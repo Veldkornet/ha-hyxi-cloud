@@ -4,6 +4,7 @@ import hmac
 import base64
 import requests
 import logging
+from datetime import datetime, timezone
 
 _LOGGER = logging.getLogger(__name__)
 
