@@ -1,2 +1,58 @@
-# ha-hyxi-cloud
-HYXI Cloud HACS Integration
+# HYXi Cloud Integration for Home Assistant
+
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+
+A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud API. This integration provides real-time data for solar production, battery status, and home energy usage.
+
+> **Note:** This integration has been primarily tested with the **HYXi Hybrid Inverter**. Other HYXi devices (like string inverters or micro-inverters) may not be fully supported yet.
+
+## Features
+
+- **Real-time Monitoring:** Tracks Solar Power, Battery SOC, Home Load, and Grid flow.
+- **Energy Dashboard Ready:** Includes sensors for Lifetime Yield and Battery totals.
+- **Auto-Naming:** Automatically prefixes sensors with your Plant Name (e.g., `sensor.hyxi_myhome_batsoc`).
+- **Clean UI:** Precision-tuned for SOH (1 decimal) and SOC (whole numbers).
+
+## Installation
+
+### Method 1: HACS (Recommended)
+1. Open **HACS** in Home Assistant.
+2. Go to **Integrations** > **Custom repositories** (three dots menu).
+3. Paste: `https://github.com/Veldkornet/ha-hyxi-cloud`
+4. Select **Integration** and click **Add**.
+5. Restart Home Assistant.
+
+### Method 2: Manual
+1. Copy the `hyxi_cloud` folder to your `/config/custom_components/` directory.
+2. Restart Home Assistant.
+
+## Supported Sensors
+
+| Category | Sensor Name | ID (Key) | Unit |
+| :--- | :--- | :--- | :--- |
+| **Power** | Battery SOC | `batSoc` | % |
+| **Power** | Battery Power | `pbat` | W |
+| **Power** | Solar Power | `ppv` | W |
+| **Power** | Home Load | `home_load` | W |
+| **Power** | Grid Import | `grid_import` | W |
+| **Power** | Grid Export | `grid_export` | W |
+| **Power** | Battery Charging | `bat_charging` | W |
+| **Power** | Battery Discharging | `bat_discharging` | W |
+| **Energy** | Lifetime Yield | `totalE` | kWh |
+| **Energy** | Total Battery Charge | `bat_charge_total` | kWh |
+| **Energy** | Total Battery Discharge | `bat_discharge_total` | kWh |
+| **Diagnostics** | Battery SOH | `batSoh` | % |
+| **Diagnostics** | Inverter Temperature | `tinv` | °C |
+| **Diagnostics** | Last Sync | `last_seen` | - |
+
+## Configuration
+
+1. Go to **Settings > Devices & Services**.
+2. Click **Add Integration** and search for **HYXi Cloud**.
+3. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
+
+## Disclaimer
+This is a custom integration and is **not** an official product of HYXi Power. Only Hybrid Inverter battery systems have been verified for compatibility at this stage.
+
+---
