@@ -54,9 +54,10 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 ## Configuration
 
 1. Ensure that you have created a developer account and have created and application for an Acces Key and Secret Key, see Step 1 & 2 at https://open.hyxicloud.com/#/quickStart for more details (ensure that you use the same email address as where the devices are registered against).
-2. Go to **Settings > Devices & Services**.
-3. Click **Add Integration** and search for **HYXi Cloud**.
-4. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
+2. Add the integration with the following:
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=hyxi_cloud)
+Or Alternatively, go to **Settings > Devices & Services** and click **Add Integration** and search for **HYXi Cloud**.
+3. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
 
 ## Disclaimer
 This is a custom integration and is **not** an official product of HYXi Power. Only Hybrid Inverter battery systems have been verified for compatibility at this stage.
