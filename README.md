@@ -46,7 +46,10 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 | **Energy** | Total Battery Discharge | `bat_discharge_total` | kWh |
 | **Diagnostics** | Battery SOH | `batSoh` | % |
 | **Diagnostics** | Inverter Temperature | `tinv` | °C |
-| **Diagnostics** | Last Sync | `last_seen` | - |
+| **Diagnostics** | Last Cloud Sync | `last_seen` | - |
+| **Diagnostics** | Last Data Update | `collectTime` | - |
+| **Diagnostics** | Inverter Serial | `deviceSn` | - |
+| **Diagnostics** | Battery Serial | `batSn` | - |
 
 ## Configuration
 
