@@ -119,13 +119,16 @@ class HyxiApiClient:
                             try: return round(float(m_raw.get(key, 0)) * mult, 2)
                             except (ValueError, TypeError): return 0.0
 
-                        # --- PERFORM THE CALCULATIONS FROM YOUR APPDAEMON SCRIPT ---
+                        # Perform calculations
                         pbat = get_f("pbat")
                         grid_w = get_f("gridP", 1000.0) # Convert kW to W
                         # Load is the sum of three phases
                         load = get_f("ph1Loadp") + get_f("ph2Loadp") + get_f("ph3Loadp")
 
-                        # Create the standardized record for the Coordinator
+                        # Generate a ISO 8601 timestamp for "Now" (Cloud Sync Time)
+                        sync_time = datetime.now(timezone.utc).isoformat()
+
+                        # Build the metrics dictionary
                         results[sn] = {
                             "sn": sn,
                             "device_name": d.get("deviceName", f"Inverter {sn}"),
@@ -133,16 +136,15 @@ class HyxiApiClient:
                             "plant_slug": plant_slug,
                             "model": "Hybrid Inverter",
                             "metrics": {
-                                **m_raw,
+                                **m_raw, # This automatically includes collectTime, batSn, deviceSn
                                 "home_load": load,
                                 "grid_import": abs(grid_w) if grid_w < 0 else 0,
                                 "grid_export": grid_w if grid_w > 0 else 0,
                                 "bat_charging": abs(pbat) if pbat < 0 else 0,
                                 "bat_discharging": pbat if pbat > 0 else 0,
-                                # Map the energy keys to your preferred names
                                 "bat_charge_total": get_f("batCharge"),
                                 "bat_discharge_total": get_f("batDisCharge"),
-                                "last_seen": time.strftime('%H:%M:%S', time.localtime(get_f("collectTime"))) if get_f("collectTime") > 0 else "Unknown"
+                                "last_seen": sync_time # Full ISO timestamp for HA
                             }
                         }
             
