@@ -48,8 +48,6 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 | **Diagnostics** | Inverter Temperature | `tinv` | °C |
 | **Diagnostics** | Last Cloud Sync | `last_seen` | - |
 | **Diagnostics** | Last Data Update | `collectTime` | - |
-| **Diagnostics** | Inverter Serial | `deviceSn` | - |
-| **Diagnostics** | Battery Serial | `batSn` | - |
 
 ## Setup Integration
 
