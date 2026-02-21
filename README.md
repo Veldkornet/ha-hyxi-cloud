@@ -1,7 +1,7 @@
 # HYXi Cloud Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)
 
 A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud API. This integration provides real-time data for solar production, battery status, and home energy usage.
 
@@ -48,9 +48,10 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 
 ## Configuration
 
-1. Go to **Settings > Devices & Services**.
-2. Click **Add Integration** and search for **HYXi Cloud**.
-3. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
+1. Ensure that you have created a developer account and have created and application for an Acces Key and Secret Key, see Step 1 & 2 at https://open.hyxicloud.com/#/quickStart for more details (ensure that you use the same email address as where the devices are registered against).
+2. Go to **Settings > Devices & Services**.
+3. Click **Add Integration** and search for **HYXi Cloud**.
+4. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
 
 ## Disclaimer
 This is a custom integration and is **not** an official product of HYXi Power. Only Hybrid Inverter battery systems have been verified for compatibility at this stage.
