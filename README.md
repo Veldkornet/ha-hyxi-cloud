@@ -5,8 +5,6 @@
 [![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/blob/main/LICENSE)
 [![Open Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
 
-[![Open your Home Assistant instance and open the repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Veldkornet&repository=ha-hyxi-cloud&category=Integration)
-
 A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud API. This integration provides real-time data for solar production, battery status, and home energy usage.
 
 > **Note:** This integration has been primarily tested with the **HYXi Hybrid Inverter**. Other HYXi devices (like string inverters or micro-inverters) may not be fully supported yet.
@@ -19,6 +17,8 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 - **Clean UI:** Precision-tuned for SOH (1 decimal) and SOC (whole numbers).
 
 ## Installation
+
+[![Open your Home Assistant instance and open the repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Veldkornet&repository=ha-hyxi-cloud&category=Integration)
 
 ### Method 1: HACS (Recommended)
 1. Open **HACS** in Home Assistant.
