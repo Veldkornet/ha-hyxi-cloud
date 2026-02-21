@@ -33,7 +33,7 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 
 | Category | Sensor Name | ID (Key) | Unit |
 | :--- | :--- | :--- | :--- |
-| **Power** | Battery SOC | `batSoc` | % |
+| **Power** | Battery State of Charge (SOC) | `batSoc` | % |
 | **Power** | Battery Power | `pbat` | W |
 | **Power** | Solar Power | `ppv` | W |
 | **Power** | Home Load | `home_load` | W |
@@ -44,7 +44,7 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 | **Energy** | Lifetime Yield | `totalE` | kWh |
 | **Energy** | Total Battery Charge | `bat_charge_total` | kWh |
 | **Energy** | Total Battery Discharge | `bat_discharge_total` | kWh |
-| **Diagnostics** | Battery SOH | `batSoh` | % |
+| **Diagnostics** | Battery State of Health (SOH) | `batSoh` | % |
 | **Diagnostics** | Inverter Temperature | `tinv` | °C |
 | **Diagnostics** | Last Cloud Sync | `last_seen` | - |
 | **Diagnostics** | Last Data Update | `collectTime` | - |
