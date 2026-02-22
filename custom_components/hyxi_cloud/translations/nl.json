@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Verbinden met HYXi Cloud",
-        "description": "Voer uw Open API-gegevens in. U kunt deze genereren op https://open.hyxicloud.com/",
+        "description": "Voer uw Open API-gegevens in van https://open.hyxicloud.com/",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
@@ -17,6 +17,25 @@
     },
     "abort": {
       "already_configured": "Dit HYXi-account is al geconfigureerd."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "batsoc": { "name": "Batterij SOC" },
+      "pbat": { "name": "Batterijvermogen" },
+      "ppv": { "name": "Zonne-energie" },
+      "home_load": { "name": "Huisverbruik" },
+      "grid_import": { "name": "Netimport" },
+      "grid_export": { "name": "Netexport" },
+      "bat_charging": { "name": "Batterij laden" },
+      "bat_discharging": { "name": "Batterij ontladen" },
+      "totale": { "name": "Totale opbrengst" },
+      "bat_charge_total": { "name": "Totaal batterij geladen" },
+      "bat_discharge_total": { "name": "Totaal batterij ontladen" },
+      "batsoh": { "name": "Batterij SOH" },
+      "tinv": { "name": "Inverter temperatuur" },
+      "collecttime": { "name": "Laatste data update" },
+      "last_seen": { "name": "Laatste cloud sync" }
     }
   }
 }

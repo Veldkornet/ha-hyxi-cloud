@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Mit HYXi Cloud verbinden",
-        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Diese können Sie unter https://open.hyxicloud.com/ erstellen.",
+        "description": "Geben Sie Ihre Open API-Zugangsdaten von https://open.hyxicloud.com/ ein",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
@@ -17,6 +17,25 @@
     },
     "abort": {
       "already_configured": "Dieses HYXi-Konto ist bereits konfiguriert."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "batsoc": { "name": "Batterie SOC" },
+      "pbat": { "name": "Batterieleistung" },
+      "ppv": { "name": "Solarleistung" },
+      "home_load": { "name": "Hausverbrauch" },
+      "grid_import": { "name": "Netzbezug" },
+      "grid_export": { "name": "Netzeinspeisung" },
+      "bat_charging": { "name": "Batterie laden" },
+      "bat_discharging": { "name": "Batterie entladen" },
+      "totale": { "name": "Gesamtertrag" },
+      "bat_charge_total": { "name": "Gesamt Batterie geladen" },
+      "bat_discharge_total": { "name": "Gesamt Batterie entladen" },
+      "batsoh": { "name": "Batterie SOH" },
+      "tinv": { "name": "Wechselrichter-Temperatur" },
+      "collecttime": { "name": "Letzte Datenaktualisierung" },
+      "last_seen": { "name": "Letzter Cloud-Sync" }
     }
   }
 }
