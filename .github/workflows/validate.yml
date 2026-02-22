@@ -23,3 +23,7 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+      - name: 🏆 Integration Quality Scale
+        uses: home-assistant/actions/helpers/check-quality-scale@master
+        with:
+          integration: hyxi_cloud
