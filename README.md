@@ -1,11 +1,13 @@
 # HYXi Cloud Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-![Version](https://img.shields.io/badge/version-1.0.7-blue.svg)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud)
 [![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/blob/main/LICENSE)
 [![Open Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
 [![Validate Integration](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml)
 ![Lint Status](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/lint.yml/badge.svg)
+![Dependabot](https://img.shields.io/badge/dependabot-enabled-blue?logo=dependabot&logoColor=white)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 [![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
 
@@ -17,7 +19,7 @@ A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) 
 
 - **Real-time Monitoring:** Tracks Solar Power, Battery SOC, Home Load, and Grid flow.
 - **Energy Dashboard Ready:** Includes sensors for Lifetime Yield and Battery totals.
-- **Auto-Naming:** Automatically prefixes sensors with your Plant Name (e.g., `sensor.hyxi_myhome_batsoc`).
+- **Device-Specific Tracking:** Automatically organizes sensors by device serial number, cleanly separating your Inverter from your Battery system in the Home Assistant UI.
 - **Clean UI:** Precision-tuned for SOH and SOC (whole numbers).
 
 ## Installation
