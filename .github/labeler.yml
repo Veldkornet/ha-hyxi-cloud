@@ -1,0 +1,22 @@
+# Label as 'enhancement' if core logic or sensors change
+enhancement:
+- changed-files:
+  - any-glob-to-any-file: 
+    - "custom_components/hyxi_cloud/*.py"
+
+# Label as 'documentation' for README, translations, or legal files
+documentation:
+- changed-files:
+  - any-glob-to-any-file:
+    - "README.md"
+    - "LICENSE"
+    - "custom_components/hyxi_cloud/translations/**/*"
+    - "custom_components/hyxi_cloud/strings.json"
+
+# Label as 'maintenance' for internal GitHub actions, versions, or metadata
+maintenance:
+- changed-files:
+  - any-glob-to-any-file:
+    - ".github/**/*"
+    - "custom_components/hyxi_cloud/manifest.json"
+    - "custom_components/hyxi_cloud/hacs.json"
