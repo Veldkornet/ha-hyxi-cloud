@@ -18,26 +18,105 @@ _LOGGER = logging.getLogger(__name__)
 # Full list of all sensors you've defined (batSn removed!)
 SENSOR_TYPES = [
     # Power Sensors
-    SensorEntityDescription(key="batSoc", native_unit_of_measurement="%", device_class=SensorDeviceClass.BATTERY, state_class=SensorStateClass.MEASUREMENT, suggested_display_precision=0),
-    SensorEntityDescription(key="pbat", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT),
-    SensorEntityDescription(key="ppv", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT),
-    SensorEntityDescription(key="home_load", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:home-lightning-bolt"),
-    SensorEntityDescription(key="grid_import", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:transmission-tower-import"),
-    SensorEntityDescription(key="grid_export", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:transmission-tower-export"),
-    SensorEntityDescription(key="bat_charging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-up"),
-    SensorEntityDescription(key="bat_discharging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-down"),
-
+    SensorEntityDescription(
+        key="batSoc",
+        native_unit_of_measurement="%",
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+    ),
+    SensorEntityDescription(
+        key="pbat",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="ppv",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="home_load",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:home-lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="grid_import",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:transmission-tower-import",
+    ),
+    SensorEntityDescription(
+        key="grid_export",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:transmission-tower-export",
+    ),
+    SensorEntityDescription(
+        key="bat_charging",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-arrow-up",
+    ),
+    SensorEntityDescription(
+        key="bat_discharging",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-arrow-down",
+    ),
     # Energy Sensors
-    SensorEntityDescription(key="totalE", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
-    SensorEntityDescription(key="bat_charge_total", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
-    SensorEntityDescription(key="bat_discharge_total", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
-
+    SensorEntityDescription(
+        key="totalE",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="bat_charge_total",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="bat_discharge_total",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
     # Diagnostics
-    SensorEntityDescription(key="batSoh", native_unit_of_measurement="%", state_class=SensorStateClass.MEASUREMENT, icon="mdi:heart-pulse", suggested_display_precision=0),
-    SensorEntityDescription(key="tinv", native_unit_of_measurement="°C", device_class=SensorDeviceClass.TEMPERATURE, state_class=SensorStateClass.MEASUREMENT),
-    SensorEntityDescription(key="collectTime", device_class=SensorDeviceClass.TIMESTAMP, entity_category=EntityCategory.DIAGNOSTIC),
-    SensorEntityDescription(key="last_seen", device_class=SensorDeviceClass.TIMESTAMP, entity_category=EntityCategory.DIAGNOSTIC),
+    SensorEntityDescription(
+        key="batSoh",
+        native_unit_of_measurement="%",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:heart-pulse",
+        suggested_display_precision=0,
+    ),
+    SensorEntityDescription(
+        key="tinv",
+        native_unit_of_measurement="°C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="collectTime",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="last_seen",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 ]
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -60,13 +139,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     async_add_entities(entities)
 
+
 class HyxiSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(self, coordinator, sn, description):
         super().__init__(coordinator)
         self.entity_description = description
-        self._sn = sn # This is the Inverter/Collector SN
+        self._sn = sn  # This is the Inverter/Collector SN
 
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
@@ -74,8 +154,13 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
         # 1. Define which sensors belong to the physical battery
         BATTERY_SENSORS = [
-            "batSoc", "pbat", "bat_charging", "bat_discharging",
-            "bat_charge_total", "bat_discharge_total", "batSoh"
+            "batSoc",
+            "pbat",
+            "bat_charging",
+            "bat_discharging",
+            "bat_charge_total",
+            "bat_discharge_total",
+            "batSoh",
         ]
 
         # 2. Logic to determine if this entity belongs to the Inverter or a Battery
@@ -88,7 +173,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 "manufacturer": "HYXi Power",
                 "model": "Energy Storage System",
                 "serial_number": bat_sn,
-                "via_device": (DOMAIN, sn) # This links the Battery to the Inverter
+                "via_device": (DOMAIN, sn),  # This links the Battery to the Inverter
             }
         else:
             self._actual_sn = sn
@@ -107,17 +192,23 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
         # The dynamic translation link
         self._attr_translation_key = description.key.lower()
-        self._attr_entity_registry_enabled_default = getattr(description, "entity_registry_enabled_default", True)
+        self._attr_entity_registry_enabled_default = getattr(
+            description, "entity_registry_enabled_default", True
+        )
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         registry = er.async_get(self.hass)
         # Use _actual_sn so the entity ID also matches the specific battery
-        new_entity_id = f"sensor.hyxi_{self._actual_sn}_{self.entity_description.key.lower()}"
+        new_entity_id = (
+            f"sensor.hyxi_{self._actual_sn}_{self.entity_description.key.lower()}"
+        )
 
         if self.entity_id != new_entity_id:
             try:
-                registry.async_update_entity(self.entity_id, new_entity_id=new_entity_id)
+                registry.async_update_entity(
+                    self.entity_id, new_entity_id=new_entity_id
+                )
             except Exception:
                 pass
 
@@ -141,6 +232,8 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 return None
 
         if self.entity_description.key == "last_seen":
-            return dt_util.parse_datetime(str(value)) # dt_util.parse_datetime handles the ISO format + UTC safely
+            return dt_util.parse_datetime(
+                str(value)
+            )  # dt_util.parse_datetime handles the ISO format + UTC safely
 
         return value

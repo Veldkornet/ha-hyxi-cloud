@@ -10,11 +10,14 @@ import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class HyxiApiClient:
-    def __init__(self, access_key, secret_key, base_url, session: aiohttp.ClientSession):
+    def __init__(
+        self, access_key, secret_key, base_url, session: aiohttp.ClientSession
+    ):
         self.access_key = access_key
         self.secret_key = secret_key
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.session = session
         self.token = None
         self.token_expires_at = 0
@@ -32,7 +35,9 @@ class HyxiApiClient:
         token_str = self.token if self.token else ""
 
         sign_string = f"{self.access_key}{token_str}{timestamp}{nonce}{string_to_sign}"
-        hmac_bytes = hmac.new(self.secret_key.encode("utf-8"), sign_string.encode("utf-8"), hashlib.sha512).digest()
+        hmac_bytes = hmac.new(
+            self.secret_key.encode("utf-8"), sign_string.encode("utf-8"), hashlib.sha512
+        ).digest()
         signature = base64.b64encode(hmac_bytes).decode("utf-8")
 
         headers = {
@@ -40,7 +45,7 @@ class HyxiApiClient:
             "timestamp": timestamp,
             "nonce": nonce,
             "sign": signature,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         if is_token_request:
@@ -62,7 +67,7 @@ class HyxiApiClient:
                 f"{self.base_url}{path}",
                 json={"grantType": 1},
                 headers=self._generate_headers(path, "POST", is_token_request=True),
-                timeout=15
+                timeout=15,
             ) as response:
                 res = await response.json()
 
@@ -96,7 +101,7 @@ class HyxiApiClient:
                 f"{self.base_url}{p_path}",
                 json={"pageSize": 10, "currentPage": 1},
                 headers=self._generate_headers(p_path, "POST"),
-                timeout=15
+                timeout=15,
             ) as resp_p:
                 res_p = await resp_p.json()
 
@@ -118,7 +123,7 @@ class HyxiApiClient:
                     f"{self.base_url}{d_path}",
                     json={"plantId": plant_id, "pageSize": 50, "currentPage": 1},
                     headers=self._generate_headers(d_path, "POST"),
-                    timeout=15
+                    timeout=15,
                 ) as resp_d:
                     res_d = await resp_d.json()
 
@@ -127,7 +132,13 @@ class HyxiApiClient:
                     continue
 
                 data_val = res_d.get("data", {})
-                devices = data_val if isinstance(data_val, list) else data_val.get("deviceList", []) if isinstance(data_val, dict) else []
+                devices = (
+                    data_val
+                    if isinstance(data_val, list)
+                    else data_val.get("deviceList", [])
+                    if isinstance(data_val, dict)
+                    else []
+                )
 
                 for d in devices:
                     sn = d.get("deviceSn")
@@ -138,11 +149,12 @@ class HyxiApiClient:
 
                     entry = {
                         "sn": sn,
-                        "device_name": d.get("deviceName") or (f"Inverter {sn}" if is_inverter else f"Collector {sn}"),
+                        "device_name": d.get("deviceName")
+                        or (f"Inverter {sn}" if is_inverter else f"Collector {sn}"),
                         "model": "Hybrid Inverter" if is_inverter else "Data Collector",
                         "sw_version": d.get("swVer"),
                         "hw_version": d.get("hwVer"),
-                        "metrics": {"last_seen": now}
+                        "metrics": {"last_seen": now},
                     }
 
                     if is_inverter:
@@ -150,13 +162,17 @@ class HyxiApiClient:
                         async with self.session.get(
                             f"{self.base_url}{q_path}?deviceSn={sn}",
                             headers=self._generate_headers(q_path, "GET"),
-                            timeout=15
+                            timeout=15,
                         ) as resp_q:
                             res_q = await resp_q.json()
 
                         if res_q.get("success"):
                             data_list = res_q.get("data", [])
-                            m_raw = {item.get("dataKey"): item.get("dataValue") for item in data_list if isinstance(item, dict) and item.get("dataKey")}
+                            m_raw = {
+                                item.get("dataKey"): item.get("dataValue")
+                                for item in data_list
+                                if isinstance(item, dict) and item.get("dataKey")
+                            }
                             entry["metrics"].update(m_raw)
 
                             def get_f(key, data_map, mult=1.0):
@@ -165,18 +181,22 @@ class HyxiApiClient:
                                 except (ValueError, TypeError, AttributeError):
                                     return 0.0
 
-                            grid = get_f("gridP", m_raw, 1000.0) # Pass m_raw here
-                            pbat = get_f("pbat", m_raw)          # And here
+                            grid = get_f("gridP", m_raw, 1000.0)  # Pass m_raw here
+                            pbat = get_f("pbat", m_raw)  # And here
 
-                            entry["metrics"].update({
-                                "home_load": get_f("ph1Loadp", m_raw) + get_f("ph2Loadp", m_raw) + get_f("ph3Loadp", m_raw),
-                                "grid_import": abs(grid) if grid < 0 else 0,
-                                "grid_export": grid if grid > 0 else 0,
-                                "bat_charging": abs(pbat) if pbat < 0 else 0,
-                                "bat_discharging": pbat if pbat > 0 else 0,
-                                "bat_charge_total": get_f("batCharge", m_raw),
-                                "bat_discharge_total": get_f("batDisCharge", m_raw),
-                            })
+                            entry["metrics"].update(
+                                {
+                                    "home_load": get_f("ph1Loadp", m_raw)
+                                    + get_f("ph2Loadp", m_raw)
+                                    + get_f("ph3Loadp", m_raw),
+                                    "grid_import": abs(grid) if grid < 0 else 0,
+                                    "grid_export": grid if grid > 0 else 0,
+                                    "bat_charging": abs(pbat) if pbat < 0 else 0,
+                                    "bat_discharging": pbat if pbat > 0 else 0,
+                                    "bat_charge_total": get_f("batCharge", m_raw),
+                                    "bat_discharge_total": get_f("batDisCharge", m_raw),
+                                }
+                            )
                         else:
                             _LOGGER.error("HYXi API Inverter Data Rejected: %s", res_q)
 

@@ -15,6 +15,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HYXi Cloud from a config entry."""
 
@@ -43,6 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return True
 
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
@@ -50,6 +52,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
 
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from HYXi API."""
@@ -60,7 +63,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name=DOMAIN,
             # 5 minutes is a good balance for cloud polling
-            update_interval=timedelta(seconds=300)
+            update_interval=timedelta(seconds=300),
         )
         self.client = client
 

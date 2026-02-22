@@ -26,7 +26,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input[CONF_ACCESS_KEY],
                 user_input[CONF_SECRET_KEY],
                 BASE_URL,
-                session
+                session,
             )
 
             try:
@@ -43,12 +43,12 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_ACCESS_KEY): str,
-                vol.Required(CONF_SECRET_KEY): str,
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_ACCESS_KEY): str,
+                    vol.Required(CONF_SECRET_KEY): str,
+                }
+            ),
             errors=errors,
-            description_placeholders={
-                "link": BASE_URL
-            },
+            description_placeholders={"link": BASE_URL},
         )
