@@ -2,10 +2,8 @@ name: Release Drafter
 
 on:
   push:
-    # This triggers the drafter to update the draft whenever something hits main
     branches:
       - main
-  # This allows the drafter to run when PRs are labeled, so it can sort them
   pull_request:
     types: [opened, reopened, synchronize, labeled]
 
@@ -17,5 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: release-drafter/release-drafter@v5.25.0
+        with:
+          # This specifically fixes the "refs/head/main" target issue
+          commitish: main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
