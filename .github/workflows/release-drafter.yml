@@ -15,9 +15,9 @@ jobs:
       # write permission is required to create a github release
       contents: write
       # write permission is required for auto-labeling (if used)
-      pull_requests: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v5
+      - uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
