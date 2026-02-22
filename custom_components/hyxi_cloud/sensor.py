@@ -18,25 +18,25 @@ _LOGGER = logging.getLogger(__name__)
 # Full list of all sensors you've defined (batSn removed!)
 SENSOR_TYPES = [
     # Power Sensors
-    SensorEntityDescription(key="batSoc", name="Battery SOC", native_unit_of_measurement="%", device_class=SensorDeviceClass.BATTERY, state_class=SensorStateClass.MEASUREMENT, suggested_display_precision=0),
-    SensorEntityDescription(key="pbat", name="Battery Power", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT),
-    SensorEntityDescription(key="ppv", name="Solar Power", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT),
-    SensorEntityDescription(key="home_load", name="Home Load", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:home-lightning-bolt"),
-    SensorEntityDescription(key="grid_import", name="Grid Import", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:transmission-tower-import"),
-    SensorEntityDescription(key="grid_export", name="Grid Export", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:transmission-tower-export"),
-    SensorEntityDescription(key="bat_charging", name="Battery Charging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-up"),
-    SensorEntityDescription(key="bat_discharging", name="Battery Discharging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-down"),
+    SensorEntityDescription(key="batSoc", native_unit_of_measurement="%", device_class=SensorDeviceClass.BATTERY, state_class=SensorStateClass.MEASUREMENT, suggested_display_precision=0),
+    SensorEntityDescription(key="pbat", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT),
+    SensorEntityDescription(key="ppv", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT),
+    SensorEntityDescription(key="home_load", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:home-lightning-bolt"),
+    SensorEntityDescription(key="grid_import", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:transmission-tower-import"),
+    SensorEntityDescription(key="grid_export", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:transmission-tower-export"),
+    SensorEntityDescription(key="bat_charging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-up"),
+    SensorEntityDescription(key="bat_discharging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-down"),
     
     # Energy Sensors
-    SensorEntityDescription(key="totalE", name="Lifetime Yield", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
-    SensorEntityDescription(key="bat_charge_total", name="Total Battery Charge", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
+    SensorEntityDescription(key="totalE", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
+    SensorEntityDescription(key="bat_charge_total", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
     SensorEntityDescription(key="bat_discharge_total", name="Total Battery Discharge", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
     
     # Diagnostics
-    SensorEntityDescription(key="batSoh", name="Battery SOH", native_unit_of_measurement="%", state_class=SensorStateClass.MEASUREMENT, icon="mdi:heart-pulse", suggested_display_precision=0),
-    SensorEntityDescription(key="tinv", name="Inverter Temperature", native_unit_of_measurement="°C", device_class=SensorDeviceClass.TEMPERATURE, state_class=SensorStateClass.MEASUREMENT),
-    SensorEntityDescription(key="collectTime", name="Last Data Update", device_class=SensorDeviceClass.TIMESTAMP, entity_category=EntityCategory.DIAGNOSTIC),
-    SensorEntityDescription(key="last_seen", name="Last Cloud Sync", device_class=SensorDeviceClass.TIMESTAMP, entity_category=EntityCategory.DIAGNOSTIC),
+    SensorEntityDescription(key="batSoh", native_unit_of_measurement="%", state_class=SensorStateClass.MEASUREMENT, icon="mdi:heart-pulse", suggested_display_precision=0),
+    SensorEntityDescription(key="tinv", native_unit_of_measurement="°C", device_class=SensorDeviceClass.TEMPERATURE, state_class=SensorStateClass.MEASUREMENT),
+    SensorEntityDescription(key="collectTime", device_class=SensorDeviceClass.TIMESTAMP, entity_category=EntityCategory.DIAGNOSTIC),
+    SensorEntityDescription(key="last_seen", device_class=SensorDeviceClass.TIMESTAMP, entity_category=EntityCategory.DIAGNOSTIC),
 ]
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -101,10 +101,13 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 "hw_version": dev_data.get("hw_version"),
                 "serial_number": sn,
             }
+
+        # The dynamic translation link
+        self._attr_translation_key = description.key.lower()
         
         # Unique ID must use the Battery SN if it's a battery sensor to allow multiple batteries
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
-        self._attr_name = description.name
+        self._attr_translation_key = description.key.lower()
         self._attr_entity_registry_enabled_default = getattr(description, "entity_registry_enabled_default", True)
 
     async def async_added_to_hass(self) -> None:
