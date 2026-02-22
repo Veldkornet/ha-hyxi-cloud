@@ -30,7 +30,7 @@ SENSOR_TYPES = [
     # Energy Sensors
     SensorEntityDescription(key="totalE", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
     SensorEntityDescription(key="bat_charge_total", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
-    SensorEntityDescription(key="bat_discharge_total", name="Total Battery Discharge", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
+    SensorEntityDescription(key="bat_discharge_total", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
     
     # Diagnostics
     SensorEntityDescription(key="batSoh", native_unit_of_measurement="%", state_class=SensorStateClass.MEASUREMENT, icon="mdi:heart-pulse", suggested_display_precision=0),
@@ -101,12 +101,10 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 "hw_version": dev_data.get("hw_version"),
                 "serial_number": sn,
             }
-
-        # The dynamic translation link
-        self._attr_translation_key = description.key.lower()
         
         # Unique ID must use the Battery SN if it's a battery sensor to allow multiple batteries
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
+        # The dynamic translation link
         self._attr_translation_key = description.key.lower()
         self._attr_entity_registry_enabled_default = getattr(description, "entity_registry_enabled_default", True)
 
