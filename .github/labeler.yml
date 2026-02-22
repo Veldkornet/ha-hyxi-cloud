@@ -20,3 +20,5 @@ maintenance:
     - ".github/**/*"
     - "custom_components/hyxi_cloud/manifest.json"
     - "custom_components/hyxi_cloud/hacs.json"
+    - "pyproject.toml"
+    - "requirements.txt"
