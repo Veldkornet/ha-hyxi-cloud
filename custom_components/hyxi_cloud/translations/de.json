@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit HYXi Cloud verbinden",
+        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Diese können Sie unter https://open.hyxicloud.com/ erstellen.",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu den HYXi-Servern fehlgeschlagen",
+      "invalid_auth": "Ungültiger Access Key oder Secret Key",
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten"
+    },
+    "abort": {
+      "already_configured": "Dieses HYXi-Konto ist bereits konfiguriert."
+    }
+  }
+}
