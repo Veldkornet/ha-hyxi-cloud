@@ -1,0 +1,24 @@
+name: "Label Checker"
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronized
+      - labeled
+      - unlabeled
+
+jobs:
+  check_labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify PR has at least one label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels;
+            if (labels.length === 0) {
+              core.setFailed("❌ No labels found! Please add a label (enhancement, bug, or documentation) to this PR so the Release Drafter can categorize it.");
+            } else {
+              console.log(`✅ PR is labeled with: ${labels.map(l => l.name).join(", ")}`);
+            }
