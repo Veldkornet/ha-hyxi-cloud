@@ -2,19 +2,17 @@ name: Release Drafter
 
 on:
   push:
-    # branches to consider during release-drafter run
+    # This triggers the drafter to update the draft whenever something hits main
     branches:
       - main
-  # Also run on PRs so it can add labels or check things
+  # This allows the drafter to run when PRs are labeled, so it can sort them
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, labeled]
 
 jobs:
   update_release_draft:
     permissions:
-      # write permission is required to create a github release
       contents: write
-      # write permission is required for auto-labeling (if used)
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
