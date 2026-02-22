@@ -1,12 +1,13 @@
 # HYXi Cloud Integration for Home Assistant
 
-[![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 ![Version](https://img.shields.io/badge/version-1.0.6-blue.svg)
 [![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/blob/main/LICENSE)
 [![Open Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
 [![Validate Integration](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml)
 ![Lint Status](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/lint.yml/badge.svg)
+
+[![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
 
 A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) Inverters and Energy Storage Systems via the HYXi Cloud API. This integration provides near real-time data for solar production, battery status, and home energy usage.
 
@@ -72,6 +73,7 @@ This is a custom integration and is **not** an official product of HYXi Power. O
 
 ## Support
 If you find this integration helpful and want to support its development:
+
 [![Buy Me a Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=veldkornet&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/veldkornet)
 
 ---
