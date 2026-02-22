@@ -7,7 +7,9 @@
 [![Validate Integration](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml)
 ![Lint Status](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/lint.yml/badge.svg)
 
-A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud API. This integration provides real-time data for solar production, battery status, and home energy usage.
+[![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
+
+A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) Inverters and Energy Storage Systems via the HYXi Cloud API. This integration provides near real-time data for solar production, battery status, and home energy usage.
 
 > **Note:** This integration has been primarily tested with the **HYXi Hybrid Inverter**. Other HYXi devices (like string inverters or micro-inverters) may not be fully supported yet.
 
@@ -16,7 +18,7 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 - **Real-time Monitoring:** Tracks Solar Power, Battery SOC, Home Load, and Grid flow.
 - **Energy Dashboard Ready:** Includes sensors for Lifetime Yield and Battery totals.
 - **Auto-Naming:** Automatically prefixes sensors with your Plant Name (e.g., `sensor.hyxi_myhome_batsoc`).
-- **Clean UI:** Precision-tuned for SOH (1 decimal) and SOC (whole numbers).
+- **Clean UI:** Precision-tuned for SOH and SOC (whole numbers).
 
 ## Installation
 
@@ -55,7 +57,8 @@ A Home Assistant integration to monitor HYXi Hybrid Inverters via the HYXi Cloud
 
 ## Setup Integration
 
-1. Ensure that you have created a developer account and have created and application for an Acces Key and Secret Key, see Step 1 & 2 at https://open.hyxicloud.com/#/quickStart for more details (ensure that you use the same email address as where the devices are registered against).
+1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key**. See [Step 1 & 2 of the Quick Start Guide](https://open.hyxicloud.com/#/quickStart) for details. 
+   > **Important:** Use the same email address that your devices are registered to in the HYXi app.
 2. Go to **Settings > Devices & Services** and click **Add Integration** and search for **HYXi Cloud**.
 Or alternatively, add the integration with the following:
 
@@ -67,5 +70,10 @@ Or alternatively, add the integration with the following:
 
 ## Disclaimer
 This is a custom integration and is **not** an official product of HYXi Power. Only Hybrid Inverter battery systems have been verified for compatibility at this stage.
+
+## Support
+If you find this integration helpful and want to support its development:
+
+[![Buy Me a Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=veldkornet&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/veldkornet)
 
 ---
