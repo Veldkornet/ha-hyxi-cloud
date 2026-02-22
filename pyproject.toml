@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ha-hyxi-cloud"
+version = "1.0.8"
+description = "HYXiPower ⚡️🔋☀️ Integration for HomeAssistant using HYXiCloud ☁️"
+readme = "README.md"
+authors = [
+    { name = "Veldkornet" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.9.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (keeps your imports organized)
+    "UP",  # pyupgrade (keeps code modern)
+    "B",   # flake8-bugbear (catches common bugs)
+]
+ignore = ["E501"] # Ignore long lines (often necessary for URLs/Logs)
+
+[tool.ruff.lint.isort]
+force-single-line = true
+combine-as-imports = true

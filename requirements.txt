@@ -1,0 +1,6 @@
+# Integration Dependencies
+aiohttp>=3.9.0
+voluptuous>=0.13.1
+
+# Development/Linting tools
+ruff>=0.2.0
