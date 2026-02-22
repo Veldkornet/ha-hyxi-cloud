@@ -2,10 +2,20 @@ name: Release Drafter
 
 on:
   push:
-    branches: [ main ]
+    # branches to consider during release-drafter run
+    branches:
+      - main
+  # Also run on PRs so it can add labels or check things
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 jobs:
   update_release_draft:
+    permissions:
+      # write permission is required to create a github release
+      contents: write
+      # write permission is required for auto-labeling (if used)
+      pull_requests: write
     runs-on: ubuntu-latest
     steps:
       - uses: release-drafter/release-drafter@v5
