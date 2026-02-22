@@ -32,4 +32,4 @@ ignore = ["E501"] # Ignore long lines (often necessary for URLs/Logs)
 
 [tool.ruff.lint.isort]
 force-single-line = true
-combined-as-imports = true
+combine-as-imports = true
