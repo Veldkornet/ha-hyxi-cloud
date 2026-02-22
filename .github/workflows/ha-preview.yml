@@ -1,0 +1,15 @@
+name: "HA Version Preview"
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every night at midnight
+  workflow_dispatch: # Allows you to run it manually
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 🔍 Check against HA Dev
+        uses: home-assistant/actions/hassfest@master
