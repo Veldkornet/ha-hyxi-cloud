@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Verbinden met HYXi Cloud",
-        "description": "Voer uw Open API-gegevens in van https://open.hyxicloud.com/",
+        "description": "Voer uw Open API-gegevens in van {link}",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"

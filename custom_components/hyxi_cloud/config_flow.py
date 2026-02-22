@@ -41,4 +41,8 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_SECRET_KEY): str,
             }),
             errors=errors,
+            # This maps the {link} in your JSON files to the URL in const.py
+            description_placeholders={
+                "link": (BASE_URL) 
+            },
         )

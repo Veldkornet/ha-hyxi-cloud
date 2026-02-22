@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Mit HYXi Cloud verbinden",
-        "description": "Geben Sie Ihre Open API-Zugangsdaten von https://open.hyxicloud.com/ ein",
+        "description": "Geben Sie Ihre Open API-Zugangsdaten von {link} ein",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"

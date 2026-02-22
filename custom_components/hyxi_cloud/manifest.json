@@ -1,10 +1,11 @@
 {
   "domain": "hyxi_cloud",
   "name": "HYXi Cloud",
-  "documentation": "https://github.com/Veldkornet/ha-hyxi-cloud",
-  "issue_tracker": "https://github.com/Veldkornet/ha-hyxi-cloud/issues",
   "codeowners": ["@Veldkornet"],
   "config_flow": true,
+  "documentation": "https://github.com/Veldkornet/ha-hyxi-cloud",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Veldkornet/ha-hyxi-cloud/issues",
+  "requirements": ["requests>=2.31.0"],
   "version": "1.0.5"
 }
