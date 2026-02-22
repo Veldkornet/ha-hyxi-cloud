@@ -1,9 +1,10 @@
 {
+  "title": "HYXi Cloud",
   "config": {
     "step": {
       "user": {
         "title": "Connect to HYXi Cloud",
-        "description": "Enter your Open API credentials. You can generate these at https://open.hyxicloud.com/",
+        "description": "Enter your Open API credentials from https://open.hyxicloud.com/",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
@@ -17,6 +18,25 @@
     },
     "abort": {
       "already_configured": "This HYXi account is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "batsoc": { "name": "Battery SOC" },
+      "pbat": { "name": "Battery Power" },
+      "ppv": { "name": "Solar Power" },
+      "home_load": { "name": "Home Load" },
+      "grid_import": { "name": "Grid Import" },
+      "grid_export": { "name": "Grid Export" },
+      "bat_charging": { "name": "Battery Charging" },
+      "bat_discharging": { "name": "Battery Discharging" },
+      "totale": { "name": "Lifetime Yield" },
+      "bat_charge_total": { "name": "Total Battery Charge" },
+      "bat_discharge_total": { "name": "Total Battery Discharge" },
+      "batsoh": { "name": "Battery SOH" },
+      "tinv": { "name": "Inverter Temperature" },
+      "collecttime": { "name": "Last Data Update" },
+      "last_seen": { "name": "Last Cloud Sync" }
     }
   }
 }
