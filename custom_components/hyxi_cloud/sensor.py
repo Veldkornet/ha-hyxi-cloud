@@ -141,9 +141,6 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 return None
 
         if self.entity_description.key == "last_seen":
-            dt = dt_util.parse_datetime(str(value))
-            if dt: 
-                return dt if dt.tzinfo else dt.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
-            return None
+            return dt_util.parse_datetime(str(value)) # dt_util.parse_datetime handles the ISO format + UTC safely
 
         return value

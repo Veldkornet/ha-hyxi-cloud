@@ -2,17 +2,18 @@ import time
 import hashlib
 import hmac
 import base64
-import requests
 import logging
+import aiohttp
 from datetime import datetime, timezone
 
 _LOGGER = logging.getLogger(__name__)
 
 class HyxiApiClient:
-    def __init__(self, access_key, secret_key, base_url):
+    def __init__(self, access_key, secret_key, base_url, session: aiohttp.ClientSession):
         self.access_key = access_key
         self.secret_key = secret_key
         self.base_url = base_url.rstrip('/')
+        self.session = session
         self.token = None
         self.token_expires_at = 0
 
@@ -22,7 +23,6 @@ class HyxiApiClient:
         timestamp = str(now_ms)
         nonce = format(now_ms, "x")[-8:]
         
-        # Mimicking Java's buildContent + deleteWhitespace
         content_str = "grantType:1" if is_token_request else ""
         hex_hash = hashlib.sha512(content_str.encode("utf-8")).hexdigest()
         
@@ -33,7 +33,6 @@ class HyxiApiClient:
         hmac_bytes = hmac.new(self.secret_key.encode("utf-8"), sign_string.encode("utf-8"), hashlib.sha512).digest()
         signature = base64.b64encode(hmac_bytes).decode("utf-8")
         
-        # EXACT Header casing from the Java document
         headers = {
             "accessKey": self.access_key,
             "timestamp": timestamp,
@@ -49,36 +48,39 @@ class HyxiApiClient:
             
         return headers
 
-    def _refresh_token(self):
+    async def _refresh_token(self):
+        """Async version of token refresh."""
         if self.token and time.time() < self.token_expires_at:
             return True
             
         path = "/api/authorization/v1/token"
         
         try:
-            r = requests.post(
+            async with self.session.post(
                 f"{self.base_url}{path}", 
                 json={"grantType": 1}, 
                 headers=self._generate_headers(path, "POST", is_token_request=True), 
                 timeout=15
-            )
-            res = r.json()
-            
-            if not res.get("success"):
-                _LOGGER.error("HYXi API Token Rejected: %s", res)
-                return False
+            ) as response:
+                res = await response.json()
                 
-            token_val = res.get("data", {}).get("token") or res.get("data", {}).get("access_token")
-            if token_val:
-                self.token = f"Bearer {token_val}"
-                self.token_expires_at = time.time() + 7000
-                return True
+                if not res.get("success"):
+                    _LOGGER.error("HYXi API Token Rejected: %s", res)
+                    return False
+                    
+                data = res.get("data", {})
+                token_val = data.get("token") or data.get("access_token")
+                if token_val:
+                    self.token = f"Bearer {token_val}"
+                    self.token_expires_at = time.time() + 7000
+                    return True
         except Exception as e:
             _LOGGER.error("HYXi Token Request Failed: %s", e)
         return False
 
-    def get_all_device_data(self):
-        if not self._refresh_token():
+    async def get_all_device_data(self):
+        """Fetches all plant and device data asynchronously."""
+        if not await self._refresh_token():
             _LOGGER.error("HYXi API: Setup aborted due to token failure.")
             return None
             
@@ -88,46 +90,45 @@ class HyxiApiClient:
         try:
             # 1. Get Plants
             p_path = "/api/plant/v1/page"
-            r_p = requests.post(
+            async with self.session.post(
                 f"{self.base_url}{p_path}", 
                 json={"pageSize": 10, "currentPage": 1}, 
-                headers=self._generate_headers(p_path, "POST", is_token_request=False), 
+                headers=self._generate_headers(p_path, "POST"), 
                 timeout=15
-            )
-            res_p = r_p.json()
+            ) as resp_p:
+                res_p = await resp_p.json()
             
             if not res_p.get("success"):
                 _LOGGER.error("HYXi API Plant Fetch Rejected: %s", res_p)
                 return None
                 
-            plants = res_p.get("data", {}).get("list", []) if isinstance(res_p.get("data"), dict) else []
+            data_p = res_p.get("data", {})
+            plants = data_p.get("list", []) if isinstance(data_p, dict) else []
 
             for p in plants:
                 plant_id = p.get("plantId")
-                if not plant_id: 
-                    continue
+                if not plant_id: continue
 
                 # 2. Get Devices
                 d_path = "/api/plant/v1/devicePage"
-                r_d = requests.post(
+                async with self.session.post(
                     f"{self.base_url}{d_path}", 
                     json={"plantId": plant_id, "pageSize": 50, "currentPage": 1}, 
-                    headers=self._generate_headers(d_path, "POST", is_token_request=False), 
+                    headers=self._generate_headers(d_path, "POST"), 
                     timeout=15
-                )
-                res_d = r_d.json()
+                ) as resp_d:
+                    res_d = await resp_d.json()
                 
                 if not res_d.get("success"):
                     _LOGGER.error("HYXi API Device Fetch Rejected: %s", res_d)
                     continue
 
-                data_val = res_d.get("data")
+                data_val = res_d.get("data", {})
                 devices = data_val if isinstance(data_val, list) else data_val.get("deviceList", []) if isinstance(data_val, dict) else []
 
                 for d in devices:
                     sn = d.get("deviceSn")
-                    if not sn: 
-                        continue
+                    if not sn: continue
                     
                     is_inverter = d.get("deviceType") == "HYBRID_INVERTER"
                     
@@ -142,14 +143,15 @@ class HyxiApiClient:
 
                     if is_inverter:
                         q_path = "/api/device/v1/queryDeviceData"
-                        qr = requests.get(
+                        async with self.session.get(
                             f"{self.base_url}{q_path}?deviceSn={sn}", 
-                            headers=self._generate_headers(q_path, "GET", is_token_request=False), 
+                            headers=self._generate_headers(q_path, "GET"), 
                             timeout=15
-                        )
+                        ) as resp_q:
+                            res_q = await resp_q.json()
                         
-                        if qr.json().get("success"):
-                            data_list = qr.json().get("data", [])
+                        if res_q.get("success"):
+                            data_list = res_q.get("data", [])
                             m_raw = {item.get("dataKey"): item.get("dataValue") for item in data_list if isinstance(item, dict) and item.get("dataKey")}
                             entry["metrics"].update(m_raw)
                             
@@ -172,10 +174,10 @@ class HyxiApiClient:
                                 "bat_discharge_total": get_f("batDisCharge"),
                             })
                         else:
-                            _LOGGER.error("HYXi API Inverter Data Rejected: %s", qr.json())
+                            _LOGGER.error("HYXi API Inverter Data Rejected: %s", res_q)
 
                     results[sn] = entry
             return results
         except Exception as e:
-            _LOGGER.error("HYXi Code Crash: %s", e, exc_info=True)
+            _LOGGER.error("HYXi Async Code Crash: %s", e, exc_info=True)
             return None
