@@ -1,4 +1,6 @@
 name: "HA Version Preview"
+permissions:
+  contents: read
 
 on:
   schedule:
