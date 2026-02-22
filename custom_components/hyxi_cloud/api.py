@@ -104,7 +104,8 @@ class HyxiApiClient:
 
             for p in plants:
                 plant_id = p.get("plantId")
-                if not plant_id: continue
+                if not plant_id: 
+                    continue
 
                 # 2. Get Devices
                 d_path = "/api/plant/v1/devicePage"
@@ -125,7 +126,8 @@ class HyxiApiClient:
 
                 for d in devices:
                     sn = d.get("deviceSn")
-                    if not sn: continue
+                    if not sn: 
+                        continue
                     
                     is_inverter = d.get("deviceType") == "HYBRID_INVERTER"
                     
@@ -153,7 +155,8 @@ class HyxiApiClient:
                             
                             def get_f(key, mult=1.0):
                                 try: return round(float(m_raw.get(key, 0)) * mult, 2)
-                                except: return 0.0
+                                except: 
+                                    return 0.0
 
                             grid = get_f("gridP", 1000.0)
                             pbat = get_f("pbat")

@@ -41,7 +41,8 @@ SENSOR_TYPES = [
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    if not coordinator.data: return
+    if not coordinator.data:
+        return
 
     entities = []
     for sn, dev_data in coordinator.data.items():
@@ -123,19 +124,25 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
         value = metrics.get(self.entity_description.key)
-        if value is None or value == "": return None
+        if value is None or value == "": 
+            return None
 
         if self.entity_description.key in ["batSoc", "batSoh"]:
-            try: return int(round(float(value)))
-            except: return None
+            try: 
+                return int(round(float(value)))
+            except (ValueError, TypeError):
+                return None
 
         if self.entity_description.key == "collectTime":
-            try: return datetime.fromtimestamp(int(value), tz=timezone.utc)
-            except: return None
+            try: 
+                return datetime.fromtimestamp(int(value), tz=timezone.utc)
+            except (ValueError, TypeError):
+                return None
 
         if self.entity_description.key == "last_seen":
             dt = dt_util.parse_datetime(str(value))
-            if dt: return dt if dt.tzinfo else dt.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+            if dt: 
+                return dt if dt.tzinfo else dt.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
             return None
 
         return value
