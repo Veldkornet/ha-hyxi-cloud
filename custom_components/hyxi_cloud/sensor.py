@@ -1,15 +1,15 @@
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorEntityDescription,
-    SensorDeviceClass,
-    SensorStateClass,
-)
-from homeassistant.const import EntityCategory
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
-from datetime import datetime, timezone
 import logging
+from datetime import UTC
+from datetime import datetime
+
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntityDescription
+from homeassistant.components.sensor import SensorStateClass
+from homeassistant.const import EntityCategory
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -26,12 +26,12 @@ SENSOR_TYPES = [
     SensorEntityDescription(key="grid_export", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:transmission-tower-export"),
     SensorEntityDescription(key="bat_charging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-up"),
     SensorEntityDescription(key="bat_discharging", native_unit_of_measurement="W", device_class=SensorDeviceClass.POWER, state_class=SensorStateClass.MEASUREMENT, icon="mdi:battery-arrow-down"),
-    
+
     # Energy Sensors
     SensorEntityDescription(key="totalE", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
     SensorEntityDescription(key="bat_charge_total", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
     SensorEntityDescription(key="bat_discharge_total", native_unit_of_measurement="kWh", device_class=SensorDeviceClass.ENERGY, state_class=SensorStateClass.TOTAL_INCREASING),
-    
+
     # Diagnostics
     SensorEntityDescription(key="batSoh", native_unit_of_measurement="%", state_class=SensorStateClass.MEASUREMENT, icon="mdi:heart-pulse", suggested_display_precision=0),
     SensorEntityDescription(key="tinv", native_unit_of_measurement="°C", device_class=SensorDeviceClass.TEMPERATURE, state_class=SensorStateClass.MEASUREMENT),
@@ -48,7 +48,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for sn, dev_data in coordinator.data.items():
         # Check model to decide which sensors to attach
         is_collector = dev_data.get("model") == "Data Collector"
-        
+
         for description in SENSOR_TYPES:
             # Logic: If it's a Collector, only give it 'last_seen' to keep it in the registry.
             # Otherwise, give the Inverter everything.
@@ -57,27 +57,27 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     entities.append(HyxiSensor(coordinator, sn, description))
             else:
                 entities.append(HyxiSensor(coordinator, sn, description))
-                
+
     async_add_entities(entities)
 
 class HyxiSensor(CoordinatorEntity, SensorEntity):
-    _attr_has_entity_name = True 
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, sn, description):
         super().__init__(coordinator)
         self.entity_description = description
         self._sn = sn # This is the Inverter/Collector SN
-        
+
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
-        
+
         # 1. Define which sensors belong to the physical battery
         BATTERY_SENSORS = [
-            "batSoc", "pbat", "bat_charging", "bat_discharging", 
+            "batSoc", "pbat", "bat_charging", "bat_discharging",
             "bat_charge_total", "bat_discharge_total", "batSoh"
         ]
-        
+
         # 2. Logic to determine if this entity belongs to the Inverter or a Battery
         if description.key in BATTERY_SENSORS and bat_sn:
             self._actual_sn = bat_sn
@@ -102,7 +102,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 "hw_version": dev_data.get("hw_version"),
                 "serial_number": sn,
             }
-        
+
         # Unique ID must use the Battery SN if it's a battery sensor to allow multiple batteries
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
         # The dynamic translation link
@@ -114,29 +114,29 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         registry = er.async_get(self.hass)
         # Use _actual_sn so the entity ID also matches the specific battery
         new_entity_id = f"sensor.hyxi_{self._actual_sn}_{self.entity_description.key.lower()}"
-        
+
         if self.entity_id != new_entity_id:
             try:
                 registry.async_update_entity(self.entity_id, new_entity_id=new_entity_id)
-            except Exception: 
+            except Exception:
                 pass
 
     @property
     def native_value(self):
         metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
         value = metrics.get(self.entity_description.key)
-        if value is None or value == "": 
+        if value is None or value == "":
             return None
 
         if self.entity_description.key in ["batSoc", "batSoh"]:
-            try: 
+            try:
                 return int(round(float(value)))
             except (ValueError, TypeError):
                 return None
 
         if self.entity_description.key == "collectTime":
-            try: 
-                return datetime.fromtimestamp(int(value), tz=timezone.utc)
+            try:
+                return datetime.fromtimestamp(int(value), tz=UTC)
             except (ValueError, TypeError):
                 return None
 
