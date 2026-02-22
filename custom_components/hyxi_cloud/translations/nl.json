@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Verbinden met HYXi Cloud",
+        "description": "Voer uw Open API-gegevens in. U kunt deze genereren op https://open.hyxicloud.com/",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbinding met HYXi-servers mislukt",
+      "invalid_auth": "Ongeldige Access Key of Secret Key",
+      "unknown": "Onverwachte fout opgetreden"
+    },
+    "abort": {
+      "already_configured": "Dit HYXi-account is al geconfigureerd."
+    }
+  }
+}
