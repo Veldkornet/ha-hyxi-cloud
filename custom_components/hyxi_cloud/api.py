@@ -154,8 +154,9 @@ class HyxiApiClient:
                             entry["metrics"].update(m_raw)
                             
                             def get_f(key, mult=1.0):
-                                try: return round(float(m_raw.get(key, 0)) * mult, 2)
-                                except: 
+                                try: 
+                                    return round(float(m_raw.get(key, 0)) * mult, 2)
+                                except (ValueError, TypeError, AttributeError): 
                                     return 0.0
 
                             grid = get_f("gridP", 1000.0)

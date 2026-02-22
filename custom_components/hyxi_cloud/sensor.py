@@ -118,7 +118,8 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if self.entity_id != new_entity_id:
             try:
                 registry.async_update_entity(self.entity_id, new_entity_id=new_entity_id)
-            except Exception: pass
+            except Exception: 
+                pass
 
     @property
     def native_value(self):
