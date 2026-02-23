@@ -3,17 +3,17 @@
     "step": {
       "user": {
         "title": "Verbinden met HYXi Cloud",
-        "description": "Voer uw Open API-gegevens in van {link}",
+        "description": "Voer uw Open API-inloggegevens in. U kunt deze genereren via {link}",
         "data": {
-          "access_key": "Access Key (AK)",
-          "secret_key": "Secret Key (SK)"
+          "access_key": "Toegangssleutel (AK)",
+          "secret_key": "Geheime sleutel (SK)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Verbinding met HYXi-servers mislukt",
-      "invalid_auth": "Ongeldige Access Key of Secret Key",
-      "unknown": "Onverwachte fout opgetreden"
+      "cannot_connect": "Kan geen verbinding maken met HYXi-servers",
+      "invalid_auth": "Ongeldige Toegangssleutel of Geheime sleutel",
+      "unknown": "Er is een onverwachte fout opgetreden"
     },
     "abort": {
       "already_configured": "Dit HYXi-account is al geconfigureerd."
@@ -21,21 +21,21 @@
   },
   "entity": {
     "sensor": {
-      "batsoc": { "name": "Batterij SOC" },
+      "batsoc": { "name": "Batterij laadstatus" },
       "pbat": { "name": "Batterijvermogen" },
-      "ppv": { "name": "Zonne-energie" },
+      "ppv": { "name": "Zonnestroom" },
       "home_load": { "name": "Huisverbruik" },
-      "grid_import": { "name": "Netimport" },
-      "grid_export": { "name": "Netexport" },
-      "bat_charging": { "name": "Batterij laden" },
+      "grid_import": { "name": "Stroomafname (net)" },
+      "grid_export": { "name": "Teruglevering (net)" },
+      "bat_charging": { "name": "Batterij opladen" },
       "bat_discharging": { "name": "Batterij ontladen" },
-      "totale": { "name": "Totale opbrengst" },
-      "bat_charge_total": { "name": "Totaal batterij geladen" },
-      "bat_discharge_total": { "name": "Totaal batterij ontladen" },
-      "batsoh": { "name": "Batterij SOH" },
-      "tinv": { "name": "Inverter temperatuur" },
-      "collecttime": { "name": "Laatste data update" },
-      "last_seen": { "name": "Laatste cloud sync" }
+      "totale": { "name": "Totale energieopbrengst" },
+      "bat_charge_total": { "name": "Totale batterijlading" },
+      "bat_discharge_total": { "name": "Totale batterijontlading" },
+      "batsoh": { "name": "Batterij gezondheid" },
+      "tinv": { "name": "Omvormer temperatuur" },
+      "collecttime": { "name": "Tijd van gegevensverzameling" },
+      "last_seen": { "name": "Laatste cloud-synchronisatie" }
     }
   }
 }

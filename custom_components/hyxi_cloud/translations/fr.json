@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connexion à HYXi Cloud",
-        "description": "Entrez vos identifiants Open API de {link}",
+        "title": "Se connecter au cloud HYXi",
+        "description": "Entrez vos identifiants Open API. Vous pouvez les générer sur {link}",
         "data": {
           "access_key": "Clé d'accès (AK)",
           "secret_key": "Clé secrète (SK)"
@@ -13,7 +13,7 @@
     "error": {
       "cannot_connect": "Échec de la connexion aux serveurs HYXi",
       "invalid_auth": "Clé d'accès ou Clé secrète invalide",
-      "unknown": "Une erreur inattendue est survenue"
+      "unknown": "Une erreur inattendue s'est produite"
     },
     "abort": {
       "already_configured": "Ce compte HYXi est déjà configuré."
@@ -21,21 +21,21 @@
   },
   "entity": {
     "sensor": {
-      "batsoc": { "name": "SOC Batterie" },
-      "pbat": { "name": "Puissance batterie" },
+      "batsoc": { "name": "État de charge de la batterie" },
+      "pbat": { "name": "Puissance de la batterie" },
       "ppv": { "name": "Puissance solaire" },
-      "home_load": { "name": "Charge domestique" },
-      "grid_import": { "name": "Importation réseau" },
-      "grid_export": { "name": "Exportation réseau" },
+      "home_load": { "name": "Consommation du domicile" },
+      "grid_import": { "name": "Importation du réseau" },
+      "grid_export": { "name": "Exportation vers le réseau" },
       "bat_charging": { "name": "Charge de la batterie" },
       "bat_discharging": { "name": "Décharge de la batterie" },
-      "totale": { "name": "Rendement total" },
-      "bat_charge_total": { "name": "Charge totale batterie" },
-      "bat_discharge_total": { "name": "Décharge totale batterie" },
-      "batsoh": { "name": "SOH Batterie" },
+      "totale": { "name": "Production totale d'énergie" },
+      "bat_charge_total": { "name": "Charge totale de la batterie" },
+      "bat_discharge_total": { "name": "Décharge totale de la batterie" },
+      "batsoh": { "name": "État de santé de la batterie" },
       "tinv": { "name": "Température de l'onduleur" },
-      "collecttime": { "name": "Dernière mise à jour des données" },
-      "last_seen": { "name": "Dernière synchro cloud" }
+      "collecttime": { "name": "Heure de collecte des données" },
+      "last_seen": { "name": "Dernière synchronisation cloud" }
     }
   }
 }
