@@ -20,6 +20,11 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Statut du Cloud"
+      }
+    },
     "sensor": {
       "batsoc": { "name": "État de charge de la batterie" },
       "pbat": { "name": "Puissance de la batterie" },

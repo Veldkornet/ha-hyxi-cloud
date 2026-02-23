@@ -21,6 +21,11 @@
   },
   "entity": {
     "sensor": {
+      "binary_sensor": {
+      "connectivity": {
+        "name": "Cloud-status"
+      }
+    },
       "batsoc": { "name": "Batterij laadstatus" },
       "pbat": { "name": "Batterijvermogen" },
       "ppv": { "name": "Zonnestroom" },

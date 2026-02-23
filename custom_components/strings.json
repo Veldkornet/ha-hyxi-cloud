@@ -21,6 +21,11 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Cloud Status"
+      }
+    },
     "sensor": {
       "batsoc": { "name": "Battery State of Charge" },
       "pbat": { "name": "Battery Power" },
