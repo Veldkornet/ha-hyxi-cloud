@@ -124,17 +124,68 @@ async def async_setup_entry(hass, entry, async_add_entities):
         return
 
     entities = []
+
+    # Define which sensors apply to which types
+    INVERTER_SENSORS = ["ppv", "totalE", "tinv"]
+    BATTERY_SENSORS = [
+        "batSoc",
+        "pbat",
+        "batSoh",
+        "bat_charge_total",
+        "bat_discharge_total",
+        "bat_charging",
+        "bat_discharging",
+    ]
+    METER_SENSORS = ["grid_import", "grid_export", "home_load"]
+
+    # Split the diagnostics so we don't give data timestamps to datasticks
+    HEARTBEAT_SENSOR = ["last_seen"]
+    DATA_TIME_SENSOR = ["collectTime"]
+
     for sn, dev_data in coordinator.data.items():
-        # Check model to decide which sensors to attach
-        is_collector = dev_data.get("model") == "Data Collector"
+        device_type = dev_data.get("device_type_code", "")
 
         for description in SENSOR_TYPES:
-            # Logic: If it's a Collector, only give it 'last_seen' to keep it in the registry.
-            # Otherwise, give the Inverter everything.
-            if is_collector:
-                if description.key == "last_seen":
-                    entities.append(HyxiSensor(coordinator, sn, description))
-            else:
+            key = description.key
+            should_add = False
+
+            # 1. Heartbeat: Every single device gets this
+            if key in HEARTBEAT_SENSOR:
+                should_add = True
+
+            # 2. Collect Time: Everything gets this EXCEPT the dumb network sticks
+            elif key in DATA_TIME_SENSOR and device_type not in [
+                "COLLECTOR",
+                "DMU",
+                "OPTIMIZER",
+            ]:
+                should_add = True
+
+            # 3. Hybrid Inverters (The big ones that do everything)
+            elif "HYBRID" in device_type or "ALL_IN_ONE" in device_type:
+                if (
+                    key in INVERTER_SENSORS
+                    or key in BATTERY_SENSORS
+                    or key in METER_SENSORS
+                ):
+                    should_add = True
+
+            # 4. Basic Inverters (String, Micro, etc. - No battery or meter attached)
+            elif "INVERTER" in device_type:
+                if key in INVERTER_SENSORS:
+                    should_add = True
+
+            # 5. Dedicated Batteries (AC Battery or EMS)
+            elif "BATTERY" in device_type or "EMS" in device_type:
+                if key in BATTERY_SENSORS:
+                    should_add = True
+
+            # 6. Dedicated Meters
+            elif "METER" in device_type:
+                if key in METER_SENSORS:
+                    should_add = True
+
+            if should_add:
                 entities.append(HyxiSensor(coordinator, sn, description))
 
     async_add_entities(entities)

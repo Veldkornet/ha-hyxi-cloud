@@ -70,12 +70,30 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch data from API asynchronously."""
         try:
-            # 3. We now AWAIT the call directly. No executor needed!
+            # We fetch all device data (Inverters, Collectors, etc.)
             data = await self.client.get_all_device_data()
 
+            _LOGGER.debug("Raw HYXi API Data: %s", data)
+
+            # 1. Catch actual API failures (network drops, bad tokens)
             if data is None:
-                raise UpdateFailed("Failed to communicate with HYXi Cloud API")
+                raise UpdateFailed(
+                    "Failed to communicate with HYXi Cloud API or token rejected."
+                )
+
+            # 2. Catch successful API calls that just have no devices
+            if not data:
+                _LOGGER.warning(
+                    "HYXi Cloud returned no device data. Does this account have devices linked?"
+                )
+                return {}
 
             return data
+
+        except UpdateFailed:
+            # Re-raise so HA handles the specialized error correctly
+            raise
         except Exception as err:
+            # Log the full error locally so you can debug it
+            _LOGGER.error("Unexpected error fetching HYXi data: %s", err)
             raise UpdateFailed(f"Error communicating with HYXi API: {err}") from err
