@@ -1,4 +1,4 @@
-name: "HA Version Preview"
+name: "HomeAssistant Preview"
 permissions:
   contents: read
 
