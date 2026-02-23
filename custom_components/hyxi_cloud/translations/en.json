@@ -21,7 +21,7 @@
   },
   "entity": {
     "sensor": {
-      "batsoc": { "name": "Battery SOC" },
+      "batsoc": { "name": "Battery State of Charge" },
       "pbat": { "name": "Battery Power" },
       "ppv": { "name": "Solar Power" },
       "home_load": { "name": "Home Load" },
@@ -29,12 +29,12 @@
       "grid_export": { "name": "Grid Export" },
       "bat_charging": { "name": "Battery Charging" },
       "bat_discharging": { "name": "Battery Discharging" },
-      "totale": { "name": "Lifetime Yield" },
+      "totale": { "name": "Total Energy Yield" },
       "bat_charge_total": { "name": "Total Battery Charge" },
       "bat_discharge_total": { "name": "Total Battery Discharge" },
-      "batsoh": { "name": "Battery SOH" },
+      "batsoh": { "name": "Battery State of Health" },
       "tinv": { "name": "Inverter Temperature" },
-      "collecttime": { "name": "Last Data Update" },
+      "collecttime": { "name": "Data Collected Time" },
       "last_seen": { "name": "Last Cloud Sync" }
     }
   }

@@ -145,19 +145,25 @@ class HyxiApiClient:
                     if not sn:
                         continue
 
-                    is_inverter = d.get("deviceType") == "HYBRID_INVERTER"
+                    # 1. Dynamically capture the true device type
+                    dev_type = d.get("deviceType") or "UNKNOWN"
 
+                    # Create a friendly fallback name for the model
+                    friendly_name = dev_type.replace("_", " ").title()
+
+                    # 2. Add 'device_type_code' to the entry so sensor.py can read it!
                     entry = {
                         "sn": sn,
-                        "device_name": d.get("deviceName")
-                        or (f"Inverter {sn}" if is_inverter else f"Collector {sn}"),
-                        "model": "Hybrid Inverter" if is_inverter else "Data Collector",
+                        "device_name": d.get("deviceName") or f"{friendly_name} {sn}",
+                        "model": friendly_name,
+                        "device_type_code": dev_type,
                         "sw_version": d.get("swVer"),
                         "hw_version": d.get("hwVer"),
                         "metrics": {"last_seen": now},
                     }
 
-                    if is_inverter:
+                    # 3. Fetch detailed metrics for EVERYTHING except the basic Collector stick
+                    if dev_type != "COLLECTOR":
                         q_path = "/api/device/v1/queryDeviceData"
                         async with self.session.get(
                             f"{self.base_url}{q_path}?deviceSn={sn}",
@@ -175,30 +181,37 @@ class HyxiApiClient:
                             }
                             entry["metrics"].update(m_raw)
 
+                            # Helper function for safe math
                             def get_f(key, data_map, mult=1.0):
                                 try:
                                     return round(float(data_map.get(key, 0)) * mult, 2)
                                 except (ValueError, TypeError, AttributeError):
                                     return 0.0
 
-                            grid = get_f("gridP", m_raw, 1000.0)  # Pass m_raw here
-                            pbat = get_f("pbat", m_raw)  # And here
+                            # 4. Only do Hybrid math if the keys actually exist in the data
+                            if "gridP" in m_raw or "pbat" in m_raw:
+                                grid = get_f("gridP", m_raw, 1000.0)
+                                pbat = get_f("pbat", m_raw)
 
-                            entry["metrics"].update(
-                                {
-                                    "home_load": get_f("ph1Loadp", m_raw)
-                                    + get_f("ph2Loadp", m_raw)
-                                    + get_f("ph3Loadp", m_raw),
-                                    "grid_import": abs(grid) if grid < 0 else 0,
-                                    "grid_export": grid if grid > 0 else 0,
-                                    "bat_charging": abs(pbat) if pbat < 0 else 0,
-                                    "bat_discharging": pbat if pbat > 0 else 0,
-                                    "bat_charge_total": get_f("batCharge", m_raw),
-                                    "bat_discharge_total": get_f("batDisCharge", m_raw),
-                                }
-                            )
+                                entry["metrics"].update(
+                                    {
+                                        "home_load": get_f("ph1Loadp", m_raw)
+                                        + get_f("ph2Loadp", m_raw)
+                                        + get_f("ph3Loadp", m_raw),
+                                        "grid_import": abs(grid) if grid < 0 else 0,
+                                        "grid_export": grid if grid > 0 else 0,
+                                        "bat_charging": abs(pbat) if pbat < 0 else 0,
+                                        "bat_discharging": pbat if pbat > 0 else 0,
+                                        "bat_charge_total": get_f("batCharge", m_raw),
+                                        "bat_discharge_total": get_f(
+                                            "batDisCharge", m_raw
+                                        ),
+                                    }
+                                )
                         else:
-                            _LOGGER.error("HYXi API Inverter Data Rejected: %s", res_q)
+                            _LOGGER.error(
+                                f"HYXi API Data Rejected for {sn} ({dev_type}): {res_q}"
+                            )
 
                     results[sn] = entry
             return results

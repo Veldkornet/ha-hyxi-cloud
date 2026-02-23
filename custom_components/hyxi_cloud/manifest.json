@@ -7,5 +7,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Veldkornet/ha-hyxi-cloud/issues",
   "requirements": ["aiohttp>=3.9.0"],
-  "version": "1.0.8"
+  "version": "1.0.9"
 }
