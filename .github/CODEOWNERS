@@ -1,0 +1,5 @@
+# This will make @Veldkornet a required reviewer for all files
+* @Veldkornet
+
+# Optional: If you want to be specifically tagged for the core logic
+# custom_components/hyxi_cloud/sensor.py    @Veldkornet
