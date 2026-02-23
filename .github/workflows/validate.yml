@@ -3,8 +3,18 @@ name: HomeAssistant
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - '**.jpg'
+      - '**.png'
+      - 'docs/**'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - '**.jpg'
+      - '**.png'
+      - 'docs/**'
 
 permissions:
   contents: read
