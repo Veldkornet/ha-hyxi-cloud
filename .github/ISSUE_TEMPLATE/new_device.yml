@@ -1,0 +1,36 @@
+name: New Device Support
+description: Submit debug logs to get an untested HYXi device officially supported
+title: "[Device]: "
+labels: ["enhancement", "new-device"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Awesome! You have a device that hasn't been mapped yet. 
+        **To add support for it, I absolutely need your Home Assistant debug logs.**
+  - type: input
+    id: device_type
+    attributes:
+      label: HYXi Device Type / Model
+      description: What specific hardware are you trying to add? (e.g., Smart Meter, String Inverter, Optimizer)
+      placeholder: e.g., STRING_INVERTER or METER
+    validations:
+      required: true
+  - type: textarea
+    id: sensors_expected
+    attributes:
+      label: What sensors are you expecting?
+      description: What data does this device show in the official HYXi app? (e.g., Grid Voltage, Phase A Current, etc.)
+      placeholder: I expect to see Grid Import, Grid Export, and Voltage...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug Logs (REQUIRED)
+      description: |
+        Please paste your Home Assistant debug logs here. 
+        (Go to Settings > Devices & Services > HYXi Cloud > Enable debug logging. Wait 5 minutes, then Disable and download).
+      render: shell
+    validations:
+      required: true

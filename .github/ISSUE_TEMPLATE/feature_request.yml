@@ -1,0 +1,32 @@
+name: Feature Request
+description: Suggest an idea or improvement for this integration
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in improving the HYXi Cloud integration! Please fill out the details below.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+      placeholder: I want to be able to automate my battery charging overnight, but there is no service to set the reserve limit...
+    validations:
+      required: false
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution or feature you would like to see added.
+      placeholder: It would be great if the integration exposed a `number` entity to control the battery reserve...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+    validations:
+      required: false
