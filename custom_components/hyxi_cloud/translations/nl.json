@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Verbinden met HYXi Cloud",
-        "description": "Voer uw Open API-inloggegevens in. U kunt deze genereren op het [HYXiPOWER Developer Platform]({link}).",
+        "description": "Voer uw Open API-inloggegevens in. U kunt deze genereren op het [HYXiPOWER Ontwikkelaarsplatform]({link}).",
         "data": {
           "access_key": "Toegangssleutel (AK)",
           "secret_key": "Geheime sleutel (SK)"
@@ -11,7 +11,7 @@
       },
       "reauth_confirm": {
         "title": "HYXi Cloud opnieuw verifiëren",
-        "description": "Uw toegangssleutel of geheime sleutel is niet langer geldig. Voer uw nieuwe inloggegevens in om de monitoring te hervatten. U vindt deze op het [HYXiPOWER Developer Platform]({link}).",
+        "description": "Uw Toegangssleutel of Geheime sleutel is niet langer geldig. Voer uw nieuwe inloggegevens in om de zonnepanelen weer te monitoren. U vindt deze op het [HYXiPOWER Ontwikkelaarsplatform]({link}).",
         "data": {
           "access_key": "Toegangssleutel (AK)",
           "secret_key": "Geheime sleutel (SK)"
@@ -19,37 +19,56 @@
       }
     },
     "error": {
-      "cannot_connect": "Verbinding met HYXi-servers mislukt",
-      "invalid_auth": "Ongeldige toegangssleutel of geheime sleutel",
-      "unknown": "Onverwachte fout opgetreden"
+      "cannot_connect": "Kan geen verbinding maken met de HYXi servers",
+      "invalid_auth": "Ongeldige Toegangssleutel of Geheime sleutel",
+      "unknown": "Er is een onverwachte fout opgetreden"
     },
     "abort": {
-      "already_configured": "Dit HYXi-account is al geconfigureerd."
+      "already_configured": "Dit HYXi-account is al geconfigureerd.",
+      "reauth_successful": "Herauthenticatie was succesvol"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXi Systeemconfiguratie",
+        "description": "Configureer optionele functies voor uw HYXi-systeem.",
+        "data": {
+          "enable_virtual_battery": "Geaggregeerde virtuele batterij inschakelen (Vereist 2+ batterijen)"
+        }
+      }
     }
   },
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud-status"
+        "name": "Cloud Status"
       }
     },
     "sensor": {
-      "batsoc": { "name": "Batterij-laadstatus (SoC)" },
+      "batsoc": { "name": "Batterij Laadstatus" },
       "pbat": { "name": "Batterijvermogen" },
-      "ppv": { "name": "Zonne-energievermogen" },
+      "ppv": { "name": "Zonne-energie" },
       "home_load": { "name": "Huisverbruik" },
-      "grid_import": { "name": "Netimport" },
-      "grid_export": { "name": "Netexport" },
-      "bat_charging": { "name": "Batterij laden" },
-      "bat_discharging": { "name": "Batterij ontladen" },
-      "totale": { "name": "Totale opbrengst" },
-      "bat_charge_total": { "name": "Totale batterijlading" },
-      "bat_discharge_total": { "name": "Totale batterij-ontlading" },
-      "batsoh": { "name": "Batterijgezondheid (SoH)" },
-      "tinv": { "name": "Omvormertemperatuur" },
-      "collecttime": { "name": "Data verzameltijd" },
-      "last_seen": { "name": "Laatste cloud-sync" },
-      "last_updated": { "name": "Integratie laatst bijgewerkt" }
+      "grid_import": { "name": "Net-import" },
+      "grid_export": { "name": "Net-export" },
+      "bat_charging": { "name": "Batterij Opladen" },
+      "bat_discharging": { "name": "Batterij Ontladen" },
+      "totale": { "name": "Totale Energieopbrengst" },
+      "bat_charge_total": { "name": "Totale Batterijlading" },
+      "bat_discharge_total": { "name": "Totale Batterijontlading" },
+      "batsoh": { "name": "Batterij Gezondheid" },
+      "tinv": { "name": "Omvormer Temperatuur" },
+      "collecttime": { "name": "Tijd van Gegevensverzameling" },
+      "last_seen": { "name": "Laatste Cloud-synchronisatie" },
+      "integration_last_updated": { "name": "Laatste Integratie-update" },
+      "battery_system_avg_soc": { "name": "Systeem Batterij Gemiddelde Laadstatus" },
+      "battery_system_avg_soh": { "name": "Systeem Batterij Gemiddelde Gezondheid" },
+      "battery_system_total_pbat": { "name": "Systeem Batterijvermogen" },
+      "battery_system_bat_charging": { "name": "Systeem Batterij Opladen" },
+      "battery_system_bat_discharging": { "name": "Systeem Batterij Ontladen" },
+      "battery_system_bat_charge_total": { "name": "Systeem Totale Batterijlading" },
+      "battery_system_bat_discharge_total": { "name": "Systeem Totale Batterijontlading" }
     }
   }
 }

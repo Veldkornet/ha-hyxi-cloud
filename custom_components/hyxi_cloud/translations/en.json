@@ -28,6 +28,17 @@
       "reauth_successful": "Re-authentication was successful"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXi System Configuration",
+        "description": "Configure optional features for your HYXi setup.",
+        "data": {
+          "enable_virtual_battery": "Enable Aggregated Virtual Battery (Requires 2+ batteries)"
+        }
+      }
+    }
+  },
   "entity": {
     "binary_sensor": {
       "connectivity": {
@@ -50,7 +61,14 @@
       "tinv": { "name": "Inverter Temperature" },
       "collecttime": { "name": "Data Collected Time" },
       "last_seen": { "name": "Last Cloud Sync" },
-      "integration_last_updated": { "name": "Integration Last Updated" }
+      "integration_last_updated": { "name": "Integration Last Updated" },
+      "battery_system_avg_soc": { "name": "System Battery State of Charge Average" },
+      "battery_system_avg_soh": { "name": "System Battery State of Health Average" },
+      "battery_system_total_pbat": { "name": "System Battery Power" },
+      "battery_system_bat_charging": { "name": "System Battery Charging" },
+      "battery_system_bat_discharging": { "name": "System Battery Discharging" },
+      "battery_system_bat_charge_total": { "name": "System Total Battery Charge" },
+      "battery_system_bat_discharge_total": { "name": "System Total Battery Discharge" }
     }
   }
 }

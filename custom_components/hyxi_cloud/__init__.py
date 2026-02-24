@@ -58,6 +58,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # 6. Forward the setup to the defined platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Listen for option changes and reload if they happen
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
     return True
 
 
@@ -110,3 +113,52 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             # Only log actual unexpected crashes here
             _LOGGER.error("Unexpected error fetching HYXi data: %s", err)
             raise UpdateFailed(f"Error communicating with HYXi API: {err}") from err
+
+    def get_battery_summary(self):
+        """Calculate aggregated data across all battery units."""
+        if not self.data:
+            return None
+
+        totals = {
+            "total_pbat": 0.0,
+            "avg_soc": 0.0,
+            "avg_soh": 0.0,
+            "bat_charge_total": 0.0,
+            "bat_discharge_total": 0.0,
+            "bat_charging": 0.0,
+            "bat_discharging": 0.0,
+            "count": 0,
+        }
+
+        for _sn, dev in self.data.items():
+            dtype = str(dev.get("device_type_code", "")).upper()
+            if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
+                metrics = dev.get("metrics", {})
+
+                totals["total_pbat"] += float(metrics.get("pbat", 0) or 0)
+                totals["avg_soc"] += float(metrics.get("batSoc", 0) or 0)
+                totals["avg_soh"] += float(metrics.get("batSoh", 0) or 0)
+                totals["bat_charge_total"] += float(
+                    metrics.get("bat_charge_total", 0) or 0
+                )
+                totals["bat_discharge_total"] += float(
+                    metrics.get("bat_discharge_total", 0) or 0
+                )
+                totals["bat_charging"] += float(metrics.get("bat_charging", 0) or 0)
+                totals["bat_discharging"] += float(
+                    metrics.get("bat_discharging", 0) or 0
+                )
+                totals["count"] += 1
+
+        if totals["count"] == 0:
+            return None
+
+        # Calculate average for SoC and SoH across all batteries
+        totals["avg_soc"] = round(totals["avg_soc"] / totals["count"], 1)
+        totals["avg_soh"] = round(totals["avg_soh"] / totals["count"], 1)
+        return totals
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry when options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
