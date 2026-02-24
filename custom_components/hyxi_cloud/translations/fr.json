@@ -2,8 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Se connecter au cloud HYXi",
-        "description": "Entrez vos identifiants Open API. Vous pouvez les générer sur {link}",
+        "title": "Connexion au Cloud HYXi",
+        "description": "Saisissez vos identifiants Open API. Vous pouvez les générer sur la [Plateforme Développeur HYXiPOWER]({link}).",
+        "data": {
+          "access_key": "Clé d'accès (AK)",
+          "secret_key": "Clé secrète (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ré-authentifier le Cloud HYXi",
+        "description": "Votre clé d'accès ou votre clé secrète n'est plus valide. Veuillez saisir vos nouveaux identifiants pour reprendre le suivi. Vous les trouverez sur la [Plateforme Développeur HYXiPOWER]({link}).",
         "data": {
           "access_key": "Clé d'accès (AK)",
           "secret_key": "Clé secrète (SK)"
@@ -12,8 +20,8 @@
     },
     "error": {
       "cannot_connect": "Échec de la connexion aux serveurs HYXi",
-      "invalid_auth": "Clé d'accès ou Clé secrète invalide",
-      "unknown": "Une erreur inattendue s'est produite"
+      "invalid_auth": "Clé d'accès ou clé secrète invalide",
+      "unknown": "Une erreur inattendue est survenue"
     },
     "abort": {
       "already_configured": "Ce compte HYXi est déjà configuré."
@@ -29,18 +37,19 @@
       "batsoc": { "name": "État de charge de la batterie" },
       "pbat": { "name": "Puissance de la batterie" },
       "ppv": { "name": "Puissance solaire" },
-      "home_load": { "name": "Consommation du domicile" },
-      "grid_import": { "name": "Importation du réseau" },
-      "grid_export": { "name": "Exportation vers le réseau" },
-      "bat_charging": { "name": "Charge de la batterie" },
-      "bat_discharging": { "name": "Décharge de la batterie" },
+      "home_load": { "name": "Consommation maison" },
+      "grid_import": { "name": "Importation réseau" },
+      "grid_export": { "name": "Exportation réseau" },
+      "bat_charging": { "name": "Charge batterie" },
+      "bat_discharging": { "name": "Décharge batterie" },
       "totale": { "name": "Production totale d'énergie" },
-      "bat_charge_total": { "name": "Charge totale de la batterie" },
-      "bat_discharge_total": { "name": "Décharge totale de la batterie" },
+      "bat_charge_total": { "name": "Charge totale batterie" },
+      "bat_discharge_total": { "name": "Décharge totale batterie" },
       "batsoh": { "name": "État de santé de la batterie" },
       "tinv": { "name": "Température de l'onduleur" },
       "collecttime": { "name": "Heure de collecte des données" },
-      "last_seen": { "name": "Dernière synchronisation cloud" }
+      "last_seen": { "name": "Dernière synchro cloud" },
+      "last_updated": { "name": "Dernière mise à jour intégration" }
     }
   }
 }

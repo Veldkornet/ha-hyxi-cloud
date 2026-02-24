@@ -3,7 +3,15 @@
     "step": {
       "user": {
         "title": "Mit HYXi Cloud verbinden",
-        "description": "Geben Sie Ihre Open API-Anmeldeinformationen ein. Sie können diese unter {link} generieren",
+        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Diese können Sie auf der [HYXiPOWER Developer Platform]({link}) erstellen.",
+        "data": {
+          "access_key": "Zugriffsschlüssel (AK)",
+          "secret_key": "Geheimer Schlüssel (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "HYXi Cloud neu authentifizieren",
+        "description": "Ihr Zugriffsschlüssel oder geheimer Schlüssel ist nicht mehr gültig. Bitte geben Sie Ihre neuen Zugangsdaten ein, um die Überwachung fortzusetzen. Diese finden Sie auf der [HYXiPOWER Developer Platform]({link}).",
         "data": {
           "access_key": "Zugriffsschlüssel (AK)",
           "secret_key": "Geheimer Schlüssel (SK)"
@@ -11,36 +19,37 @@
       }
     },
     "error": {
-      "cannot_connect": "Verbindung zu HYXi-Servern fehlgeschlagen",
+      "cannot_connect": "Verbindung zu den HYXi-Servern fehlgeschlagen",
       "invalid_auth": "Ungültiger Zugriffsschlüssel oder geheimer Schlüssel",
-      "unknown": "Unerwarteter Fehler aufgetreten"
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten"
     },
     "abort": {
       "already_configured": "Dieses HYXi-Konto ist bereits konfiguriert."
     }
   },
   "entity": {
-    "sensor": {
-      "binary_sensor": {
+    "binary_sensor": {
       "connectivity": {
         "name": "Cloud-Status"
       }
     },
-      "batsoc": { "name": "Batterie Ladezustand" },
+    "sensor": {
+      "batsoc": { "name": "Batterie-Ladestatus (SoC)" },
       "pbat": { "name": "Batterieleistung" },
       "ppv": { "name": "Solarleistung" },
       "home_load": { "name": "Hausverbrauch" },
       "grid_import": { "name": "Netzbezug" },
       "grid_export": { "name": "Netzeinspeisung" },
-      "bat_charging": { "name": "Batterie lädt" },
-      "bat_discharging": { "name": "Batterie entlädt" },
-      "totale": { "name": "Gesamtertrag" },
+      "bat_charging": { "name": "Batterie wird geladen" },
+      "bat_discharging": { "name": "Batterie wird entladen" },
+      "totale": { "name": "Gesamtenergieertrag" },
       "bat_charge_total": { "name": "Gesamte Batterieladung" },
       "bat_discharge_total": { "name": "Gesamte Batterieentladung" },
-      "batsoh": { "name": "Batterie Gesundheitszustand" },
+      "batsoh": { "name": "Batteriezustand (SoH)" },
       "tinv": { "name": "Wechselrichter-Temperatur" },
-      "collecttime": { "name": "Zeitpunkt der Datenerfassung" },
-      "last_seen": { "name": "Letzte Cloud-Synchronisierung" }
+      "collecttime": { "name": "Datenerfassungszeit" },
+      "last_seen": { "name": "Letzter Cloud-Sync" },
+      "last_updated": { "name": "Integration zuletzt aktualisiert" }
     }
   }
 }
