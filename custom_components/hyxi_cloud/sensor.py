@@ -2,14 +2,11 @@ import logging
 from datetime import UTC
 from datetime import datetime
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    EntityCategory,
-    SensorEntityDescription,
-    SensorStateClass,
-)
-from homeassistant.helpers import entity_registry as er
+from homeassistant.components.sensor import EntityCategory
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntityDescription
+from homeassistant.components.sensor import SensorStateClass
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -250,7 +247,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if self.entity_description.key == "collectTime":
             try:
                 return datetime.fromtimestamp(int(value), tz=UTC)
-            except:
+            except (ValueError, TypeError, OSError):
                 return None
 
         if self.entity_description.key == "last_seen":
