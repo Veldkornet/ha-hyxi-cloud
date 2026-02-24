@@ -244,7 +244,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if self.entity_description.key in ["batSoc", "batSoh"]:
             try:
                 return int(round(float(value)))
-            except:
+            except (ValueError, TypeError):
                 return None
 
         if self.entity_description.key == "collectTime":

@@ -8,6 +8,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .api import HyxiApiClient
 from .const import BASE_URL, CONF_ACCESS_KEY, CONF_SECRET_KEY, DOMAIN, PLATFORMS
@@ -36,7 +37,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = HyxiDataUpdateCoordinator(hass, client)
 
     # 4. Fetch initial data
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except ConfigEntryAuthFailed:
+        # If this hits, Home Assistant WILL show the RECONFIGURE button
+        _LOGGER.error("Authentication failed during setup")
+        raise
+    except Exception as err:
+        _LOGGER.warning("HYXi Cloud not ready: %s", err)
+        raise ConfigEntryNotReady(f"Connection error: {err}") from err
 
     # 5. Store the coordinator for use in platforms (sensor.py, etc.)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
@@ -75,30 +84,24 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch data from API asynchronously."""
         try:
-            # Fetch all device data from the API client
             data = await self.client.get_all_device_data()
 
-            _LOGGER.debug("Raw HYXi API Data: %s", data)
+            if data == "auth_failed":
+                # Raise this specifically
+                raise ConfigEntryAuthFailed("Invalid API keys or expired token")
 
-            # Handle cases where the API returns None or errors out
             if data is None:
-                raise UpdateFailed(
-                    "Failed to communicate with HYXi Cloud API or token rejected."
-                )
-
-            # Handle successful calls that return no data
-            if not data:
-                _LOGGER.warning(
-                    "HYXi Cloud returned no device data. Does this account have devices linked?"
-                )
-                return {}
+                raise UpdateFailed("Failed to communicate with HYXi Cloud API.")
 
             return data
 
+        except ConfigEntryAuthFailed:
+            # DO NOT log this as an "Unexpected error"
+            # Just raise it so Home Assistant sees it
+            raise
         except UpdateFailed:
-            # Re-raise UpdateFailed to let Home Assistant handle it
             raise
         except Exception as err:
-            # Catch-all for unexpected errors
+            # Only log actual unexpected crashes here
             _LOGGER.error("Unexpected error fetching HYXi data: %s", err)
             raise UpdateFailed(f"Error communicating with HYXi API: {err}") from err
