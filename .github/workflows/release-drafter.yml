@@ -14,19 +14,16 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      # 1. Check out the repo so the runner can see the manifest.json
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Extract the version string using jq
       - name: Get version from manifest.json
         id: get_version
         run: |
-          # Ensure this path matches your folder structure!
           VERSION=$(jq -r '.version' custom_components/hyxi_cloud/manifest.json)
+          echo "Extracted version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      # 3. Pass the version directly to the Drafter
       - name: Update Release Draft
         uses: release-drafter/release-drafter@v6.2.0
         with:
