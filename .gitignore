@@ -7,7 +7,9 @@ __pycache__/
 *$py.class
 
 # IDEs and Editors
-.vscode/
+# Ignore VSCode personal settings, but keep the tasks
+.vscode/*
+!.vscode/tasks.json
 .idea/
 *.swp
 

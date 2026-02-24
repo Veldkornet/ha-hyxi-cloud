@@ -7,6 +7,15 @@ cd "$SCRIPT_DIR"
 ACTION=$1
 
 case "$ACTION" in
+  sync-git)
+    echo "🔄 Syncing dev branch with main..."
+    git checkout main
+    git pull origin main
+    git checkout dev
+    git rebase main
+    echo "✅ Dev branch is now up to date with Main. Happy coding!"
+    ;;
+    
   start)
     echo "🧹 Wiping old Sandbox..."
     rm -rf ha_testing_config
