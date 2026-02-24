@@ -14,7 +14,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Full list of all sensors you've defined
 SENSOR_TYPES = [
     # Power Sensors
     SensorEntityDescription(
@@ -23,18 +22,21 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
+        icon="mdi:battery",
     ),
     SensorEntityDescription(
         key="pbat",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:flash",
     ),
     SensorEntityDescription(
         key="ppv",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-power",
     ),
     SensorEntityDescription(
         key="home_load",
@@ -77,24 +79,28 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:counter",
     ),
     SensorEntityDescription(
         key="bat_charge_total",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:battery-plus-variant",
     ),
     SensorEntityDescription(
         key="bat_discharge_total",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:battery-minus-variant",
     ),
     # Diagnostics
     SensorEntityDescription(
         key="batSoh",
         native_unit_of_measurement="%",
         state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:heart-pulse",
         suggested_display_precision=0,
     ),
@@ -104,6 +110,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    # Data Integrity
     SensorEntityDescription(
         key="collectTime",
         device_class=SensorDeviceClass.TIMESTAMP,
@@ -115,17 +122,78 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
 ]
+VSYS_SENSORS = [
+    SensorEntityDescription(
+        key="avg_soc",
+        name="Battery State of Charge Average",
+        icon="mdi:battery",
+        native_unit_of_measurement="%",
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="avg_soh",
+        name="Battery State of Health Average",
+        icon="mdi:heart-pulse",
+        native_unit_of_measurement="%",
+        suggested_display_precision=0,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="total_pbat",
+        name="Battery Power",
+        icon="mdi:flash",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="bat_charging",
+        name="Battery Charging",
+        icon="mdi:battery-arrow-up",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="bat_discharging",
+        name="Battery Discharging",
+        icon="mdi:battery-arrow-down",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="bat_charge_total",
+        name="Total Battery Charge",
+        icon="mdi:battery-plus-variant",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    SensorEntityDescription(
+        key="bat_discharge_total",
+        name="Total Battery Discharge",
+        icon="mdi:battery-minus-variant",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+]
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HYXi sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if not coordinator.data:
+        _LOGGER.warning("HYXi Setup: No data available in coordinator during setup")
         return
 
     entities = []
 
-    # Define which sensors apply to which types
+    # Filter constants
     INVERTER_SENSORS = ["ppv", "totalE", "tinv"]
     BATTERY_SENSORS = [
         "batSoc",
@@ -140,9 +208,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     HEARTBEAT_SENSOR = ["last_seen"]
     DATA_TIME_SENSOR = ["collectTime"]
 
-    # 1. Hardware Loop: Add sensors for every physical device found
+    # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
-        device_type = dev_data.get("device_type_code", "")
+        device_type = str(dev_data.get("device_type_code", "")).upper()
+        _LOGGER.debug(
+            "HYXi Setup: Found hardware device %s (Type: %s)", sn, device_type
+        )
 
         for description in SENSOR_TYPES:
             key = description.key
@@ -176,9 +247,40 @@ async def async_setup_entry(hass, entry, async_add_entities):
             if should_add:
                 entities.append(HyxiSensor(coordinator, sn, description))
 
-    # 2. Integration Loop: Add the Service/Bridge sensor exactly ONCE
+    # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
+    # 3. Aggregate System View
+    battery_sns = []
+    for sn, dev in coordinator.data.items():
+        dtype = str(dev.get("device_type_code", "")).upper()
+        if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
+            battery_sns.append(sn)
+
+    # RULE 1: Must have more than 1 battery
+    if len(battery_sns) > 1:
+        # RULE 2: Must be enabled in the configuration menu
+        enable_virtual = entry.options.get("enable_virtual_battery", False)
+
+        if enable_virtual:
+            _LOGGER.debug("HYXi Aggregator: Creating 'Battery System' entities...")
+            for description in VSYS_SENSORS:
+                entities.append(
+                    HyxiBatterySystemSensor(coordinator, entry, description)
+                )
+        else:
+            _LOGGER.debug(
+                "HYXi Aggregator: Multiple batteries found, but virtual battery is disabled in options."
+            )
+    else:
+        _LOGGER.debug(
+            "HYXi Aggregator: 1 or 0 batteries found. Skipping virtual battery setup."
+        )
+
+    # Final registration
+    _LOGGER.debug(
+        "HYXi Setup: Handing off %s entities to Home Assistant", len(entities)
+    )
     async_add_entities(entities)
 
 
@@ -196,7 +298,8 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
-        BATTERY_SENSORS = [
+        # Battery Logic for linking
+        BAT_KEYS = [
             "batSoc",
             "pbat",
             "bat_charging",
@@ -206,7 +309,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             "batSoh",
         ]
 
-        if description.key in BATTERY_SENSORS and bat_sn:
+        if description.key in BAT_KEYS and bat_sn:
             self._actual_sn = bat_sn
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
@@ -243,21 +346,18 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 return int(round(float(value)))
             except (ValueError, TypeError):
                 return None
-
         if self.entity_description.key == "collectTime":
             try:
                 return datetime.fromtimestamp(int(value), tz=UTC)
             except (ValueError, TypeError, OSError):
                 return None
-
         if self.entity_description.key == "last_seen":
             return dt_util.parse_datetime(str(value))
-
         return value
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
-    """Diagnostic sensor for the Integration/Cloud Bridge status."""
+    """Diagnostic sensor for the Integration health."""
 
     _attr_has_entity_name = True
     _attr_device_class = SensorDeviceClass.TIMESTAMP
@@ -276,15 +376,44 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Return if the sensor is available."""
-        # This uses the standard boolean provided by the coordinator
         return self.coordinator.last_update_success
 
     @property
     def native_value(self):
-        """Return the last successful update time."""
         if self.coordinator.last_update_success:
-            # We use the Home Assistant utility to get current UTC time
-            # Since the coordinator just succeeded, 'now' is our last update time
             return dt_util.utcnow()
         return None
+
+
+class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
+    """Virtual sensor representing the combined battery storage."""
+
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, entry, description):
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._key = description.key
+
+        # Using the original Unique ID
+        self._attr_unique_id = f"hyxi_vsys_{entry.entry_id}_{description.key}"
+
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"hyxi_system_{entry.entry_id}")},
+            "name": "HYXi Battery System",
+            "manufacturer": "HYXi Power",
+            "model": "Aggregated Storage",
+        }
+
+    @property
+    def native_value(self):
+        """Value with floating point protection."""
+        summary = self.coordinator.get_battery_summary()
+        if not summary:
+            return None
+        value = summary.get(self._key)
+
+        # Keep the floating point fix
+        if value is not None and isinstance(value, (int, float)):
+            return round(float(value), 1)
+        return value

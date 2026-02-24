@@ -2,6 +2,7 @@ import logging
 
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import HyxiApiClient
@@ -23,6 +24,12 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for HYXi Cloud."""
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return HyxiOptionsFlowHandler(config_entry)
 
     VERSION = 1
 
@@ -97,3 +104,25 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={"link": BASE_URL},
         )
+
+
+class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle HYXi optional settings."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self._config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        # Default to False (Off)
+        current_config = self._config_entry.options.get("enable_virtual_battery", False)
+
+        options_schema = vol.Schema(
+            {vol.Optional("enable_virtual_battery", default=current_config): bool}
+        )
+
+        return self.async_show_form(step_id="init", data_schema=options_schema)

@@ -87,6 +87,11 @@ Or alternatively, add the integration with the following:
 
 1. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
 
+### Optional Features (Options Flow)
+
+Once installed, you can click the **Configure** button on the HYXi integration card to access optional features:
+* **Enable Aggregated Virtual Battery:** If you have 2 or more physical batteries, check this box to dynamically spawn "System" sensors that combine your battery data into single, easy-to-read metrics for your dashboards.
+
 ## 🐛 Troubleshooting & Debugging
 
 If you have a device that is not showing the correct sensors, or if you are opening a bug report, please include your debug logs! This allows me to see exactly what the HYXi API is returning for your specific hardware.
