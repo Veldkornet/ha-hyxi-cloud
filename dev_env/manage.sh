@@ -8,12 +8,26 @@ ACTION=$1
 
 case "$ACTION" in
   sync-git)
-    echo "🔄 Syncing dev branch with main..."
+    echo "☁️  Fetching latest from GitHub..."
+    git fetch --all
+
+    echo "🏠 Updating local 'main'..."
     git checkout main
     git pull origin main
+
+    echo "🛠️  Updating local 'dev'..."
     git checkout dev
-    git rebase main
-    echo "✅ Dev branch is now up to date with Main. Happy coding!"
+    git pull origin dev
+
+    echo "🔀 Merging 'main' into 'dev'..."
+    if git merge main -m "chore: sync with main"; then
+        echo "✅ Everything is up to date and in sync!"
+    else
+        echo "⚠️  CONFLICTS FOUND!"
+        echo "Git couldn't auto-merge. Look at the red files in your sidebar."
+        echo "Fix them, save, and commit to finish the sync."
+        exit 1
+    fi
     ;;
     
   start)
