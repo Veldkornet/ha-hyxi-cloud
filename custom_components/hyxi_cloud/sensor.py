@@ -64,14 +64,14 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:battery-plus-variant",
+        icon="mdi:battery-arrow-up",
     ),
     SensorEntityDescription(
         key="bat_discharging",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:battery-minus-variant",
+        icon="mdi:battery-arrow-down",
     ),
     # Energy Sensors
     SensorEntityDescription(
@@ -86,14 +86,14 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-arrow-up",
+        icon="mdi:battery-plus-variant",
     ),
     SensorEntityDescription(
         key="bat_discharge_total",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-arrow-down",
+        icon="mdi:battery-minus-variant",
     ),
     # Diagnostics
     SensorEntityDescription(
@@ -152,7 +152,7 @@ VSYS_SENSORS = [
     SensorEntityDescription(
         key="bat_charging",
         name="Battery Charging",
-        icon="mdi:battery-plus-variant",
+        icon="mdi:battery-arrow-up",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -160,7 +160,7 @@ VSYS_SENSORS = [
     SensorEntityDescription(
         key="bat_discharging",
         name="Battery Discharging",
-        icon="mdi:battery-minus-variant",
+        icon="mdi:battery-arrow-down",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -168,7 +168,7 @@ VSYS_SENSORS = [
     SensorEntityDescription(
         key="bat_charge_total",
         name="Total Battery Charge",
-        icon="mdi:battery-arrow-up",
+        icon="mdi:battery-plus-variant",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -176,7 +176,7 @@ VSYS_SENSORS = [
     SensorEntityDescription(
         key="bat_discharge_total",
         name="Total Battery Discharge",
-        icon="mdi:battery-arrow-down",
+        icon="mdi:battery-minus-variant",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
