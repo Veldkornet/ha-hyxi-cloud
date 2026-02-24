@@ -2,12 +2,11 @@ import logging
 from datetime import UTC
 from datetime import datetime
 
+from homeassistant.components.sensor import EntityCategory
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
-from homeassistant.const import EntityCategory
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -15,7 +14,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Full list of all sensors you've defined (batSn removed!)
+# Full list of all sensors you've defined
 SENSOR_TYPES = [
     # Power Sensors
     SensorEntityDescription(
@@ -119,6 +118,7 @@ SENSOR_TYPES = [
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up HYXi sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if not coordinator.data:
         return
@@ -137,11 +137,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
         "bat_discharging",
     ]
     METER_SENSORS = ["grid_import", "grid_export", "home_load"]
-
-    # Split the diagnostics so we don't give data timestamps to datasticks
     HEARTBEAT_SENSOR = ["last_seen"]
     DATA_TIME_SENSOR = ["collectTime"]
 
+    # 1. Hardware Loop: Add sensors for every physical device found
     for sn, dev_data in coordinator.data.items():
         device_type = dev_data.get("device_type_code", "")
 
@@ -149,19 +148,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
             key = description.key
             should_add = False
 
-            # 1. Heartbeat: Every single device gets this
             if key in HEARTBEAT_SENSOR:
                 should_add = True
-
-            # 2. Collect Time: Everything gets this EXCEPT the dumb network sticks
             elif key in DATA_TIME_SENSOR and device_type not in [
                 "COLLECTOR",
                 "DMU",
                 "OPTIMIZER",
             ]:
                 should_add = True
-
-            # 3. Hybrid Inverters (The big ones that do everything)
             elif "HYBRID" in device_type or "ALL_IN_ONE" in device_type:
                 if (
                     key in INVERTER_SENSORS
@@ -169,18 +163,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     or key in METER_SENSORS
                 ):
                     should_add = True
-
-            # 4. Basic Inverters (String, Micro, etc. - No battery or meter attached)
             elif "INVERTER" in device_type:
                 if key in INVERTER_SENSORS:
                     should_add = True
-
-            # 5. Dedicated Batteries (AC Battery or EMS)
             elif "BATTERY" in device_type or "EMS" in device_type:
                 if key in BATTERY_SENSORS:
                     should_add = True
-
-            # 6. Dedicated Meters
             elif "METER" in device_type:
                 if key in METER_SENSORS:
                     should_add = True
@@ -188,22 +176,26 @@ async def async_setup_entry(hass, entry, async_add_entities):
             if should_add:
                 entities.append(HyxiSensor(coordinator, sn, description))
 
+    # 2. Integration Loop: Add the Service/Bridge sensor exactly ONCE
+    entities.append(HyxiLastUpdateSensor(coordinator, entry))
+
     async_add_entities(entities)
 
 
 class HyxiSensor(CoordinatorEntity, SensorEntity):
+    """Representation of a Physical HYXi Sensor."""
+
     _attr_has_entity_name = True
 
     def __init__(self, coordinator, sn, description):
         super().__init__(coordinator)
         self.entity_description = description
-        self._sn = sn  # This is the Inverter/Collector SN
+        self._sn = sn
 
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
-        # 1. Define which sensors belong to the physical battery
         BATTERY_SENSORS = [
             "batSoc",
             "pbat",
@@ -214,21 +206,18 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             "batSoh",
         ]
 
-        # 2. Logic to determine if this entity belongs to the Inverter or a Battery
         if description.key in BATTERY_SENSORS and bat_sn:
             self._actual_sn = bat_sn
-            # Battery Device Setup
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
                 "name": f"Battery {bat_sn}",
                 "manufacturer": "HYXi Power",
                 "model": "Energy Storage System",
                 "serial_number": bat_sn,
-                "via_device": (DOMAIN, sn),  # This links the Battery to the Inverter
+                "via_device": (DOMAIN, sn),
             }
         else:
             self._actual_sn = sn
-            # Inverter / Collector Device Setup
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, sn)},
                 "name": dev_data.get("device_name", f"Device {sn}"),
@@ -239,29 +228,8 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 "serial_number": sn,
             }
 
-        # Unique ID must use the Battery SN if it's a battery sensor to allow multiple batteries
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
-        # The dynamic translation link
         self._attr_translation_key = description.key.lower()
-        self._attr_entity_registry_enabled_default = getattr(
-            description, "entity_registry_enabled_default", True
-        )
-
-    async def async_added_to_hass(self) -> None:
-        await super().async_added_to_hass()
-        registry = er.async_get(self.hass)
-        # Use _actual_sn so the entity ID also matches the specific battery
-        new_entity_id = (
-            f"sensor.hyxi_{self._actual_sn}_{self.entity_description.key.lower()}"
-        )
-
-        if self.entity_id != new_entity_id:
-            try:
-                registry.async_update_entity(
-                    self.entity_id, new_entity_id=new_entity_id
-                )
-            except Exception:
-                pass
 
     @property
     def native_value(self):
@@ -279,12 +247,44 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if self.entity_description.key == "collectTime":
             try:
                 return datetime.fromtimestamp(int(value), tz=UTC)
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, OSError):
                 return None
 
         if self.entity_description.key == "last_seen":
-            return dt_util.parse_datetime(
-                str(value)
-            )  # dt_util.parse_datetime handles the ISO format + UTC safely
+            return dt_util.parse_datetime(str(value))
 
         return value
+
+
+class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor for the Integration/Cloud Bridge status."""
+
+    _attr_has_entity_name = True
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_translation_key = "integration_last_updated"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_integration_last_updated"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "HYXi Cloud Service",
+            "manufacturer": "HYXi Power",
+            "model": "Cloud API Bridge",
+        }
+
+    @property
+    def available(self) -> bool:
+        """Return if the sensor is available."""
+        # This uses the standard boolean provided by the coordinator
+        return self.coordinator.last_update_success
+
+    @property
+    def native_value(self):
+        """Return the last successful update time."""
+        if self.coordinator.last_update_success:
+            # We use the Home Assistant utility to get current UTC time
+            # Since the coordinator just succeeded, 'now' is our last update time
+            return dt_util.utcnow()
+        return None

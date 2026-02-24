@@ -4,7 +4,15 @@
     "step": {
       "user": {
         "title": "Connect to HYXi Cloud",
-        "description": "Enter your Open API credentials from https://open.hyxicloud.com/",
+        "description": "Enter your Open API credentials. You can generate these at the [HYXiPOWER Developer Platform]({link}).",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate HYXi Cloud",
+        "description": "Your Access Key or Secret Key is no longer valid. Please enter your new credentials to resume solar monitoring. You can find these at the [HYXiPOWER Developer Platform]({link}).",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
@@ -17,10 +25,16 @@
       "unknown": "Unexpected error occurred"
     },
     "abort": {
-      "already_configured": "This HYXi account is already configured."
+      "already_configured": "This HYXi account is already configured.",
+      "reauth_successful": "Re-authentication was successful"
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Cloud Status"
+      }
+    },
     "sensor": {
       "batsoc": { "name": "Battery State of Charge" },
       "pbat": { "name": "Battery Power" },
@@ -36,7 +50,8 @@
       "batsoh": { "name": "Battery State of Health" },
       "tinv": { "name": "Inverter Temperature" },
       "collecttime": { "name": "Data Collected Time" },
-      "last_seen": { "name": "Last Cloud Sync" }
+      "last_seen": { "name": "Last Cloud Sync" },
+      "integration_last_updated": { "name": "Integration Last Updated" }
     }
   }
 }

@@ -69,10 +69,18 @@ class HyxiApiClient:
                 headers=self._generate_headers(path, "POST", is_token_request=True),
                 timeout=15,
             ) as response:
+                # NEW: Catch Auth failures immediately
+                if response.status in [401, 403]:
+                    _LOGGER.error("HYXi API: Token request unauthorized (401/403)")
+                    return "auth_failed"
+
                 res = await response.json()
 
                 if not res.get("success"):
                     _LOGGER.error("HYXi API Token Rejected: %s", res)
+                    # Some APIs return 200 OK but success: false for bad keys
+                    if res.get("code") in [401, 403, "401", "403"]:
+                        return "auth_failed"
                     return False
 
                 data = res.get("data", {})
@@ -87,7 +95,12 @@ class HyxiApiClient:
 
     async def get_all_device_data(self):
         """Fetches all plant and device data asynchronously."""
-        if not await self._refresh_token():
+
+        token_status = await self._refresh_token()
+
+        if token_status == "auth_failed":
+            return "auth_failed"
+        if not token_status:
             _LOGGER.error("HYXi API: Setup aborted due to token failure.")
             return None
 
