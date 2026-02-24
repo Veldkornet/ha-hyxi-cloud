@@ -7,10 +7,15 @@ categories:
   - title: '🐛 Bug Fixes'
     labels:
       - 'bug'
-  - title: '🧰 Maintenance & Docs'
+  - title: '⚙️ CI & Tooling'
+    labels:
+      - 'ci'
+  - title: '🧰 Maintenance'
+    labels:
+      - 'maintenance'
+  - title: '📚 Documentation'
     labels:
       - 'documentation'
-      - 'maintenance'
 version-resolver:
   major:
     labels:

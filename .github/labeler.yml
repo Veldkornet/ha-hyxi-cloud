@@ -13,13 +13,20 @@ documentation:
     - "custom_components/hyxi_cloud/translations/**/*"
     - "custom_components/hyxi_cloud/strings.json"
 
-# Label as 'maintenance' for internal GitHub actions, versions, or metadata
+# Label for GitHub Actions, Scripts, and Repo Infrastructure
+ci:
+- changed-files:
+  - any-glob-to-any-file:
+      - ".github/**/*"        # Catches Workflows, Release Drafter config, etc.
+      - "dev_env/**/*"        # Catches your local sandbox scripts
+      - ".vscode/tasks.json"  # Catches your VS Code buttons
+
+# Label as 'maintenance' for versions, metadata, and bots
 maintenance:
 - author: 
     - "dependabot[bot]"
 - changed-files:
   - any-glob-to-any-file:
-    - ".github/**/*"
     - "custom_components/hyxi_cloud/manifest.json"
     - "custom_components/hyxi_cloud/hacs.json"
     - "pyproject.toml"
