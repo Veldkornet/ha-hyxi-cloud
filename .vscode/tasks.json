@@ -74,6 +74,21 @@
                 "focus": true,
                 "panel": "dedicated"
             }
+        },
+        {
+            "label": "Git: Reset Dev (Nuke Ghosts)",
+            "type": "shell",
+            "command": "./manage.sh reset-dev",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": true
+            }
         }
     ]
 }
