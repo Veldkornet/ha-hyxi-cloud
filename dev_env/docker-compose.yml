@@ -1,0 +1,14 @@
+services:
+  homeassistant:
+    container_name: ha_dev_hyxi
+    image: ghcr.io/home-assistant/home-assistant:latest
+    ports:
+      - "8123:8123"
+      - "5678:5678"
+    environment:
+      - TZ=Europe/Amsterdam # Set to your local timezone!
+    volumes:
+      # 1. Creates a fake HA config folder inside your project to save test setups
+      - ./ha_testing_config:/config
+      # 2. Mounts your live code directly into the container's custom_components folder!
+      - ../custom_components/hyxi_cloud:/config/custom_components/hyxi_cloud

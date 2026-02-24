@@ -1,0 +1,74 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "HA: Start Sandbox",
+            "type": "shell",
+            "command": "./manage.sh start",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": false
+            }
+        },
+        {
+            "label": "HA: Stop Sandbox",
+            "type": "shell",
+            "command": "./manage.sh stop",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": false
+            }
+        },
+        {
+            "label": "HA: Restart & Reset Sandbox",
+            "type": "shell",
+            "command": "./manage.sh restart",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": false
+            }
+        },
+        {
+            "label": "HA: View Live Logs",
+            "type": "shell",
+            "command": "docker compose logs -f",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "clear": true,
+                "focus": true
+            }
+        },
+        {
+            "label": "Git: Sync Dev with Main",
+            "type": "shell",
+            "command": "./manage.sh sync-git",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

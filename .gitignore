@@ -7,7 +7,9 @@ __pycache__/
 *$py.class
 
 # IDEs and Editors
-.vscode/
+# Ignore VSCode personal settings, but keep the tasks
+.vscode/*
+!.vscode/tasks.json
 .idea/
 *.swp
 
@@ -15,3 +17,6 @@ __pycache__/
 .storage/
 home-assistant_v2.db
 home-assistant.log
+
+# Local Home Assistant dev environments
+dev_env/ha_testing_*
