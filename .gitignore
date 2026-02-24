@@ -15,3 +15,6 @@ __pycache__/
 .storage/
 home-assistant_v2.db
 home-assistant.log
+
+# Local Home Assistant dev environments
+dev_env/ha_testing_*
