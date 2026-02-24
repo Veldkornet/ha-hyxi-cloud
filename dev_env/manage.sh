@@ -21,11 +21,14 @@ case "$ACTION" in
 
     echo "🔀 Merging 'main' into 'dev'..."
     if git merge main -m "chore: sync with main"; then
+        echo "🚀 Pushing synced dev branch to GitHub..."
+        git push origin dev
         echo "✅ Everything is up to date and in sync!"
     else
         echo "⚠️  CONFLICTS FOUND!"
         echo "Git couldn't auto-merge. Look at the red files in your sidebar."
-        echo "Fix them, save, and commit to finish the sync."
+        echo "Fix them, save, and commit to finish the sync manually."
+        # We exit with an error code so the VS Code task shows a 'failed' notification
         exit 1
     fi
     ;;
