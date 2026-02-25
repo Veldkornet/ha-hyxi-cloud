@@ -3,15 +3,15 @@
     "step": {
       "user": {
         "title": "Se connecter à HYXi Cloud",
-        "description": "Entrez vos identifiants Open API. Vous pouvez les générer sur la [Plateforme Développeur HYXiPOWER]({link}).",
+        "description": "Entrez vos identifiants Open API. Vous pouvez les générer sur la [plateforme développeur HYXiPOWER]({link}).",
         "data": {
           "access_key": "Clé d'accès (AK)",
           "secret_key": "Clé secrète (SK)"
         }
       },
       "reauth_confirm": {
-        "title": "Réauthentifier HYXi Cloud",
-        "description": "Votre clé d'accès ou clé secrète n'est plus valide. Veuillez saisir vos nouveaux identifiants pour reprendre la surveillance solaire. Vous pouvez les trouver sur la [Plateforme Développeur HYXiPOWER]({link}).",
+        "title": "Ré-authentifier HYXi Cloud",
+        "description": "Votre clé d'accès ou clé secrète n'est plus valide. Veuillez saisir de nouveaux identifiants pour reprendre le suivi. Vous pouvez les trouver sur la [plateforme développeur HYXiPOWER]({link}).",
         "data": {
           "access_key": "Clé d'accès (AK)",
           "secret_key": "Clé secrète (SK)"
@@ -25,50 +25,49 @@
     },
     "abort": {
       "already_configured": "Ce compte HYXi est déjà configuré.",
-      "reauth_successful": "La réauthentification a réussi"
+      "reauth_successful": "La ré-authentification a réussi"
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Configuration du système HYXi",
-        "description": "Configurez les fonctionnalités optionnelles pour votre système HYXi.",
+        "description": "Ajustez la communication avec HYXi Cloud et l'affichage de votre matériel.\n\n---",
         "data": {
-          "enable_virtual_battery": "Activer la batterie virtuelle agrégée (Nécessite 2+ batteries)"
+          "update_interval": "Intervalle d'actualisation (1-60 minutes, par défaut : 5)",
+          "enable_virtual_battery": "Activer la batterie virtuelle agrégée (nécessite 2+ batteries)"
         }
       }
     }
   },
   "entity": {
     "binary_sensor": {
-      "connectivity": {
-        "name": "Statut du Cloud"
-      }
+      "connectivity": { "name": "Statut du Cloud" }
     },
     "sensor": {
-      "batsoc": { "name": "Niveau de charge de la batterie" },
+      "batsoc": { "name": "État de charge de la batterie" },
       "pbat": { "name": "Puissance de la batterie" },
       "ppv": { "name": "Puissance solaire" },
-      "home_load": { "name": "Consommation du domicile" },
-      "grid_import": { "name": "Importation du réseau" },
-      "grid_export": { "name": "Exportation vers le réseau" },
+      "home_load": { "name": "Consommation maison" },
+      "grid_import": { "name": "Importation réseau" },
+      "grid_export": { "name": "Exportation réseau" },
       "bat_charging": { "name": "Charge de la batterie" },
       "bat_discharging": { "name": "Décharge de la batterie" },
-      "totale": { "name": "Rendement énergétique total" },
-      "bat_charge_total": { "name": "Charge totale de la batterie" },
-      "bat_discharge_total": { "name": "Décharge totale de la batterie" },
+      "totale": { "name": "Production totale" },
+      "bat_charge_total": { "name": "Charge totale batterie" },
+      "bat_discharge_total": { "name": "Décharge totale batterie" },
       "batsoh": { "name": "État de santé de la batterie" },
       "tinv": { "name": "Température de l'onduleur" },
       "collecttime": { "name": "Heure de collecte des données" },
-      "last_seen": { "name": "Dernière synchronisation cloud" },
+      "last_seen": { "name": "Dernière synchro Cloud" },
       "integration_last_updated": { "name": "Dernière mise à jour de l'intégration" },
-      "battery_system_avg_soc": { "name": "Niveau de charge moyen du système" },
-      "battery_system_avg_soh": { "name": "État de santé moyen du système" },
-      "battery_system_total_pbat": { "name": "Puissance de la batterie du système" },
-      "battery_system_bat_charging": { "name": "Charge de la batterie du système" },
-      "battery_system_bat_discharging": { "name": "Décharge de la batterie du système" },
-      "battery_system_bat_charge_total": { "name": "Charge totale de la batterie du système" },
-      "battery_system_bat_discharge_total": { "name": "Décharge totale de la batterie du système" }
+      "battery_system_avg_soc": { "name": "Moyenne état de charge batterie système" },
+      "battery_system_avg_soh": { "name": "Moyenne état de santé batterie système" },
+      "battery_system_total_pbat": { "name": "Puissance batterie système" },
+      "battery_system_bat_charging": { "name": "Charge batterie système" },
+      "battery_system_bat_discharging": { "name": "Décharge batterie système" },
+      "battery_system_bat_charge_total": { "name": "Charge totale batterie système" },
+      "battery_system_bat_discharge_total": { "name": "Décharge totale batterie système" }
     }
   }
 }

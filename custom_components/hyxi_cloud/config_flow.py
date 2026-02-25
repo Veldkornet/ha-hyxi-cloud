@@ -1,5 +1,4 @@
 import logging
-
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -13,7 +12,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Define the schema once so both steps can use it
+# Schema for User Setup and Re-auth
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ACCESS_KEY): str,
@@ -25,13 +24,13 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for HYXi Cloud."""
 
+    VERSION = 1
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
         return HyxiOptionsFlowHandler(config_entry)
-
-    VERSION = 1
 
     def __init__(self):
         """Initialize the flow."""
@@ -48,6 +47,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
         try:
+            # Attempt a token refresh to verify AK/SK
             success = await client._refresh_token()
             if not success:
                 return "invalid_auth"
@@ -62,7 +62,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Prevent duplicate entries
+            # Prevent duplicate entries by using the Access Key as a Unique ID
             await self.async_set_unique_id(user_input[CONF_ACCESS_KEY])
             self._abort_if_unique_id_configured()
 
@@ -87,7 +87,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(self, user_input=None):
-        """Handle reauth confirmation (the actual form)."""
+        """Handle reauth confirmation."""
         errors = {}
 
         if user_input is not None:
@@ -107,22 +107,32 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle HYXi optional settings."""
+    """Handle HYXi optional settings (The Slider)."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
-        """Manage the options."""
+        """Manage the options form."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        # Default to False (Off)
-        current_config = self._config_entry.options.get("enable_virtual_battery", False)
+        # Pull current values or defaults
+        current_battery = self._config_entry.options.get(
+            "enable_virtual_battery", False
+        )
+        current_interval = self._config_entry.options.get("update_interval", 5)
 
         options_schema = vol.Schema(
-            {vol.Optional("enable_virtual_battery", default=current_config): bool}
+            {
+                # Slider for Interval
+                vol.Required("update_interval", default=current_interval): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=60)
+                ),
+                # Checkbox for Virtual Battery
+                vol.Optional("enable_virtual_battery", default=current_battery): bool,
+            }
         )
 
         return self.async_show_form(step_id="init", data_schema=options_schema)

@@ -3,70 +3,69 @@
     "step": {
       "user": {
         "title": "Mit HYXi Cloud verbinden",
-        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Sie können diese auf der [HYXiPOWER Entwicklerplattform]({link}) generieren.",
+        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Diese können Sie auf der [HYXiPOWER Developer Platform]({link}) erstellen.",
         "data": {
-          "access_key": "Zugriffsschlüssel (AK)",
-          "secret_key": "Geheimer Schlüssel (SK)"
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
         }
       },
       "reauth_confirm": {
-        "title": "HYXi Cloud erneut authentifizieren",
-        "description": "Ihr Zugriffs- oder geheimer Schlüssel ist nicht mehr gültig. Bitte geben Sie Ihre neuen Anmeldedaten ein, um die Solarüberwachung fortzusetzen. Sie finden diese auf der [HYXiPOWER Entwicklerplattform]({link}).",
+        "title": "HYXi Cloud neu authentifizieren",
+        "description": "Ihr Access Key oder Secret Key ist nicht mehr gültig. Bitte geben Sie neue Zugangsdaten ein, um die Überwachung fortzusetzen. Sie finden diese auf der [HYXiPOWER Developer Platform]({link}).",
         "data": {
-          "access_key": "Zugriffsschlüssel (AK)",
-          "secret_key": "Geheimer Schlüssel (SK)"
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Verbindung zu den HYXi-Servern fehlgeschlagen",
-      "invalid_auth": "Ungültiger Zugriffsschlüssel oder geheimer Schlüssel",
-      "unknown": "Ein unerwarteter Fehler ist aufgetreten"
+      "cannot_connect": "Verbindung zu HYXi-Servern fehlgeschlagen",
+      "invalid_auth": "Ungültiger Access Key oder Secret Key",
+      "unknown": "Unerwarteter Fehler aufgetreten"
     },
     "abort": {
       "already_configured": "Dieses HYXi-Konto ist bereits konfiguriert.",
-      "reauth_successful": "Re-Authentifizierung war erfolgreich"
+      "reauth_successful": "Neu-Authentifizierung war erfolgreich"
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXi Systemkonfiguration",
-        "description": "Konfigurieren Sie optionale Funktionen für Ihr HYXi-System.",
+        "description": "Passen Sie an, wie Ihre Integration mit der HYXi Cloud kommuniziert und wie Ihre Hardware angezeigt wird.\n\n---",
         "data": {
-          "enable_virtual_battery": "Aggregierte virtuelle Batterie aktivieren (Benötigt 2+ Batterien)"
+          "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
+          "enable_virtual_battery": "Aggregierte virtuelle Batterie aktivieren (benötigt 2+ Batterien)"
         }
       }
     }
   },
   "entity": {
     "binary_sensor": {
-      "connectivity": {
-        "name": "Cloud-Status"
-      }
+      "connectivity": { "name": "Cloud-Status" }
     },
     "sensor": {
-      "batsoc": { "name": "Batterie Ladezustand" },
+      "batsoc": { "name": "Batterieladezustand" },
       "pbat": { "name": "Batterieleistung" },
-      "ppv": { "name": "Solarleistung" },
+      "ppv": { "name": "Photovoltaik-Leistung" },
       "home_load": { "name": "Hausverbrauch" },
       "grid_import": { "name": "Netzbezug" },
       "grid_export": { "name": "Netzeinspeisung" },
-      "bat_charging": { "name": "Batterieladung" },
-      "bat_discharging": { "name": "Batterieentladung" },
-      "totale": { "name": "Gesamtertrag Energie" },
+      "bat_charging": { "name": "Batterie Ladung" },
+      "bat_discharging": { "name": "Batterie Entladung" },
+      "totale": { "name": "Gesamtertrag" },
       "bat_charge_total": { "name": "Gesamte Batterieladung" },
       "bat_discharge_total": { "name": "Gesamte Batterieentladung" },
-      "batsoh": { "name": "Batteriegesundheit" },
-      "tinv": { "name": "Wechselrichtertemperatur" },
-      "collecttime": { "name": "Zeitpunkt der Datenerfassung" },
-      "last_seen": { "name": "Letzte Cloud-Synchronisierung" },
-      "integration_last_updated": { "name": "Letztes Integrations-Update" },
-      "battery_system_avg_soc": { "name": "System Batterie Durchschnittlicher Ladezustand" },
-      "battery_system_avg_soh": { "name": "System Batterie Durchschnittliche Gesundheit" },
+      "batsoh": { "name": "Batterie-Gesundheitszustand" },
+      "tinv": { "name": "Wechselrichter-Temperatur" },
+      "collecttime": { "name": "Daten-Erfassungszeit" },
+      "last_seen": { "name": "Letzter Cloud-Sync" },
+      "integration_last_updated": { "name": "Integration zuletzt aktualisiert" },
+      "battery_system_avg_soc": { "name": "System Batterie-Ladezustand Durchschnitt" },
+      "battery_system_avg_soh": { "name": "System Batterie-Gesundheitszustand Durchschnitt" },
       "battery_system_total_pbat": { "name": "System Batterieleistung" },
-      "battery_system_bat_charging": { "name": "System Batterieladung" },
-      "battery_system_bat_discharging": { "name": "System Batterieentladung" },
+      "battery_system_bat_charging": { "name": "System Batterie Ladung" },
+      "battery_system_bat_discharging": { "name": "System Batterie Entladung" },
       "battery_system_bat_charge_total": { "name": "System Gesamte Batterieladung" },
       "battery_system_bat_discharge_total": { "name": "System Gesamte Batterieentladung" }
     }

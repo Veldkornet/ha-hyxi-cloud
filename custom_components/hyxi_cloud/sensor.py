@@ -397,6 +397,8 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
 
         self._attr_unique_id = f"hyxi_vsys_{entry.entry_id}_{description.key}"
 
+        self._attr_translation_key = f"battery_system_{description.key.lower()}"
+
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"hyxi_system_{entry.entry_id}")},
             "name": "HYXi Battery System",
