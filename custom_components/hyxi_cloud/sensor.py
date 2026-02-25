@@ -340,10 +340,11 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         value = metrics.get(self.entity_description.key)
         if value is None or value == "":
             return None
+        check_key = self.entity_description.key.lower()
 
-        if self.entity_description.key in ["batSoc", "batSoh"]:
+        if check_key in ["batsoc", "batsoh"]:
             try:
-                return int(round(float(value)))
+                return int(round(float(value), 0))
             except (ValueError, TypeError):
                 return None
         if self.entity_description.key == "collectTime":
@@ -415,5 +416,5 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         value = summary.get(self._key)
 
         if value is not None and isinstance(value, (int, float)):
-            return round(float(value), 1)
+            return int(round(float(value), 0))
         return value
