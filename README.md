@@ -53,14 +53,14 @@ The integration dynamically adapts to your hardware based on the device types re
 
 ## 🛡️ Reliability & Diagnostics
 
-This integration includes a specialized diagnostic system to help you understand the health of your connection:
+This integration includes a specialized diagnostic system to help you distinguish between local hardware issues and cloud service outages.
 
 | Sensor | Purpose | Behavior |
 | :--- | :--- | :--- |
 | **Cloud Status** | Binary connectivity sensor. | Turns `Off` if the API is unreachable or authentication fails. |
-| **Integration Last Updated** | Timestamp of the last successful poll. | Updates only when fresh data is successfully written to HA. |
-| **Last Cloud Sync** | The `last_seen` timestamp from HYXi. | Tells you the last time your hardware talked to the HYXi servers. |
-| **Data Collected Time** | Local hardware timestamp. | The exact time the inverter recorded the current metrics. |
+| **Connection Quality** | API Stability tracking. | Reports "Excellent" or "Degraded" based on API retry attempts. |
+| **Data Freshness** | Sync latency tracking. | Compares hardware `collectTime` to current time to detect "Stale" data. |
+| **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
 
 ### Smart Caching Logic
 When the **Cloud Status** becomes `Offline`, the integration will:
