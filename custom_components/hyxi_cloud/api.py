@@ -162,7 +162,7 @@ class HyxiApiClient:
                     # ✅ Success: Return a package containing data AND the attempt number
                     return {"data": data, "attempts": attempt}
                 return None
-            except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            except (aiohttp.ClientError, TimeoutError) as err:
                 if attempt < MAX_RETRIES:
                     wait_time = attempt * RETRY_DELAY
                     _LOGGER.warning(
