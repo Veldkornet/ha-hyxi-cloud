@@ -114,6 +114,12 @@ class HyxiApiClient:
                     for item in data_list
                     if isinstance(item, dict) and item.get("dataKey")
                 }
+                _LOGGER.debug(
+                    "HYXi Raw Metrics for %s (%s): %s",
+                    sn,
+                    entry.get("device_type_code"),
+                    m_raw,
+                )
                 entry["metrics"].update(m_raw)
 
                 def get_f(key, data_map, mult=1.0):
