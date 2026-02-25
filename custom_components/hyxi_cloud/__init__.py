@@ -10,6 +10,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import HyxiApiClient
 from .const import BASE_URL
@@ -90,15 +91,16 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
 
     async def _async_update_data(self):
-        """Fetch data from API with a strict first-load check."""
+        """Fetch data with first-load check and namespaced metadata."""
         try:
-            data = await self.client.get_all_device_data()
+            # result is: {"data": ..., "attempts": ...}
+            result = await self.client.get_all_device_data()
 
-            if data == "auth_failed":
+            if result == "auth_failed":
                 raise ConfigEntryAuthFailed("Invalid API keys or expired token")
 
-            if data is None:
-                # 🛑 If we have NO data and NO cache, it's a hard failure
+            if result is None:
+                # 🛑 Hard failure on first run
                 if not self.data:
                     _LOGGER.error(
                         "Initial fetch failed: No data received from HYXi Cloud."
@@ -107,21 +109,51 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                         "Could not connect to HYXi Cloud for initial setup."
                     )
 
-                # ⚠️ If we HAVE data from a previous success, we do the Soft Failure
+                # ⚠️ Soft Failure: Reuse cached data but update metadata to Offline
                 _LOGGER.warning("HYXi Cloud unreachable. Using cached data.")
-                return {**self.data, "cloud_online": False}
 
-            # ✅ SUCCESS
-            return {**data, "cloud_online": True}
+                # We rebuild the data dict to update ONLY the metadata
+                new_data = dict(self.data)
+                old_meta = self.data.get("_metadata", {})
+
+                new_data["_metadata"] = {
+                    "cloud_online": False,
+                    "last_attempts": 3,
+                    # We keep the old success time so we know how "stale" the data is
+                    "last_success": old_meta.get("last_success"),
+                }
+                return new_data
+
+            # ✅ SUCCESS: Extract data and wrap metadata
+            devices = result["data"]
+            attempts = result["attempts"]
+
+            return {
+                **devices,
+                "_metadata": {
+                    "cloud_online": True,
+                    "last_attempts": attempts,
+                    "last_success": dt_util.utcnow().isoformat(),
+                },
+            }
 
         except ConfigEntryAuthFailed:
             raise
         except UpdateFailed:
             raise
         except Exception as err:
+            _LOGGER.error("Unexpected error in HYXi update: %s", err)
             if not self.data:
                 raise UpdateFailed(f"Setup failed: {err}") from err
-            return {**self.data, "cloud_online": False}
+
+            # Crash protection: mark offline but keep data
+            new_data = dict(self.data)
+            new_data["_metadata"] = {
+                **self.data.get("_metadata", {}),
+                "cloud_online": False,
+                "last_attempts": 1,
+            }
+            return new_data
 
     def get_battery_summary(self):
         """Calculate aggregated data across all battery units."""

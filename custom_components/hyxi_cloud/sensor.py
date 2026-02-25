@@ -191,7 +191,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXi Setup: No data available in coordinator during setup")
         return
 
-    # To fix the 'via_device' warning, we register parents before children
+    # Registration order to fix 'via_device'
     parent_entities = []
     child_entities = []
 
@@ -212,8 +212,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
-        # FIX: Skip the 'cloud_online' metadata flag to avoid AttributeError
-        if sn == "cloud_online":
+        # 🛠️ UPDATED FIX: Skip the namespaced metadata dictionary
+        if sn == "_metadata":
             continue
 
         device_type = str(dev_data.get("device_type_code", "")).upper()
@@ -249,31 +249,27 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     should_add = True
 
             if should_add:
-                # To fix 'via_device', check if this is a linked battery child
                 if key in BATTERY_SENSORS and metrics.get("batSn"):
                     child_entities.append(HyxiSensor(coordinator, sn, description))
                 else:
                     parent_entities.append(HyxiSensor(coordinator, sn, description))
 
-    # 2. Integration Health (Parent Level)
+    # 2. Integration Health
     parent_entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
     # 3. Aggregate System View
     battery_sns = []
     for sn, dev in coordinator.data.items():
-        # FIX: Skip 'cloud_online' here as well
-        if sn == "cloud_online":
+        # 🛠️ UPDATED FIX: Skip metadata here too
+        if sn == "_metadata":
             continue
 
         dtype = str(dev.get("device_type_code", "")).upper()
         if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
             battery_sns.append(sn)
 
-    # RULE 1: Must have more than 1 battery
     if len(battery_sns) > 1:
-        # RULE 2: Must be enabled in the configuration menu (Default False as requested)
         enable_virtual = entry.options.get("enable_virtual_battery", False)
-
         if enable_virtual:
             _LOGGER.debug("HYXi Aggregator: Creating 'Battery System' entities...")
             for description in VSYS_SENSORS:
@@ -281,7 +277,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     HyxiBatterySystemSensor(coordinator, entry, description)
                 )
 
-    # FINAL REGISTRATION: Register Inverters (parents) first, then linked Batteries (children)
+    # FINAL REGISTRATION: Register Inverters/Service first, then Children
     if parent_entities:
         async_add_entities(parent_entities)
 
@@ -303,7 +299,6 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
-        # Battery Keys for logic
         BAT_KEYS = [
             "batSoc",
             "pbat",
@@ -411,6 +406,7 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """Value with floating point protection."""
         summary = self.coordinator.get_battery_summary()
         if not summary:
             return None

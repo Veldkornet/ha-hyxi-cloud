@@ -152,12 +152,16 @@ class HyxiApiClient:
         return sn, entry
 
     async def get_all_device_data(self):
-        """Fetches data with built-in retry logic and clean error reporting."""
+        """Fetches data with built-in retry logic and returns attempt count."""
 
         # Exponential Backoff Loop
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                return await self._execute_fetch_all()
+                data = await self._execute_fetch_all()
+                if data:
+                    # ✅ Success: Return a package containing data AND the attempt number
+                    return {"data": data, "attempts": attempt}
+                return None
             except (aiohttp.ClientError, asyncio.TimeoutError) as err:
                 if attempt < MAX_RETRIES:
                     wait_time = attempt * RETRY_DELAY
