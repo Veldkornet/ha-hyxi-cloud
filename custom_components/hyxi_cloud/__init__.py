@@ -10,6 +10,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import HyxiApiClient
 from .const import BASE_URL
@@ -18,7 +19,6 @@ from .const import CONF_SECRET_KEY
 from .const import DOMAIN
 from .const import PLATFORMS
 
-# Setup logging
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -32,33 +32,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("HYXi Integration could not find Access/Secret keys.")
         return False
 
-    # 1. Get the shared Home Assistant aiohttp session
     session = async_get_clientsession(hass)
-
-    # 2. Initialize the Async API Client
     client = HyxiApiClient(access_key, secret_key, BASE_URL, session)
 
-    # 3. Setup the Data Coordinator
-    coordinator = HyxiDataUpdateCoordinator(hass, client)
+    # 🛠️ Pass 'entry' to the coordinator so it can read options
+    coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
 
-    # 4. Fetch initial data
     try:
         await coordinator.async_config_entry_first_refresh()
     except ConfigEntryAuthFailed:
-        # If this hits, Home Assistant WILL show the RECONFIGURE button
         _LOGGER.error("Authentication failed during setup")
         raise
     except Exception as err:
         _LOGGER.warning("HYXi Cloud not ready: %s", err)
         raise ConfigEntryNotReady(f"Connection error: {err}") from err
 
-    # 5. Store the coordinator for use in platforms (sensor.py, etc.)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
-
-    # 6. Forward the setup to the defined platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Listen for option changes and reload if they happen
+    # Listen for option changes (the slider) and reload if they happen
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True
@@ -66,58 +58,97 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    # Unload all platforms defined in the PLATFORMS constant
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
-
     return unload_ok
 
 
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from HYXi API."""
 
-    def __init__(self, hass: HomeAssistant, client: HyxiApiClient):
-        """Initialize the coordinator."""
+    def __init__(self, hass: HomeAssistant, client: HyxiApiClient, entry: ConfigEntry):
+        """Initialize the coordinator with dynamic interval."""
+        # 🛠️ Read interval from options (default to 5 mins)
+        interval = entry.options.get("update_interval", 5)
+
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            # Update every 5 minutes (300 seconds)
-            update_interval=timedelta(seconds=300),
+            update_interval=timedelta(minutes=interval),
         )
         self.client = client
+        self.entry = entry
 
     async def _async_update_data(self):
-        """Fetch data from API asynchronously."""
+        """Fetch data with first-load check and namespaced metadata."""
         try:
-            data = await self.client.get_all_device_data()
+            result = await self.client.get_all_device_data()
 
-            if data == "auth_failed":
-                # Raise this specifically
+            if result == "auth_failed":
                 raise ConfigEntryAuthFailed("Invalid API keys or expired token")
 
-            if data is None:
-                raise UpdateFailed("Failed to communicate with HYXi Cloud API.")
+            if result is None:
+                if not self.data:
+                    _LOGGER.error(
+                        "Initial fetch failed: No data received from HYXi Cloud."
+                    )
+                    raise UpdateFailed(
+                        "Could not connect to HYXi Cloud for initial setup."
+                    )
 
-            return data
+                _LOGGER.warning("HYXi Cloud unreachable. Using cached data.")
+                new_data = dict(self.data)
+                old_meta = self.data.get("_metadata", {})
+
+                new_data["_metadata"] = {
+                    "cloud_online": False,
+                    "last_attempts": 3,
+                    "last_success": old_meta.get("last_success"),
+                }
+                return new_data
+
+            devices = result["data"]
+            attempts = result["attempts"]
+
+            return {
+                **devices,
+                "_metadata": {
+                    "cloud_online": True,
+                    "last_attempts": attempts,
+                    "last_success": dt_util.utcnow().isoformat(),
+                },
+            }
 
         except ConfigEntryAuthFailed:
-            # DO NOT log this as an "Unexpected error"
-            # Just raise it so Home Assistant sees it
             raise
         except UpdateFailed:
             raise
         except Exception as err:
-            # Only log actual unexpected crashes here
-            _LOGGER.error("Unexpected error fetching HYXi data: %s", err)
-            raise UpdateFailed(f"Error communicating with HYXi API: {err}") from err
+            _LOGGER.error("Unexpected error in HYXi update: %s", err)
+            if not self.data:
+                raise UpdateFailed(f"Setup failed: {err}") from err
+
+            new_data = dict(self.data)
+            new_data["_metadata"] = {
+                **self.data.get("_metadata", {}),
+                "cloud_online": False,
+                "last_attempts": 1,
+            }
+            return new_data
 
     def get_battery_summary(self):
         """Calculate aggregated data across all battery units."""
         if not self.data:
             return None
+
+        # Helper to prevent crashes if the API returns non-numeric values
+        def safe_float(value):
+            try:
+                return float(value or 0)
+            except (ValueError, TypeError):
+                return 0.0
 
         totals = {
             "total_pbat": 0.0,
@@ -131,6 +162,10 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         }
 
         for _sn, dev in self.data.items():
+            # 🛠️ UPDATED: Skip the Namespaced metadata key
+            if _sn == "_metadata":
+                continue
+
             dtype = str(dev.get("device_type_code", "")).upper()
             if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
                 metrics = dev.get("metrics", {})
@@ -153,7 +188,6 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         if totals["count"] == 0:
             return None
 
-        # Calculate average for SoC and SoH across all batteries
         totals["avg_soc"] = round(totals["avg_soc"] / totals["count"], 1)
         totals["avg_soh"] = round(totals["avg_soh"] / totals["count"], 1)
         return totals

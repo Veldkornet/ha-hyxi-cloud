@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -9,6 +10,10 @@ from datetime import datetime
 import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
+
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # Seconds to wait between retries (multiplied by attempt number)
 
 
 class HyxiApiClient:
@@ -69,7 +74,6 @@ class HyxiApiClient:
                 headers=self._generate_headers(path, "POST", is_token_request=True),
                 timeout=15,
             ) as response:
-                # NEW: Catch Auth failures immediately
                 if response.status in [401, 403]:
                     _LOGGER.error("HYXi API: Token request unauthorized (401/403)")
                     return "auth_failed"
@@ -78,7 +82,6 @@ class HyxiApiClient:
 
                 if not res.get("success"):
                     _LOGGER.error("HYXi API Token Rejected: %s", res)
-                    # Some APIs return 200 OK but success: false for bad keys
                     if res.get("code") in [401, 403, "401", "403"]:
                         return "auth_failed"
                     return False
@@ -87,147 +90,185 @@ class HyxiApiClient:
                 token_val = data.get("token") or data.get("access_token")
                 if token_val:
                     self.token = f"Bearer {token_val}"
-                    self.token_expires_at = time.time() + 7000
+                    self.token_expires_at = time.time() + 6600
                     return True
         except Exception as e:
             _LOGGER.error("HYXi Token Request Failed: %s", e)
         return False
 
-    async def get_all_device_data(self):
-        """Fetches all plant and device data asynchronously."""
+    async def _fetch_device_metrics(self, sn, entry):
+        """Helper to fetch detailed metrics for a single device."""
+        q_path = "/api/device/v1/queryDeviceData"
+        try:
+            async with self.session.get(
+                f"{self.base_url}{q_path}?deviceSn={sn}",
+                headers=self._generate_headers(q_path, "GET"),
+                timeout=15,
+            ) as resp_q:
+                res_q = await resp_q.json()
 
+            if res_q.get("success"):
+                data_list = res_q.get("data", [])
+                m_raw = {
+                    item.get("dataKey"): item.get("dataValue")
+                    for item in data_list
+                    if isinstance(item, dict) and item.get("dataKey")
+                }
+                entry["metrics"].update(m_raw)
+
+                def get_f(key, data_map, mult=1.0):
+                    try:
+                        val = data_map.get(key)
+                        if val is None or val == "":
+                            return 0.0
+                        return round(float(val) * mult, 2)
+                    except (ValueError, TypeError):
+                        return 0.0
+
+                if "gridP" in m_raw or "pbat" in m_raw:
+                    grid = get_f("gridP", m_raw, 1000.0)
+                    pbat = get_f("pbat", m_raw)
+
+                    entry["metrics"].update(
+                        {
+                            "home_load": get_f("ph1Loadp", m_raw)
+                            + get_f("ph2Loadp", m_raw)
+                            + get_f("ph3Loadp", m_raw),
+                            "grid_import": abs(grid) if grid < 0 else 0,
+                            "grid_export": grid if grid > 0 else 0,
+                            "bat_charging": abs(pbat) if pbat < 0 else 0,
+                            "bat_discharging": pbat if pbat > 0 else 0,
+                            "bat_charge_total": get_f("batCharge", m_raw),
+                            "bat_discharge_total": get_f("batDisCharge", m_raw),
+                        }
+                    )
+            else:
+                _LOGGER.warning(
+                    "HYXi API metrics rejected for %s: %s", sn, res_q.get("message")
+                )
+        except Exception as e:
+            _LOGGER.error("Error fetching metrics for %s: %s", sn, e)
+
+        return sn, entry
+
+    async def get_all_device_data(self):
+        """Fetches data with built-in retry logic and returns attempt count."""
+
+        # Exponential Backoff Loop
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                data = await self._execute_fetch_all()
+                if data:
+                    # ✅ Success: Return a package containing data AND the attempt number
+                    return {"data": data, "attempts": attempt}
+                return None
+            except (aiohttp.ClientError, TimeoutError) as err:
+                if attempt < MAX_RETRIES:
+                    wait_time = attempt * RETRY_DELAY
+                    _LOGGER.warning(
+                        "HYXi Connection attempt %s/%s failed. Retrying in %ss... (Error: %s)",
+                        attempt,
+                        MAX_RETRIES,
+                        wait_time,
+                        err,
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    _LOGGER.error(
+                        "HYXi Cloud connection failed after %s attempts: %s",
+                        MAX_RETRIES,
+                        err,
+                    )
+            except Exception:
+                _LOGGER.exception("HYXi Unexpected Code Crash:")
+                break  # Don't retry code bugs
+
+        return None
+
+    async def _execute_fetch_all(self):
+        """The actual fetching logic moved to a private method for the retry loop."""
         token_status = await self._refresh_token()
 
         if token_status == "auth_failed":
             return "auth_failed"
         if not token_status:
-            _LOGGER.error("HYXi API: Setup aborted due to token failure.")
             return None
 
         results = {}
         now = datetime.now(UTC).isoformat()
 
-        try:
-            # 1. Get Plants
-            p_path = "/api/plant/v1/page"
-            async with self.session.post(
-                f"{self.base_url}{p_path}",
-                json={"pageSize": 10, "currentPage": 1},
-                headers=self._generate_headers(p_path, "POST"),
-                timeout=15,
-            ) as resp_p:
-                res_p = await resp_p.json()
+        # 1. Get Plants
+        p_path = "/api/plant/v1/page"
+        async with self.session.post(
+            f"{self.base_url}{p_path}",
+            json={"pageSize": 10, "currentPage": 1},
+            headers=self._generate_headers(p_path, "POST"),
+            timeout=15,
+        ) as resp_p:
+            res_p = await resp_p.json()
 
-            if not res_p.get("success"):
-                _LOGGER.error("HYXi API Plant Fetch Rejected: %s", res_p)
-                return None
-
-            data_p = res_p.get("data", {})
-            plants = data_p.get("list", []) if isinstance(data_p, dict) else []
-
-            for p in plants:
-                plant_id = p.get("plantId")
-                if not plant_id:
-                    continue
-
-                # 2. Get Devices
-                d_path = "/api/plant/v1/devicePage"
-                async with self.session.post(
-                    f"{self.base_url}{d_path}",
-                    json={"plantId": plant_id, "pageSize": 50, "currentPage": 1},
-                    headers=self._generate_headers(d_path, "POST"),
-                    timeout=15,
-                ) as resp_d:
-                    res_d = await resp_d.json()
-
-                if not res_d.get("success"):
-                    _LOGGER.error("HYXi API Device Fetch Rejected: %s", res_d)
-                    continue
-
-                data_val = res_d.get("data", {})
-                devices = (
-                    data_val
-                    if isinstance(data_val, list)
-                    else data_val.get("deviceList", [])
-                    if isinstance(data_val, dict)
-                    else []
-                )
-
-                for d in devices:
-                    sn = d.get("deviceSn")
-                    if not sn:
-                        continue
-
-                    # 1. Dynamically capture the true device type
-                    dev_type = d.get("deviceType") or "UNKNOWN"
-
-                    # Create a friendly fallback name for the model
-                    friendly_name = dev_type.replace("_", " ").title()
-
-                    # 2. Add 'device_type_code' to the entry so sensor.py can read it!
-                    entry = {
-                        "sn": sn,
-                        "device_name": d.get("deviceName") or f"{friendly_name} {sn}",
-                        "model": friendly_name,
-                        "device_type_code": dev_type,
-                        "sw_version": d.get("swVer"),
-                        "hw_version": d.get("hwVer"),
-                        "metrics": {"last_seen": now},
-                    }
-
-                    # 3. Fetch detailed metrics for EVERYTHING except the basic Collector stick
-                    if dev_type != "COLLECTOR":
-                        q_path = "/api/device/v1/queryDeviceData"
-                        async with self.session.get(
-                            f"{self.base_url}{q_path}?deviceSn={sn}",
-                            headers=self._generate_headers(q_path, "GET"),
-                            timeout=15,
-                        ) as resp_q:
-                            res_q = await resp_q.json()
-
-                        if res_q.get("success"):
-                            data_list = res_q.get("data", [])
-                            m_raw = {
-                                item.get("dataKey"): item.get("dataValue")
-                                for item in data_list
-                                if isinstance(item, dict) and item.get("dataKey")
-                            }
-                            entry["metrics"].update(m_raw)
-
-                            # Helper function for safe math
-                            def get_f(key, data_map, mult=1.0):
-                                try:
-                                    return round(float(data_map.get(key, 0)) * mult, 2)
-                                except (ValueError, TypeError, AttributeError):
-                                    return 0.0
-
-                            # 4. Only do Hybrid math if the keys actually exist in the data
-                            if "gridP" in m_raw or "pbat" in m_raw:
-                                grid = get_f("gridP", m_raw, 1000.0)
-                                pbat = get_f("pbat", m_raw)
-
-                                entry["metrics"].update(
-                                    {
-                                        "home_load": get_f("ph1Loadp", m_raw)
-                                        + get_f("ph2Loadp", m_raw)
-                                        + get_f("ph3Loadp", m_raw),
-                                        "grid_import": abs(grid) if grid < 0 else 0,
-                                        "grid_export": grid if grid > 0 else 0,
-                                        "bat_charging": abs(pbat) if pbat < 0 else 0,
-                                        "bat_discharging": pbat if pbat > 0 else 0,
-                                        "bat_charge_total": get_f("batCharge", m_raw),
-                                        "bat_discharge_total": get_f(
-                                            "batDisCharge", m_raw
-                                        ),
-                                    }
-                                )
-                        else:
-                            _LOGGER.error(
-                                f"HYXi API Data Rejected for {sn} ({dev_type}): {res_q}"
-                            )
-
-                    results[sn] = entry
-            return results
-        except Exception as e:
-            _LOGGER.error("HYXi Async Code Crash: %s", e, exc_info=True)
+        if not res_p.get("success"):
+            _LOGGER.error("HYXi API Plant Fetch Rejected: %s", res_p)
             return None
+
+        data_p = res_p.get("data", {})
+        plants = data_p.get("list", []) if isinstance(data_p, dict) else []
+        metric_tasks = []
+
+        for p in plants:
+            plant_id = p.get("plantId")
+            if not plant_id:
+                continue
+
+            # 2. Get Devices
+            d_path = "/api/plant/v1/devicePage"
+            async with self.session.post(
+                f"{self.base_url}{d_path}",
+                json={"plantId": plant_id, "pageSize": 50, "currentPage": 1},
+                headers=self._generate_headers(d_path, "POST"),
+                timeout=15,
+            ) as resp_d:
+                res_d = await resp_d.json()
+
+            if not res_d.get("success"):
+                continue
+
+            data_val = res_d.get("data", {})
+            devices = (
+                data_val
+                if isinstance(data_val, list)
+                else data_val.get("deviceList", [])
+                if isinstance(data_val, dict)
+                else []
+            )
+
+            for d in devices:
+                sn = d.get("deviceSn")
+                if not sn:
+                    continue
+
+                dev_type = d.get("deviceType") or "UNKNOWN"
+                friendly_name = dev_type.replace("_", " ").title()
+
+                entry = {
+                    "sn": sn,
+                    "device_name": d.get("deviceName") or f"{friendly_name} {sn}",
+                    "model": friendly_name,
+                    "device_type_code": dev_type,
+                    "sw_version": d.get("swVer"),
+                    "hw_version": d.get("hwVer"),
+                    "metrics": {"last_seen": now},
+                }
+
+                if dev_type != "COLLECTOR":
+                    metric_tasks.append(self._fetch_device_metrics(sn, entry))
+                else:
+                    results[sn] = entry
+
+        # 3. Concurrent Metrics
+        if metric_tasks:
+            updated_entries = await asyncio.gather(*metric_tasks)
+            for sn, entry in updated_entries:
+                results[sn] = entry
+
+        return results

@@ -1,6 +1,6 @@
 {
   "title": "HYXi Cloud",
-  "config": {
+    "config": {
     "step": {
       "user": {
         "title": "Connect to HYXi Cloud",
@@ -33,8 +33,9 @@
     "step": {
       "init": {
         "title": "HYXi System Configuration",
-        "description": "Configure optional features for your HYXi setup.",
+        "description": "Adjust how your integration communicates with the HYXi Cloud and how it displays your hardware.\n\n---",
         "data": {
+          "update_interval": "Polling Interval (1-60 Minutes, Default: 5)",
           "enable_virtual_battery": "Enable Aggregated Virtual Battery (Requires 2+ batteries)"
         }
       }
