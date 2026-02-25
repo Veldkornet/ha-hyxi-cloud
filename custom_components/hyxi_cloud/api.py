@@ -4,6 +4,8 @@ import hashlib
 import hmac
 import logging
 import time
+import os
+import json
 from datetime import UTC
 from datetime import datetime
 
@@ -155,6 +157,68 @@ class HyxiApiClient:
         except Exception as e:
             _LOGGER.error("Error fetching metrics for %s: %s", sn, e)
 
+    async def _fetch_device_info(self, sn, entry):
+        """Helper to fetch static device info (firmware, capacity, limits)."""
+        i_path = "/api/device/v1/queryDeviceInfo"
+        try:
+            async with self.session.get(
+                f"{self.base_url}{i_path}?deviceSn={sn}",
+                headers=self._generate_headers(i_path, "GET"),
+                timeout=15,
+            ) as resp_i:
+                res_i = await resp_i.json()
+
+            if res_i.get("success"):
+                data_list = res_i.get("data", [])
+                i_raw = {
+                    item.get("dataKey"): item.get("dataValue")
+                    for item in data_list
+                    if isinstance(item, dict) and item.get("dataKey")
+                }
+
+                # 👇 This will dump the EXACT info the cloud sends back
+                _LOGGER.debug("HYXi Raw INFO for %s: %s", sn, i_raw)
+
+                # Smart Firmware Finder
+                sw_ver = (
+                    i_raw.get("swVerSys")
+                    or i_raw.get("swVerMaster")
+                    or i_raw.get("swVer")
+                )
+                if sw_ver:
+                    entry["sw_version"] = sw_ver
+
+                # Merge static info into metrics
+                entry["metrics"].update(
+                    {
+                        "signalIntensity": i_raw.get("signalIntensity"),
+                        "signalVal": i_raw.get("signalVal"),
+                        "wifiVer": i_raw.get("wifiVer"),
+                        "comMode": i_raw.get("comMode"),
+                        "batCap": i_raw.get("batCap"),
+                        "maxChargePower": i_raw.get("maxChargePower")
+                        or i_raw.get("maxChargingDischargingPower"),
+                        "maxDischargePower": i_raw.get("maxDischargePower")
+                        or i_raw.get("maxChargingDischargingPower"),
+                    }
+                )
+            else:
+                _LOGGER.warning(
+                    "HYXi INFO API Rejected for %s: %s", sn, res_i.get("message")
+                )
+
+        except Exception as e:
+            _LOGGER.error("Error fetching device info for %s: %s", sn, e)
+
+    async def _fetch_all_for_device(self, sn, entry, dev_type):
+        """Fires off concurrent requests for Data and Info, merging the results."""
+        tasks = [self._fetch_device_info(sn, entry)]
+
+        # Only fetch metrics for devices that actually generate live power data
+        if dev_type != "COLLECTOR":
+            tasks.append(self._fetch_device_metrics(sn, entry))
+
+        await asyncio.gather(*tasks)
         return sn, entry
 
     async def get_all_device_data(self):
@@ -193,6 +257,34 @@ class HyxiApiClient:
 
     async def _execute_fetch_all(self):
         """The actual fetching logic moved to a private method for the retry loop."""
+
+        # 🧪 MOCK OVERRIDE START
+        mock_file = os.path.join(os.path.dirname(__file__), "mock_data.json")
+
+        # Helper function to read the file synchronously
+        def load_mock():
+            if os.path.exists(mock_file):
+                with open(mock_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            return "NOT_FOUND"
+
+        try:
+            mock_data = await asyncio.to_thread(load_mock)
+            if mock_data != "NOT_FOUND":
+                _LOGGER.warning(
+                    "HYXi API 🧪: MOCK MODE ACTIVE - Successfully loaded %s", mock_file
+                )
+                return mock_data
+        except json.JSONDecodeError as e:
+            _LOGGER.error(
+                "HYXi API 🧪: MOCK FILE FOUND, BUT JSON IS INVALID! Error: %s", e
+            )
+            return None
+        except Exception as e:
+            _LOGGER.error("HYXi API 🧪: Unexpected error reading mock file: %s", e)
+            return None
+        # 🧪 MOCK OVERRIDE END
+
         token_status = await self._refresh_token()
 
         if token_status == "auth_failed":
@@ -266,15 +358,13 @@ class HyxiApiClient:
                     "metrics": {"last_seen": now},
                 }
 
-                if dev_type != "COLLECTOR":
-                    metric_tasks.append(self._fetch_device_metrics(sn, entry))
-                else:
-                    results[sn] = entry
+                metric_tasks.append(self._fetch_all_for_device(sn, entry, dev_type))
 
         # 3. Concurrent Metrics
         if metric_tasks:
             updated_entries = await asyncio.gather(*metric_tasks)
             for sn, entry in updated_entries:
-                results[sn] = entry
+                if sn:
+                    results[sn] = entry
 
         return results

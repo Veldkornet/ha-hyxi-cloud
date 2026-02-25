@@ -121,6 +121,58 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    # New Device Info Sensors
+    SensorEntityDescription(
+        key="batCap",
+        name="Battery Capacity",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY_STORAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-high",
+    ),
+    SensorEntityDescription(
+        key="maxChargePower",
+        name="Max Charge Power",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="maxDischargePower",
+        name="Max Discharge Power",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="signalIntensity",
+        name="Wi-Fi Signal Strength",
+        native_unit_of_measurement="dBm",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="signalVal",
+        name="Wi-Fi Signal Quality",
+        native_unit_of_measurement="%",
+        icon="mdi:wifi",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="wifiVer",
+        name="Wi-Fi Firmware Version",
+        icon="mdi:memory",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="comMode",
+        name="Communication Mode",
+        icon="mdi:lan",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 ]
 VSYS_SENSORS = [
     SensorEntityDescription(
@@ -196,7 +248,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
     child_entities = []
 
     # Filter constants
-    INVERTER_SENSORS = ["ppv", "totalE", "tinv"]
+    INVERTER_SENSORS = [
+        "ppv",
+        "totalE",
+        "tinv",
+        "batCap",
+        "maxChargePower",
+        "maxDischargePower",
+    ]
     BATTERY_SENSORS = [
         "batSoc",
         "pbat",
@@ -207,6 +266,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         "bat_discharging",
     ]
     METER_SENSORS = ["grid_import", "grid_export", "home_load"]
+    COLLECTOR_SENSORS = ["signalIntensity", "signalVal", "wifiVer", "comMode"]
     HEARTBEAT_SENSOR = ["last_seen"]
     DATA_TIME_SENSOR = ["collectTime"]
 
@@ -246,6 +306,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     should_add = True
             elif "METER" in device_type:
                 if key in METER_SENSORS:
+                    should_add = True
+            elif "COLLECTOR" in device_type or "DMU" in device_type:
+                if key in COLLECTOR_SENSORS:
                     should_add = True
 
             if should_add:
