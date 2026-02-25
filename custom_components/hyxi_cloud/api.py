@@ -2,10 +2,10 @@ import asyncio
 import base64
 import hashlib
 import hmac
-import logging
-import time
-import os
 import json
+import logging
+import os
+import time
 from datetime import UTC
 from datetime import datetime
 
@@ -264,7 +264,7 @@ class HyxiApiClient:
         # Helper function to read the file synchronously
         def load_mock():
             if os.path.exists(mock_file):
-                with open(mock_file, "r", encoding="utf-8") as f:
+                with open(mock_file, encoding="utf-8") as f:
                     return json.load(f)
             return "NOT_FOUND"
 
