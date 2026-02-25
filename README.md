@@ -16,9 +16,11 @@ A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) 
 
 ## ✨ Features
 
-- **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track your daily solar yield, grid dependency, and battery cycles seamlessly.
-- **Real-time Monitoring:** Tracks Solar Power, Battery SOC, Home Load, and Grid flow.
-- **Dynamic Device Support:** Automatically adapts to your specific hardware setup, organizing sensors cleanly by device serial number and separating your Inverter from your Battery system in the UI.
+- **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
+- **🛡️ Smart Caching:** If the cloud goes offline, sensors retain their last known values instead of becoming "Unavailable," ensuring your dashboards stay readable.
+- **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
+- **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
+- **🔋 Virtual Battery System:** Automatically aggregates multiple physical battery units into a single system view.
 - **Clean UI:** Precision-tuned data with multi-language support (English, French, German, Dutch).
 
 ## 📥 Installation
@@ -38,9 +40,7 @@ A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) 
 
 ## 🔌 Supported Devices
 
-This integration dynamically adapts to your hardware based on the device types reported by the HYXi Cloud. Because I only own a Hybrid Inverter, I need the community's help to verify the others! 
-
-If you own an "Untested" device and it works correctly, please [open an issue](https://github.com/Veldkornet/ha-hyxi-cloud/issues) so I can mark it as verified!
+The integration dynamically adapts to your hardware based on the device types reported by the HYXi Cloud. 
 
 | Device Type | HYXi API Code | Status | Supported Sensors |
 | :--- | :--- | :--- | :--- |
@@ -50,35 +50,56 @@ If you own an "Untested" device and it works correctly, please [open an issue](h
 | **Micro Inverter** | `MICRO_INVERTER` | ⚠️ *Untested* | Solar, Diagnostics |
 | **Standalone Battery** | `ENERGY_STORAGE_BATTERY`, `AC_BATTERY`, `EMS` | ⚠️ *Untested* | Battery SOC, Power, Health |
 | **Smart Meter** | `METER` | ⚠️ *Untested* | Grid Import/Export, Home Load |
-| **Optimizer** | `OPTIMIZER` | 🚧 *Partial* | Heartbeat only (Panel-level data planned) |
 
-> **Note:** If your specific device isn't showing the correct sensors, please open an issue and include your debug logs so we can map it correctly!
+## 🛡️ Reliability & Diagnostics
+
+This integration includes a specialized diagnostic system to help you understand the health of your connection:
+
+| Sensor | Purpose | Behavior |
+| :--- | :--- | :--- |
+| **Cloud Status** | Binary connectivity sensor. | Turns `Off` if the API is unreachable or authentication fails. |
+| **Integration Last Updated** | Timestamp of the last successful poll. | Updates only when fresh data is successfully written to HA. |
+| **Last Cloud Sync** | The `last_seen` timestamp from HYXi. | Tells you the last time your hardware talked to the HYXi servers. |
+| **Data Collected Time** | Local hardware timestamp. | The exact time the inverter recorded the current metrics. |
+
+### Smart Caching Logic
+When the **Cloud Status** becomes `Offline`, the integration will:
+1. Keep your sensor values at their **last known state** (preventing "Unavailable" icons).
+2. Log the connection attempt and use **exponential backoff** to retry.
+3. Automatically resume updates once the cloud is back online.
 
 ## 📊 Supported Sensors
 
+### Core Monitoring
 | Category | Sensor Name | ID (Key) | Unit |
 | :--- | :--- | :--- | :--- |
-| **Power** | Battery State of Charge | `batSoc` | % |
-| **Power** | Battery Power | `pbat` | W |
-| **Power** | Solar Power | `ppv` | W |
-| **Power** | Home Load | `home_load` | W |
-| **Power** | Grid Import | `grid_import` | W |
-| **Power** | Grid Export | `grid_export` | W |
-| **Power** | Battery Charging | `bat_charging` | W |
-| **Power** | Battery Discharging | `bat_discharging` | W |
-| **Energy** | Total Energy Yield | `totalE` | kWh |
-| **Energy** | Total Battery Charge | `bat_charge_total` | kWh |
-| **Energy** | Total Battery Discharge | `bat_discharge_total` | kWh |
-| **Diagnostics** | Battery State of Health | `batSoh` | % |
-| **Diagnostics** | Inverter Temperature | `tinv` | °C |
-| **Diagnostics** | Last Cloud Sync | `last_seen` | - |
-| **Diagnostics** | Data Collected Time | `collectTime` | - |
+| **Solar** | Solar Power | `ppv` | W |
+| **Solar** | Total Energy Yield | `totale` | kWh |
+| **Battery** | State of Charge | `batsoc` | % |
+| **Battery** | State of Health | `batsoh` | % |
+| **Battery** | Battery Power | `pbat` | W |
+| **Battery** | Battery Charging | `bat_charging` | W |
+| **Battery** | Battery Discharging | `bat_discharging` | W |
+| **Grid/Load** | Home Load | `home_load` | W |
+| **Grid/Load** | Grid Import | `grid_import` | W |
+| **Grid/Load** | Grid Export | `grid_export` | W |
 
-## ⚙️ Setup Integration
+### Virtual Battery System (Aggregated)
+*Enabled via Options if 2+ batteries are detected.*
+| Sensor Name | ID (Key) | Unit |
+| :--- | :--- | :--- |
+| System Battery SoC Average | `battery_system_avg_soc` | % |
+| System Battery Power | `battery_system_total_pbat` | W |
+| System Battery Charging | `battery_system_bat_charging` | W |
+| System Battery Discharging | `battery_system_bat_discharging` | W |
+| System Total Battery Charge | `battery_system_bat_charge_total` | kWh |
+| System Total Battery Discharge | `battery_system_bat_discharge_total` | kWh |
 
-1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key**. See [Step 1 & 2 of the Quick Start Guide](https://open.hyxicloud.com/#/quickStart) for details. 
+## ⚙️ Setup & Configuration
+
+1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXiPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
    > **Important:** Use the same email address that your devices are registered to in the HYXi app.
-2. Go to **Settings > Devices & Services** and click **Add Integration** and search for **HYXi Cloud**.
+2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXi Cloud**.
 Or alternatively, add the integration with the following:
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=hyxi_cloud)
@@ -88,28 +109,24 @@ Or alternatively, add the integration with the following:
 1. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
 
 ### Optional Features (Options Flow)
+Click the **Configure** button on the HYXi integration card to access:
+* **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
+* **Enable Aggregated Virtual Battery:** Combine data from 2+ batteries into single "System" sensors.
 
-Once installed, you can click the **Configure** button on the HYXi integration card to access optional features:
-* **Enable Aggregated Virtual Battery:** If you have 2 or more physical batteries, check this box to dynamically spawn "System" sensors that combine your battery data into single, easy-to-read metrics for your dashboards.
+## 🐛 Troubleshooting
 
-## 🐛 Troubleshooting & Debugging
-
-If you have a device that is not showing the correct sensors, or if you are opening a bug report, please include your debug logs! This allows me to see exactly what the HYXi API is returning for your specific hardware.
-
+If you are opening a bug report, please include **Debug Logs**:
 **How to enable and download debug logs:**
-1. In Home Assistant, go to **Settings > Devices & Services**.
-2. Find the **HYXi Cloud** integration and click on it.
-3. Click the **three dots** (⋮) or the "Enable debug logging" button.
-4. Wait about **5 minutes** for the integration to poll the cloud and gather data.
-5. Click **Disable debug logging**. Home Assistant will automatically download a `.log` file to your computer.
-6. Open the file, remove any sensitive information (like your real serial numbers if you prefer), and attach it to your GitHub issue!
+1. Go to **Settings > Devices & Services** > **HYXi Cloud**.
+2. Click the three dots (⋮) and select **Enable debug logging**.
+3. Wait 5-10 minutes, then click **Disable debug logging** to download the file.
+4. Open the file, remove any sensitive information (like your real serial numbers if you prefer), and attach it to your GitHub issue!
 
 ## Disclaimer
-This is a custom integration and is **not** an official product of HYXi Power. Only Hybrid Inverter battery systems have been verified for compatibility at this stage.
+This is a custom integration and is **not** an official product of HYXi Power. 
 
 ## Support
 If you find this integration helpful and want to support its development:
-
 [![Buy Me a Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=veldkornet&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/veldkornet)
 
 ---
