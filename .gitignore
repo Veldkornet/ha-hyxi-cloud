@@ -21,3 +21,7 @@ home-assistant.log
 
 # Local Home Assistant dev environments
 dev_env/ha_testing_*
+
+#Mock data
+mock_data.json
+mock_data_example.json
