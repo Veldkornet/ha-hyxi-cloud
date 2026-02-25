@@ -90,34 +90,50 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
 
     async def _async_update_data(self):
-        """Fetch data from API asynchronously."""
+        """Fetch data from API with a strict first-load check."""
         try:
             data = await self.client.get_all_device_data()
 
             if data == "auth_failed":
-                # Raise this specifically
                 raise ConfigEntryAuthFailed("Invalid API keys or expired token")
 
             if data is None:
-                raise UpdateFailed("Failed to communicate with HYXi Cloud API.")
+                # 🛑 If we have NO data and NO cache, it's a hard failure
+                if not self.data:
+                    _LOGGER.error(
+                        "Initial fetch failed: No data received from HYXi Cloud."
+                    )
+                    raise UpdateFailed(
+                        "Could not connect to HYXi Cloud for initial setup."
+                    )
 
-            return data
+                # ⚠️ If we HAVE data from a previous success, we do the Soft Failure
+                _LOGGER.warning("HYXi Cloud unreachable. Using cached data.")
+                return {**self.data, "cloud_online": False}
+
+            # ✅ SUCCESS
+            return {**data, "cloud_online": True}
 
         except ConfigEntryAuthFailed:
-            # DO NOT log this as an "Unexpected error"
-            # Just raise it so Home Assistant sees it
             raise
         except UpdateFailed:
             raise
         except Exception as err:
-            # Only log actual unexpected crashes here
-            _LOGGER.error("Unexpected error fetching HYXi data: %s", err)
-            raise UpdateFailed(f"Error communicating with HYXi API: {err}") from err
+            if not self.data:
+                raise UpdateFailed(f"Setup failed: {err}") from err
+            return {**self.data, "cloud_online": False}
 
     def get_battery_summary(self):
         """Calculate aggregated data across all battery units."""
         if not self.data:
             return None
+
+        # Helper to prevent crashes if the API returns non-numeric values
+        def safe_float(value):
+            try:
+                return float(value or 0)
+            except (ValueError, TypeError):
+                return 0.0
 
         totals = {
             "total_pbat": 0.0,
@@ -131,6 +147,10 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         }
 
         for _sn, dev in self.data.items():
+            # Skip the 'cloud_online' metadata key
+            if _sn == "cloud_online":
+                continue
+
             dtype = str(dev.get("device_type_code", "")).upper()
             if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
                 metrics = dev.get("metrics", {})

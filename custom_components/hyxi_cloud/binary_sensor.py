@@ -43,5 +43,20 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        """Return true if the latest update was successful."""
-        return self.coordinator.last_update_success
+        """Return true if the cloud is reachable and data is flowing."""
+        # 1. Check if the coordinator has any data at all
+        if not self.coordinator.data:
+            return False
+
+        # 2. Look for the 'cloud_online' flag we injected in the coordinator
+        # If it's missing, fall back to checking if the last update worked
+        return self.coordinator.data.get(
+            "cloud_online", self.coordinator.last_update_success
+        )
+
+    @property
+    def available(self) -> bool:
+        """Always stay available so the user can see the 'Disconnected' state."""
+        # This prevents the sensor from turning purple/unavailable
+        # unless the integration is actually being unloaded.
+        return True
