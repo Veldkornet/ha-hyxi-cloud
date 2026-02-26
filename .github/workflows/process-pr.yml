@@ -37,7 +37,7 @@ jobs:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           configuration-path: "pr-metadata/labeler.yml"
           pr-number: ${{ env.PR_NUMBER }}
-          sync-labels: true
+          sync-labels: false
 
       - name: Verify & Enforce Labels
         uses: actions/github-script@v7
