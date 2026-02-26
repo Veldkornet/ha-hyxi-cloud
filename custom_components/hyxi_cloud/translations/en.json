@@ -47,29 +47,93 @@
       }
     },
     "sensor": {
-      "batsoc": { "name": "Battery State of Charge" },
-      "pbat": { "name": "Battery Power" },
-      "ppv": { "name": "Solar Power" },
-      "home_load": { "name": "Home Load" },
-      "grid_import": { "name": "Grid Import" },
-      "grid_export": { "name": "Grid Export" },
-      "bat_charging": { "name": "Battery Charging" },
-      "bat_discharging": { "name": "Battery Discharging" },
-      "totale": { "name": "Total Energy Yield" },
-      "bat_charge_total": { "name": "Total Battery Charge" },
-      "bat_discharge_total": { "name": "Total Battery Discharge" },
-      "batsoh": { "name": "Battery State of Health" },
-      "tinv": { "name": "Inverter Temperature" },
-      "collecttime": { "name": "Data Collected Time" },
-      "last_seen": { "name": "Last Cloud Sync" },
-      "integration_last_updated": { "name": "Integration Last Updated" },
-      "battery_system_avg_soc": { "name": "System Battery State of Charge Average" },
-      "battery_system_avg_soh": { "name": "System Battery State of Health Average" },
-      "battery_system_total_pbat": { "name": "System Battery Power" },
-      "battery_system_bat_charging": { "name": "System Battery Charging" },
-      "battery_system_bat_discharging": { "name": "System Battery Discharging" },
-      "battery_system_bat_charge_total": { "name": "System Total Battery Charge" },
-      "battery_system_bat_discharge_total": { "name": "System Total Battery Discharge" }
+      "batsoc": {
+        "name": "Battery State of Charge"
+      },
+      "pbat": {
+        "name": "Battery Power"
+      },
+      "ppv": {
+        "name": "Solar Power"
+      },
+      "home_load": {
+        "name": "Home Load"
+      },
+      "grid_import": {
+        "name": "Grid Import"
+      },
+      "grid_export": {
+        "name": "Grid Export"
+      },
+      "bat_charging": {
+        "name": "Battery Charging"
+      },
+      "bat_discharging": {
+        "name": "Battery Discharging"
+      },
+      "totale": {
+        "name": "Total Energy Yield"
+      },
+      "bat_charge_total": {
+        "name": "Total Battery Charge"
+      },
+      "bat_discharge_total": {
+        "name": "Total Battery Discharge"
+      },
+      "batsoh": {
+        "name": "Battery State of Health"
+      },
+      "tinv": {
+        "name": "Internal Temperature"
+      },
+      "collecttime": {
+        "name": "Data Collection Time"
+      },
+      "last_seen": {
+        "name": "Last Cloud Sync"
+      },
+      "batcap": {
+        "name": "Battery Capacity"
+      },
+      "maxchargepower": {
+        "name": "Max Charge Limit"
+      },
+      "maxdischargepower": {
+        "name": "Max Discharge Limit"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi Signal Strength"
+      },
+      "signalval": {
+        "name": "Wi-Fi Signal Quality"
+      },
+      "wifiver": {
+        "name": "Wi-Fi Firmware"
+      },
+      "commode": {
+        "name": "Communication Mode"
+      },
+      "acp": {
+        "name": "AC Power"
+      },
+      "vac": {
+        "name": "AC Voltage"
+      },
+      "vpv": {
+        "name": "PV Voltage"
+      },
+      "etoday": {
+        "name": "Energy Today"
+      },
+      "avg_soc": {
+        "name": "Average Battery Charge"
+      },
+      "avg_soh": {
+        "name": "Average Battery Health"
+      },
+      "total_pbat": {
+        "name": "Total Battery Power"
+      }
     }
   }
 }

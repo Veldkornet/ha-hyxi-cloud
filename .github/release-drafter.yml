@@ -1,32 +1,67 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+name-template: '$RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
+
+change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
+sort-direction: ascending
+
 categories:
-  - title: '🚀 New Features'
+  - title: "📚 Documentation"
     labels:
-      - 'enhancement'
-  - title: '🐛 Bug Fixes'
+      - "documentation"
+  - title: "💥 Breaking Changes"
     labels:
-      - 'bug'
-  - title: '⚙️ CI & Tooling'
+      - "breaking-change"
+  - title: "✨ New Features"
     labels:
-      - 'ci'
-  - title: '🧰 Maintenance'
+      - "new-feature"
+  - title: "🐛 Bug Fixes"
     labels:
-      - 'maintenance'
-  - title: '📚 Documentation'
+      - "bugfix"
+  - title: "🎨 Style"
     labels:
-      - 'documentation'
-version-resolver:
-  major:
+      - "style"
+  - title: "📦 Refactor"
     labels:
-      - 'major'
-  minor:
+      - "refactor"
+  - title: "🚀 Performance"
     labels:
-      - 'minor'
-  patch:
+      - "performance"
+  - title: "🧪 Test"
     labels:
-      - 'patch'
-  default: patch
+      - "test"
+  - title: "🛠️ Build"
+    labels:
+      - "build"
+  - title: "⚙️ CI"
+    labels:
+      - "ci"
+  - title: "♻️ Chore"
+    labels:
+      - "chore"
+  - title: "🗑️ Revert"
+    labels:
+      - "revert"
+  - title: "⬆️ Dependency Updates"
+    labels:
+      - "dependencies"
+    collapse-after: 3 
+
 template: |
   ## Changes
   $CHANGES
+
+  ## 🧡 Contributors
+  $CONTRIBUTORS
+
+version-resolver:
+  major:
+    labels:
+      - "breaking-change"
+  minor:
+    labels:
+      - "new-feature"
+  patch:
+    labels:
+      - "bugfix"
+      - "chore"
+      - "dependencies"
