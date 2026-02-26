@@ -26,8 +26,10 @@ jobs:
       - name: Read PR Data
         id: pr_data
         run: |
-          echo "PR_NUMBER=$(cat pr-metadata/pr_number)" >> $GITHUB_ENV
-          echo "PR_SHA=$(cat pr-metadata/pr_sha)" >> $GITHUB_ENV
+          PR_NUMBER=$(tr -d '\n' < pr-metadata/pr_number)
+          PR_SHA=$(tr -d '\n' < pr-metadata/pr_sha)
+          echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
+          echo "PR_SHA=$PR_SHA" >> "$GITHUB_ENV"
 
       - name: Apply Labels
         uses: actions/labeler@v5
