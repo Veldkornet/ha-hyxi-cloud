@@ -65,3 +65,4 @@ version-resolver:
       - "bugfix"
       - "chore"
       - "dependencies"
+  default: patch
