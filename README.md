@@ -1,28 +1,29 @@
-# HYXiPower Cloud Integration for Home Assistant
-
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="custom_components/hyxi_cloud/brand/dark_logo.png">
-    <source media="(prefers-color-scheme: light)" srcset="custom_components/hyxi_cloud/brand/logo.png">
-    <img alt="HYXi Cloud Logo" src="ccustom_components/hyxi_cloud/brand/logo.png" width="400">
-  </picture>
-  <br />
-  <strong>HACS Integration for HYXiPOWER Inverters and Energy Storage Systems.</strong>
-</div>
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud)
-[![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/blob/main/LICENSE)
-[![Open Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
-![Dependabot](https://img.shields.io/badge/dependabot-enabled-blue?logo=dependabot&logoColor=white)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Validate](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml)
-![Lint Status](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/lint.yml/badge.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="custom_components/hyxi_cloud/brand/logo_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="custom_components/hyxi_cloud/brand/logo_light.png">
+  <img alt="HYXi Cloud Logo" src="custom_components/hyxi_cloud/brand/logo_light.png" width="450">
+</picture>
+
+### [HYXiPower](https://www.hyxipower.com/) Cloud for Home Assistant
+**Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
+
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud?style=flat-square&color=blue)](https://github.com/Veldkornet/ha-hyxi-cloud/releases)
+[![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square&color=lightgrey)](LICENSE)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
+[![GitHub Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square&color=red)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
+
 [![CodeQL](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml)
+[![Gitleaks](https://img.shields.io/badge/protected%20by-gitleaks-blue?style=flat-square)](https://github.com/gitleaks/gitleaks-action)
+[![Security: Harden-Runner](https://img.shields.io/badge/Security-Harden--Runner-green?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/actions)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-blue?style=flat-square&logo=dependabot)](https://github.com/Veldkornet/ha-hyxi-cloud/network/updates)
 
-[![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
 
-A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) Inverters and Energy Storage Systems via the HYXi Cloud API. This integration provides near real-time data for solar production, battery status, and home energy usage.
+---
+</div>
 
 ## ✨ Features
 
