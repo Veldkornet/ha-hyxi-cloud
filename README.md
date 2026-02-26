@@ -40,7 +40,7 @@ A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) 
 
 ## 🔌 Supported Devices
 
-The integration dynamically adapts to your hardware based on the device types reported by the HYXi Cloud. 
+The integration dynamically adapts to your hardware based on the device types reported by the HYXi Cloud and creates sensors based on what your specific hardware reports to the cloud. If you are missing sensors / devices, please see [New Devices](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices)
 
 | Device Type | HYXi API Code | Status | Supported Sensors |
 | :--- | :--- | :--- | :--- |
