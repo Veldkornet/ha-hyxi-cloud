@@ -49,3 +49,12 @@
           - ".github/**/*"  # 🚀 Double asterisks catch all subfolders/files
           - "dev_env/**/*"
           - ".vscode/tasks.json"
+          
+# 📚 Documentation
+"documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "README.md"
+          - "LICENSE"
+          - "custom_components/hyxi_cloud/strings.json"
+          - "docs/**/*"
