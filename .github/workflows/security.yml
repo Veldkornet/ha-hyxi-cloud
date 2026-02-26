@@ -1,0 +1,58 @@
+name: "Security Shield"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '30 4 * * 1' # Runs every Monday at 4:30 AM to catch new vulnerabilities
+permissions:
+  contents: read       # Required to check out code
+  security-events: write # Required for Bandit/CodeQL to report to the Security tab
+  pull-requests: write   # Optional: Only if you want comments in your PR
+jobs:
+  # 🛡️ 1. Harden Runner: Blocks exfiltration of your secrets
+  # 🔒 2. Gitleaks: Scans for leaked API keys/serial numbers
+  # 🐍 3. Bandit: Scans for Python-specific security holes
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # Allows Bandit/Gitleaks to report to the Security tab
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit # 'audit' tells you what's happening; 'block' is stricter
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks (Secret Scan)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bandit (Python Security)
+        run: |
+          pip install bandit
+          # -r: recursive, -ll: medium severity and up
+          bandit -r custom_components/hyxi_cloud/ -ll
+
+  # 📦 4. Dependency Review: Blocks malicious/vulnerable libraries
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Review Dependencies
+        uses: actions/dependency-review-action@v4
