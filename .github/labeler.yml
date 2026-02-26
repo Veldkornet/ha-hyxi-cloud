@@ -54,7 +54,8 @@
 "documentation":
   - changed-files:
       - any-glob-to-any-file:
-          - "README.md"
-          - "LICENSE"
-          - "custom_components/hyxi_cloud/strings.json"
-          - "docs/**/*"
+          - "*.md"                                      # Root level markdown files
+          - "LICENSE"                                   # Legal updates
+          - "custom_components/hyxi_cloud/strings.json" # Translation updates
+          - "docs/**/*"                                 # Anything inside a docs folder
+          - ".github/ISSUE_TEMPLATE/*.md"               # Issue template updates
