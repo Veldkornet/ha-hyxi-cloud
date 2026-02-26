@@ -1,9 +1,9 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="custom_components/hyxi_cloud/brand/logo_dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="custom_components/hyxi_cloud/brand/logo_light.png">
-  <img alt="HYXi Cloud Logo" src="custom_components/hyxi_cloud/brand/logo_light.png" width="450">
+  <source media="(prefers-color-scheme: dark)" srcset="custom_components/hyxi_cloud/brand/dark_logo.png">
+  <source media="(prefers-color-scheme: light)" srcset="custom_components/hyxi_cloud/brand/logo.png">
+  <img alt="HYXi Cloud Logo" src="custom_components/hyxi_cloud/brand/logo.png" width="450">
 </picture>
 
 ### [HYXiPower](https://www.hyxipower.com/) Cloud for Home Assistant
