@@ -1,33 +1,43 @@
-# Label as 'enhancement' if core logic or sensors change
-enhancement:
-- changed-files:
-  - any-glob-to-any-file: 
-    - "custom_components/hyxi_cloud/*.py"
+# 🚀 New Features (Logic changes)
+"new-feature":
+  - changed-files:
+      - any-glob-to-any-file: "custom_components/hyxi_cloud/*.py"
+  - head-branch: ["^feature/", "^feat/"] # Auto-label if branch is feat/my-cool-thing
 
-# Label as 'documentation' for README, translations, or legal files
-documentation:
-- changed-files:
-  - any-glob-to-any-file:
-    - "README.md"
-    - "LICENSE"
-    - "custom_components/hyxi_cloud/translations/**/*"
-    - "custom_components/hyxi_cloud/strings.json"
+# 🐛 Bug Fixes (Title or Branch matching)
+"bugfix":
+  - head-branch: ["^fix/", "^bug/"]
+  # You can't match title in 'labeler.yml', but you can match branch!
 
-# Label for GitHub Actions, Scripts, and Repo Infrastructure
-ci:
-- changed-files:
-  - any-glob-to-any-file:
-      - ".github/**/*"        # Catches Workflows, Release Drafter config, etc.
-      - "dev_env/**/*"        # Catches your local sandbox scripts
-      - ".vscode/tasks.json"  # Catches your VS Code buttons
+# 🎨 Style 
+"style":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/static/**/*"
+          - "custom_components/hyxi_cloud/brand/**/*"
+          - "custom_components/hyxi_cloud/translations/**/*"
 
-# Label as 'maintenance' for versions, metadata, and bots
-maintenance:
-- author: 
-    - "dependabot[bot]"
-- changed-files:
-  - any-glob-to-any-file:
-    - "custom_components/hyxi_cloud/manifest.json"
-    - "custom_components/hyxi_cloud/hacs.json"
-    - "pyproject.toml"
-    - "requirements.txt"
+# 🧪 Tests
+"test":
+  - changed-files:
+      - any-glob-to-any-file: "tests/**/*"
+
+# 📦 Refactor
+"refactor":
+  - head-branch: ["^refactor/"]
+
+# ⬆️ Dependency Updates
+"dependencies":
+  - author: ["dependabot[bot]"]
+  - changed-files:
+      - any-glob-to-any-file:
+          - "requirements.txt"
+          - "pyproject.toml"
+
+# ♻️ Chore (Metadata & Housekeeping)
+"chore":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/manifest.json"
+          - "custom_components/hyxi_cloud/hacs.json"
+          - ".gitignore"
