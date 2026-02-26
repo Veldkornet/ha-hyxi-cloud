@@ -11,11 +11,19 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
+      # 🚀 1. Checkout the PR branch so the action can see the NEW labeler.yml
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
       - name: Apply Labels
         uses: actions/labeler@v5
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           sync-labels: true
+          # 🚀 2. Explicitly tell it to use the file you just checked out
+          configuration-path: .github/labeler.yml
 
   check-labels:
     needs: label # <--- MAGIC: This job waits for the labeler to finish
