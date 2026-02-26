@@ -16,6 +16,12 @@ jobs:
       issues: write # Needed to comment on the PR if no labels are found
     
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          # 🔍 'audit' mode observes and recommends a policy. 
+          # 🛡️ 'block' mode strictly prevents any unapproved outgoing traffic.
+          egress-policy: audit
       - name: Download PR Metadata
         uses: actions/download-artifact@v4
         with:
