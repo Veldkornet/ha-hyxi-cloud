@@ -5,7 +5,8 @@ on:
     branches:
       - main
   pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
+    # 🚀 Added 'edited' so renaming a PR updates the draft immediately
+    types: [opened, reopened, synchronize, labeled, edited]
 
 jobs:
   update_release_draft:
@@ -14,20 +15,11 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get version from manifest.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' custom_components/hyxi_cloud/manifest.json)
-          echo "Extracted version: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
+      # We no longer need to checkout the code to find the version!
+      # Release Drafter will calculate it based on your labels.
       - name: Update Release Draft
-        uses: release-drafter/release-drafter@v6.2.0
+        uses: release-drafter/release-drafter@v6
         with:
-          version: ${{ steps.get_version.outputs.version }}
           commitish: main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

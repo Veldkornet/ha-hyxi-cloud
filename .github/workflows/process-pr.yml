@@ -1,0 +1,81 @@
+name: "2. Process PR Labels (Privileged)"
+
+on:
+  workflow_run:
+    workflows: ["1. Receive PR (Untrusted)"]
+    types: [completed]
+
+jobs:
+  apply-and-check:
+    runs-on: ubuntu-latest
+    # Only run if the PR workflow actually succeeded
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      pull-requests: write
+      statuses: write # Needed to put the Red X / Green Check on the PR
+      issues: write # Needed to comment on the PR if no labels are found
+    
+    steps:
+      - name: Download PR Metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-metadata
+          path: pr-metadata
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Read PR Data
+        id: pr_data
+        run: |
+          PR_NUMBER=$(tr -d '\n' < pr-metadata/pr_number)
+          PR_SHA=$(tr -d '\n' < pr-metadata/pr_sha)
+          echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
+          echo "PR_SHA=$PR_SHA" >> "$GITHUB_ENV"
+
+      - name: Apply Labels
+        uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          configuration-path: "pr-metadata/labeler.yml"
+          pr-number: ${{ env.PR_NUMBER }}
+          sync-labels: false
+
+      - name: Verify & Enforce Labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER, 10);
+            const prSha = process.env.PR_SHA;
+
+            // Fetch the newly applied labels
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const labels = pullRequest.labels;
+            const hasLabels = labels.length > 0;
+
+            // 1. Update the PR's visual status check (Green Check or Red X)
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: prSha,
+              state: hasLabels ? 'success' : 'error',
+              context: 'Label Enforcement',
+              description: hasLabels ? `Found ${labels.length} label(s)` : 'No labels found. Please add one.',
+            });
+
+            // 2. Add a helpful comment if it failed
+            if (!hasLabels) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: "❌ **Label Check Failed:** I couldn't automatically label this PR, and no manual labels were added. Please add a label (e.g., `bugfix`, `new-feature`) so the Release Drafter can categorize it!"
+              });
+              core.setFailed("No labels found.");
+            } else {
+              console.log(`✅ PR is labeled with: ${labels.map(l => l.name).join(", ")}`);
+            }

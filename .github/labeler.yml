@@ -41,3 +41,11 @@
           - "custom_components/hyxi_cloud/manifest.json"
           - "custom_components/hyxi_cloud/hacs.json"
           - ".gitignore"
+          
+# Label for GitHub Actions, Scripts, and Repo Infrastructure
+"ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**/*"  # 🚀 Double asterisks catch all subfolders/files
+          - "dev_env/**/*"
+          - ".vscode/tasks.json"

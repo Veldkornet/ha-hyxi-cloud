@@ -1,0 +1,32 @@
+name: Sync Manifest on Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Update manifest.json to match Release Tag
+        run: |
+          # Get the tag name (e.g., 2026.3.2)
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          
+          # Strip 'v' if it exists (e.g., v2026.3.2 -> 2026.3.2)
+          CLEAN_VER=$(echo $TAG_NAME | sed 's/^v//')
+          
+          # Update the manifest
+          jq ".version = \"$CLEAN_VER\"" custom_components/hyxi_cloud/manifest.json > temp.json && mv temp.json custom_components/hyxi_cloud/manifest.json
+          
+          # Commit back to main
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add custom_components/hyxi_cloud/manifest.json
+          git commit -m "chore: sync manifest to $CLEAN_VER [skip ci]"
+          git push origin main

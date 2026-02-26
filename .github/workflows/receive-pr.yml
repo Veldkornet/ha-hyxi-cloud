@@ -1,0 +1,36 @@
+name: "1. Receive PR (Untrusted)"
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    # We use standard pull_request here so it's fully sandboxed
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+jobs:
+  gather-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR Code
+        uses: actions/checkout@v4
+
+      - name: Package PR Metadata
+        run: |
+          mkdir -p pr-metadata
+          # Save the PR Number and Commit Hash
+          echo ${{ github.event.number }} > pr-metadata/pr_number
+          echo ${{ github.event.pull_request.head.sha }} > pr-metadata/pr_sha
+          
+          # Copy the labeler config if it exists
+          if [ -f .github/labeler.yml ]; then
+            cp .github/labeler.yml pr-metadata/
+          else
+            echo "" > pr-metadata/labeler.yml
+          fi
+
+      - name: Upload PR Metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-metadata
+          path: pr-metadata/
+          overwrite: true
