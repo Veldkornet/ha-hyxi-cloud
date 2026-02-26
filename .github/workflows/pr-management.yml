@@ -1,8 +1,8 @@
 name: "PR Management"
 
 on:
-  pull_request_target: # Using pull_request_target allows the labeler to work on forks safely
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited] 
 
 jobs:
   label:
