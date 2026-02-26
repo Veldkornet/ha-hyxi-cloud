@@ -5,6 +5,9 @@ change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
 sort-direction: ascending
 
 categories:
+  - title: "📚 Documentation"
+    labels:
+      - "documentation"
   - title: "💥 Breaking Changes"
     labels:
       - "breaking-change"
