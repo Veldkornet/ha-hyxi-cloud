@@ -11,6 +11,10 @@ jobs:
   gather-metadata:
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
       - name: Checkout PR Code
         uses: actions/checkout@v4
 
