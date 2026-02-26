@@ -22,7 +22,6 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
-        icon="mdi:battery",
     ),
     SensorEntityDescription(
         key="pbat",
@@ -115,11 +114,13 @@ SENSOR_TYPES = [
         key="collectTime",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-check-outline",
     ),
     SensorEntityDescription(
         key="last_seen",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:cloud-check-outline",
     ),
     # New Device Info Sensors
     SensorEntityDescription(
@@ -173,12 +174,43 @@ SENSOR_TYPES = [
         icon="mdi:lan",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    SensorEntityDescription(
+        key="acP",
+        name="AC Power",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-power",
+    ),
+    SensorEntityDescription(
+        key="vac",
+        name="AC Voltage",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sine-wave",
+    ),
+    SensorEntityDescription(
+        key="vpv",
+        name="PV Voltage",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-panel",
+    ),
+    SensorEntityDescription(
+        key="eToday",
+        name="Energy Today",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:solar-power-variant",
+    ),
 ]
 VSYS_SENSORS = [
     SensorEntityDescription(
         key="avg_soc",
         name="Battery State of Charge Average",
-        icon="mdi:battery",
         native_unit_of_measurement="%",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.BATTERY,
@@ -248,14 +280,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     child_entities = []
 
     # Filter constants
-    INVERTER_SENSORS = [
-        "ppv",
-        "totalE",
-        "tinv",
-        "batCap",
-        "maxChargePower",
-        "maxDischargePower",
-    ]
     BATTERY_SENSORS = [
         "batSoc",
         "pbat",
@@ -265,53 +289,46 @@ async def async_setup_entry(hass, entry, async_add_entities):
         "bat_charging",
         "bat_discharging",
     ]
-    METER_SENSORS = ["grid_import", "grid_export", "home_load"]
     COLLECTOR_SENSORS = ["signalIntensity", "signalVal", "wifiVer", "comMode"]
     HEARTBEAT_SENSOR = ["last_seen"]
-    DATA_TIME_SENSOR = ["collectTime"]
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
-        # 🛠️ UPDATED FIX: Skip the namespaced metadata dictionary
         if sn == "_metadata":
             continue
 
         device_type = str(dev_data.get("device_type_code", "")).upper()
         metrics = dev_data.get("metrics", {})
 
+        _LOGGER.debug(
+            "HYXi Processing Device %s (Type: %s). Metrics keys: %s",
+            sn,
+            device_type,
+            list(metrics.keys()),
+        )
+
         for description in SENSOR_TYPES:
             key = description.key
             should_add = False
 
+            # ✅ 1. Always add Heartbeat/Diagnostic sensors
             if key in HEARTBEAT_SENSOR:
                 should_add = True
-            elif key in DATA_TIME_SENSOR and device_type not in [
-                "COLLECTOR",
-                "DMU",
-                "OPTIMIZER",
-            ]:
-                should_add = True
-            elif "HYBRID" in device_type or "ALL_IN_ONE" in device_type:
-                if (
-                    key in INVERTER_SENSORS
-                    or key in BATTERY_SENSORS
-                    or key in METER_SENSORS
-                ):
+
+            # ✅ 2. Collector-Only Sensors
+            elif key in COLLECTOR_SENSORS:
+                if "COLLECTOR" in device_type or "DMU" in device_type:
                     should_add = True
-            elif "INVERTER" in device_type:
-                if key in INVERTER_SENSORS:
-                    should_add = True
-            elif "BATTERY" in device_type or "EMS" in device_type:
-                if key in BATTERY_SENSORS:
-                    should_add = True
-            elif "METER" in device_type:
-                if key in METER_SENSORS:
-                    should_add = True
-            elif "COLLECTOR" in device_type or "DMU" in device_type:
-                if key in COLLECTOR_SENSORS:
+
+            # ✅ 3. Data-Driven Discovery
+            # We check if the key exists in metrics and isn't just a placeholder
+            elif key in metrics and metrics[key] is not None:
+                # We accept everything except empty strings for these
+                if str(metrics[key]) != "":
                     should_add = True
 
             if should_add:
+                # Decide if it's a "Child" (Battery) or "Parent" (Device) entity
                 if key in BATTERY_SENSORS and metrics.get("batSn"):
                     child_entities.append(HyxiSensor(coordinator, sn, description))
                 else:
@@ -399,17 +416,24 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """Returns the sensor value with correct data typing for HA."""
         metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
         value = metrics.get(self.entity_description.key)
+
+        # 1. Early exit for missing data
         if value is None or value == "":
             return None
+
         check_key = self.entity_description.key.lower()
 
-        if check_key in ["batsoc", "batsoh"]:
+        # 2. Integers (Percentages)
+        if check_key in ["batsoc", "batsoh", "signalval"]:
             try:
                 return int(round(float(value), 0))
             except (ValueError, TypeError):
                 return None
+
+        # 3. Timestamps
         if self.entity_description.key == "collectTime":
             try:
                 return datetime.fromtimestamp(int(value), tz=UTC)
@@ -417,6 +441,16 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 return None
         if self.entity_description.key == "last_seen":
             return dt_util.parse_datetime(str(value))
+
+        # 🚀 4. Numerical Sensors (Power, Voltage, Energy, Capacity)
+        # If the sensor has a unit (W, V, kWh), we ensure it's a float.
+        # This fixes the "String vs Number" issue for Micro Inverters!
+        if self.entity_description.native_unit_of_measurement is not None:
+            try:
+                return round(float(value), 2)
+            except (ValueError, TypeError):
+                return value  # Fallback if it's not a number
+
         return value
 
 
@@ -460,8 +494,8 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         self._key = description.key
 
         self._attr_unique_id = f"hyxi_vsys_{entry.entry_id}_{description.key}"
-
-        self._attr_translation_key = f"battery_system_{description.key.lower()}"
+        # 🛡️ Match strings.json exactly
+        self._attr_translation_key = description.key.lower()
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"hyxi_system_{entry.entry_id}")},
@@ -472,12 +506,27 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Value with floating point protection."""
+        """Value with floating point protection and proper typing."""
         summary = self.coordinator.get_battery_summary()
         if not summary:
             return None
         value = summary.get(self._key)
 
-        if value is not None and isinstance(value, (int, float)):
-            return int(round(float(value), 0))
+        if value is None or value == "":
+            return None
+
+        # 🚀 Use the same logic as the main sensors for consistency
+        if "soc" in self._key.lower() or "soh" in self._key.lower():
+            try:
+                return int(round(float(value), 0))
+            except (ValueError, TypeError):
+                return None
+
+        # Keep decimals for Power (W) and Energy (kWh)
+        if self.entity_description.native_unit_of_measurement is not None:
+            try:
+                return round(float(value), 2)
+            except (ValueError, TypeError):
+                return value
+
         return value

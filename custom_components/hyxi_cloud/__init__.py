@@ -72,6 +72,13 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         # 🛠️ Read interval from options (default to 5 mins)
         interval = entry.options.get("update_interval", 5)
 
+        # 🚀 Added Debug Log
+        _LOGGER.debug(
+            "Initializing HYXi Coordinator for '%s' with polling interval: %s minutes",
+            entry.title,
+            interval,
+        )
+
         super().__init__(
             hass,
             _LOGGER,
@@ -195,4 +202,5 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry when options change."""
+    _LOGGER.debug("HYXi: Options updated, reloading integration to apply new settings")
     await hass.config_entries.async_reload(entry.entry_id)
