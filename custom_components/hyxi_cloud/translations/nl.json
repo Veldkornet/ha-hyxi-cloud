@@ -1,73 +1,98 @@
 {
-  "config": {
-    "step": {
-      "user": {
-        "title": "Verbinden met HYXi Cloud",
-        "description": "Voer uw Open API-gegevens in. U kunt deze genereren op het [HYXiPOWER Developer Platform]({link}).",
-        "data": {
-          "access_key": "Access Key (AK)",
-          "secret_key": "Secret Key (SK)"
-        }
-      },
-      "reauth_confirm": {
-        "title": "HYXi Cloud opnieuw verifiëren",
-        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer nieuwe gegevens in om de monitoring te hervatten. U vindt deze op het [HYXiPOWER Developer Platform]({link}).",
-        "data": {
-          "access_key": "Access Key (AK)",
-          "secret_key": "Secret Key (SK)"
-        }
-      }
-    },
-    "error": {
-      "cannot_connect": "Verbinding met HYXi-servers mislukt",
-      "invalid_auth": "Ongeldige Access Key of Secret Key",
-      "unknown": "Onverwachte fout opgetreden"
-    },
-    "abort": {
-      "already_configured": "Dit HYXi-account is al geconfigureerd.",
-      "reauth_successful": "Herauthenticatie was succesvol"
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "HYXi Systeemconfiguratie",
-        "description": "Pas aan hoe uw integratie communiceert met de HYXi Cloud en hoe uw hardware wordt weergegeven.\n\n---",
-        "data": {
-          "update_interval": "Interval voor gegevensvernieuwing (1-60 minuten, Standaard: 5)",
-          "enable_virtual_battery": "Geaggregeerde virtuele batterij inschakelen (vereist 2+ batterijen)"
-        }
-      }
-    }
-  },
   "entity": {
     "binary_sensor": {
-      "connectivity": { "name": "Cloudstatus" }
+      "connectivity": {
+        "name": "Cloudstatus"
+      }
     },
     "sensor": {
-      "batsoc": { "name": "Batterij Laadstatus" },
-      "pbat": { "name": "Batterijvermogen" },
-      "ppv": { "name": "Zonne-energie vermogen" },
-      "home_load": { "name": "Huisverbruik" },
-      "grid_import": { "name": "Netimport" },
-      "grid_export": { "name": "Netexport" },
-      "bat_charging": { "name": "Batterij opladen" },
-      "bat_discharging": { "name": "Batterij ontladen" },
-      "totale": { "name": "Totale energieopbrengst" },
-      "bat_charge_total": { "name": "Totaal opgeladen batterij" },
-      "bat_discharge_total": { "name": "Totaal ontladen batterij" },
-      "batsoh": { "name": "Batterij Gezondheidstoestand" },
-      "tinv": { "name": "Omvormer temperatuur" },
-      "collecttime": { "name": "Gegevens verzameltijd" },
-      "last_seen": { "name": "Laatste Cloud Sync" },
-      "integration_last_updated": { "name": "Integratie laatst bijgewerkt" },
-      "battery_system_avg_soc": { "name": "Systeem batterij laadstatus gemiddelde" },
-      "battery_system_avg_soh": { "name": "Systeem batterij gezondheid gemiddelde" },
-      "battery_system_total_pbat": { "name": "Systeem batterijvermogen" },
-      "battery_system_bat_charging": { "name": "Systeem batterij opladen" },
-      "battery_system_bat_discharging": { "name": "Systeem batterij ontladen" },
-      "battery_system_bat_charge_total": { "name": "Systeem totaal opgeladen batterij" },
-      "battery_system_bat_discharge_total": { "name": "Systeem totaal ontladen batterij" }
+      "batsoc": {
+        "name": "Batterijniveau (SoC)"
+      },
+      "pbat": {
+        "name": "Batterijvermogen"
+      },
+      "ppv": {
+        "name": "Zonne-energie (PV)"
+      },
+      "home_load": {
+        "name": "Huisverbruik"
+      },
+      "grid_import": {
+        "name": "Netimport"
+      },
+      "grid_export": {
+        "name": "Netexport"
+      },
+      "bat_charging": {
+        "name": "Batterij wordt geladen"
+      },
+      "bat_discharging": {
+        "name": "Batterij wordt ontladen"
+      },
+      "totale": {
+        "name": "Totale opbrengst"
+      },
+      "bat_charge_total": {
+        "name": "Totaal geladen batterij"
+      },
+      "bat_discharge_total": {
+        "name": "Totaal ontladen batterij"
+      },
+      "batsoh": {
+        "name": "Batterijgezondheid (SoH)"
+      },
+      "tinv": {
+        "name": "Interne temperatuur"
+      },
+      "collecttime": {
+        "name": "Gegevensverzamelmoment"
+      },
+      "last_seen": {
+        "name": "Laatste cloud-sync"
+      },
+      "batcap": {
+        "name": "Batterijcapaciteit"
+      },
+      "maxchargepower": {
+        "name": "Maximale laadlimiet"
+      },
+      "maxdischargepower": {
+        "name": "Maximale ontlaadlimiet"
+      },
+      "signalintensity": {
+        "name": "Wifi-signaalsterkte"
+      },
+      "signalval": {
+        "name": "Wifi-signaalkwaliteit"
+      },
+      "wifiver": {
+        "name": "Wifi-firmware"
+      },
+      "commode": {
+        "name": "Communicatiemodus"
+      },
+      "acp": {
+        "name": "AC-vermogen"
+      },
+      "vac": {
+        "name": "AC-spanning"
+      },
+      "vpv": {
+        "name": "PV-spanning"
+      },
+      "etoday": {
+        "name": "Energie vandaag"
+      },
+      "avg_soc": {
+        "name": "Gemiddelde batterijlading"
+      },
+      "avg_soh": {
+        "name": "Gemiddelde batterijgezondheid"
+      },
+      "total_pbat": {
+        "name": "Totaal batterijvermogen"
+      }
     }
   }
 }

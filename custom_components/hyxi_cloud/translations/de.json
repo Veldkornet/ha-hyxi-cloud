@@ -1,73 +1,98 @@
 {
-  "config": {
-    "step": {
-      "user": {
-        "title": "Mit HYXi Cloud verbinden",
-        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Diese können Sie auf der [HYXiPOWER Developer Platform]({link}) erstellen.",
-        "data": {
-          "access_key": "Access Key (AK)",
-          "secret_key": "Secret Key (SK)"
-        }
-      },
-      "reauth_confirm": {
-        "title": "HYXi Cloud neu authentifizieren",
-        "description": "Ihr Access Key oder Secret Key ist nicht mehr gültig. Bitte geben Sie neue Zugangsdaten ein, um die Überwachung fortzusetzen. Sie finden diese auf der [HYXiPOWER Developer Platform]({link}).",
-        "data": {
-          "access_key": "Access Key (AK)",
-          "secret_key": "Secret Key (SK)"
-        }
-      }
-    },
-    "error": {
-      "cannot_connect": "Verbindung zu HYXi-Servern fehlgeschlagen",
-      "invalid_auth": "Ungültiger Access Key oder Secret Key",
-      "unknown": "Unerwarteter Fehler aufgetreten"
-    },
-    "abort": {
-      "already_configured": "Dieses HYXi-Konto ist bereits konfiguriert.",
-      "reauth_successful": "Neu-Authentifizierung war erfolgreich"
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "HYXi Systemkonfiguration",
-        "description": "Passen Sie an, wie Ihre Integration mit der HYXi Cloud kommuniziert und wie Ihre Hardware angezeigt wird.\n\n---",
-        "data": {
-          "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
-          "enable_virtual_battery": "Aggregierte virtuelle Batterie aktivieren (benötigt 2+ Batterien)"
-        }
-      }
-    }
-  },
   "entity": {
     "binary_sensor": {
-      "connectivity": { "name": "Cloud-Status" }
+      "connectivity": {
+        "name": "Cloud-Status"
+      }
     },
     "sensor": {
-      "batsoc": { "name": "Batterieladezustand" },
-      "pbat": { "name": "Batterieleistung" },
-      "ppv": { "name": "Photovoltaik-Leistung" },
-      "home_load": { "name": "Hausverbrauch" },
-      "grid_import": { "name": "Netzbezug" },
-      "grid_export": { "name": "Netzeinspeisung" },
-      "bat_charging": { "name": "Batterie Ladung" },
-      "bat_discharging": { "name": "Batterie Entladung" },
-      "totale": { "name": "Gesamtertrag" },
-      "bat_charge_total": { "name": "Gesamte Batterieladung" },
-      "bat_discharge_total": { "name": "Gesamte Batterieentladung" },
-      "batsoh": { "name": "Batterie-Gesundheitszustand" },
-      "tinv": { "name": "Wechselrichter-Temperatur" },
-      "collecttime": { "name": "Daten-Erfassungszeit" },
-      "last_seen": { "name": "Letzter Cloud-Sync" },
-      "integration_last_updated": { "name": "Integration zuletzt aktualisiert" },
-      "battery_system_avg_soc": { "name": "System Batterie-Ladezustand Durchschnitt" },
-      "battery_system_avg_soh": { "name": "System Batterie-Gesundheitszustand Durchschnitt" },
-      "battery_system_total_pbat": { "name": "System Batterieleistung" },
-      "battery_system_bat_charging": { "name": "System Batterie Ladung" },
-      "battery_system_bat_discharging": { "name": "System Batterie Entladung" },
-      "battery_system_bat_charge_total": { "name": "System Gesamte Batterieladung" },
-      "battery_system_bat_discharge_total": { "name": "System Gesamte Batterieentladung" }
+      "batsoc": {
+        "name": "Batterieladezustand (SoC)"
+      },
+      "pbat": {
+        "name": "Batterieleistung"
+      },
+      "ppv": {
+        "name": "Solarleistung (PV)"
+      },
+      "home_load": {
+        "name": "Hausverbrauch"
+      },
+      "grid_import": {
+        "name": "Netzbezug"
+      },
+      "grid_export": {
+        "name": "Netzeinspeisung"
+      },
+      "bat_charging": {
+        "name": "Batterie lädt"
+      },
+      "bat_discharging": {
+        "name": "Batterie entlädt"
+      },
+      "totale": {
+        "name": "Gesamtertrag"
+      },
+      "bat_charge_total": {
+        "name": "Gesamte Batterieladung"
+      },
+      "bat_discharge_total": {
+        "name": "Gesamte Batterieentladung"
+      },
+      "batsoh": {
+        "name": "Batteriegesundheit (SoH)"
+      },
+      "tinv": {
+        "name": "Innentemperatur"
+      },
+      "collecttime": {
+        "name": "Datenerfassungszeit"
+      },
+      "last_seen": {
+        "name": "Letzte Cloud-Synchronisierung"
+      },
+      "batcap": {
+        "name": "Batteriekapazität"
+      },
+      "maxchargepower": {
+        "name": "Max. Ladelimit"
+      },
+      "maxdischargepower": {
+        "name": "Max. Entladelimit"
+      },
+      "signalintensity": {
+        "name": "WLAN-Signalstärke"
+      },
+      "signalval": {
+        "name": "WLAN-Signalqualität"
+      },
+      "wifiver": {
+        "name": "WLAN-Firmware"
+      },
+      "commode": {
+        "name": "Kommunikationsmodus"
+      },
+      "acp": {
+        "name": "AC-Leistung"
+      },
+      "vac": {
+        "name": "AC-Spannung"
+      },
+      "vpv": {
+        "name": "PV-Spannung"
+      },
+      "etoday": {
+        "name": "Heutiger Ertrag"
+      },
+      "avg_soc": {
+        "name": "Durchschnittliche Batterieladung"
+      },
+      "avg_soh": {
+        "name": "Durchschnittliche Batteriegesundheit"
+      },
+      "total_pbat": {
+        "name": "Gesamte Batterieleistung"
+      }
     }
   }
 }
