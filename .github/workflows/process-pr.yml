@@ -13,6 +13,7 @@ jobs:
     permissions:
       pull-requests: write
       statuses: write # Needed to put the Red X / Green Check on the PR
+      issues: write # Needed to comment on the PR if no labels are found
     
     steps:
       - name: Download PR Metadata
