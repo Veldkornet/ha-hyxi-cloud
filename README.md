@@ -1,18 +1,29 @@
-# HYXi Cloud Integration for Home Assistant
+<div align="center">
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud)
-[![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/blob/main/LICENSE)
-[![Open Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
-![Dependabot](https://img.shields.io/badge/dependabot-enabled-blue?logo=dependabot&logoColor=white)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Validate](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml)
-![Lint Status](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/lint.yml/badge.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="custom_components/hyxi_cloud/brand/logo_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="custom_components/hyxi_cloud/brand/logo_light.png">
+  <img alt="HYXi Cloud Logo" src="custom_components/hyxi_cloud/brand/logo_light.png" width="450">
+</picture>
+
+### [HYXiPower](https://www.hyxipower.com/) Cloud for Home Assistant
+**Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
+
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud?style=flat-square&color=blue)](https://github.com/Veldkornet/ha-hyxi-cloud/releases)
+[![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square&color=lightgrey)](LICENSE)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
+[![GitHub Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square&color=red)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
+
 [![CodeQL](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml)
+[![Gitleaks](https://img.shields.io/badge/protected%20by-gitleaks-blue?style=flat-square)](https://github.com/gitleaks/gitleaks-action)
+[![Security: Harden-Runner](https://img.shields.io/badge/Security-Harden--Runner-green?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/actions)
+[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-blue?style=flat-square&logo=dependabot)](https://github.com/Veldkornet/ha-hyxi-cloud/network/updates)
 
-[![Buy Me a Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
 
-A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) Inverters and Energy Storage Systems via the HYXi Cloud API. This integration provides near real-time data for solar production, battery status, and home energy usage.
+---
+</div>
 
 ## ✨ Features
 
@@ -40,18 +51,28 @@ A Home Assistant integration to monitor [HYXiPower](https://www.hyxipower.com/) 
 
 ## 🔌 Supported Devices
 
-The integration dynamically adapts to your hardware based on the device types reported by the HYXi Cloud and creates sensors based on what your specific hardware reports to the cloud. If you are missing sensors / devices, please see [New Devices](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices)
+> [!TIP]
+> **Dynamic Discovery:** This integration uses a proactive discovery model. Even if your device is listed as "Untested," it will automatically populate with at least basic diagnostic entities and known mapped entities. Full sensor mapping is applied once the device type is confirmed.
 
-| Device Type | HYXi API Code | Status | Supported Sensors |
-| :--- | :--- | :--- | :--- |
-| **Hybrid Inverter** | `HYBRID_INVERTER`, `ALL_IN_ONE` | ✅ **Tested** | Solar, Battery, Grid, Diagnostics |
-| **Data Collector** | `COLLECTOR`, `DMU` | ✅ **Tested** | Heartbeat (`last_seen`) |
-| **String Inverter** | `STRING_INVERTER` | ⚠️ *Untested* | Solar, Diagnostics |
-| **Micro Inverter** | `MICRO_INVERTER` | ⚠️ *Untested* | Solar, Diagnostics |
-| **Standalone Battery** | `ENERGY_STORAGE_BATTERY`, `AC_BATTERY`, `EMS` | ⚠️ *Untested* | Battery SOC, Power, Health |
-| **Smart Meter** | `METER` | ⚠️ *Untested* | Grid Import/Export, Home Load |
+### 📡 Detailed Entity Support
 
-## 🛡️ Reliability & Diagnostics
+| Device Type | Status | Key Entities Provided |
+| :--- | :--- | :--- |
+| **Hybrid & All-in-One** | ✅ Tested | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency <br> **System:** Internal Temp, Running State, Fault Codes |
+| **Data Collector** | ✅ Tested | **Diagnostics:** Signal Intensity (RSSI), Heartbeat, Heartbeat Interval, Last Seen |
+| **String Inverter** | ⚠️ Untested | **PV:** Power, String Volts/Amps <br> **AC:** Output Power, Daily/Total Yield, Bus Voltage, Temperature |
+| **Micro Inverter** | ⚠️ Untested | **Module:** DC Input Power, AC Voltage, Frequency, Daily Energy, Internal Temp |
+| **Smart Meter** | ⚠️ Untested | **Grid:** Active/Reactive Power, Voltage, Export Energy, Import Energy |
+
+> [!IMPORTANT]
+> ### 🤝 Call for Testers
+> you own a **String Inverter, Micro Inverter, Standalone Batteryor Multiple Batteries**? Your data can help us move these to **✅ Tested**!
+> 
+> 1. Enable **Debug Logging** in Home Assistant for this integration.
+> 2. Open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices) and provide a sanitized (remove your ID/Serial) snippet of the API response.
+> 3. We will verify the sensor mappings and update the integration!
+
+### 🛡️ Reliability & Diagnostics
 
 This integration includes a specialized diagnostic system to help you distinguish between local hardware issues and cloud service outages.
 
@@ -62,43 +83,25 @@ This integration includes a specialized diagnostic system to help you distinguis
 | **Data Freshness** | Sync latency tracking. | Compares hardware `collectTime` to current time to detect "Stale" data. |
 | **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
 
+### 🔋 Virtual Battery Management
+For systems with multiple physical battery units, this integration automatically creates a **Virtual System Battery**. 
+
+* **Aggregated View:** Combines SOC, SOH, and Power across all units into a single "System" entity for easy dashboarding.
+* **Balanced Metrics:** Uses weighted averages for State of Charge (SOC) to ensure your "Full" or "Empty" readings are accurate across the entire bank.
+* **Individual Monitoring:** You can still access individual battery telemetry for cell-level health checks.
+
 ### Smart Caching Logic
 When the **Cloud Status** becomes `Offline`, the integration will:
 1. Keep your sensor values at their **last known state** (preventing "Unavailable" icons).
 2. Log the connection attempt and use **exponential backoff** to retry.
 3. Automatically resume updates once the cloud is back online.
 
-## 📊 Supported Sensors
-
-### Core Monitoring
-| Category | Sensor Name | ID (Key) | Unit |
-| :--- | :--- | :--- | :--- |
-| **Solar** | Solar Power | `ppv` | W |
-| **Solar** | Total Energy Yield | `totale` | kWh |
-| **Battery** | State of Charge | `batsoc` | % |
-| **Battery** | State of Health | `batsoh` | % |
-| **Battery** | Battery Power | `pbat` | W |
-| **Battery** | Battery Charging | `bat_charging` | W |
-| **Battery** | Battery Discharging | `bat_discharging` | W |
-| **Grid/Load** | Home Load | `home_load` | W |
-| **Grid/Load** | Grid Import | `grid_import` | W |
-| **Grid/Load** | Grid Export | `grid_export` | W |
-
-### Virtual Battery System (Aggregated)
-*Enabled via Options if 2+ batteries are detected.*
-| Sensor Name | ID (Key) | Unit |
-| :--- | :--- | :--- |
-| System Battery SoC Average | `battery_system_avg_soc` | % |
-| System Battery Power | `battery_system_total_pbat` | W |
-| System Battery Charging | `battery_system_bat_charging` | W |
-| System Battery Discharging | `battery_system_bat_discharging` | W |
-| System Total Battery Charge | `battery_system_bat_charge_total` | kWh |
-| System Total Battery Discharge | `battery_system_bat_discharge_total` | kWh |
-
 ## ⚙️ Setup & Configuration
 
 1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXiPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
-   > **Important:** Use the same email address that your devices are registered to in the HYXi app.
+   
+   > **Important:** 
+   > Use the same email address that your devices are registered to in the HYXi app.
 2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXi Cloud**.
 Or alternatively, add the integration with the following:
 
