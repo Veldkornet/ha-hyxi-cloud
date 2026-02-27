@@ -33,14 +33,22 @@ class HyxiApiClient:
         """Generates headers matching HYXi's official Java SDK implementation."""
         now_ms = int(time.time() * 1000)
         timestamp = str(now_ms)
-        nonce = format(now_ms, "x")[-8:]
+
+        # 🚀 Generate a truly unique Nonce for concurrent requests
+        nonce = os.urandom(4).hex()
 
         content_str = "grantType:1" if is_token_request else ""
         hex_hash = hashlib.sha512(content_str.encode("utf-8")).hexdigest()
 
         string_to_sign = f"{path}\n{method.upper()}\n{hex_hash}\n"
-        token_str = self.token if self.token else ""
 
+        # 🚀 Do not poison the signature with an expired token!
+        if is_token_request:
+            token_str = ""
+        else:
+            token_str = self.token if self.token else ""
+
+        # Build the final string
         sign_string = f"{self.access_key}{token_str}{timestamp}{nonce}{string_to_sign}"
         hmac_bytes = hmac.new(
             self.secret_key.encode("utf-8"), sign_string.encode("utf-8"), hashlib.sha512
