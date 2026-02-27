@@ -177,19 +177,17 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
                 metrics = dev.get("metrics", {})
 
-                totals["total_pbat"] += float(metrics.get("pbat", 0) or 0)
-                totals["avg_soc"] += float(metrics.get("batSoc", 0) or 0)
-                totals["avg_soh"] += float(metrics.get("batSoh", 0) or 0)
-                totals["bat_charge_total"] += float(
-                    metrics.get("bat_charge_total", 0) or 0
+                totals["total_pbat"] += safe_float(metrics.get("pbat"))
+                totals["avg_soc"] += safe_float(metrics.get("batSoc"))
+                totals["avg_soh"] += safe_float(metrics.get("batSoh"))
+                totals["bat_charge_total"] += safe_float(
+                    metrics.get("bat_charge_total")
                 )
-                totals["bat_discharge_total"] += float(
-                    metrics.get("bat_discharge_total", 0) or 0
+                totals["bat_discharge_total"] += safe_float(
+                    metrics.get("bat_discharge_total")
                 )
-                totals["bat_charging"] += float(metrics.get("bat_charging", 0) or 0)
-                totals["bat_discharging"] += float(
-                    metrics.get("bat_discharging", 0) or 0
-                )
+                totals["bat_charging"] += safe_float(metrics.get("bat_charging"))
+                totals["bat_discharging"] += safe_float(metrics.get("bat_discharging"))
                 totals["count"] += 1
 
         if totals["count"] == 0:
