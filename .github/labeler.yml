@@ -1,13 +1,10 @@
 # 🚀 New Features (Logic changes)
 "new-feature":
-  - changed-files:
-      - any-glob-to-any-file: "custom_components/hyxi_cloud/*.py"
   - head-branch: ["^feature/", "^feat/"] # Auto-label if branch is feat/my-cool-thing
 
 # 🐛 Bug Fixes (Title or Branch matching)
 "bugfix":
   - head-branch: ["^fix/", "^bug/"]
-  # You can't match title in 'labeler.yml', but you can match branch!
 
 # 🎨 Style 
 "style":
