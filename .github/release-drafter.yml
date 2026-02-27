@@ -17,6 +17,9 @@ categories:
   - title: "🐛 Bug Fixes"
     labels:
       - "bugfix"
+    exclude-labels:
+      - "new-feature"
+      - "breaking-change"
   - title: "🎨 Style"
     labels:
       - "style"
