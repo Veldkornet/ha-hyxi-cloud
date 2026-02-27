@@ -4,11 +4,11 @@
 ### [HYXiPower](https://www.hyxipower.com/) Cloud for Home Assistant
 **Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=flat-square)](https://github.com/hacs/integration)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud?style=flat-square&color=blue)](https://github.com/Veldkornet/ha-hyxi-cloud/releases)
 [![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square&color=lightgrey)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
-[![GitHub Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square&color=red)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
+[![GitHub Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square&color=blue)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
 
 [![CodeQL](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml)
 [![HomeAssistant](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml)
