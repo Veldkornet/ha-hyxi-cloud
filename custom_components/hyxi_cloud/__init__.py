@@ -35,7 +35,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session = async_get_clientsession(hass)
     client = HyxiApiClient(access_key, secret_key, BASE_URL, session)
 
-    # 🛠️ Pass 'entry' to the coordinator so it can read options
     coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
 
     try:
@@ -50,7 +49,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Listen for option changes (the slider) and reload if they happen
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True
@@ -69,10 +67,8 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, client: HyxiApiClient, entry: ConfigEntry):
         """Initialize the coordinator with dynamic interval."""
-        # 🛠️ Read interval from options (default to 5 mins)
         interval = entry.options.get("update_interval", 5)
 
-        # 🚀 Added Debug Log
         _LOGGER.debug(
             "Initializing HYXi Coordinator for '%s' with polling interval: %s minutes",
             entry.title,
@@ -88,8 +84,14 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
         self.entry = entry
 
+        # 🚀 Store metadata on the object, not in the data dictionary!
+        self.hyxi_metadata = {
+            "last_attempts": 0,
+            "last_success": None,
+        }
+
     async def _async_update_data(self):
-        """Fetch data with first-load check and namespaced metadata."""
+        """Fetch data and manage metadata attributes."""
         try:
             result = await self.client.get_all_device_data()
 
@@ -97,36 +99,18 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 raise ConfigEntryAuthFailed("Invalid API keys or expired token")
 
             if result is None:
-                if not self.data:
-                    _LOGGER.error(
-                        "Initial fetch failed: No data received from HYXi Cloud."
-                    )
-                    raise UpdateFailed(
-                        "Could not connect to HYXi Cloud for initial setup."
-                    )
+                self.hyxi_metadata["last_attempts"] = 3  # Hard fail after retries
+                raise UpdateFailed(
+                    "HYXi Cloud unreachable. Check internet or API status."
+                )
 
-                _LOGGER.warning("HYXi Cloud unreachable. Using cached data.")
-                new_data = dict(self.data)
-                old_meta = self.data.get("_metadata", {})
-
-                new_data["_metadata"] = {
-                    "cloud_online": False,
-                    "last_attempts": 3,
-                    "last_success": old_meta.get("last_success"),
-                }
-                return new_data
-
+            # ✅ Success! Update metadata attributes.
             devices = result["data"]
-            attempts = result["attempts"]
+            self.hyxi_metadata["last_attempts"] = result["attempts"]
+            self.hyxi_metadata["last_success"] = dt_util.utcnow().isoformat()
 
-            return {
-                **devices,
-                "_metadata": {
-                    "cloud_online": True,
-                    "last_attempts": attempts,
-                    "last_success": dt_util.utcnow().isoformat(),
-                },
-            }
+            # Return pure device dictionary
+            return devices
 
         except ConfigEntryAuthFailed:
             raise
@@ -134,23 +118,14 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             raise
         except Exception as err:
             _LOGGER.error("Unexpected error in HYXi update: %s", err)
-            if not self.data:
-                raise UpdateFailed(f"Setup failed: {err}") from err
-
-            new_data = dict(self.data)
-            new_data["_metadata"] = {
-                **self.data.get("_metadata", {}),
-                "cloud_online": False,
-                "last_attempts": 1,
-            }
-            return new_data
+            self.hyxi_metadata["last_attempts"] += 1
+            raise UpdateFailed(f"Unexpected error: {err}") from err
 
     def get_battery_summary(self):
         """Calculate aggregated data across all battery units."""
         if not self.data:
             return None
 
-        # Helper to prevent crashes if the API returns non-numeric values
         def safe_float(value):
             try:
                 return float(value or 0)
@@ -169,27 +144,21 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         }
 
         for _sn, dev in self.data.items():
-            # 🛠️ UPDATED: Skip the Namespaced metadata key
-            if _sn == "_metadata":
-                continue
-
             dtype = str(dev.get("device_type_code", "")).upper()
             if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
                 metrics = dev.get("metrics", {})
 
-                totals["total_pbat"] += float(metrics.get("pbat", 0) or 0)
-                totals["avg_soc"] += float(metrics.get("batSoc", 0) or 0)
-                totals["avg_soh"] += float(metrics.get("batSoh", 0) or 0)
-                totals["bat_charge_total"] += float(
-                    metrics.get("bat_charge_total", 0) or 0
+                totals["total_pbat"] += safe_float(metrics.get("pbat"))
+                totals["avg_soc"] += safe_float(metrics.get("batSoc"))
+                totals["avg_soh"] += safe_float(metrics.get("batSoh"))
+                totals["bat_charge_total"] += safe_float(
+                    metrics.get("bat_charge_total")
                 )
-                totals["bat_discharge_total"] += float(
-                    metrics.get("bat_discharge_total", 0) or 0
+                totals["bat_discharge_total"] += safe_float(
+                    metrics.get("bat_discharge_total")
                 )
-                totals["bat_charging"] += float(metrics.get("bat_charging", 0) or 0)
-                totals["bat_discharging"] += float(
-                    metrics.get("bat_discharging", 0) or 0
-                )
+                totals["bat_charging"] += safe_float(metrics.get("bat_charging"))
+                totals["bat_discharging"] += safe_float(metrics.get("bat_discharging"))
                 totals["count"] += 1
 
         if totals["count"] == 0:

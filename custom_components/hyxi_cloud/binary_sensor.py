@@ -42,21 +42,14 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the cloud is reachable and data is flowing."""
-        if not self.coordinator.data:
-            return False
-
-        # 🛠️ Path updated to look in _metadata
-        metadata = self.coordinator.data.get("_metadata", {})
-        return metadata.get("cloud_online", False)
+        # 🚀 Native HA tracking for Coordinator success/failure!
+        return self.coordinator.last_update_success
 
     @property
     def extra_state_attributes(self):
         """Return diagnostic attributes including freshness metrics."""
-        if not self.coordinator.data:
-            return {}
-
-        # 🛠️ Paths updated to look in _metadata
-        metadata = self.coordinator.data.get("_metadata", {})
+        # 🛠️ Read directly from the class attribute we created in __init__.py
+        metadata = getattr(self.coordinator, "hyxi_metadata", {})
         attempts = metadata.get("last_attempts", 0)
         last_success_str = metadata.get("last_success")
 

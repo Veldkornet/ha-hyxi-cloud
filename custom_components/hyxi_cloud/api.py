@@ -33,14 +33,22 @@ class HyxiApiClient:
         """Generates headers matching HYXi's official Java SDK implementation."""
         now_ms = int(time.time() * 1000)
         timestamp = str(now_ms)
-        nonce = format(now_ms, "x")[-8:]
+
+        # 🚀 Generate a truly unique Nonce for concurrent requests
+        nonce = os.urandom(4).hex()
 
         content_str = "grantType:1" if is_token_request else ""
         hex_hash = hashlib.sha512(content_str.encode("utf-8")).hexdigest()
 
         string_to_sign = f"{path}\n{method.upper()}\n{hex_hash}\n"
-        token_str = self.token if self.token else ""
 
+        # 🚀 Do not poison the signature with an expired token!
+        if is_token_request:
+            token_str = ""
+        else:
+            token_str = self.token if self.token else ""
+
+        # Build the final string
         sign_string = f"{self.access_key}{token_str}{timestamp}{nonce}{string_to_sign}"
         hmac_bytes = hmac.new(
             self.secret_key.encode("utf-8"), sign_string.encode("utf-8"), hashlib.sha512
@@ -80,6 +88,7 @@ class HyxiApiClient:
                     _LOGGER.error("HYXi API: Token request unauthorized (401/403)")
                     return "auth_failed"
 
+                response.raise_for_status()
                 res = await response.json()
 
                 if not res.get("success"):
@@ -107,6 +116,7 @@ class HyxiApiClient:
                 headers=self._generate_headers(q_path, "GET"),
                 timeout=15,
             ) as resp_q:
+                resp_q.raise_for_status()
                 res_q = await resp_q.json()
 
             if res_q.get("success"):
@@ -224,14 +234,18 @@ class HyxiApiClient:
     async def get_all_device_data(self):
         """Fetches data with built-in retry logic and returns attempt count."""
 
-        # Exponential Backoff Loop
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 data = await self._execute_fetch_all()
+                if data == "auth_failed":
+                    return None  # Hard fail, don't retry bad credentials
                 if data:
-                    # ✅ Success: Return a package containing data AND the attempt number
+                    # ✅ Success
                     return {"data": data, "attempts": attempt}
-                return None
+
+                # If we get here, data was None (soft failure). Trigger a retry manually.
+                raise aiohttp.ClientError("Fetch returned None, triggering retry.")
+
             except (aiohttp.ClientError, TimeoutError) as err:
                 if attempt < MAX_RETRIES:
                     wait_time = attempt * RETRY_DELAY
@@ -251,7 +265,7 @@ class HyxiApiClient:
                     )
             except Exception:
                 _LOGGER.exception("HYXi Unexpected Code Crash:")
-                break  # Don't retry code bugs
+                break
 
         return None
 
@@ -303,9 +317,20 @@ class HyxiApiClient:
             headers=self._generate_headers(p_path, "POST"),
             timeout=15,
         ) as resp_p:
+            resp_p.raise_for_status()
             res_p = await resp_p.json()
 
         if not res_p.get("success"):
+            # 🚀 If the server rejects the token, wipe it and force a retry!
+            if res_p.get("code") in ["A000002", "A000005"]:
+                _LOGGER.warning(
+                    "HYXi Server rejected our token (A000002/A000005). Forcing immediate token refresh..."
+                )
+                self.token = None
+                self.token_expires_at = 0
+                # Raising this error kicks it back up to the retry loop
+                raise aiohttp.ClientError("Server rejected token")
+
             _LOGGER.error("HYXi API Plant Fetch Rejected: %s", res_p)
             return None
 
@@ -326,9 +351,13 @@ class HyxiApiClient:
                 headers=self._generate_headers(d_path, "POST"),
                 timeout=15,
             ) as resp_d:
+                resp_d.raise_for_status()
                 res_d = await resp_d.json()
 
             if not res_d.get("success"):
+                _LOGGER.error(
+                    "HYXi API Device Fetch Rejected for Plant %s: %s", plant_id, res_d
+                )
                 continue
 
             data_val = res_d.get("data", {})
