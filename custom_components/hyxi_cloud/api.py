@@ -232,14 +232,18 @@ class HyxiApiClient:
     async def get_all_device_data(self):
         """Fetches data with built-in retry logic and returns attempt count."""
 
-        # Exponential Backoff Loop
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 data = await self._execute_fetch_all()
+                if data == "auth_failed":
+                    return None  # Hard fail, don't retry bad credentials
                 if data:
-                    # ✅ Success: Return a package containing data AND the attempt number
+                    # ✅ Success
                     return {"data": data, "attempts": attempt}
-                return None
+
+                # If we get here, data was None (soft failure). Trigger a retry manually.
+                raise aiohttp.ClientError("Fetch returned None, triggering retry.")
+
             except (aiohttp.ClientError, TimeoutError) as err:
                 if attempt < MAX_RETRIES:
                     wait_time = attempt * RETRY_DELAY
@@ -259,7 +263,7 @@ class HyxiApiClient:
                     )
             except Exception:
                 _LOGGER.exception("HYXi Unexpected Code Crash:")
-                break  # Don't retry code bugs
+                break
 
         return None
 
@@ -314,6 +318,16 @@ class HyxiApiClient:
             res_p = await resp_p.json()
 
         if not res_p.get("success"):
+            # 🚀 If the server rejects the token, wipe it and force a retry!
+            if res_p.get("code") in ["A000002", "A000005"]:
+                _LOGGER.warning(
+                    "HYXi Server rejected our token (A000002/A000005). Forcing immediate token refresh..."
+                )
+                self.token = None
+                self.token_expires_at = 0
+                # Raising this error kicks it back up to the retry loop
+                raise aiohttp.ClientError("Server rejected token")
+
             _LOGGER.error("HYXi API Plant Fetch Rejected: %s", res_p)
             return None
 
