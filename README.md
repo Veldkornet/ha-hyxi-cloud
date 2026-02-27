@@ -1,10 +1,5 @@
-<div align="center">
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="custom_components/hyxi_cloud/brand/dark_logo.png">
-  <source media="(prefers-color-scheme: light)" srcset="custom_components/hyxi_cloud/brand/logo.png">
-  <img alt="HYXi Cloud Logo" src="custom_components/hyxi_cloud/brand/logo.png" width="450">
-</picture>
+# HYXi Cloud
+![HYXi Cloud Logo](https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/custom_components/hyxi_cloud/brand/logo.png)
 
 ### [HYXiPower](https://www.hyxipower.com/) Cloud for Home Assistant
 **Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
@@ -23,7 +18,6 @@
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
 
 ---
-</div>
 
 ## ✨ Features
 
