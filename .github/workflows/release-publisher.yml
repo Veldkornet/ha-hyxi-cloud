@@ -1,41 +1,38 @@
 name: Release Publisher
 
-# This only runs when you click "Publish release" on a draft
+# Runs exactly when you click "Publish release"
 on:
   release:
     types: [published]
 
 jobs:
-  update-manifest:
+  build-and-upload:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 🚀 This is the VIP Pass to push code
+      contents: write # Required to upload assets to the release
     
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
-        with:
-          ref: main 
 
-      - name: 📝 Update Manifest Version
+      - name: 📝 Inject Version into Manifest
         run: |
-          # 1. Grab the release tag (e.g., v1.3.0) and strip the 'v'
+          # Grab the release tag (e.g., v1.3.0) and strip the 'v'
           TAG_NAME="${{ github.event.release.tag_name }}"
           CLEAN_VERSION="${TAG_NAME#v}"
           
-          echo "Updating manifest.json to version: $CLEAN_VERSION"
-          
-          # 2. Use jq to safely inject the new version into the JSON
+          echo "Injecting version $CLEAN_VERSION into manifest..."
           jq ".version = \"$CLEAN_VERSION\"" custom_components/hyxi_cloud/manifest.json > tmp.json
           mv tmp.json custom_components/hyxi_cloud/manifest.json
 
-      - name: 💾 Commit and Push directly to main
+      - name: 📦 Create Zip Archive
         run: |
-          # 3. Tell git who is making the commit (the automated bot)
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # 4. Commit and push!
-          git add custom_components/hyxi_cloud/manifest.json
-          # Only commit if there was actually a change
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: bump manifest version to $TAG_NAME 🚀" && git push)
+          # Zip only the integration folder, exactly as HACS expects it
+          cd custom_components
+          zip -r ../hyxi_cloud.zip hyxi_cloud/
+          cd ..
+
+      - name: 🚀 Upload Zip to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: hyxi_cloud.zip
