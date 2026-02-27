@@ -125,7 +125,6 @@ SENSOR_TYPES = [
     # New Device Info Sensors
     SensorEntityDescription(
         key="batCap",
-        name="Battery Capacity",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY_STORAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -134,21 +133,18 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="maxChargePower",
-        name="Max Charge Power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="maxDischargePower",
-        name="Max Discharge Power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="signalIntensity",
-        name="Wi-Fi Signal Strength",
         native_unit_of_measurement="dBm",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         state_class=SensorStateClass.MEASUREMENT,
@@ -156,7 +152,6 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="signalVal",
-        name="Wi-Fi Signal Quality",
         native_unit_of_measurement="%",
         icon="mdi:wifi",
         state_class=SensorStateClass.MEASUREMENT,
@@ -164,19 +159,16 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="wifiVer",
-        name="Wi-Fi Firmware Version",
         icon="mdi:memory",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="comMode",
-        name="Communication Mode",
         icon="mdi:lan",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="acP",
-        name="AC Power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -184,7 +176,6 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="vac",
-        name="AC Voltage",
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -192,7 +183,6 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="vpv",
-        name="PV Voltage",
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -200,7 +190,6 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="eToday",
-        name="Energy Today",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -210,7 +199,6 @@ SENSOR_TYPES = [
 VSYS_SENSORS = [
     SensorEntityDescription(
         key="avg_soc",
-        name="Battery State of Charge Average",
         native_unit_of_measurement="%",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.BATTERY,
@@ -218,7 +206,6 @@ VSYS_SENSORS = [
     ),
     SensorEntityDescription(
         key="avg_soh",
-        name="Battery State of Health Average",
         icon="mdi:heart-pulse",
         native_unit_of_measurement="%",
         suggested_display_precision=0,
@@ -227,7 +214,6 @@ VSYS_SENSORS = [
     ),
     SensorEntityDescription(
         key="total_pbat",
-        name="Battery Power",
         icon="mdi:flash",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
@@ -235,7 +221,6 @@ VSYS_SENSORS = [
     ),
     SensorEntityDescription(
         key="bat_charging",
-        name="Battery Charging",
         icon="mdi:battery-arrow-up",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
@@ -243,7 +228,6 @@ VSYS_SENSORS = [
     ),
     SensorEntityDescription(
         key="bat_discharging",
-        name="Battery Discharging",
         icon="mdi:battery-arrow-down",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
@@ -251,7 +235,6 @@ VSYS_SENSORS = [
     ),
     SensorEntityDescription(
         key="bat_charge_total",
-        name="Total Battery Charge",
         icon="mdi:battery-plus-variant",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
@@ -259,7 +242,6 @@ VSYS_SENSORS = [
     ),
     SensorEntityDescription(
         key="bat_discharge_total",
-        name="Total Battery Discharge",
         icon="mdi:battery-minus-variant",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
