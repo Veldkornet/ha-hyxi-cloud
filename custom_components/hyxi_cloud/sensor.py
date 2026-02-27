@@ -276,9 +276,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
-        if sn == "_metadata":
-            continue
-
         device_type = str(dev_data.get("device_type_code", "")).upper()
         metrics = dev_data.get("metrics", {})
 
@@ -293,24 +290,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
             key = description.key
             should_add = False
 
-            # ✅ 1. Always add Heartbeat/Diagnostic sensors
             if key in HEARTBEAT_SENSOR:
                 should_add = True
-
-            # ✅ 2. Collector-Only Sensors
             elif key in COLLECTOR_SENSORS:
                 if "COLLECTOR" in device_type or "DMU" in device_type:
                     should_add = True
-
-            # ✅ 3. Data-Driven Discovery
-            # We check if the key exists in metrics and isn't just a placeholder
             elif key in metrics and metrics[key] is not None:
-                # We accept everything except empty strings for these
                 if str(metrics[key]) != "":
                     should_add = True
 
             if should_add:
-                # Decide if it's a "Child" (Battery) or "Parent" (Device) entity
                 if key in BATTERY_SENSORS and metrics.get("batSn"):
                     child_entities.append(HyxiSensor(coordinator, sn, description))
                 else:
@@ -322,10 +311,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # 3. Aggregate System View
     battery_sns = []
     for sn, dev in coordinator.data.items():
-        # 🛠️ UPDATED FIX: Skip metadata here too
-        if sn == "_metadata":
-            continue
-
         dtype = str(dev.get("device_type_code", "")).upper()
         if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
             battery_sns.append(sn)
@@ -356,6 +341,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._sn = sn
+        self._last_valid_value = None
 
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
@@ -395,6 +381,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
         self._attr_translation_key = description.key.lower()
+        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
 
     @property
     def native_value(self):
@@ -402,40 +389,52 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
         value = metrics.get(self.entity_description.key)
 
-        # 1. Early exit for missing data
         if value is None or value == "":
             return None
 
         check_key = self.entity_description.key.lower()
 
-        # 2. Integers (Percentages)
         if check_key in ["batsoc", "batsoh", "signalval"]:
             try:
                 return int(round(float(value), 0))
             except (ValueError, TypeError):
                 return None
 
-        ## 3. Timestamps
         if self.entity_description.key == "collectTime":
             try:
                 val_int = int(value)
-                # If it's 13 digits (milliseconds), convert to seconds
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
             except (ValueError, TypeError, OSError):
                 return None
+
         if self.entity_description.key == "last_seen":
             return dt_util.parse_datetime(str(value))
 
-        # 🚀 4. Numerical Sensors (Power, Voltage, Energy, Capacity)
-        # If the sensor has a unit (W, V, kWh), we ensure it's a float.
-        # This fixes the "String vs Number" issue for Micro Inverters!
         if self.entity_description.native_unit_of_measurement is not None:
             try:
-                return round(float(value), 2)
+                num_value = round(float(value), 2)
+
+                # Jitter Filter
+                if (
+                    self.entity_description.state_class
+                    == SensorStateClass.TOTAL_INCREASING
+                ):
+                    if self._last_valid_value is not None:
+                        if 0 < num_value < self._last_valid_value:
+                            _LOGGER.debug(
+                                "HYXi Jitter filtered for %s: Blocked drop from %s to %s",
+                                self.entity_description.key,
+                                self._last_valid_value,
+                                num_value,
+                            )
+                            return self._last_valid_value
+
+                self._last_valid_value = num_value
+                return num_value
             except (ValueError, TypeError):
-                return value  # Fallback if it's not a number
+                return value
 
         return value
 
@@ -444,9 +443,9 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
     """Diagnostic sensor for the Integration health."""
 
     _attr_has_entity_name = True
+    _attr_name = "Integration Last Updated"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_translation_key = "integration_last_updated"
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
@@ -478,10 +477,11 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._key = description.key
+        self._last_valid_value = None
 
         self._attr_unique_id = f"hyxi_vsys_{entry.entry_id}_{description.key}"
-        # 🛡️ Match strings.json exactly
         self._attr_translation_key = description.key.lower()
+        self.entity_id = f"sensor.hyxi_vsys_{entry.entry_id}_{description.key.lower()}"
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"hyxi_system_{entry.entry_id}")},
@@ -501,17 +501,33 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         if value is None or value == "":
             return None
 
-        # 🚀 Use the same logic as the main sensors for consistency
         if "soc" in self._key.lower() or "soh" in self._key.lower():
             try:
                 return int(round(float(value), 0))
             except (ValueError, TypeError):
                 return None
 
-        # Keep decimals for Power (W) and Energy (kWh)
         if self.entity_description.native_unit_of_measurement is not None:
             try:
-                return round(float(value), 2)
+                num_value = round(float(value), 2)
+
+                # Jitter Filter
+                if (
+                    self.entity_description.state_class
+                    == SensorStateClass.TOTAL_INCREASING
+                ):
+                    if self._last_valid_value is not None:
+                        if 0 < num_value < self._last_valid_value:
+                            _LOGGER.debug(
+                                "HYXi Jitter filtered for %s: Blocked drop from %s to %s",
+                                self._key,
+                                self._last_valid_value,
+                                num_value,
+                            )
+                            return self._last_valid_value
+
+                self._last_valid_value = num_value
+                return num_value
             except (ValueError, TypeError):
                 return value
 
