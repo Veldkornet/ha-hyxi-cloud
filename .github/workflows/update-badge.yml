@@ -1,0 +1,35 @@
+name: Update Issues Badge
+on:
+  issues:
+    types: [opened, closed, deleted, reopened]
+  workflow_dispatch: # Allows you to run it manually
+
+jobs:
+  update-badge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Issue Count
+        id: count
+        run: |
+          COUNT=$(curl -s "https://api.github.com/repos/${{ github.repository }}" | jq '.open_issues_count')
+          echo "total=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Determine Color
+        id: color
+        run: |
+          VAL=${{ steps.count.outputs.total }}
+          if [ "$VAL" -eq 0 ]; then COLOR="41BDF5";
+          elif [ "$VAL" -lt 10 ]; then COLOR="40c463";
+          elif [ "$VAL" -lt 25 ]; then COLOR="f0883e";
+          else COLOR="ff0000"; fi
+          echo "hex=$COLOR" >> $GITHUB_OUTPUT
+
+      - name: Update Gist
+        uses: itemprop/dynamic-badges@v1.0.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: aa341e2bc93d58afe114759e7e565cf8
+          filename: issues_badge.json
+          label: Issues
+          message: ${{ steps.count.outputs.total }}
+          color: ${{ steps.color.outputs.hex }}
