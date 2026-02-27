@@ -123,7 +123,7 @@ If you are opening a bug report, please include **Debug Logs**:
 1. Go to **Settings > Devices & Services** > **HYXi Cloud**.
 2. Click the three dots (⋮) and select **Enable debug logging**.
 3. Wait 5-10 minutes, then click **Disable debug logging** to download the file.
-4. Open the file, remove any sensitive information (like your real serial numbers if you prefer), and attach it to your GitHub issue!
+4. Open the file, replace any sensitive information (like your real serial numbers if you prefer), and attach it to your GitHub issue! _Note: If you sanitize the data, please keep it consistent as the serial number can be used to show how devices link to each other!_
 
 ## Disclaimer
 This is a custom integration and is **not** an official product of HYXi Power. 
