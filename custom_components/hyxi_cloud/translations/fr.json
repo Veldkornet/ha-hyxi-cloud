@@ -1,4 +1,45 @@
 {
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion à HYXi Cloud",
+        "description": "Entrez vos identifiants Open API. Vous pouvez les générer sur la [plateforme développeur HYXiPOWER]({link}).",
+        "data": {
+          "access_key": "Clé d'accès (AK)",
+          "secret_key": "Clé secrète (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Réauthentification HYXi Cloud",
+        "description": "Votre clé d'accès ou clé secrète n'est plus valide. Veuillez entrer vos nouveaux identifiants pour reprendre la surveillance solaire. Vous les trouverez sur la [plateforme développeur HYXiPOWER]({link}).",
+        "data": {
+          "access_key": "Clé d'accès (AK)",
+          "secret_key": "Clé secrète (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion aux serveurs HYXi",
+      "invalid_auth": "Clé d'accès ou clé secrète invalide",
+      "unknown": "Une erreur inattendue est survenue"
+    },
+    "abort": {
+      "already_configured": "Ce compte HYXi est déjà configuré.",
+      "reauth_successful": "Réauthentification réussie"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configuration du système HYXi",
+        "description": "Ajustez la façon dont votre intégration communique avec le cloud HYXi et comment elle affiche votre matériel.\n\n---",
+        "data": {
+          "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)",
+          "enable_virtual_battery": "Activer la batterie virtuelle agrégée (Nécessite 2+ batteries)"
+        }
+      }
+    }
+  },
   "entity": {
     "binary_sensor": {
       "connectivity": {
@@ -7,16 +48,16 @@
     },
     "sensor": {
       "batsoc": {
-        "name": "Niveau de charge batterie"
+        "name": "Niveau de charge de la batterie"
       },
       "pbat": {
-        "name": "Puissance batterie"
+        "name": "Puissance de la batterie"
       },
       "ppv": {
-        "name": "Puissance solaire (PV)"
+        "name": "Puissance solaire"
       },
       "home_load": {
-        "name": "Charge domestique"
+        "name": "Consommation du foyer"
       },
       "grid_import": {
         "name": "Importation réseau"
@@ -25,22 +66,22 @@
         "name": "Exportation réseau"
       },
       "bat_charging": {
-        "name": "Charge batterie en cours"
+        "name": "Batterie en charge"
       },
       "bat_discharging": {
-        "name": "Décharge batterie en cours"
+        "name": "Batterie en décharge"
       },
       "totale": {
-        "name": "Production totale"
+        "name": "Rendement énergétique total"
       },
       "bat_charge_total": {
-        "name": "Charge totale batterie"
+        "name": "Charge totale de la batterie"
       },
       "bat_discharge_total": {
-        "name": "Décharge totale batterie"
+        "name": "Décharge totale de la batterie"
       },
       "batsoh": {
-        "name": "Santé de la batterie (SOH)"
+        "name": "État de santé de la batterie"
       },
       "tinv": {
         "name": "Température interne"
@@ -49,10 +90,13 @@
         "name": "Heure de collecte des données"
       },
       "last_seen": {
-        "name": "Dernière synchro cloud"
+        "name": "Dernière synchronisation Cloud"
+      },
+      "integration_last_updated": {
+        "name": "Dernière mise à jour de l'intégration"
       },
       "batcap": {
-        "name": "Capacité batterie"
+        "name": "Capacité de la batterie"
       },
       "maxchargepower": {
         "name": "Limite de charge max"
@@ -61,13 +105,13 @@
         "name": "Limite de décharge max"
       },
       "signalintensity": {
-        "name": "Force du signal Wi-Fi"
+        "name": "Intensité du signal Wi-Fi"
       },
       "signalval": {
         "name": "Qualité du signal Wi-Fi"
       },
       "wifiver": {
-        "name": "Firmware Wi-Fi"
+        "name": "Micrologiciel Wi-Fi"
       },
       "commode": {
         "name": "Mode de communication"
@@ -85,13 +129,13 @@
         "name": "Énergie du jour"
       },
       "avg_soc": {
-        "name": "Charge batterie moyenne"
+        "name": "Charge moyenne des batteries"
       },
       "avg_soh": {
-        "name": "Santé batterie moyenne"
+        "name": "Santé moyenne des batteries"
       },
       "total_pbat": {
-        "name": "Puissance batterie totale"
+        "name": "Puissance totale des batteries"
       }
     }
   }

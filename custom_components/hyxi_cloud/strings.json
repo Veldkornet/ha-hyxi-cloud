@@ -93,6 +93,9 @@
       "last_seen": {
         "name": "Last Cloud Sync"
       },
+      "integration_last_updated": {
+        "name": "Integration Last Updated"
+      },
       "batcap": {
         "name": "Battery Capacity"
       },

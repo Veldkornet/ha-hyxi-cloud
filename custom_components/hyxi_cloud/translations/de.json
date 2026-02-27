@@ -1,19 +1,60 @@
 {
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit HYXi Cloud verbinden",
+        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Sie können diese auf der [HYXiPOWER Developer Platform]({link}) generieren.",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "HYXi Cloud erneut authentifizieren",
+        "description": "Ihr Access Key oder Secret Key ist nicht mehr gültig. Bitte geben Sie Ihre neuen Anmeldedaten ein, um die Solarüberwachung fortzusetzen. Sie finden diese auf der [HYXiPOWER Developer Platform]({link}).",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu den HYXi-Servern fehlgeschlagen",
+      "invalid_auth": "Ungültiger Access Key oder Secret Key",
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten"
+    },
+    "abort": {
+      "already_configured": "Dieses HYXi-Konto ist bereits konfiguriert.",
+      "reauth_successful": "Die erneute Authentifizierung war erfolgreich"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXi Systemkonfiguration",
+        "description": "Passen Sie an, wie Ihre Integration mit der HYXi Cloud kommuniziert und wie Ihre Hardware angezeigt wird.\n\n---",
+        "data": {
+          "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
+          "enable_virtual_battery": "Aggregierte virtuelle Batterie aktivieren (Erfordert 2+ Batterien)"
+        }
+      }
+    }
+  },
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud-Status"
+        "name": "Cloud Status"
       }
     },
     "sensor": {
       "batsoc": {
-        "name": "Batterieladezustand (SoC)"
+        "name": "Batterieladezustand"
       },
       "pbat": {
         "name": "Batterieleistung"
       },
       "ppv": {
-        "name": "Solarleistung (PV)"
+        "name": "Solarleistung"
       },
       "home_load": {
         "name": "Hausverbrauch"
@@ -40,7 +81,7 @@
         "name": "Gesamte Batterieentladung"
       },
       "batsoh": {
-        "name": "Batteriegesundheit (SoH)"
+        "name": "Batteriegesundheit"
       },
       "tinv": {
         "name": "Innentemperatur"
@@ -49,7 +90,10 @@
         "name": "Datenerfassungszeit"
       },
       "last_seen": {
-        "name": "Letzte Cloud-Synchronisierung"
+        "name": "Letzte Cloud-Synchronisation"
+      },
+      "integration_last_updated": {
+        "name": "Integration zuletzt aktualisiert"
       },
       "batcap": {
         "name": "Batteriekapazität"
@@ -82,7 +126,7 @@
         "name": "PV-Spannung"
       },
       "etoday": {
-        "name": "Heutiger Ertrag"
+        "name": "Tagesertrag"
       },
       "avg_soc": {
         "name": "Durchschnittliche Batterieladung"

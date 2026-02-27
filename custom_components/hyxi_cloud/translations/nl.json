@@ -1,97 +1,141 @@
 {
+  "config": {
+    "step": {
+      "user": {
+        "title": "Verbinden met HYXi Cloud",
+        "description": "Voer uw Open API inloggegevens in. U kunt deze genereren op het [HYXiPOWER Developer Platform]({link}).",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "HYXi Cloud opnieuw verifiëren",
+        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer uw nieuwe inloggegevens in om de zonnemonitoring te hervatten. U kunt deze vinden op het [HYXiPOWER Developer Platform]({link}).",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan geen verbinding maken met de HYXi servers",
+      "invalid_auth": "Ongeldige Access Key of Secret Key",
+      "unknown": "Er is een onverwachte fout opgetreden"
+    },
+    "abort": {
+      "already_configured": "Dit HYXi account is al geconfigureerd.",
+      "reauth_successful": "Herauthenticatie was succesvol"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXi Systeemconfiguratie",
+        "description": "Pas aan hoe uw integratie communiceert met de HYXi Cloud en hoe uw hardware wordt weergegeven.\n\n---",
+        "data": {
+          "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
+          "enable_virtual_battery": "Schakel samengevoegde virtuele batterij in (Vereist 2+ batterijen)"
+        }
+      }
+    }
+  },
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloudstatus"
+        "name": "Cloud Status"
       }
     },
     "sensor": {
       "batsoc": {
-        "name": "Batterijniveau (SoC)"
+        "name": "Batterij Laadstatus (SoC)"
       },
       "pbat": {
         "name": "Batterijvermogen"
       },
       "ppv": {
-        "name": "Zonne-energie (PV)"
+        "name": "Zonne-energie"
       },
       "home_load": {
         "name": "Huisverbruik"
       },
       "grid_import": {
-        "name": "Netimport"
+        "name": "Net Import"
       },
       "grid_export": {
-        "name": "Netexport"
+        "name": "Net Teruglevering"
       },
       "bat_charging": {
-        "name": "Batterij wordt geladen"
+        "name": "Batterij Opladen"
       },
       "bat_discharging": {
-        "name": "Batterij wordt ontladen"
+        "name": "Batterij Ontladen"
       },
       "totale": {
-        "name": "Totale opbrengst"
+        "name": "Totale Energieopbrengst"
       },
       "bat_charge_total": {
-        "name": "Totaal geladen batterij"
+        "name": "Totaal Batterij Opgeladen"
       },
       "bat_discharge_total": {
-        "name": "Totaal ontladen batterij"
+        "name": "Totaal Batterij Ontladen"
       },
       "batsoh": {
-        "name": "Batterijgezondheid (SoH)"
+        "name": "Batterij Gezondheid (SoH)"
       },
       "tinv": {
-        "name": "Interne temperatuur"
+        "name": "Interne Temperatuur"
       },
       "collecttime": {
-        "name": "Gegevensverzamelmoment"
+        "name": "Gegevensverzamelingstijd"
       },
       "last_seen": {
-        "name": "Laatste cloud-sync"
+        "name": "Laatste Cloud Sync"
+      },
+      "integration_last_updated": {
+        "name": "Integratie Laatst Bijgewerkt"
       },
       "batcap": {
         "name": "Batterijcapaciteit"
       },
       "maxchargepower": {
-        "name": "Maximale laadlimiet"
+        "name": "Max Laadlimiet"
       },
       "maxdischargepower": {
-        "name": "Maximale ontlaadlimiet"
+        "name": "Max Ontlaadlimiet"
       },
       "signalintensity": {
-        "name": "Wifi-signaalsterkte"
+        "name": "Wi-Fi Signaalsterkte"
       },
       "signalval": {
-        "name": "Wifi-signaalkwaliteit"
+        "name": "Wi-Fi Signaalkwaliteit"
       },
       "wifiver": {
-        "name": "Wifi-firmware"
+        "name": "Wi-Fi Firmware"
       },
       "commode": {
         "name": "Communicatiemodus"
       },
       "acp": {
-        "name": "AC-vermogen"
+        "name": "AC Vermogen"
       },
       "vac": {
-        "name": "AC-spanning"
+        "name": "AC Spanning"
       },
       "vpv": {
-        "name": "PV-spanning"
+        "name": "PV Spanning"
       },
       "etoday": {
-        "name": "Energie vandaag"
+        "name": "Energie Vandaag"
       },
       "avg_soc": {
-        "name": "Gemiddelde batterijlading"
+        "name": "Gemiddelde Batterijlading"
       },
       "avg_soh": {
-        "name": "Gemiddelde batterijgezondheid"
+        "name": "Gemiddelde Batterijgezondheid"
       },
       "total_pbat": {
-        "name": "Totaal batterijvermogen"
+        "name": "Totaal Batterijvermogen"
       }
     }
   }
