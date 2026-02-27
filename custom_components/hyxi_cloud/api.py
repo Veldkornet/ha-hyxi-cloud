@@ -88,6 +88,7 @@ class HyxiApiClient:
                     _LOGGER.error("HYXi API: Token request unauthorized (401/403)")
                     return "auth_failed"
 
+                response.raise_for_status()
                 res = await response.json()
 
                 if not res.get("success"):
@@ -115,6 +116,7 @@ class HyxiApiClient:
                 headers=self._generate_headers(q_path, "GET"),
                 timeout=15,
             ) as resp_q:
+                resp_q.raise_for_status()
                 res_q = await resp_q.json()
 
             if res_q.get("success"):
@@ -315,6 +317,7 @@ class HyxiApiClient:
             headers=self._generate_headers(p_path, "POST"),
             timeout=15,
         ) as resp_p:
+            resp_p.raise_for_status()
             res_p = await resp_p.json()
 
         if not res_p.get("success"):
@@ -348,9 +351,13 @@ class HyxiApiClient:
                 headers=self._generate_headers(d_path, "POST"),
                 timeout=15,
             ) as resp_d:
+                resp_d.raise_for_status()
                 res_d = await resp_d.json()
 
             if not res_d.get("success"):
+                _LOGGER.error(
+                    "HYXi API Device Fetch Rejected for Plant %s: %s", plant_id, res_d
+                )
                 continue
 
             data_val = res_d.get("data", {})
