@@ -90,12 +90,6 @@ For systems with multiple physical battery units, this integration automatically
 * **Balanced Metrics:** Uses weighted averages for State of Charge (SOC) to ensure your "Full" or "Empty" readings are accurate across the entire bank.
 * **Individual Monitoring:** You can still access individual battery telemetry for cell-level health checks.
 
-### Smart Caching Logic
-When the **Cloud Status** becomes `Offline`, the integration will:
-1. Keep your sensor values at their **last known state** (preventing "Unavailable" icons).
-2. Log the connection attempt and use **exponential backoff** to retry.
-3. Automatically resume updates once the cloud is back online.
-
 ## ⚙️ Setup & Configuration
 
 1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXiPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
