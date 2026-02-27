@@ -433,10 +433,14 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             except (ValueError, TypeError):
                 return None
 
-        # 3. Timestamps
+        ## 3. Timestamps
         if self.entity_description.key == "collectTime":
             try:
-                return datetime.fromtimestamp(int(value), tz=UTC)
+                val_int = int(value)
+                # If it's 13 digits (milliseconds), convert to seconds
+                if val_int > 9999999999:
+                    val_int = val_int / 1000
+                return datetime.fromtimestamp(val_int, tz=UTC)
             except (ValueError, TypeError, OSError):
                 return None
         if self.entity_description.key == "last_seen":
