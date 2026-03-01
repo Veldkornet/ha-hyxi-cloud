@@ -37,3 +37,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: hyxi_cloud.zip
+          overwrite: true
