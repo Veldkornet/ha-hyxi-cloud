@@ -69,3 +69,5 @@ version-resolver:
       - "chore"
       - "dependencies"
   default: patch
+replace-contributors:
+  'dependabot[bot]': '@dependabot[bot]'
