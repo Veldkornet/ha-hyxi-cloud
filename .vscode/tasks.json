@@ -89,6 +89,51 @@
                 "clear": true,
                 "focus": true
             }
+        },
+        {
+            "label": "Ruff: Check",
+            "type": "shell",
+            "command": "./manage.sh ruff-check",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": true
+            }
+        },
+        {
+            "label": "Ruff: Format",
+            "type": "shell",
+            "command": "./manage.sh ruff-format",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": true
+            }
+        },
+        {
+            "label": "Ruff: Fix",
+            "type": "shell",
+            "command": "./manage.sh ruff-fix",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": true
+            }
         }
     ]
 }

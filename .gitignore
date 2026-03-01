@@ -13,6 +13,7 @@ __pycache__/
 .idea/
 *.swp
 .ruff_cache/
+.venv/
 
 # Home Assistant testing
 .storage/

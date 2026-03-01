@@ -87,9 +87,24 @@ case "$ACTION" in
     $0 stop
     $0 start
     ;;
-
+  ruff-check)
+    echo "🔍 Running Ruff Check..."
+    cd ..
+    python3 -m ruff check .
+    ;;
+  ruff-format)
+    echo "🧹 Running Ruff Format..."
+    cd ..
+    python3 -m ruff format .
+    ;;
+  ruff-fix)
+    echo "🧹 Running Ruff Fix..."
+    cd ..
+    python3 -m ruff check . --fix
+    ;;
   *)
-    echo "Usage: $0 {start|stop|restart}"
+    echo "Usage: $0 {start|stop|restart|ruff-check|ruff-format|ruff-fix}"
     exit 1
     ;;
+
 esac
