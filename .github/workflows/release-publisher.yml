@@ -13,7 +13,7 @@ jobs:
     
     steps:
       - name: 📥 Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: 📝 Inject Version into Manifest
         run: |
@@ -27,10 +27,11 @@ jobs:
 
       - name: 📦 Create Zip Archive
         run: |
-          # Zip only the integration folder, exactly as HACS expects it
-          cd custom_components
-          zip -r ../hyxi_cloud.zip hyxi_cloud/
-          cd ..
+          # Go INSIDE the integration folder and zip the contents 
+          # This ensures manifest.json is at the root of the zip file
+          cd custom_components/hyxi_cloud
+          zip -r ../../hyxi_cloud.zip .
+          cd ../..
 
       - name: 🚀 Upload Zip to Release
         uses: softprops/action-gh-release@v2
