@@ -69,5 +69,7 @@ version-resolver:
       - "chore"
       - "dependencies"
   default: patch
-replace-contributors:
-  'dependabot[bot]': '@dependabot[bot]'
+exclude-contributors:
+  - 'dependabot[bot]'
+  - 'dependabot-preview[bot]'
+  - 'github-actions[bot]'
