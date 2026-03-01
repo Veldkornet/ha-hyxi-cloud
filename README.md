@@ -23,7 +23,6 @@
 ## ✨ Features
 
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
-- **🛡️ Smart Caching:** If the cloud goes offline, sensors retain their last known values instead of becoming "Unavailable," ensuring your dashboards stay readable.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
 - **🔋 Virtual Battery System:** Automatically aggregates multiple physical battery units into a single system view.
