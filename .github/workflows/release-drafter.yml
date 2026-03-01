@@ -7,7 +7,9 @@ on:
   pull_request_target:
     # 🚀 Added 'edited' so renaming a PR updates the draft immediately
     types: [opened, reopened, synchronize, labeled, edited]
-
+concurrency:
+  group: release-drafter
+  cancel-in-progress: false
 jobs:
   update_release_draft:
     permissions:
