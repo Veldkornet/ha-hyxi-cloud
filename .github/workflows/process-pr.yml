@@ -23,7 +23,7 @@ jobs:
           # 🛡️ 'block' mode strictly prevents any unapproved outgoing traffic.
           egress-policy: audit
       - name: Download PR Metadata
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: pr-metadata
           path: pr-metadata
