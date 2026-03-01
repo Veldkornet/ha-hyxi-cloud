@@ -39,7 +39,7 @@ jobs:
           echo "PR_SHA=$PR_SHA" >> "$GITHUB_ENV"
 
       - name: Apply Labels
-        uses: actions/labeler@v5
+        uses: actions/labeler@v6
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           configuration-path: "pr-metadata/labeler.yml"
