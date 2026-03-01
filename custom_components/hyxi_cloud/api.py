@@ -105,7 +105,10 @@ class HyxiApiClient:
 
                     # 1. Grab the raw expiration value exactly as the API sent it
                     raw_expires_in = data.get("expiresIn") or data.get("expires_in")
-                    _LOGGER.debug("HYXi API returned raw token expiration: %s seconds", raw_expires_in)
+                    _LOGGER.debug(
+                        "HYXi API returned raw token expiration: %s seconds",
+                        raw_expires_in,
+                    )
 
                     # 2. Default to 6600 if the API didn't provide one
                     expires_in = raw_expires_in or 6600
@@ -115,11 +118,13 @@ class HyxiApiClient:
                     self.token_expires_at = time.time() + int(expires_in) - buffer_secs
 
                     # 4. Log the actual scheduled refresh time
-                    refresh_time_str = datetime.fromtimestamp(self.token_expires_at).strftime('%Y-%m-%d %H:%M:%S')
+                    refresh_time_str = datetime.fromtimestamp(
+                        self.token_expires_at
+                    ).strftime("%Y-%m-%d %H:%M:%S")
                     _LOGGER.debug(
                         "HYXi Token proactive refresh scheduled in %s seconds (at %s)",
                         int(expires_in) - buffer_secs,
-                        refresh_time_str
+                        refresh_time_str,
                     )
                     return True
         except Exception as e:
