@@ -17,18 +17,11 @@ jobs:
         run: |
           # Get the tag name (e.g., v1.2.6)
           TAG_NAME="${{ github.ref_name }}"
-          
-          # Strip 'v' if it exists
           CLEAN_VER=$(echo $TAG_NAME | sed 's/^v//')
           
-          # Update the manifest
+          # Update the manifest locally (DO NOT COMMIT)
           jq ".version = \"$CLEAN_VER\"" custom_components/hyxi_cloud/manifest.json > temp.json && mv temp.json custom_components/hyxi_cloud/manifest.json
           
-          # Commit back to main
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add custom_components/hyxi_cloud/manifest.json
-          git commit -m "chore: sync manifest to $CLEAN_VER [skip ci]"
-          
-          # Push the detached HEAD to the remote main branch
-          git push origin HEAD:main
+          # Zip the integration folder
+          cd custom_components
+          zip -r ../hyxi_cloud.zip hyxi_cloud/
