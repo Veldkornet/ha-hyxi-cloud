@@ -4,8 +4,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from hyxi_cloud_api import HyxiApiClient
 
-from .api import HyxiApiClient
 from .const import BASE_URL
 from .const import CONF_ACCESS_KEY
 from .const import CONF_SECRET_KEY

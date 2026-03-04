@@ -12,7 +12,8 @@
     "custom_components.hyxi_cloud"
   ],
   "requirements": [
-    "aiohttp>=3.9.0"
+    "aiohttp>=3.9.0",
+    "hyxi-cloud-api==0.1.1"
   ],
   "version": "0.0.0"
 }
