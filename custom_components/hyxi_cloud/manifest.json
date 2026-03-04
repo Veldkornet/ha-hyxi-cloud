@@ -1,6 +1,6 @@
 {
   "domain": "hyxi_cloud",
-  "name": "HYXi Cloud",
+  "name": "HYXI",
   "codeowners": [
     "@Veldkornet"
   ],
@@ -9,7 +9,8 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Veldkornet/ha-hyxi-cloud/issues",
   "loggers": [
-    "custom_components.hyxi_cloud"
+    "custom_components.hyxi_cloud",
+    "hyxi_cloud_api"
   ],
   "requirements": [
     "aiohttp>=3.9.0",
