@@ -452,23 +452,28 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                                     _LOGGER.debug(
                                         "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
                                         self.entity_description.key,
-                                    self._last_valid_value,
-                                    num_value,
-                                )
+                                        self._last_valid_value,
+                                        num_value,
+                                    )
                                     self._last_logged_glitch = num_value
                                 return self._last_valid_value
 
-                            _LOGGER.debug("HYXi Midnight Reset detected for %s", self.entity_description.key)
+                            _LOGGER.debug(
+                                "HYXi Midnight Reset detected for %s",
+                                self.entity_description.key,
+                            )
 
                         # --- UPPER BOUND CHECK ---
                         elif (num_value - self._last_valid_value) > 100.0:
-                             if self._last_logged_glitch != num_value:
+                            if self._last_logged_glitch != num_value:
                                 _LOGGER.debug(
                                     "HYXi High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
-                                    self.entity_description.key, self._last_valid_value, num_value,
+                                    self.entity_description.key,
+                                    self._last_valid_value,
+                                    num_value,
                                 )
                                 self._last_logged_glitch = num_value
-                             return self._last_valid_value
+                            return self._last_valid_value
 
                 # Reset the gatekeeper if we finally get a valid new value
                 self._last_logged_glitch = None
@@ -596,15 +601,15 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
 
                         # Anti-Spike Check
                         elif (num_value - self._last_valid_value) > 100.0:
-                             if self._last_logged_glitch != num_value:
+                            if self._last_logged_glitch != num_value:
                                 _LOGGER.debug(
                                     "HYXi Virtual High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
                                     self._key,
                                     self._last_valid_value,
-                                    num_value
+                                    num_value,
                                 )
                                 self._last_logged_glitch = num_value
-                             return self._last_valid_value
+                            return self._last_valid_value
 
                 self._last_logged_glitch = None
                 self._last_valid_value = num_value
