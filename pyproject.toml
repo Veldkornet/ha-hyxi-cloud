@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ha-hyxi-cloud"
-version = "1.2.9"
+version = "1.2.10"
 description = "HYXI ⚡️🔋☀️ Integration for HomeAssistant using HYXI Cloud ☁️"
 readme = "README.md"
 authors = [
