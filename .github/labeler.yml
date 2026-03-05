@@ -1,10 +1,14 @@
 # 🚀 New Features (Logic changes)
 "new-feature":
-  - head-branch: ["^feature/", "^feat/"] # Auto-label if branch is feat/my-cool-thing
+  - head-branch: ["^feature/", "^feat/"]
+  - title: ["^feat:", "^feature:", "🚀"]
 
 # 🐛 Bug Fixes (Title or Branch matching)
 "bugfix":
   - head-branch: ["^fix/", "^bug/"]
+  - title: ["^fix:", "^bug:", "🐛"]
+  - changed-files:
+      - any-glob-to-any-file: "custom_components/hyxi_cloud/*.py"
 
 # 🎨 Style 
 "style":
@@ -22,6 +26,7 @@
 # 📦 Refactor
 "refactor":
   - head-branch: ["^refactor/"]
+  - title: ["^refactor:"]
 
 # ⬆️ Dependency Updates
 "dependencies":
