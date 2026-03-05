@@ -1,4 +1,6 @@
 name: Python Tests
+permissions:
+  contents: read
 
 # This tells GitHub to run this workflow every time you push or make a Pull Request
 on:
