@@ -1,7 +1,7 @@
 # Integration Dependencies
-aiohttp>=3.9.0
+aiohttp>=3.13.3
 voluptuous>=0.13.1
-hyxi-cloud-api==0.1.1
+hyxi-cloud-api==0.1.2
 
 # Development/Linting tools
-ruff>=0.2.0
+ruff>=0.15.4
