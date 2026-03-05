@@ -2,6 +2,7 @@ services:
   homeassistant:
     container_name: ha_dev_hyxi
     image: ghcr.io/home-assistant/home-assistant:latest
+    pull_policy: always
     ports:
       - "8123:8123"
       - "5678:5678"
