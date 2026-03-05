@@ -1,7 +1,7 @@
-# HYXI Cloud Integration for Home Assistant
+# HYXI
 ![HYXI Logo](https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/custom_components/hyxi_cloud/brand/logo.png)
 
-### [HYXiPower](https://www.hyxipower.com/) Cloud for Home Assistant
+### [HYXiPower](https://www.hyxipower.com/) Cloud Integration for Home Assistant
 **Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
