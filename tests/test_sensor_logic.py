@@ -52,12 +52,27 @@ def test_energy_sensor_anti_dip():
     sensor.hass = None
 
     # --- TEST 1: Initial state ---
-    assert sensor.native_value == 2731.90
+    val = sensor.native_value
+    print(f"\n[1] Initial Value: {sensor.native_value} kWh")
+    assert val == 2731.90
 
     # --- TEST 2: The Glitch ---
     coordinator.data["SN123"]["metrics"]["totalE"] = 2726.30
-    assert sensor.native_value == 2731.90
+    val = sensor.native_value
+    print(f"[2] Cloud Glitch! Reported: 2726.30 | Sensor Output: {sensor.native_value} kWh")
+    assert val == 2731.90
 
     # --- TEST 3: The Midnight Reset ---
     coordinator.data["SN123"]["metrics"]["totalE"] = 0.5
-    assert sensor.native_value == 0.5
+    val = sensor.native_value
+    print(f"[3] Midnight Reset! Reported: 0.5 | Sensor Output: {sensor.native_value} kWh")
+    assert val == 0.5
+
+    # --- TEST 4: The Ghost Spike (Impossible Jump) ---
+    # We simulate the cloud reporting a massive jump (e.g., +1,000,000 kWh)
+    coordinator.data["SN123"]["metrics"]["totalE"] = 1002731.90
+    val = sensor.native_value
+    print(f"[4] Ghost Spike! Reported: 1002731.90 | Sensor Output: {sensor.native_value} kWh")
+    
+    # The sensor should REJECT this because a jump of 1M kWh is impossible
+    assert val == 0.5  # It should stay at the last valid value (from Test 3)
