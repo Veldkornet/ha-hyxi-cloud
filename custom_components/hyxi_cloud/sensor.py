@@ -396,7 +396,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if check_key in ["batsoc", "batsoh", "signalval"]:
             try:
                 return int(round(float(value), 0))
-            except (ValueError, TypeError):
+            except (ValueError, TypeError,):
                 return None
 
         if self.entity_description.key == "collectTime":
@@ -405,7 +405,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except (ValueError, TypeError, OSError):
+            except (ValueError, TypeError, OSError,):
                 return None
 
         if self.entity_description.key == "last_seen":
@@ -418,23 +418,31 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
                 # Anti-Dip & Persistence Logic
                 # We check for the string "total_increasing" as well to make our tests pass!
-                if self.entity_description.state_class in (SensorStateClass.TOTAL_INCREASING, "total_increasing"):
-
+                if self.entity_description.state_class in (
+                    SensorStateClass.TOTAL_INCREASING,
+                    "total_increasing",
+                ):
                     # 1. Recover state from HA on first run after restart
                     if self._last_valid_value is None and self.hass is not None:
                         old_state = self.hass.states.get(self.entity_id)
-                        if old_state and old_state.state not in (None, "unknown", "unavailable"):
+                        if old_state and old_state.state not in (
+                            None,
+                            "unknown",
+                            "unavailable",
+                        ):
                             try:
                                 self._last_valid_value = float(old_state.state)
                             # Catch TypeError so our MagicMocks in testing don't crash it
-                            except (ValueError, TypeError):
+                            except (ValueError, TypeError,):
                                 pass
 
                     # 2. Threshold-based filtering
                     if self._last_valid_value is not None:
                         if num_value < self._last_valid_value:
                             # If drop is small (glitch) vs near-zero (midnight reset)
-                            if num_value > 1.0 and num_value > (self._last_valid_value * 0.1):
+                            if num_value > 1.0 and num_value > (
+                                self._last_valid_value * 0.1
+                            ):
                                 _LOGGER.debug(
                                     "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
                                     self.entity_description.key,
@@ -450,7 +458,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
                 self._last_valid_value = num_value
                 return num_value
-            except (ValueError, TypeError): # 👈 Fixed the Python 2 comma syntax here!
+            except (ValueError, TypeError,): 
                 return value
 
         return value
@@ -521,7 +529,7 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         if "soc" in self._key.lower() or "soh" in self._key.lower():
             try:
                 return int(round(float(value), 0))
-            except (ValueError, TypeError):
+            except (ValueError, TypeError,):
                 return None
 
         if self.entity_description.native_unit_of_measurement is not None:
@@ -529,18 +537,27 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
                 num_value = round(float(value), 2)
 
                 # Anti-Dip & Persistence logic for virtual sensors
-                if self.entity_description.state_class in (SensorStateClass.TOTAL_INCREASING, "total_increasing"):
+                if self.entity_description.state_class in (
+                    SensorStateClass.TOTAL_INCREASING,
+                    "total_increasing",
+                ):
                     if self._last_valid_value is None and self.hass is not None:
                         old_state = self.hass.states.get(self.entity_id)
-                        if old_state and old_state.state not in (None, "unknown", "unavailable"):
+                        if old_state and old_state.state not in (
+                            None,
+                            "unknown",
+                            "unavailable",
+                        ):
                             try:
                                 self._last_valid_value = float(old_state.state)
-                            except (ValueError, TypeError):
+                            except (ValueError, TypeError,):
                                 pass
 
                     if self._last_valid_value is not None:
                         if num_value < self._last_valid_value:
-                            if num_value > 1.0 and num_value > (self._last_valid_value * 0.1):
+                            if num_value > 1.0 and num_value > (
+                                self._last_valid_value * 0.1
+                            ):
                                 _LOGGER.debug(
                                     "HYXi Virtual Glitch Filter: Prevented %s drop (%s -> %s)",
                                     self._key,
@@ -551,7 +568,7 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
 
                 self._last_valid_value = num_value
                 return num_value
-            except (ValueError, TypeError):
+            except (ValueError, TypeError,):
                 return value
 
         return value

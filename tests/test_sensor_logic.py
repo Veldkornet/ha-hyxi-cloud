@@ -6,12 +6,15 @@ from unittest.mock import MagicMock
 class FakeBase:
     pass
 
+
 class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
 
+
 class FakeSensorEntity(FakeBase):
     pass
+
 
 # 2. INJECT THEM INTO PYTHON'S BRAIN
 mock_ha = MagicMock()
