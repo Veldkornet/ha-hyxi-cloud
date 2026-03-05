@@ -397,7 +397,10 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if check_key in ["batsoc", "batsoh", "signalval"]:
             try:
                 return int(round(float(value), 0))
-            except (ValueError, TypeError):
+            except (
+                ValueError,
+                TypeError,
+            ):
                 return None
 
         if self.entity_description.key == "collectTime":
@@ -406,7 +409,11 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except (ValueError, TypeError, OSError):
+            except (
+                ValueError,
+                TypeError,
+                OSError,
+            ):
                 return None
 
         if self.entity_description.key == "last_seen":
@@ -433,7 +440,10 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
                 self._last_valid_value = num_value
                 return num_value
-            except (ValueError, TypeError):
+            except (
+                ValueError,
+                TypeError,
+            ):
                 return value
 
         return value
@@ -504,7 +514,10 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         if "soc" in self._key.lower() or "soh" in self._key.lower():
             try:
                 return int(round(float(value), 0))
-            except (ValueError, TypeError):
+            except (
+                ValueError,
+                TypeError,
+            ):
                 return None
 
         if self.entity_description.native_unit_of_measurement is not None:
@@ -528,7 +541,10 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
 
                 self._last_valid_value = num_value
                 return num_value
-            except (ValueError, TypeError):
+            except (
+                ValueError,
+                TypeError,
+            ):
                 return value
 
         return value

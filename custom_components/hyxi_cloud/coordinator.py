@@ -83,7 +83,10 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         def safe_float(value):
             try:
                 return float(value or 0)
-            except (ValueError, TypeError):
+            except (
+                ValueError,
+                TypeError,
+            ):
                 return 0.0
 
         totals = {
