@@ -1,6 +1,7 @@
 import sys
 from unittest.mock import MagicMock
 
+
 # 1. THE BULLETPROOF MOCK
 class FakeBase:
     pass
@@ -30,20 +31,20 @@ sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.util"] = mock_ha
 
 # 3. NOW WE IMPORT THE LOGIC
-from custom_components.hyxi_cloud.sensor import HyxiSensor
+from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
+
 
 def test_energy_sensor_anti_dip():
     """Verify that 2731.90 -> 2726.30 is blocked, but 2731.90 -> 0.1 is a reset."""
-    
+
     coordinator = MagicMock()
     coordinator.data = {"SN123": {"metrics": {"totalE": 2731.90}}}
-    
+
     description = MagicMock()
     description.key = "totalE"
-    # 👇 THESE ARE THE MISSING LINES I FORGOT! 👇
     description.native_unit_of_measurement = "kWh"
-    description.state_class = "total_increasing" 
-    
+    description.state_class = "total_increasing"
+
     sensor = HyxiSensor(coordinator, "SN123", description)
     sensor.hass = None
 

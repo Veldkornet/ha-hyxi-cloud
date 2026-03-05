@@ -419,7 +419,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 # Anti-Dip & Persistence Logic
                 # We check for the string "total_increasing" as well to make our tests pass!
                 if self.entity_description.state_class in (SensorStateClass.TOTAL_INCREASING, "total_increasing"):
-                    
+
                     # 1. Recover state from HA on first run after restart
                     if self._last_valid_value is None and self.hass is not None:
                         old_state = self.hass.states.get(self.entity_id)
