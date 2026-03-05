@@ -385,7 +385,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Returns the sensor value with correct data typing for HA."""
+        """Returns the sensor value with correct data typing and anti-dip protection."""
         metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
         value = metrics.get(self.entity_description.key)
 
@@ -393,7 +393,6 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             return None
 
         check_key = self.entity_description.key.lower()
-
         if check_key in ["batsoc", "batsoh", "signalval"]:
             try:
                 return int(round(float(value), 0))
@@ -419,31 +418,52 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if self.entity_description.key == "last_seen":
             return dt_util.parse_datetime(str(value))
 
+        # Main Numeric/Energy Logic
         if self.entity_description.native_unit_of_measurement is not None:
             try:
                 num_value = round(float(value), 2)
 
-                # Jitter Filter
+                # Anti-Dip & Persistence Logic
                 if (
                     self.entity_description.state_class
                     == SensorStateClass.TOTAL_INCREASING
                 ):
+                    # 1. Recover state from HA on first run after restart
+                    if self._last_valid_value is None and self.hass is not None:
+                        old_state = self.hass.states.get(self.entity_id)
+                        if old_state and old_state.state not in (
+                            None,
+                            "unknown",
+                            "unavailable",
+                        ):
+                            try:
+                                self._last_valid_value = float(old_state.state)
+                            except ValueError:
+                                pass
+
+                    # 2. Threshold-based filtering
                     if self._last_valid_value is not None:
-                        if 0 < num_value < self._last_valid_value:
+                        if num_value < self._last_valid_value:
+                            # If drop is small (glitch) vs near-zero (midnight reset)
+                            if num_value > 1.0 and num_value > (
+                                self._last_valid_value * 0.1
+                            ):
+                                _LOGGER.debug(
+                                    "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
+                                    self.entity_description.key,
+                                    self._last_valid_value,
+                                    num_value,
+                                )
+                                return self._last_valid_value
+
                             _LOGGER.debug(
-                                "HYXi Jitter filtered for %s: Blocked drop from %s to %s",
+                                "HYXi Midnight Reset detected for %s",
                                 self.entity_description.key,
-                                self._last_valid_value,
-                                num_value,
                             )
-                            return self._last_valid_value
 
                 self._last_valid_value = num_value
                 return num_value
-            except (
-                ValueError,
-                TypeError,
-            ):
+            except ValueError, TypeError:
                 return value
 
         return value
@@ -502,7 +522,7 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Value with floating point protection and proper typing."""
+        """Value with floating point protection and anti-dip persistence."""
         summary = self.coordinator.get_battery_summary()
         if not summary:
             return None
@@ -524,20 +544,35 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
             try:
                 num_value = round(float(value), 2)
 
-                # Jitter Filter
+                # Anti-Dip & Persistence logic for virtual sensors
                 if (
                     self.entity_description.state_class
                     == SensorStateClass.TOTAL_INCREASING
                 ):
+                    if self._last_valid_value is None and self.hass is not None:
+                        old_state = self.hass.states.get(self.entity_id)
+                        if old_state and old_state.state not in (
+                            None,
+                            "unknown",
+                            "unavailable",
+                        ):
+                            try:
+                                self._last_valid_value = float(old_state.state)
+                            except ValueError:
+                                pass
+
                     if self._last_valid_value is not None:
-                        if 0 < num_value < self._last_valid_value:
-                            _LOGGER.debug(
-                                "HYXi Jitter filtered for %s: Blocked drop from %s to %s",
-                                self._key,
-                                self._last_valid_value,
-                                num_value,
-                            )
-                            return self._last_valid_value
+                        if num_value < self._last_valid_value:
+                            if num_value > 1.0 and num_value > (
+                                self._last_valid_value * 0.1
+                            ):
+                                _LOGGER.debug(
+                                    "HYXi Virtual Glitch Filter: Prevented %s drop (%s -> %s)",
+                                    self._key,
+                                    self._last_valid_value,
+                                    num_value,
+                                )
+                                return self._last_valid_value
 
                 self._last_valid_value = num_value
                 return num_value
