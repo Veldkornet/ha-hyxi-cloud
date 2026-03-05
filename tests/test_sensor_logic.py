@@ -73,6 +73,6 @@ def test_energy_sensor_anti_dip():
     coordinator.data["SN123"]["metrics"]["totalE"] = 1002731.90
     val = sensor.native_value
     print(f"[4] Ghost Spike! Reported: 1002731.90 | Sensor Output: {sensor.native_value} kWh")
-    
+
     # The sensor should REJECT this because a jump of 1M kWh is impossible
     assert val == 0.5  # It should stay at the last valid value (from Test 3)

@@ -342,7 +342,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         self.entity_description = description
         self._sn = sn
         self._last_valid_value = None
-        self._last_logged_glitch = None 
+        self._last_logged_glitch = None
 
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
@@ -459,7 +459,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                                 return self._last_valid_value
 
                             _LOGGER.debug("HYXi Midnight Reset detected for %s", self.entity_description.key)
-                        
+
                         # --- UPPER BOUND CHECK ---
                         elif (num_value - self._last_valid_value) > 100.0:
                              if self._last_logged_glitch != num_value:
@@ -471,7 +471,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                              return self._last_valid_value
 
                 # Reset the gatekeeper if we finally get a valid new value
-                self._last_logged_glitch = None 
+                self._last_logged_glitch = None
                 self._last_valid_value = num_value
                 return num_value
             except (
@@ -522,7 +522,7 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         self.entity_description = description
         self._key = description.key
         self._last_valid_value = None
-        self._last_logged_glitch = None 
+        self._last_logged_glitch = None
 
         self._attr_unique_id = f"hyxi_vsys_{entry.entry_id}_{description.key}"
         self._attr_translation_key = description.key.lower()
@@ -593,7 +593,7 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
                                     )
                                     self._last_logged_glitch = num_value
                                 return self._last_valid_value
-                        
+
                         # Anti-Spike Check
                         elif (num_value - self._last_valid_value) > 100.0:
                              if self._last_logged_glitch != num_value:
