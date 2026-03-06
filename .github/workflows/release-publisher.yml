@@ -1,41 +1,42 @@
 name: Release Publisher
 
-# Runs exactly when you click "Publish release"
 on:
   release:
     types: [published]
 
+# 🛑 1. Start with zero permissions at the top level
 permissions:
-  contents: read
+  contents: none
 
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
+    # ✅ 2. Explicitly grant 'write' ONLY for this specific release task
     permissions:
-      contents: write # Required to upload assets to the release
-    
+      contents: write # To read the code and upload the asset
+
     steps:
-      - name: Harden the runner (Audit all outbound calls)
+      - name: Harden the runner
         uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           egress-policy: audit
 
       - name: 📥 Checkout Code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 #v6.0.2
 
       - name: 📝 Inject Version into Manifest
         run: |
           # Grab the release tag (e.g., v1.3.0) and strip the 'v'
           TAG_NAME="${{ github.event.release.tag_name }}"
           CLEAN_VERSION="${TAG_NAME#v}"
-          
+
           echo "Injecting version $CLEAN_VERSION into manifest..."
           jq ".version = \"$CLEAN_VERSION\"" custom_components/hyxi_cloud/manifest.json > tmp.json
           mv tmp.json custom_components/hyxi_cloud/manifest.json
 
       - name: 📦 Create Zip Archive
         run: |
-          # Go INSIDE the integration folder and zip the contents 
+          # Go INSIDE the integration folder and zip the contents
           # This ensures manifest.json is at the root of the zip file
           cd custom_components/hyxi_cloud
           zip -r ../../hyxi_cloud.zip .
@@ -45,4 +46,5 @@ jobs:
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           files: hyxi_cloud.zip
+          tag_name: ${{ github.event.release.tag_name }}
           overwrite: true
