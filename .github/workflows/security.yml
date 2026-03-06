@@ -23,14 +23,14 @@ jobs:
     permissions:
       contents: read
       security-events: write # Allows Bandit/Gitleaks to report to the Security tab
-    
+
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc #v2.15.1
         with:
-          # 👇 Change to 'audit' for the first few runs! 
+          # 👇 Change to 'audit' for the first few runs!
           # You need to see the 'Allowed Endpoints' list before you can safely 'block'.
-          egress-policy: audit 
+          egress-policy: audit
           allowed-endpoints: >
             api.github.com:443
             github.com:443
@@ -77,3 +77,5 @@ jobs:
         uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 #v6.0.2
       - name: Review Dependencies
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 #v4.9.0
+        with:
+          retry-on-snapshot-warnings: true
