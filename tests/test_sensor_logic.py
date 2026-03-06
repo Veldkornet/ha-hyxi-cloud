@@ -99,3 +99,20 @@ def test_rounding_protection(base_sensor):
     sensor, coordinator = base_sensor
     coordinator.data["SN123"]["metrics"]["totalE"] = 2742.123456
     assert sensor.native_value == 2742.12
+
+
+def test_late_night_correction(base_sensor):
+    """Verify that a jump after a long flat period (night) is accepted."""
+    sensor, coordinator = base_sensor
+
+    # 10:00 PM - Value is 2742.0
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2742.0
+    assert sensor.native_value == 2742.0
+
+    # 02:00 AM - Cloud 'finds' 1.5kWh missed from earlier in the day
+    # Even though it's night, this is a valid increase < 100kWh.
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2743.5
+    val = sensor.native_value
+
+    print(f"[Night Correction] Jumped from 2742.0 to {val} kWh")
+    assert val == 2743.5  # Should be ALLOWED
