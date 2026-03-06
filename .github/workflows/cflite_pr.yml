@@ -1,0 +1,18 @@
+name: ClusterFuzzLite PR
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  PR:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+      - name: Build Fuzzers
+        uses: google/clusterfuzzlite/actions/build_fuzzers@main
+      - name: Run Fuzzers
+        uses: google/clusterfuzzlite/actions/run_fuzzers@main
