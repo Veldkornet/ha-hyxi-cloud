@@ -2,21 +2,27 @@
 
 ## Supported Versions
 
-Currently, only the latest release of the HYXi Cloud Home Assistant integration is actively supported with security updates. 
+We actively provide security updates for the following versions of HYXi Cloud:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| v1.x.x  | :white_check_mark: |
-| < v1.0.0| :x:                |
+| 1.1.x   | :white_check_mark: |
+| < 1.1.0 | :x:                |
 
 ## Reporting a Vulnerability
 
-Security is taken very seriously. Since this integration handles cloud API keys, please **do not** report security vulnerabilities through public GitHub issues.
+**Please do not report security vulnerabilities through public GitHub issues.**
 
-If you believe you have found a security vulnerability, please report it privately:
+If you discover a security vulnerability within this project, please report it privately via **GitHub Private Vulnerability Reporting**. 
 
-1. Go to the **Security** tab of this repository.
-2. Click on **Advisories** (or "Report a vulnerability").
-3. Submit the details privately.
+1. Go to the [Security tab](https://github.com/Veldkornet/ha-hyxi-cloud/security) of this repository.
+2. Click on **Advisories**.
+3. Click **Report a vulnerability** to open a private draft advisory.
 
-Please provide as much detail as possible, including steps to reproduce the issue. I will do my best to respond within a timely manner, verify the vulnerability, and release a patched version as quickly as possible.
+### What to include
+* A detailed description of the vulnerability.
+* Steps to reproduce the issue.
+* Any potential impact or exploit scenarios you've identified.
+
+## Our Commitment
+We will acknowledge receipt of your report within 48 hours and provide a timeline for a fix. Once a fix is released, we will credit you for the discovery (unless you prefer to remain anonymous).
