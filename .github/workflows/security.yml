@@ -14,17 +14,23 @@ permissions:
   pull-requests: write   # Optional: Only if you want comments in your PR
 
 jobs:
+  # 🛡️ 1. Harden Runner: Blocks exfiltration of your secrets
+  # 🔒 2. Gitleaks: Scans for leaked API keys/serial numbers
+  # 🐍 3. Bandit: Scans for Python-specific security holes
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # Allows Bandit/Gitleaks to report to the Security tab
     
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          # 👇 Change this back to 'audit' for the first few runs! 
+          # 👇 Change to 'audit' for the first few runs! 
           # You need to see the 'Allowed Endpoints' list before you can safely 'block'.
-          egress-policy: block 
+          egress-policy: audit 
           allowed-endpoints: >
             api.github.com:443
             github.com:443
