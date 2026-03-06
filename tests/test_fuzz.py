@@ -76,6 +76,7 @@ def test_fuzz_sensor_anti_dip_logic(new_val):
     coordinator.data["SN123"]["metrics"]["totalE"] = new_val
 
     # 3. Trigger the property getter
+    result = None
     try:
         result = sensor.native_value
     except Exception as e:  # pylint: disable=broad-exception-caught
