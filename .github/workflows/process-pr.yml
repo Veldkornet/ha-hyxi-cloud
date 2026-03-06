@@ -5,6 +5,9 @@ on:
     workflows: ["1. Receive PR (Untrusted)"]
     types: [completed]
 
+permissions:
+  contents: read
+
 jobs:
   apply-and-check:
     runs-on: ubuntu-latest
@@ -17,13 +20,13 @@ jobs:
     
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           # 🔍 'audit' mode observes and recommends a policy. 
           # 🛡️ 'block' mode strictly prevents any unapproved outgoing traffic.
           egress-policy: audit
       - name: Download PR Metadata
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: pr-metadata
           path: pr-metadata
@@ -39,7 +42,7 @@ jobs:
           echo "PR_SHA=$PR_SHA" >> "$GITHUB_ENV"
 
       - name: Apply Labels
-        uses: actions/labeler@v6
+        uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b # v6.0.1
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           configuration-path: "pr-metadata/labeler.yml"
@@ -47,7 +50,7 @@ jobs:
           sync-labels: false
 
       - name: Verify & Enforce Labels
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const prNumber = parseInt(process.env.PR_NUMBER, 10);

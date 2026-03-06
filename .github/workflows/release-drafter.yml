@@ -10,6 +10,9 @@ on:
 concurrency:
   group: release-drafter
   cancel-in-progress: false
+permissions:
+  contents: read
+
 jobs:
   update_release_draft:
     permissions:
@@ -19,8 +22,13 @@ jobs:
     steps:
       # We no longer need to checkout the code to find the version!
       # Release Drafter will calculate it based on your labels.
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        with:
+          egress-policy: audit
+
       - name: Update Release Draft
-        uses: release-drafter/release-drafter@v6
+        uses: release-drafter/release-drafter@00ce30b0ce8a4d67bccfca59421cdf6c55dd0784 # v6.3.0
         with:
           commitish: main
         env:
