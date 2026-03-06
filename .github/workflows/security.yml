@@ -70,7 +70,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 #v6.0.2
       - name: Submit Dependencies
-        uses: advanced-security/python-dependency-submission-action@6a52315a435c611ad5a559c60fd9e8f31d3bb29c #v1.1.1
+        uses: actions/python-dependency-submission-action@e4b0100d986503c5d6e2c38290f64c672b152d1b # v4.3.0
 
   dependency-review:
     name: Dependency Review
