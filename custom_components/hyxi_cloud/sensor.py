@@ -442,6 +442,8 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                                 ValueError,
                                 TypeError,
                             ):
+                                # The previous state was non-numeric (e.g. 'unavailable').
+                                # Safely ignore it so we don't crash.
                                 pass
 
                     if self._last_valid_value is not None:
@@ -590,6 +592,8 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
                                 ValueError,
                                 TypeError,
                             ):
+                                # The previous state was non-numeric (e.g. 'unavailable').
+                                # Safely ignore it so we don't crash.
                                 pass
 
                     if self._last_valid_value is not None:
