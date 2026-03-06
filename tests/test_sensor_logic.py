@@ -1,7 +1,8 @@
 import sys
-from unittest.mock import MagicMock
-import pytest
 from datetime import datetime
+from unittest.mock import MagicMock
+
+import pytest
 
 
 # 1. THE BULLETPROOF MOCK
