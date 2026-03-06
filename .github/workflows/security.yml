@@ -7,10 +7,12 @@ on:
     branches: [main]
   schedule:
     - cron: '30 4 * * 1' # Runs every Monday at 4:30 AM to catch new vulnerabilities
+
 permissions:
   contents: read       # Required to check out code
   security-events: write # Required for Bandit/CodeQL to report to the Security tab
   pull-requests: write   # Optional: Only if you want comments in your PR
+
 jobs:
   # 🛡️ 1. Harden Runner: Blocks exfiltration of your secrets
   # 🔒 2. Gitleaks: Scans for leaked API keys/serial numbers
@@ -24,9 +26,17 @@ jobs:
     
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc #v2.15.1
         with:
-          egress-policy: audit # 'audit' tells you what's happening; 'block' is stricter
+          # 👇 Change to 'audit' for the first few runs! 
+          # You need to see the 'Allowed Endpoints' list before you can safely 'block'.
+          egress-policy: audit 
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+            pypi.org:443
+            files.pythonhosted.org:443
+            api.stepsecurity.io:443
 
       - name: Checkout Code
         uses: actions/checkout@v6
@@ -40,18 +50,28 @@ jobs:
 
       - name: Bandit (Python Security)
         run: |
-          pip install bandit
-          # -r: recursive, -ll: medium severity and up
-          bandit -r custom_components/hyxi_cloud/ -ll
+          # 👇 You must install 'sarif' support for bandit to generate the file
+          pip install "bandit[sarif]"
+          # 👇 Added -f sarif and -o to actually CREATE the file for the next step
+          bandit -r custom_components/hyxi_cloud/ -ll -f sarif -o bandit-results.sarif
 
-  # 📦 4. Dependency Review: Blocks malicious/vulnerable libraries
+      - name: Upload Bandit Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() # Ensures results upload even if Bandit finds a 'Failed' security hole
+        with:
+          sarif_file: bandit-results.sarif
+
   dependency-review:
     name: Dependency Review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
+      # 👇 IMPORTANT: Harden-Runner must be the FIRST step in EVERY job
+      - name: Harden Runner
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc #v2.15.1
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@v6
       - name: Review Dependencies

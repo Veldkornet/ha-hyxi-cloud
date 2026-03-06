@@ -29,6 +29,12 @@ jobs:
           build-mode: none
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc #v2.15.1
+      with:
+        # Start with 'audit' to find the specific CodeQL URLs
+        egress-policy: audit
+
     - name: Checkout repository
       uses: actions/checkout@v6
 
@@ -38,7 +44,7 @@ jobs:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
         # Optional: Adds more "quality" checks beyond just security
-        # queries: security-extended,security-and-quality
+        queries: security-extended,security-and-quality
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
