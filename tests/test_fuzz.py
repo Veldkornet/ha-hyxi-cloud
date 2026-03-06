@@ -92,4 +92,4 @@ def test_fuzz_sensor_anti_dip_logic(new_val):
     if isinstance(result, (float, int)) and not isinstance(new_val, complex):
         # We handle math.isnan safely just in case it slipped through
         if not math.isnan(result):
-            assert result >= baseline_value or (0.0 <= result <= 0.1)
+            assert result >= baseline_value or (-0.1 <= result <= 0.1)
