@@ -7,22 +7,24 @@ on:
   pull_request_target:
     # 🚀 Added 'edited' so renaming a PR updates the draft immediately
     types: [opened, reopened, synchronize, labeled, edited]
+
 concurrency:
   group: release-drafter
   cancel-in-progress: false
+
+# 🛑 1. Baseline: No permissions allowed by default
 permissions:
-  contents: read
+  contents: none
 
 jobs:
   update_release_draft:
+    # ✅ 2. Specifically grant permissions to this job only
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write   # Required to create/update the release draft
+      pull-requests: write # Required to read PR labels and metadata
     runs-on: ubuntu-latest
     steps:
-      # We no longer need to checkout the code to find the version!
-      # Release Drafter will calculate it based on your labels.
-      - name: Harden the runner (Audit all outbound calls)
+      - name: Harden the runner
         uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           egress-policy: audit

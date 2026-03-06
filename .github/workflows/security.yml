@@ -8,28 +8,24 @@ on:
   schedule:
     - cron: '30 4 * * 1' # Runs every Monday at 4:30 AM to catch new vulnerabilities
 
+# 🛑 1. Global permissions set to minimum (Read-Only)
 permissions:
-  contents: read       # Required to check out code
-  security-events: write # Required for Bandit/CodeQL to report to the Security tab
-  pull-requests: write   # Optional: Only if you want comments in your PR
+  contents: read
 
 jobs:
-  # 🛡️ 1. Harden Runner: Blocks exfiltration of your secrets
-  # 🔒 2. Gitleaks: Scans for leaked API keys/serial numbers
-  # 🐍 3. Bandit: Scans for Python-specific security holes
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    # ✅ 2. Grant 'write' ONLY to the security scan job
     permissions:
       contents: read
-      security-events: write # Allows Bandit/Gitleaks to report to the Security tab
+      security-events: write
+      pull-requests: write
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc #v2.15.1
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
-          # 👇 Change to 'audit' for the first few runs!
-          # You need to see the 'Allowed Endpoints' list before you can safely 'block'.
           egress-policy: audit
           allowed-endpoints: >
             api.github.com:443
@@ -66,16 +62,19 @@ jobs:
     name: Dependency Review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
-      # 👇 IMPORTANT: Harden-Runner must be the FIRST step in EVERY job
       - name: Harden Runner
-        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc #v2.15.1
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           egress-policy: audit
 
       - name: Checkout
         uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 #v6.0.2
+
       - name: Review Dependencies
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 #v4.9.0
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           retry-on-snapshot-warnings: true

@@ -5,24 +5,27 @@ on:
     workflows: ["1. Receive PR (Untrusted)"]
     types: [completed]
 
+# 🛑 1. Baseline: No global permissions
 permissions:
-  contents: read
+  contents: none
 
 jobs:
   apply-and-check:
     runs-on: ubuntu-latest
-    # Only run if the PR workflow actually succeeded
     if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
+
+    # ✅ 2. Scoped Permissions: Restricted to the specific job
     permissions:
-      pull-requests: write
-      statuses: write # Needed to put the Red X / Green Check on the PR
-      issues: write # Needed to comment on the PR if no labels are found
-    
+      pull-requests: write # To read PR labels and metadata
+      statuses: write      # To create the Green Check/Red X on the commit
+      issues: write        # To comment on the PR if labels are missing
+      actions: read        # Required to download artifacts from the 'workflow_run' source
+
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
-          # 🔍 'audit' mode observes and recommends a policy. 
+          # 🔍 'audit' mode observes and recommends a policy.
           # 🛡️ 'block' mode strictly prevents any unapproved outgoing traffic.
           egress-policy: audit
       - name: Download PR Metadata
