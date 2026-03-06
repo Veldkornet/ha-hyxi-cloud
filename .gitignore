@@ -6,6 +6,16 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Python build/dist artifacts
+*.egg-info/
+.eggs/
+build/
+dist/
+.hypothesis/*
+
+# Pixi environments
+.pixi/
+
 # IDEs and Editors
 # Ignore VSCode personal settings, but keep the tasks
 .vscode/*

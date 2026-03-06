@@ -1,3 +1,5 @@
+"""HYXi Cloud Sensor platform."""
+
 import logging
 from datetime import UTC
 from datetime import datetime
@@ -262,7 +264,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     child_entities = []
 
     # Filter constants
-    BATTERY_SENSORS = [
+    battery_sensors = [
         "batSoc",
         "pbat",
         "batSoh",
@@ -271,8 +273,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         "bat_charging",
         "bat_discharging",
     ]
-    COLLECTOR_SENSORS = ["signalIntensity", "signalVal", "wifiVer", "comMode"]
-    HEARTBEAT_SENSOR = ["last_seen"]
+    collector_sensors = ["signalIntensity", "signalVal", "wifiVer", "comMode"]
+    heartbeat_sensor = ["last_seen"]
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
@@ -290,9 +292,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
             key = description.key
             should_add = False
 
-            if key in HEARTBEAT_SENSOR:
+            if key in heartbeat_sensor:
                 should_add = True
-            elif key in COLLECTOR_SENSORS:
+            elif key in collector_sensors:
                 if "COLLECTOR" in device_type or "DMU" in device_type:
                     should_add = True
             elif key in metrics and metrics[key] is not None:
@@ -300,7 +302,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     should_add = True
 
             if should_add:
-                if key in BATTERY_SENSORS and metrics.get("batSn"):
+                if key in battery_sensors and metrics.get("batSn"):
                     child_entities.append(HyxiSensor(coordinator, sn, description))
                 else:
                     parent_entities.append(HyxiSensor(coordinator, sn, description))
@@ -348,7 +350,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
-        BAT_KEYS = [
+        bat_keys = [
             "batSoc",
             "pbat",
             "bat_charging",
@@ -358,7 +360,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             "batSoh",
         ]
 
-        if description.key in BAT_KEYS and bat_sn:
+        if description.key in bat_keys and bat_sn:
             self._actual_sn = bat_sn
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
@@ -445,9 +447,16 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                     if self._last_valid_value is not None:
                         # --- LOWER BOUND CHECK ---
                         if num_value < self._last_valid_value:
-                            if num_value > 1.0 and num_value > (
-                                self._last_valid_value * 0.1
-                            ):
+                            # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
+                            # AND the drop is significant (meaning it's not just a tiny dip).
+                            # Otherwise, it's a glitch and should be blocked.
+                            is_valid_reset = (0.0 <= num_value <= 0.1) and (
+                                (self._last_valid_value - num_value)(
+                                    self._last_valid_value * 0.5
+                                )
+                            )
+
+                            if not is_valid_reset:
                                 if self._last_logged_glitch != num_value:
                                     _LOGGER.debug(
                                         "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
@@ -586,9 +595,11 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
                     if self._last_valid_value is not None:
                         # Anti-Dip Check
                         if num_value < self._last_valid_value:
-                            if num_value > 1.0 and num_value > (
-                                self._last_valid_value * 0.1
-                            ):
+                            is_valid_reset = num_value <= 0.1 and (
+                                self._last_valid_value - num_value
+                            ) > (self._last_valid_value * 0.5)
+
+                            if not is_valid_reset:
                                 if self._last_logged_glitch != num_value:
                                     _LOGGER.debug(
                                         "HYXi Virtual Glitch Filter: Prevented %s drop (%s -> %s)",

@@ -16,6 +16,14 @@ dependencies = [
     "hyxi-cloud-api==0.1.3"
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio",
+    "hypothesis>=6.100.0",
+    "pytest-cov>=5.0.0",
+]
+
 [tool.ruff]
 target-version = "py314"
 line-length = 88
@@ -32,7 +40,7 @@ select = [
 ignore = [
     "E501", # Ignore long lines (often necessary for URLs/Logs)
     "UP039" # This stops Ruff from removing "unnecessary" parentheses
-    ] 
+    ]
 
 [tool.ruff.lint.isort]
 force-single-line = true
@@ -40,3 +48,24 @@ combine-as-imports = true
 
 [tool.ruff.format]
 skip-magic-trailing-comma = false
+
+[tool.setuptools.packages.find]
+include = ["custom_components*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.pylint.messages_control]
+disable = [
+    "line-too-long",  # Turns off C0301 so Ruff can do its job in peace
+    "import-error",               # E0401: Ignores missing HA/pytest imports
+    "too-few-public-methods",     # R0903: Standard for HA entities/mocks
+    "too-many-instance-attributes",# R0902: Standard for HA entities
+    "too-many-branches",          # R0912: Expected in complex native_value logic
+    "too-many-return-statements", # R0911: Expected in native_value logic
+    "too-many-nested-blocks",     # R1702: Expected with our anti-dip logic
+    "too-many-locals",            # R0914: Expected in async_setup_entry
+    "missing-class-docstring",    # C0115: Optional for test mocks
+    "missing-function-docstring", # C0116: Optional for standard HA overrides
+]
