@@ -6,11 +6,12 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '30 4 * * 1'
+    - cron: '30 4 * * 1' # Runs every Monday at 4:30 AM to catch new vulnerabilities
 
 permissions:
-  contents: read
-  security-events: write 
+  contents: read       # Required to check out code
+  security-events: write # Required for Bandit/CodeQL to report to the Security tab
+  pull-requests: write   # Optional: Only if you want comments in your PR
 
 jobs:
   security-scan:
