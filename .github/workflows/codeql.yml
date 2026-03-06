@@ -36,10 +36,10 @@ jobs:
         egress-policy: audit
 
     - name: Checkout repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 #v6.0.2
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v4 # Using stable v3/v4
+      uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
@@ -47,6 +47,6 @@ jobs:
         queries: security-extended,security-and-quality
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v4
+      uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
       with:
         category: "/language:${{matrix.language}}"
