@@ -539,7 +539,120 @@ async def async_setup_entry(hass, entry, async_add_entities):
         async_add_entities(child_entities)
 
 
-class HyxiSensor(CoordinatorEntity, SensorEntity):
+class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
+    """Base class for HYXi sensors with shared parsing and validation logic."""
+
+    def __init__(self, coordinator):
+        super().__init__(coordinator)
+        self._last_valid_value = None
+        self._last_logged_glitch = None
+
+    def _parse_special_values(self, value):
+        key = self.entity_description.key
+        if key.lower() in ("batsoc", "batsoh", "signalval", "avg_soc", "avg_soh"):
+            try:
+                return int(round(float(value), 0))
+            except (ValueError, TypeError):
+                return None
+
+        if key == "collectTime":
+            try:
+                val_int = int(value)
+                if val_int > 9999999999:
+                    val_int = val_int / 1000
+                return datetime.fromtimestamp(val_int, tz=UTC)
+            except (ValueError, TypeError, OSError):
+                return None
+
+        if key == "last_seen":
+            return dt_util.parse_datetime(str(value))
+
+        return value
+
+    def _restore_previous_state(self):
+        if self._last_valid_value is None and self.hass is not None:
+            old_state = self.hass.states.get(self.entity_id)
+            if old_state and old_state.state not in (None, "unknown", "unavailable"):
+                try:
+                    self._last_valid_value = float(old_state.state)
+                except (ValueError, TypeError):
+                    pass
+
+    def _apply_glitch_filter(self, num_value):
+        if self._last_valid_value is not None:
+            # --- LOWER BOUND CHECK ---
+            if num_value < self._last_valid_value:
+                # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
+                # AND the drop is significant (meaning it's not just a tiny dip).
+                # Otherwise, it's a glitch and should be blocked.
+                is_valid_reset = (0.0 <= num_value <= 0.1) and (
+                    (self._last_valid_value - num_value)
+                    > (self._last_valid_value * 0.5)
+                )
+
+                if not is_valid_reset:
+                    if self._last_logged_glitch != num_value:
+                        _LOGGER.debug(
+                            "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
+                            self.entity_description.key,
+                            self._last_valid_value,
+                            num_value,
+                        )
+                        self._last_logged_glitch = num_value
+                    return self._last_valid_value
+
+                _LOGGER.debug(
+                    "HYXi Midnight Reset detected for %s",
+                    self.entity_description.key,
+                )
+
+            # --- UPPER BOUND CHECK ---
+            elif (num_value - self._last_valid_value) > 100.0:
+                if self._last_logged_glitch != num_value:
+                    _LOGGER.debug(
+                        "HYXi High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                        self.entity_description.key,
+                        self._last_valid_value,
+                        num_value,
+                    )
+                    self._last_logged_glitch = num_value
+                return self._last_valid_value
+
+        return None
+
+    def _process_numeric_value(self, value):
+        if value is None or value == "":
+            return None
+
+        special_value = self._parse_special_values(value)
+        if (
+            special_value != value
+            or isinstance(special_value, datetime)
+            or self.entity_description.native_unit_of_measurement is None
+        ):
+            return special_value
+
+        try:
+            num_value = round(float(value), 2)
+
+            if self.entity_description.state_class in (
+                SensorStateClass.TOTAL_INCREASING,
+                "total_increasing",
+            ):
+                self._restore_previous_state()
+                glitch_result = self._apply_glitch_filter(num_value)
+                if glitch_result is not None:
+                    return glitch_result
+
+            # Reset the gatekeeper if we finally get a valid new value
+            self._last_logged_glitch = None
+            self._last_valid_value = num_value
+            return num_value
+        except (ValueError, TypeError):
+            return value
+
+
+class HyxiSensor(HyxiBaseSensor):
     """Representation of a Physical HYXi Sensor."""
 
     _attr_has_entity_name = True
@@ -548,8 +661,6 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._sn = sn
-        self._last_valid_value = None
-        self._last_logged_glitch = None
 
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
@@ -601,111 +712,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         """Returns the sensor value with correct data typing and anti-dip protection."""
         metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
         value = metrics.get(self.entity_description.key)
-
-        if value is None or value == "":
-            return None
-
-        if self.entity_description.key.lower() in ("batsoc", "batsoh", "signalval"):
-            try:
-                return int(round(float(value), 0))
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return None
-
-        if self.entity_description.key == "collectTime":
-            try:
-                val_int = int(value)
-                if val_int > 9999999999:
-                    val_int = val_int / 1000
-                return datetime.fromtimestamp(val_int, tz=UTC)
-            except (
-                ValueError,
-                TypeError,
-                OSError,
-            ):
-                return None
-
-        if self.entity_description.key == "last_seen":
-            return dt_util.parse_datetime(str(value))
-
-        if self.entity_description.native_unit_of_measurement is not None:
-            try:
-                num_value = round(float(value), 2)
-
-                if self.entity_description.state_class in (
-                    SensorStateClass.TOTAL_INCREASING,
-                    "total_increasing",
-                ):
-                    if self._last_valid_value is None and self.hass is not None:
-                        old_state = self.hass.states.get(self.entity_id)
-                        if old_state and old_state.state not in (
-                            None,
-                            "unknown",
-                            "unavailable",
-                        ):
-                            try:
-                                self._last_valid_value = float(old_state.state)
-                            except (
-                                ValueError,
-                                TypeError,
-                            ):
-                                # The previous state was non-numeric (e.g. 'unavailable').
-                                # Safely ignore it so we don't crash.
-                                pass
-
-                    if self._last_valid_value is not None:
-                        # --- LOWER BOUND CHECK ---
-                        if num_value < self._last_valid_value:
-                            # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
-                            # AND the drop is significant (meaning it's not just a tiny dip).
-                            # Otherwise, it's a glitch and should be blocked.
-                            is_valid_reset = (0.0 <= num_value <= 0.1) and (
-                                (self._last_valid_value - num_value)(
-                                    self._last_valid_value * 0.5
-                                )
-                            )
-
-                            if not is_valid_reset:
-                                if self._last_logged_glitch != num_value:
-                                    _LOGGER.debug(
-                                        "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
-                                        self.entity_description.key,
-                                        self._last_valid_value,
-                                        num_value,
-                                    )
-                                    self._last_logged_glitch = num_value
-                                return self._last_valid_value
-
-                            _LOGGER.debug(
-                                "HYXi Midnight Reset detected for %s",
-                                self.entity_description.key,
-                            )
-
-                        # --- UPPER BOUND CHECK ---
-                        elif (num_value - self._last_valid_value) > 100.0:
-                            if self._last_logged_glitch != num_value:
-                                _LOGGER.debug(
-                                    "HYXi High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
-                                    self.entity_description.key,
-                                    self._last_valid_value,
-                                    num_value,
-                                )
-                                self._last_logged_glitch = num_value
-                            return self._last_valid_value
-
-                # Reset the gatekeeper if we finally get a valid new value
-                self._last_logged_glitch = None
-                self._last_valid_value = num_value
-                return num_value
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return value
-
-        return value
+        return self._process_numeric_value(value)
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
@@ -737,7 +744,7 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         return None
 
 
-class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
+class HyxiBatterySystemSensor(HyxiBaseSensor):
     """Virtual sensor representing the combined battery storage."""
 
     _attr_has_entity_name = True
@@ -746,8 +753,6 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._key = description.key
-        self._last_valid_value = None
-        self._last_logged_glitch = None
 
         self._attr_unique_id = f"hyxi_vsys_{entry.entry_id}_{description.key}"
         self._attr_translation_key = description.key.lower()
@@ -767,81 +772,4 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
         if not summary:
             return None
         value = summary.get(self._key)
-
-        if value is None or value == "":
-            return None
-
-        if self._key in ("avg_soc", "avg_soh"):
-            try:
-                return int(round(float(value), 0))
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return None
-
-        if self.entity_description.native_unit_of_measurement is not None:
-            try:
-                num_value = round(float(value), 2)
-
-                if self.entity_description.state_class in (
-                    SensorStateClass.TOTAL_INCREASING,
-                    "total_increasing",
-                ):
-                    if self._last_valid_value is None and self.hass is not None:
-                        old_state = self.hass.states.get(self.entity_id)
-                        if old_state and old_state.state not in (
-                            None,
-                            "unknown",
-                            "unavailable",
-                        ):
-                            try:
-                                self._last_valid_value = float(old_state.state)
-                            except (
-                                ValueError,
-                                TypeError,
-                            ):
-                                # The previous state was non-numeric (e.g. 'unavailable').
-                                # Safely ignore it so we don't crash.
-                                pass
-
-                    if self._last_valid_value is not None:
-                        # Anti-Dip Check
-                        if num_value < self._last_valid_value:
-                            is_valid_reset = num_value <= 0.1 and (
-                                self._last_valid_value - num_value
-                            ) > (self._last_valid_value * 0.5)
-
-                            if not is_valid_reset:
-                                if self._last_logged_glitch != num_value:
-                                    _LOGGER.debug(
-                                        "HYXi Virtual Glitch Filter: Prevented %s drop (%s -> %s)",
-                                        self._key,
-                                        self._last_valid_value,
-                                        num_value,
-                                    )
-                                    self._last_logged_glitch = num_value
-                                return self._last_valid_value
-
-                        # Anti-Spike Check
-                        elif (num_value - self._last_valid_value) > 100.0:
-                            if self._last_logged_glitch != num_value:
-                                _LOGGER.debug(
-                                    "HYXi Virtual High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
-                                    self._key,
-                                    self._last_valid_value,
-                                    num_value,
-                                )
-                                self._last_logged_glitch = num_value
-                            return self._last_valid_value
-
-                self._last_logged_glitch = None
-                self._last_valid_value = num_value
-                return num_value
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return value
-
-        return value
+        return self._process_numeric_value(value)

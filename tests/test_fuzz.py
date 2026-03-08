@@ -26,8 +26,13 @@ class FakeSensorEntity(FakeBase):
 
 
 mock_ha = MagicMock()
+mock_ha.__path__ = []
+mock_ha.__spec__ = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
+sys.modules["homeassistant.core"] = mock_ha
+sys.modules["homeassistant.exceptions"] = mock_ha
+sys.modules["homeassistant.const"] = mock_ha
 mock_sensor = MagicMock()
 mock_sensor.SensorEntity = FakeSensorEntity
 mock_sensor.SensorStateClass = MagicMock()
@@ -37,7 +42,11 @@ mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
 sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
+sys.modules["homeassistant.config_entries"] = mock_ha
+sys.modules["hyxi_cloud_api"] = mock_ha
+sys.modules["hyxi_cloud_api.exceptions"] = mock_ha
 
 # Now it's safe to import the sensor
 # pylint: disable-next=wrong-import-position

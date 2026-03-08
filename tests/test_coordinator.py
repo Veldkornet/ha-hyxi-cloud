@@ -5,11 +5,16 @@ import sys
 from unittest.mock import MagicMock
 
 mock_ha = MagicMock()
+mock_ha.__path__ = []
+mock_ha.__spec__ = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
 sys.modules["homeassistant.core"] = mock_ha
 sys.modules["homeassistant.exceptions"] = mock_ha
+sys.modules["homeassistant.const"] = mock_ha
 sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
+sys.modules["hyxi_cloud_api.exceptions"] = mock_ha
 
 mock_util = MagicMock()
 sys.modules["homeassistant.util"] = mock_util
