@@ -1,3 +1,5 @@
+"""Script to compare metrics returned by the API against mapped HA sensors."""
+
 api_metrics = [
     "last_seen",
     "signalIntensity",
