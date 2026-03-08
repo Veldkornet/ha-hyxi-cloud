@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # v6.0.2
       
       - name: Set up Python 3.14
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.5.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5.5.0
         with:
           python-version: '3.14' 
           
