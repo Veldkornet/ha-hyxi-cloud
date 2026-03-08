@@ -4,6 +4,7 @@
 import sys
 from unittest.mock import MagicMock
 
+
 class MockModule(MagicMock):
     @classmethod
     def __getattr__(cls, name):
@@ -12,6 +13,7 @@ class MockModule(MagicMock):
         if name == "__spec__":
             return None
         return MagicMock()
+
 
 mock_ha = MockModule()
 sys.modules["homeassistant"] = mock_ha
