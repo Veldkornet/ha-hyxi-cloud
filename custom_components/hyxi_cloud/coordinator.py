@@ -16,6 +16,17 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
+def _safe_float(value) -> float:
+    """Helper to safely convert values to float."""
+    try:
+        return float(value or 0)
+    except (
+        ValueError,
+        TypeError,
+    ):
+        return 0.0
+
+
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from HYXi API."""
 
@@ -80,7 +91,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         if not self.data:
             return None
 
-        def safe_float(value):
+        def _safe_float(value):
             try:
                 return float(value or 0)
             except (
@@ -105,17 +116,17 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
                 metrics = dev.get("metrics", {})
 
-                totals["total_pbat"] += safe_float(metrics.get("pbat"))
-                totals["avg_soc"] += safe_float(metrics.get("batSoc"))
-                totals["avg_soh"] += safe_float(metrics.get("batSoh"))
-                totals["bat_charge_total"] += safe_float(
+                totals["total_pbat"] += _safe_float(metrics.get("pbat"))
+                totals["avg_soc"] += _safe_float(metrics.get("batSoc"))
+                totals["avg_soh"] += _safe_float(metrics.get("batSoh"))
+                totals["bat_charge_total"] += _safe_float(
                     metrics.get("bat_charge_total")
                 )
-                totals["bat_discharge_total"] += safe_float(
+                totals["bat_discharge_total"] += _safe_float(
                     metrics.get("bat_discharge_total")
                 )
-                totals["bat_charging"] += safe_float(metrics.get("bat_charging"))
-                totals["bat_discharging"] += safe_float(metrics.get("bat_discharging"))
+                totals["bat_charging"] += _safe_float(metrics.get("bat_charging"))
+                totals["bat_discharging"] += _safe_float(metrics.get("bat_discharging"))
                 totals["count"] += 1
 
         if totals["count"] == 0:

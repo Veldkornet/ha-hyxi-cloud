@@ -1,4 +1,9 @@
 """HYXi Cloud Integration for Home Assistant."""
+# pylint: disable=wrong-import-position
+
+import sys
+
+sys.path.insert(0, "/workspaces/hyxi-cloud-api/src")
 
 import logging
 

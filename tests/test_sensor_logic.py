@@ -1,3 +1,5 @@
+# pylint: disable=missing-module-docstring, unused-argument, wrong-import-position, redefined-outer-name, import-outside-toplevel
+import importlib
 import sys
 from datetime import datetime
 from unittest.mock import MagicMock
@@ -19,19 +21,39 @@ class FakeSensorEntity(FakeBase):
     pass
 
 
+# Create a mock homeassistant environment BEFORE importing integration code
 mock_ha = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
+
+# We need SensorEntityDescription to retain its attributes instead of being a generic mock
 mock_sensor = MagicMock()
+
+
+def mock_sensor_entity_description(**kwargs):
+    desc = MagicMock()
+    for k, v in kwargs.items():
+        setattr(desc, k, v)
+    return desc
+
+
+mock_sensor.SensorEntityDescription = mock_sensor_entity_description
 mock_sensor.SensorEntity = FakeSensorEntity
-mock_sensor.SensorStateClass = MagicMock()
 mock_sensor.SensorDeviceClass = MagicMock()
+mock_sensor.SensorStateClass = MagicMock()
+
 sys.modules["homeassistant.components.sensor"] = mock_sensor
+
+# Other mocked dependencies
 mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from original
 sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.util"] = mock_ha
+
+import custom_components.hyxi_cloud.sensor  # noqa: E402
+
+importlib.reload(custom_components.hyxi_cloud.sensor)
 
 from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
 
@@ -116,3 +138,162 @@ def test_late_night_correction(base_sensor):
 
     print(f"[Night Correction] Jumped from 2742.0 to {val} kWh")
     assert val == 2743.5  # Should be ALLOWED
+
+
+def test_batsoc_batsoh_casting(base_sensor):
+    """Verify batSoc and batSoh correctly cast to integers after rounding."""
+    sensor, coordinator = base_sensor
+
+    # Test batSoc
+    sensor.entity_description.key = "batSoc"
+    coordinator.data["SN123"]["metrics"]["batSoc"] = 85.6
+    assert sensor.native_value == 86
+
+    # Test batSoh
+    sensor.entity_description.key = "batSoh"
+    coordinator.data["SN123"]["metrics"]["batSoh"] = 99.1
+    assert sensor.native_value == 99
+
+    # Test invalid string gracefully handled
+    coordinator.data["SN123"]["metrics"]["batSoh"] = "invalid"
+    assert sensor.native_value is None
+
+
+def test_virtual_battery_soc_soh_casting():
+    """Verify that the virtual battery properly casts avg_soc and avg_soh to ints."""
+    from custom_components.hyxi_cloud.sensor import HyxiBatterySystemSensor
+
+    coordinator = MagicMock()
+    # Mocking get_battery_summary rather than relying on internal raw data
+    coordinator.get_battery_summary.return_value = {"avg_soc": 49.0, "avg_soh": 98.6}
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    # Test avg_soc
+    desc_soc = MagicMock()
+    desc_soc.key = "avg_soc"
+    sensor_soc = HyxiBatterySystemSensor(coordinator, entry, desc_soc)
+    sensor_soc.hass = None
+    assert sensor_soc.native_value == 49
+
+    # Test avg_soh
+    desc_soh = MagicMock()
+    desc_soh.key = "avg_soh"
+    sensor_soh = HyxiBatterySystemSensor(coordinator, entry, desc_soh)
+    sensor_soh.hass = None
+    assert sensor_soh.native_value == 99
+
+    # Test invalid string gracefully handled
+    coordinator.get_battery_summary.return_value = {"avg_soh": "invalid"}
+    assert sensor_soh.native_value is None
+
+
+@pytest.mark.asyncio
+async def test_new_api_metrics_registration():
+    """Verify that all new PV, Phase, Battery, and Status sensors instantiate correctly."""
+    from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+    from custom_components.hyxi_cloud.sensor import async_setup_entry  # noqa: E402
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {}  # No virtual battery
+
+    coordinator = MagicMock()
+
+    # Simulate a hybrid inverter payload containing all the new metrics
+    coordinator.data = {
+        "INV123": {
+            "device_type_code": "HYBRID_INVERTER",
+            "metrics": {
+                "ph1Loadp": 120.0,
+                "ph2Loadp": 240.0,
+                "ph3Loadp": 360.0,
+                "ph1v": 220.0,
+                "ph2v": 220.0,
+                "ph3v": 220.0,
+                "ph1i": 5.0,
+                "ph2i": 5.0,
+                "ph3i": 5.0,
+                "ph1p": 1100.0,
+                "ph2p": 1100.0,
+                "ph3p": 1100.0,
+                "pv1v": 300.1,
+                "pv2v": 310.2,
+                "pv1i": 5.5,
+                "pv2i": 6.6,
+                "pv1p": 1650.55,
+                "pv2p": 2047.32,
+                "batV": 48.2,
+                "batI": -12.5,
+                "vbus": 400.0,
+                "f": 50.01,
+                "acE": 12345.6,
+                "deviceState": "Running",
+                "ratedPower": 10000,
+                "ratedVoltage": 220,
+            },
+        },
+        "COLL123": {
+            "device_type_code": "COLLECTOR",
+            "metrics": {
+                "childNum": 3,
+                "batCap": 20.0,
+                "maxChargePower": 10000.0,
+                "maxDischargePower": 10000.0,
+            },
+        },
+    }
+    hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+    # We need to capture the sensors that async_setup_entry attempts to register
+    registered_entities = []
+
+    def mock_async_add_entities(entities):
+        registered_entities.extend(entities)
+
+    await async_setup_entry(hass, entry, mock_async_add_entities)
+
+    # Extract just the string keys of the sensors that were registered (ignoring diagnostics without descriptions)
+    registered_keys = [
+        getattr(entity.entity_description, "key", None)
+        for entity in registered_entities
+        if hasattr(entity, "entity_description")
+    ]
+
+    # Verify all new metrics exist in the registration list
+    expected_new_keys = [
+        "ph1Loadp",
+        "ph2Loadp",
+        "ph3Loadp",
+        "ph1v",
+        "ph2v",
+        "ph3v",
+        "ph1i",
+        "ph2i",
+        "ph3i",
+        "ph1p",
+        "ph2p",
+        "ph3p",
+        "pv1v",
+        "pv2v",
+        "pv1i",
+        "pv2i",
+        "pv1p",
+        "pv2p",
+        "batV",
+        "batI",
+        "vbus",
+        "f",
+        "acE",
+        "deviceState",
+        "ratedPower",
+        "ratedVoltage",
+        "childNum",
+    ]
+
+    for key in expected_new_keys:
+        assert key in registered_keys, (
+            f"Sensor '{key}' was not registered by async_setup_entry"
+        )

@@ -35,7 +35,7 @@ case "$ACTION" in
 
   reset-dev)
     echo "☢️  Preparing to hard reset 'dev' to 'main'..."
-    
+
     # Safety Check: Are there uncommitted changes?
     if ! git diff-index --quiet HEAD --; then
         echo "❌ ERROR: You have uncommitted changes! Commit them or stash them first."
@@ -52,13 +52,13 @@ case "$ACTION" in
     echo "🧹 Wiping 'dev' and matching it to 'main'..."
     git checkout dev
     git reset --hard main
-    
+
     echo "🚀 Force-pushing clean 'dev' to GitHub..."
     git push origin dev --force
 
     echo "✨ 'dev' is now a clean mirror of 'main'. The ghosts are gone!"
     ;;
-      
+
   start)
     echo "🧹 Wiping old Sandbox..."
     rm -rf ha_testing_config
@@ -73,6 +73,27 @@ case "$ACTION" in
 
     echo "🚀 Starting Home Assistant..."
     docker compose up -d
+
+    echo "🔗 Linking local HYXi API Development folder..."
+    sleep 2
+    docker exec ha_dev_hyxi pip install -e /workspaces/hyxi-cloud-api
+
+    # Force Home Assistant to prioritize the local workspace over PyPi cache by injecting it cleanly
+    docker exec ha_dev_hyxi python -c '
+import os
+file_path = "/config/custom_components/hyxi_cloud/__init__.py"
+if os.path.exists(file_path):
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+    if "import sys\n" not in lines:
+        lines.insert(0, "import sys\n")
+        lines.insert(1, "sys.path.insert(0, \"/workspaces/hyxi-cloud-api/src\")\n")
+        with open(file_path, "w") as f:
+            f.writelines(lines)
+'
+    docker restart ha_dev_hyxi
+    # ---------------------------
+
     echo "✅ Ready at http://localhost:8123"
     ;;
 
