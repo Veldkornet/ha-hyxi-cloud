@@ -1,4 +1,4 @@
-# 🛰️ HYXi Cloud API | PR
+# 🛰️ HYXi Cloud  PR
 
 ## 📝 Description
 ## 💡 Rationale
