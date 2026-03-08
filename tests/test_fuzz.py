@@ -9,6 +9,7 @@ import pytest
 try:
     from hypothesis import given
     from hypothesis import strategies as st
+
     HAS_HYPOTHESIS = True
 except ImportError:
     HAS_HYPOTHESIS = False
@@ -54,6 +55,7 @@ from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
 
 
 if HAS_HYPOTHESIS:
+
     @given(new_val=st.floats(allow_nan=True, allow_infinity=True))
     def test_fuzz_sensor_anti_dip_logic(new_val):
         """
@@ -86,7 +88,9 @@ if HAS_HYPOTHESIS:
         try:
             result = sensor.native_value
         except Exception as e:  # pylint: disable=broad-exception-caught
-            pytest.fail(f"Sensor crashed when processing the value {new_val}. Error: {e}")
+            pytest.fail(
+                f"Sensor crashed when processing the value {new_val}. Error: {e}"
+            )
 
         # 4. Check Invariants (The rules that must ALWAYS be true)
 
@@ -100,5 +104,6 @@ if HAS_HYPOTHESIS:
             if not math.isnan(result):
                 assert result >= baseline_value or (-0.1 <= result <= 0.1)
 else:
+
     def test_fuzz_sensor_anti_dip_logic_skipped():
         pytest.skip("Hypothesis not installed")
