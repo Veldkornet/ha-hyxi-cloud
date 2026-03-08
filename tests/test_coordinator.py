@@ -1,3 +1,6 @@
+"""Tests for the DataUpdateCoordinator logic."""
+# pylint: disable=wrong-import-position
+
 import sys
 from unittest.mock import MagicMock
 
@@ -18,7 +21,7 @@ mock_coordinator = MagicMock()
 
 
 class DummyDataUpdateCoordinator:
-    def __init__(self, hass, logger, name, update_interval):
+    def __init__(self, hass, logger, name, update_interval):  # pylint: disable=unused-argument
         self.data = {}
 
 
@@ -34,7 +37,10 @@ mock_const.DOMAIN = "hyxi_cloud"
 sys.modules["custom_components.hyxi_cloud.const"] = mock_const
 
 
-from custom_components.hyxi_cloud.coordinator import HyxiDataUpdateCoordinator, _safe_float  # noqa: E402, I001
+from custom_components.hyxi_cloud.coordinator import (  # noqa: E402, I001
+    HyxiDataUpdateCoordinator,
+    _safe_float,
+)
 
 
 def test_safe_float():
