@@ -50,6 +50,7 @@ mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from ori
 sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.util"] = mock_ha
+sys.modules["hyxi_cloud_api"] = mock_ha
 
 import custom_components.hyxi_cloud.sensor  # noqa: E402
 
@@ -297,3 +298,29 @@ async def test_new_api_metrics_registration():
         assert key in registered_keys, (
             f"Sensor '{key}' was not registered by async_setup_entry"
         )
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_no_data():
+    """Verify that async_setup_entry returns early when coordinator has no data."""
+    from custom_components.hyxi_cloud.const import DOMAIN
+    from custom_components.hyxi_cloud.sensor import async_setup_entry
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    coordinator = MagicMock()
+    coordinator.data = {}
+    hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+    mock_async_add_entities = MagicMock()
+    await async_setup_entry(hass, entry, mock_async_add_entities)
+
+    # Should exit early and not add any entities if data is empty
+    mock_async_add_entities.assert_not_called()
+
+    # Also test None
+    coordinator.data = None
+    await async_setup_entry(hass, entry, mock_async_add_entities)
+
+    # Should exit early and not add any entities if data is None
+    mock_async_add_entities.assert_not_called()
