@@ -136,6 +136,93 @@
       },
       "total_pbat": {
         "name": "Puissance totale des batteries"
+      },
+      "ph1loadp": {
+        "name": "Charge phase 1"
+      },
+      "ph2loadp": {
+        "name": "Charge phase 2"
+      },
+      "ph3loadp": {
+        "name": "Charge phase 3"
+      },
+      "pv1v": {
+        "name": "Tension PV1"
+      },
+      "pv2v": {
+        "name": "Tension PV2"
+      },
+      "pv1i": {
+        "name": "Courant PV1"
+      },
+      "pv2i": {
+        "name": "Courant PV2"
+      },
+      "pv1p": {
+        "name": "Puissance PV1"
+      },
+      "pv2p": {
+        "name": "Puissance PV2"
+      },
+      "batv": {
+        "name": "Tension de la batterie"
+      },
+      "bati": {
+        "name": "Courant de la batterie"
+      },
+      "vbus": {
+        "name": "Tension du bus"
+      },
+      "f": {
+        "name": "Fréquence du réseau"
+      },
+      "ace": {
+        "name": "Énergie AC"
+      },
+      "devicestate": {
+        "name": "État de l'appareil",
+        "state": {
+          "1": "En ligne",
+          "2": "Hors ligne",
+          "3": "Alarme",
+          "10": "Non activé"
+        }
+      },
+      "ratedpower": {
+        "name": "Puissance Nominale"
+      },
+      "ratedvoltage": {
+        "name": "Tension Nominale"
+      },
+      "childnum": {
+        "name": "Appareils Connectés"
+      },
+      "ph1v": {
+        "name": "Phase 1 Tension"
+      },
+      "ph1i": {
+        "name": "Phase 1 Courant"
+      },
+      "ph1p": {
+        "name": "Phase 1 Puissance"
+      },
+      "ph2v": {
+        "name": "Phase 2 Tension"
+      },
+      "ph2i": {
+        "name": "Phase 2 Courant"
+      },
+      "ph2p": {
+        "name": "Phase 2 Puissance"
+      },
+      "ph3v": {
+        "name": "Phase 3 Tension"
+      },
+      "ph3i": {
+        "name": "Phase 3 Courant"
+      },
+      "ph3p": {
+        "name": "Phase 3 Puissance"
       }
     }
   }

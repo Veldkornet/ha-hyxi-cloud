@@ -136,6 +136,93 @@
       },
       "total_pbat": {
         "name": "Total Battery Power"
+      },
+      "ph1loadp": {
+        "name": "Phase 1 Load"
+      },
+      "ph2loadp": {
+        "name": "Phase 2 Load"
+      },
+      "ph3loadp": {
+        "name": "Phase 3 Load"
+      },
+      "pv1v": {
+        "name": "PV1 Voltage"
+      },
+      "pv2v": {
+        "name": "PV2 Voltage"
+      },
+      "pv1i": {
+        "name": "PV1 Current"
+      },
+      "pv2i": {
+        "name": "PV2 Current"
+      },
+      "pv1p": {
+        "name": "PV1 Power"
+      },
+      "pv2p": {
+        "name": "PV2 Power"
+      },
+      "batv": {
+        "name": "Battery Voltage"
+      },
+      "bati": {
+        "name": "Battery Current"
+      },
+      "vbus": {
+        "name": "Bus Voltage"
+      },
+      "f": {
+        "name": "Grid Frequency"
+      },
+      "ace": {
+        "name": "AC Energy"
+      },
+      "devicestate": {
+        "name": "Device State",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Alarm",
+          "10": "Not Activated"
+        }
+      },
+      "ratedpower": {
+        "name": "Rated Power"
+      },
+      "ratedvoltage": {
+        "name": "Rated Voltage"
+      },
+      "childnum": {
+        "name": "Connected Devices"
+      },
+      "ph1v": {
+        "name": "Phase 1 Voltage"
+      },
+      "ph1i": {
+        "name": "Phase 1 Current"
+      },
+      "ph1p": {
+        "name": "Phase 1 Power"
+      },
+      "ph2v": {
+        "name": "Phase 2 Voltage"
+      },
+      "ph2i": {
+        "name": "Phase 2 Current"
+      },
+      "ph2p": {
+        "name": "Phase 2 Power"
+      },
+      "ph3v": {
+        "name": "Phase 3 Voltage"
+      },
+      "ph3i": {
+        "name": "Phase 3 Current"
+      },
+      "ph3p": {
+        "name": "Phase 3 Power"
       }
     }
   }
