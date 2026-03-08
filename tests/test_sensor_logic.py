@@ -299,6 +299,7 @@ async def test_new_api_metrics_registration():
             f"Sensor '{key}' was not registered by async_setup_entry"
         )
 
+
 @pytest.mark.asyncio
 async def test_async_setup_entry_no_data():
     """Verify that async_setup_entry returns early when coordinator has no data."""
