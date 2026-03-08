@@ -2,10 +2,13 @@
 # pylint: disable=wrong-import-position
 
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+
 
 class ModuleMock(MagicMock):
     __path__ = []
+
 
 mock_ha = ModuleMock()
 sys.modules["homeassistant"] = mock_ha
@@ -44,10 +47,14 @@ mock_const.DOMAIN = "hyxi_cloud"
 sys.modules["custom_components.hyxi_cloud.const"] = mock_const
 
 
+import pytest  # noqa: E402
+from homeassistant.exceptions import ConfigEntryAuthFailed  # noqa: E402
+from homeassistant.helpers.update_coordinator import UpdateFailed  # noqa: E402
+
 from custom_components.hyxi_cloud.coordinator import (  # noqa: E402, I001
     HyxiDataUpdateCoordinator,
-    _safe_float,
 )
+from custom_components.hyxi_cloud.coordinator import _safe_float  # noqa: E402, I001
 
 
 def test_safe_float():
@@ -92,11 +99,6 @@ def test_safe_float():
     assert res["avg_soc"] == 49.0
     assert res["avg_soh"] == 98.5
     assert res["count"] == 2
-
-
-import pytest
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import UpdateFailed
 
 
 @pytest.mark.asyncio
