@@ -5,11 +5,13 @@ import sys
 from unittest.mock import MagicMock
 
 mock_ha = MagicMock()
+mock_ha.__path__ = []
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
 sys.modules["homeassistant.core"] = mock_ha
 sys.modules["homeassistant.exceptions"] = mock_ha
 sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 
 mock_util = MagicMock()
 sys.modules["homeassistant.util"] = mock_util
@@ -26,8 +28,17 @@ class DummyDataUpdateCoordinator:
 
 
 mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
-mock_coordinator.UpdateFailed = Exception
+
+class DummyUpdateFailed(Exception):
+    pass
+mock_coordinator.UpdateFailed = DummyUpdateFailed
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+
+class DummyConfigEntryAuthFailed(Exception):
+    pass
+mock_config_exceptions = MagicMock()
+mock_config_exceptions.ConfigEntryAuthFailed = DummyConfigEntryAuthFailed
+sys.modules["homeassistant.exceptions"] = mock_config_exceptions
 
 mock_api = MagicMock()
 sys.modules["hyxi_cloud_api"] = mock_api
@@ -85,3 +96,24 @@ def test_safe_float():
     assert res["avg_soc"] == 49.0
     assert res["avg_soh"] == 98.5
     assert res["count"] == 2
+
+import pytest
+
+@pytest.mark.asyncio
+async def test_async_update_data_unexpected_error():
+    """Test unexpected errors are caught and logged."""
+    mock_entry = MagicMock()
+    mock_entry.data = {"access_key": "ak", "secret_key": "sk", "base_url": "url"}
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data.side_effect = Exception("Test unexpected error")
+
+    coordinator = HyxiDataUpdateCoordinator(MagicMock(), mock_client, mock_entry)
+
+    assert coordinator.hyxi_metadata["last_attempts"] == 0
+
+    with pytest.raises(Exception) as excinfo:
+        await coordinator._async_update_data()
+
+    assert "Unexpected error" in str(excinfo.value)
+    assert coordinator.hyxi_metadata["last_attempts"] == 1
