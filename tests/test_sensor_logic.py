@@ -23,7 +23,7 @@ class FakeSensorEntity(FakeBase):
 
 # Create a mock homeassistant environment BEFORE importing integration code
 mock_ha = MagicMock()
-mock_ha.__path__ = [] # IMPORTANT for nested module resolution
+mock_ha.__path__ = []  # IMPORTANT for nested module resolution
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
 sys.modules["homeassistant.config_entries"] = mock_ha
