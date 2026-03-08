@@ -4,6 +4,8 @@
 import sys
 from unittest.mock import MagicMock
 
+import pytest
+
 mock_ha = MagicMock()
 mock_ha.__path__ = []
 sys.modules["homeassistant"] = mock_ha
@@ -29,13 +31,19 @@ class DummyDataUpdateCoordinator:
 
 mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
 
+
 class DummyUpdateFailed(Exception):
     pass
+
+
 mock_coordinator.UpdateFailed = DummyUpdateFailed
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 
+
 class DummyConfigEntryAuthFailed(Exception):
     pass
+
+
 mock_config_exceptions = MagicMock()
 mock_config_exceptions.ConfigEntryAuthFailed = DummyConfigEntryAuthFailed
 sys.modules["homeassistant.exceptions"] = mock_config_exceptions
@@ -97,7 +105,6 @@ def test_safe_float():
     assert res["avg_soh"] == 98.5
     assert res["count"] == 2
 
-import pytest
 
 @pytest.mark.asyncio
 async def test_async_update_data_unexpected_error():
