@@ -297,3 +297,10 @@ async def test_new_api_metrics_registration():
         assert key in registered_keys, (
             f"Sensor '{key}' was not registered by async_setup_entry"
         )
+
+
+def test_float_conversion_error(base_sensor):
+    """Verify that a non-numeric string gracefully falls back."""
+    sensor, coordinator = base_sensor
+    coordinator.data["SN123"]["metrics"]["totalE"] = "bad_data"
+    assert sensor.native_value == "bad_data"
