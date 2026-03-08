@@ -2,22 +2,26 @@
 # pylint: disable=wrong-import-position
 
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
-mock_ha = MagicMock()
+class ModuleMock(MagicMock):
+    __path__ = []
+
+mock_ha = ModuleMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
 sys.modules["homeassistant.core"] = mock_ha
 sys.modules["homeassistant.exceptions"] = mock_ha
 sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 
-mock_util = MagicMock()
+mock_util = ModuleMock()
 sys.modules["homeassistant.util"] = mock_util
 
-mock_config = MagicMock()
+mock_config = ModuleMock()
 sys.modules["homeassistant.config_entries"] = mock_config
 
-mock_coordinator = MagicMock()
+mock_coordinator = ModuleMock()
 
 
 class DummyDataUpdateCoordinator:
@@ -26,8 +30,11 @@ class DummyDataUpdateCoordinator:
 
 
 mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
-mock_coordinator.UpdateFailed = Exception
+mock_coordinator.UpdateFailed = type("UpdateFailed", (Exception,), {})
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+
+mock_exceptions = sys.modules["homeassistant.exceptions"]
+mock_exceptions.ConfigEntryAuthFailed = type("ConfigEntryAuthFailed", (Exception,), {})
 
 mock_api = MagicMock()
 sys.modules["hyxi_cloud_api"] = mock_api
@@ -85,3 +92,77 @@ def test_safe_float():
     assert res["avg_soc"] == 49.0
     assert res["avg_soh"] == 98.5
     assert res["count"] == 2
+
+
+import pytest
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.update_coordinator import UpdateFailed
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_success():
+    """Test successful data update from API."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = AsyncMock()
+    mock_client.get_all_device_data.return_value = {
+        "data": {"SN123": {"metrics": {"test": 1}}},
+        "attempts": 2,
+    }
+
+    coordinator = HyxiDataUpdateCoordinator(MagicMock(), mock_client, mock_entry)
+
+    # Assert return value is pure device dictionary
+    result = await coordinator._async_update_data()
+    assert result == {"SN123": {"metrics": {"test": 1}}}
+
+    # Assert metadata is updated
+    assert coordinator.hyxi_metadata["last_attempts"] == 2
+    assert coordinator.hyxi_metadata["last_success"] is not None
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_auth_failed():
+    """Test auth_failed handling from API."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = AsyncMock()
+    mock_client.get_all_device_data.return_value = "auth_failed"
+
+    coordinator = HyxiDataUpdateCoordinator(MagicMock(), mock_client, mock_entry)
+
+    with pytest.raises(ConfigEntryAuthFailed):
+        await coordinator._async_update_data()
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_none_result():
+    """Test None result handling from API."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = AsyncMock()
+    mock_client.get_all_device_data.return_value = None
+
+    coordinator = HyxiDataUpdateCoordinator(MagicMock(), mock_client, mock_entry)
+
+    with pytest.raises(UpdateFailed, match="HYXi Cloud unreachable"):
+        await coordinator._async_update_data()
+
+    assert coordinator.hyxi_metadata["last_attempts"] == 3
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_unexpected_error():
+    """Test unexpected error handling from API."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = AsyncMock()
+    mock_client.get_all_device_data.side_effect = Exception("Test exception")
+
+    coordinator = HyxiDataUpdateCoordinator(MagicMock(), mock_client, mock_entry)
+    initial_attempts = coordinator.hyxi_metadata["last_attempts"]
+
+    with pytest.raises(UpdateFailed, match="Unexpected error"):
+        await coordinator._async_update_data()
+
+    assert coordinator.hyxi_metadata["last_attempts"] == initial_attempts + 1
