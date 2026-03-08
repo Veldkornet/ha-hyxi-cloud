@@ -5,6 +5,7 @@ import sys
 from unittest.mock import MagicMock
 
 mock_ha = MagicMock()
+sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
 sys.modules["homeassistant.core"] = mock_ha
@@ -85,3 +86,40 @@ def test_safe_float():
     assert res["avg_soc"] == 49.0
     assert res["avg_soh"] == 98.5
     assert res["count"] == 2
+
+
+def test_battery_summary_safe_float_error():
+    """Test get_battery_summary handles invalid and badly typed metrics without crashing."""
+    mock_entry = MagicMock()
+    mock_entry.data = {"access_key": "ak", "secret_key": "sk", "base_url": "url"}
+    mock_entry.options = {"update_interval": 5}
+    coordinator = HyxiDataUpdateCoordinator(MagicMock(), MagicMock(), mock_entry)
+
+    # Provide valid data structure but with metrics that will raise ValueError and TypeError
+    coordinator.data = {
+        "SN_ERR": {
+            "device_type_code": "BATTERY_SYSTEM",
+            "metrics": {
+                "pbat": "invalid_value",  # ValueError
+                "batSoc": {"dict": "not_a_float"},  # TypeError
+                "batSoh": ["list_not_a_float"],  # TypeError
+                "bat_charge_total": None,  # handled by or 0
+                "bat_discharge_total": "",  # ValueError
+                "bat_charging": 100.5,  # Valid
+                "bat_discharging": "50.5",  # Valid
+            },
+        },
+    }
+
+    res = coordinator.get_battery_summary()
+
+    # 0.0 + 0.0 = 0.0 (count = 1)
+    assert res is not None
+    assert res["total_pbat"] == 0.0
+    assert res["avg_soc"] == 0.0
+    assert res["avg_soh"] == 0.0
+    assert res["bat_charge_total"] == 0.0
+    assert res["bat_discharge_total"] == 0.0
+    assert res["bat_charging"] == 100.5
+    assert res["bat_discharging"] == 50.5
+    assert res["count"] == 1
