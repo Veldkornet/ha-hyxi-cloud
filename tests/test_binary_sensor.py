@@ -1,9 +1,45 @@
 """Tests for the HYXi Cloud binary sensor logic."""
 
+import sys
 from unittest.mock import MagicMock
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+class FakeBase:
+    pass
 
+class FakeCoordinatorEntity(FakeBase):
+    def __init__(self, coordinator, context=None, **kwargs):
+        self.coordinator = coordinator
+
+class FakeBinarySensorEntity(FakeBase):
+    pass
+
+mock_ha = MagicMock()
+mock_ha.__path__ = []
+sys.modules["homeassistant"] = mock_ha
+sys.modules["homeassistant.components"] = mock_ha
+
+mock_binary_sensor = MagicMock()
+mock_binary_sensor.BinarySensorEntity = FakeBinarySensorEntity
+class FakeBinarySensorDeviceClass:
+    PROBLEM = "problem"
+    CONNECTIVITY = "connectivity"
+mock_binary_sensor.BinarySensorDeviceClass = FakeBinarySensorDeviceClass
+sys.modules["homeassistant.components.binary_sensor"] = mock_binary_sensor
+
+mock_coordinator = MagicMock()
+mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+sys.modules["homeassistant.util"] = mock_ha
+sys.modules["homeassistant.exceptions"] = mock_ha
+sys.modules["homeassistant.core"] = mock_ha
+sys.modules["homeassistant.config_entries"] = mock_ha
+sys.modules["hyxi_cloud_api"] = mock_ha
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
+sys.modules["homeassistant.const"] = mock_ha
+sys.modules["homeassistant.helpers.entity_platform"] = mock_ha
+
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from custom_components.hyxi_cloud.binary_sensor import HyxiDeviceAlarmSensor
 
 
@@ -26,7 +62,7 @@ def test_alarm_sensor_active():
 
     assert sensor.is_on is True
     assert sensor.extra_state_attributes["active_alarms_count"] == 1
-    assert sensor.device_class == BinarySensorDeviceClass.PROBLEM
+    assert getattr(sensor, "device_class", sensor._attr_device_class) == BinarySensorDeviceClass.PROBLEM
 
 
 def test_alarm_sensor_restored():
