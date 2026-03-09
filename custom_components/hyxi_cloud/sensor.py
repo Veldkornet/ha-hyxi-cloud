@@ -519,7 +519,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     battery_sns = []
     for sn, dev in coordinator.data.items():
         dtype = str(dev.get("device_type_code", "")).upper()
-        if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
+        if (
+            "BATTERY" in dtype
+            or "EMS" in dtype
+            or "HYBRID" in dtype
+            or "ALL_IN_ONE" in dtype
+        ):
             battery_sns.append(sn)
 
     if len(battery_sns) > 1:
