@@ -471,6 +471,67 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
         self._last_valid_value = None
         self._last_logged_glitch = None
 
+    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
+        """Helper to log glitch prevention only once per glitch value."""
+        if self._last_logged_glitch != num_value:
+            _LOGGER.debug(message, *args)
+            self._last_logged_glitch = num_value
+
+    def _initialize_last_valid_value(self) -> None:
+        """Initialize last valid value from state machine."""
+        if self._last_valid_value is not None or self.hass is None:
+            return
+
+        old_state = self.hass.states.get(self.entity_id)
+        if not old_state or old_state.state in (None, "unknown", "unavailable"):
+            return
+
+        try:
+            self._last_valid_value = float(old_state.state)
+        except (ValueError, TypeError):
+            _LOGGER.debug(
+                "HYXI Initialization: Could not parse previous state '%s' for %s",
+                old_state.state,
+                self.entity_id,
+            )
+
+    def _check_anti_dip(self, num_value: float) -> float | None:
+        """Check for and prevent invalid value drops."""
+        if num_value >= self._last_valid_value:
+            return None
+
+        # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
+        # AND the drop is significant (meaning it's not just a tiny dip).
+        is_valid_reset = (0.0 <= num_value <= 0.1) and (
+            (self._last_valid_value - num_value) > (self._last_valid_value * 0.5)
+        )
+
+        if not is_valid_reset:
+            self._log_glitch_once(
+                num_value,
+                "HYXI Glitch Filter: Prevented %s drop (%s -> %s)",
+                self.entity_description.key,
+                self._last_valid_value,
+                num_value,
+            )
+            return self._last_valid_value
+
+        return None
+
+    def _check_anti_spike(self, num_value: float) -> float | None:
+        """Check for and prevent impossible value jumps."""
+        if (num_value - self._last_valid_value) > 100.0:
+            self._log_glitch_once(
+                num_value,
+                "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                self.entity_description.key,
+                self._last_valid_value,
+                num_value,
+            )
+            return self._last_valid_value
+
+        return None
+
     def _process_numeric_value(self, value):
         """Common numeric processing for sensors."""
         if value is None or value == "":
@@ -486,57 +547,16 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                 SensorStateClass.TOTAL_INCREASING,
                 "total_increasing",
             ):
-                if self._last_valid_value is None and self.hass is not None:
-                    old_state = self.hass.states.get(self.entity_id)
-                    if old_state and old_state.state not in (
-                        None,
-                        "unknown",
-                        "unavailable",
-                    ):
-                        try:
-                            self._last_valid_value = float(old_state.state)
-                        except (
-                            ValueError,
-                            TypeError,
-                        ):
-                            _LOGGER.debug(
-                                "HYXI Initialization: Could not parse previous state '%s' for %s",
-                                old_state.state,
-                                self.entity_id,
-                            )
+                self._initialize_last_valid_value()
 
                 if self._last_valid_value is not None:
-                    # Anti-Dip Check
-                    if num_value < self._last_valid_value:
-                        # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
-                        # AND the drop is significant (meaning it's not just a tiny dip).
-                        is_valid_reset = (0.0 <= num_value <= 0.1) and (
-                            (self._last_valid_value - num_value)
-                            > (self._last_valid_value * 0.5)
-                        )
+                    dip_result = self._check_anti_dip(num_value)
+                    if dip_result is not None:
+                        return dip_result
 
-                        if not is_valid_reset:
-                            if self._last_logged_glitch != num_value:
-                                _LOGGER.debug(
-                                    "HYXI Glitch Filter: Prevented %s drop (%s -> %s)",
-                                    self.entity_description.key,
-                                    self._last_valid_value,
-                                    num_value,
-                                )
-                                self._last_logged_glitch = num_value
-                            return self._last_valid_value
-
-                    # Anti-Spike Check
-                    elif (num_value - self._last_valid_value) > 100.0:
-                        if self._last_logged_glitch != num_value:
-                            _LOGGER.debug(
-                                "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
-                                self.entity_description.key,
-                                self._last_valid_value,
-                                num_value,
-                            )
-                            self._last_logged_glitch = num_value
-                        return self._last_valid_value
+                    spike_result = self._check_anti_spike(num_value)
+                    if spike_result is not None:
+                        return spike_result
 
             self._last_logged_glitch = None
             self._last_valid_value = num_value
@@ -587,12 +607,6 @@ class HyxiSensor(HyxiBaseSensor):
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
         self._attr_translation_key = description.key.lower()
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
-
-    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
-        """Helper to log glitch prevention only once per glitch value."""
-        if self._last_logged_glitch != num_value:
-            _LOGGER.debug(message, *args)
-            self._last_logged_glitch = num_value
 
     @property
     def native_value(self):
