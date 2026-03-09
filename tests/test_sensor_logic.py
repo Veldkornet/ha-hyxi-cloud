@@ -351,3 +351,10 @@ def test_sensor_int_conversion_error(base_sensor):
         # Test empty string (handled by earlier check)
         coordinator.data["SN123"]["metrics"][key] = ""
         assert sensor.native_value is None
+
+
+def test_float_conversion_error(base_sensor):
+    """Verify that a non-numeric string gracefully falls back."""
+    sensor, coordinator = base_sensor
+    coordinator.data["SN123"]["metrics"]["totalE"] = "bad_data"
+    assert sensor.native_value == "bad_data"
