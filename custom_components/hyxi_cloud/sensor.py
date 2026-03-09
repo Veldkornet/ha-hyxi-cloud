@@ -412,6 +412,8 @@ SENSOR_TYPES = [
     ),
 ]
 
+SENSOR_TYPES_BY_KEY = {desc.key: desc for desc in SENSOR_TYPES}
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HYXI sensors."""
@@ -434,23 +436,20 @@ async def async_setup_entry(hass, entry, async_add_entities):
             list(metrics.keys()),
         )
 
-        for description in SENSOR_TYPES:
-            key = description.key
-            should_add = False
+        is_collector_or_dmu = "COLLECTOR" in device_type or "DMU" in device_type
 
-            if key in HEARTBEAT_SENSORS:
-                should_add = True
-            elif key in COLLECTOR_SENSORS:
-                if "COLLECTOR" in device_type or "DMU" in device_type:
-                    should_add = True
-            elif key in metrics and metrics[key] is not None:
-                if str(metrics[key]) != "":
-                    should_add = True
+        keys_to_add = set(HEARTBEAT_SENSORS)
+        if is_collector_or_dmu:
+            keys_to_add.update(COLLECTOR_SENSORS)
 
-            if should_add:
-                if key in BATTERY_SENSORS and (
-                    "COLLECTOR" in device_type or "DMU" in device_type
-                ):
+        for k, v in metrics.items():
+            if v is not None and str(v) != "":
+                keys_to_add.add(k)
+
+        for key in keys_to_add:
+            description = SENSOR_TYPES_BY_KEY.get(key)
+            if description:
+                if key in BATTERY_SENSORS and is_collector_or_dmu:
                     continue
                 entities.append(HyxiSensor(coordinator, sn, description))
 
