@@ -21,7 +21,7 @@ mock_coordinator = MagicMock()
 
 
 class DummyDataUpdateCoordinator:
-    def __init__(self, hass, logger, name, update_interval):  # pylint: disable=unused-argument
+    def __init__(self, hass, logger, name, update_interval, config_entry=None):  # pylint: disable=unused-argument
         self.data = {}
 
 
