@@ -1,4 +1,4 @@
-# Contributing to HYXi Cloud
+# Contributing to HYXI Cloud
 
 First off, thank you for considering contributing! People like you make the Home Assistant community great. ☀️
 
