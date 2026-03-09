@@ -40,6 +40,9 @@ import custom_components.hyxi_cloud.__init__ as hc_init  # noqa: E402
 from custom_components.hyxi_cloud.__init__ import ConfigEntryAuthFailed
 from custom_components.hyxi_cloud.__init__ import ConfigEntryNotReady
 from custom_components.hyxi_cloud.__init__ import async_setup_entry
+from custom_components.hyxi_cloud.__init__ import async_unload_entry
+from custom_components.hyxi_cloud.const import DOMAIN
+from custom_components.hyxi_cloud.const import PLATFORMS
 
 if not isinstance(hc_init.ConfigEntryAuthFailed, type) or not issubclass(
     hc_init.ConfigEntryAuthFailed, Exception
@@ -150,3 +153,31 @@ async def test_async_setup_entry_missing_keys(mock_hass):
         mock_logger.assert_called_with(
             "HYXI Integration could not find Access/Secret keys."
         )
+
+
+@pytest.mark.asyncio
+async def test_async_unload_entry_success(mock_hass, mock_entry):
+    """Test successful unload of a config entry."""
+    mock_hass.data[DOMAIN] = {mock_entry.entry_id: MagicMock()}
+    mock_hass.config_entries.async_unload_platforms.return_value = True
+
+    assert await async_unload_entry(mock_hass, mock_entry) is True
+
+    mock_hass.config_entries.async_unload_platforms.assert_called_once_with(
+        mock_entry, PLATFORMS
+    )
+    assert mock_entry.entry_id not in mock_hass.data[DOMAIN]
+
+
+@pytest.mark.asyncio
+async def test_async_unload_entry_failure(mock_hass, mock_entry):
+    """Test failed unload of a config entry."""
+    mock_hass.data[DOMAIN] = {mock_entry.entry_id: MagicMock()}
+    mock_hass.config_entries.async_unload_platforms.return_value = False
+
+    assert await async_unload_entry(mock_hass, mock_entry) is False
+
+    mock_hass.config_entries.async_unload_platforms.assert_called_once_with(
+        mock_entry, PLATFORMS
+    )
+    assert mock_entry.entry_id in mock_hass.data[DOMAIN]
