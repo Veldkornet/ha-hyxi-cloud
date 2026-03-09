@@ -44,6 +44,9 @@
     "binary_sensor": {
       "connectivity": {
         "name": "Cloud Status"
+      },
+      "device_alarm": {
+        "name": "Actieve Alarmen"
       }
     },
     "sensor": {
@@ -136,6 +139,98 @@
       },
       "total_pbat": {
         "name": "Totaal Batterijvermogen"
+      },
+      "ph1loadp": {
+        "name": "Fase 1 Belasting"
+      },
+      "ph2loadp": {
+        "name": "Fase 2 Belasting"
+      },
+      "ph3loadp": {
+        "name": "Fase 3 Belasting"
+      },
+      "pv1v": {
+        "name": "PV1 Spanning"
+      },
+      "pv2v": {
+        "name": "PV2 Spanning"
+      },
+      "pv1i": {
+        "name": "PV1 Stroom"
+      },
+      "pv2i": {
+        "name": "PV2 Stroom"
+      },
+      "pv1p": {
+        "name": "PV1 Vermogen"
+      },
+      "pv2p": {
+        "name": "PV2 Vermogen"
+      },
+      "batv": {
+        "name": "Batterijspanning"
+      },
+      "bati": {
+        "name": "Batterijstroom"
+      },
+      "vbus": {
+        "name": "Bus Spanning"
+      },
+      "f": {
+        "name": "Netfrequentie"
+      },
+      "ace": {
+        "name": "AC Energie"
+      },
+      "devicestate": {
+        "name": "Apparaatstatus",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Alarm",
+          "10": "Niet geactiveerd"
+        }
+      },
+      "ratedpower": {
+        "name": "Nominaal Vermogen"
+      },
+      "ratedvoltage": {
+        "name": "Nominale Spanning"
+      },
+      "childnum": {
+        "name": "Verbonden Apparaten"
+      },
+      "ph1v": {
+        "name": "Fase 1 Spanning"
+      },
+      "ph1i": {
+        "name": "Fase 1 Stroom"
+      },
+      "ph1p": {
+        "name": "Fase 1 Vermogen"
+      },
+      "ph2v": {
+        "name": "Fase 2 Spanning"
+      },
+      "ph2i": {
+        "name": "Fase 2 Stroom"
+      },
+      "ph2p": {
+        "name": "Fase 2 Vermogen"
+      },
+      "ph3v": {
+        "name": "Fase 3 Spanning"
+      },
+      "ph3i": {
+        "name": "Fase 3 Stroom"
+      },
+      "ph3p": {
+        "name": "Fase 3 Vermogen"
+      }
+    },
+    "binary_sensor": {
+      "device_alarm": {
+        "name": "Actieve Alarmen"
       }
     }
   }

@@ -55,8 +55,9 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             success = await client._refresh_token()
             if not success:
                 return "invalid_auth"
-        except Exception:
-            _LOGGER.exception("Connection error during validation")
+        except Exception as e:
+            _LOGGER.error("Connection error during validation: %s", e)
+            _LOGGER.debug("Validation traceback:", exc_info=True)
             return "cannot_connect"
 
         return None

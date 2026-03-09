@@ -44,6 +44,9 @@
     "binary_sensor": {
       "connectivity": {
         "name": "Cloud Status"
+      },
+      "device_alarm": {
+        "name": "Aktive Alarme"
       }
     },
     "sensor": {
@@ -136,6 +139,98 @@
       },
       "total_pbat": {
         "name": "Gesamte Batterieleistung"
+      },
+      "ph1loadp": {
+        "name": "Phase 1 Verbrauch"
+      },
+      "ph2loadp": {
+        "name": "Phase 2 Verbrauch"
+      },
+      "ph3loadp": {
+        "name": "Phase 3 Verbrauch"
+      },
+      "pv1v": {
+        "name": "PV1 Spannung"
+      },
+      "pv2v": {
+        "name": "PV2 Spannung"
+      },
+      "pv1i": {
+        "name": "PV1 Strom"
+      },
+      "pv2i": {
+        "name": "PV2 Strom"
+      },
+      "pv1p": {
+        "name": "PV1 Leistung"
+      },
+      "pv2p": {
+        "name": "PV2 Leistung"
+      },
+      "batv": {
+        "name": "Batteriespannung"
+      },
+      "bati": {
+        "name": "Batteriestrom"
+      },
+      "vbus": {
+        "name": "Bus Spannung"
+      },
+      "f": {
+        "name": "Netzfrequenz"
+      },
+      "ace": {
+        "name": "AC-Energie"
+      },
+      "devicestate": {
+        "name": "Gerätestatus",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Alarm",
+          "10": "Nicht aktiviert"
+        }
+      },
+      "ratedpower": {
+        "name": "Nennleistung"
+      },
+      "ratedvoltage": {
+        "name": "Nennspannung"
+      },
+      "childnum": {
+        "name": "Verbundene Geräte"
+      },
+      "ph1v": {
+        "name": "Phase 1 Spannung"
+      },
+      "ph1i": {
+        "name": "Phase 1 Strom"
+      },
+      "ph1p": {
+        "name": "Phase 1 Leistung"
+      },
+      "ph2v": {
+        "name": "Phase 2 Spannung"
+      },
+      "ph2i": {
+        "name": "Phase 2 Strom"
+      },
+      "ph2p": {
+        "name": "Phase 2 Leistung"
+      },
+      "ph3v": {
+        "name": "Phase 3 Spannung"
+      },
+      "ph3i": {
+        "name": "Phase 3 Strom"
+      },
+      "ph3p": {
+        "name": "Phase 3 Leistung"
+      }
+    },
+    "binary_sensor": {
+      "device_alarm": {
+        "name": "Aktive Alarme"
       }
     }
   }

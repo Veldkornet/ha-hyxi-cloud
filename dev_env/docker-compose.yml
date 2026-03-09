@@ -13,3 +13,4 @@ services:
       - ./ha_testing_config:/config
       # 2. Mounts your live code directly into the container's custom_components folder!
       - ../custom_components/hyxi_cloud:/config/custom_components/hyxi_cloud
+      - ../../hyxi-cloud-api:/workspaces/hyxi-cloud-api
