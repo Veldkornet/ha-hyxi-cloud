@@ -351,3 +351,33 @@ async def test_async_setup_entry_no_data():
 
     # Should exit early and not add any entities if data is None
     mock_async_add_entities.assert_not_called()
+
+
+def test_sensor_int_conversion_error(base_sensor):
+    """Test that invalid numeric strings or objects return None for batSoc, batSoh, signalVal."""
+    sensor, coordinator = base_sensor
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "100"
+
+    # Test keys: batsoc, batsoh, signalval (case insensitive in sensor.py)
+    for key in ["batSoc", "batSoh", "signalVal"]:
+        sensor.entity_description.key = key
+
+        # Test valid string
+        coordinator.data["SN123"]["metrics"][key] = "85.5"
+        assert sensor.native_value == 86
+
+        # Test invalid string
+        coordinator.data["SN123"]["metrics"][key] = "invalid_string"
+        assert sensor.native_value is None
+
+        # Test non-numeric object
+        coordinator.data["SN123"]["metrics"][key] = {"unexpected": "data"}
+        assert sensor.native_value is None
+
+        # Test None value (handled by earlier check but good to verify)
+        coordinator.data["SN123"]["metrics"][key] = None
+        assert sensor.native_value is None
+
+        # Test empty string (handled by earlier check)
+        coordinator.data["SN123"]["metrics"][key] = ""
+        assert sensor.native_value is None
