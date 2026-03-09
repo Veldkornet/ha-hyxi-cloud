@@ -519,7 +519,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     battery_sns = []
     for sn, dev in coordinator.data.items():
         dtype = str(dev.get("device_type_code", "")).upper()
-        if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
+        if (
+            "BATTERY" in dtype
+            or "EMS" in dtype
+            or "HYBRID" in dtype
+            or "ALL_IN_ONE" in dtype
+        ):
             battery_sns.append(sn)
 
     if len(battery_sns) > 1:
@@ -596,6 +601,12 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         self._attr_translation_key = description.key.lower()
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
 
+    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
+        """Helper to log glitch prevention only once per glitch value."""
+        if self._last_logged_glitch != num_value:
+            _LOGGER.debug(message, *args)
+            self._last_logged_glitch = num_value
+
     @property
     def native_value(self):
         """Returns the sensor value with correct data typing and anti-dip protection."""
@@ -668,14 +679,13 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                             )
 
                             if not is_valid_reset:
-                                if self._last_logged_glitch != num_value:
-                                    _LOGGER.debug(
-                                        "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
-                                        self.entity_description.key,
-                                        self._last_valid_value,
-                                        num_value,
-                                    )
-                                    self._last_logged_glitch = num_value
+                                self._log_glitch_once(
+                                    num_value,
+                                    "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
+                                    self.entity_description.key,
+                                    self._last_valid_value,
+                                    num_value,
+                                )
                                 return self._last_valid_value
 
                             _LOGGER.debug(
@@ -685,14 +695,13 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
 
                         # --- UPPER BOUND CHECK ---
                         elif (num_value - self._last_valid_value) > 100.0:
-                            if self._last_logged_glitch != num_value:
-                                _LOGGER.debug(
-                                    "HYXi High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
-                                    self.entity_description.key,
-                                    self._last_valid_value,
-                                    num_value,
-                                )
-                                self._last_logged_glitch = num_value
+                            self._log_glitch_once(
+                                num_value,
+                                "HYXi High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                                self.entity_description.key,
+                                self._last_valid_value,
+                                num_value,
+                            )
                             return self._last_valid_value
 
                 # Reset the gatekeeper if we finally get a valid new value
@@ -760,6 +769,12 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
             "model": "Aggregated Storage",
         }
 
+    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
+        """Helper to log glitch prevention only once per glitch value."""
+        if self._last_logged_glitch != num_value:
+            _LOGGER.debug(message, *args)
+            self._last_logged_glitch = num_value
+
     @property
     def native_value(self):
         """Value with floating point protection and anti-dip persistence."""
@@ -813,26 +828,24 @@ class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
                             ) > (self._last_valid_value * 0.5)
 
                             if not is_valid_reset:
-                                if self._last_logged_glitch != num_value:
-                                    _LOGGER.debug(
-                                        "HYXi Virtual Glitch Filter: Prevented %s drop (%s -> %s)",
-                                        self._key,
-                                        self._last_valid_value,
-                                        num_value,
-                                    )
-                                    self._last_logged_glitch = num_value
-                                return self._last_valid_value
-
-                        # Anti-Spike Check
-                        elif (num_value - self._last_valid_value) > 100.0:
-                            if self._last_logged_glitch != num_value:
-                                _LOGGER.debug(
-                                    "HYXi Virtual High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                                self._log_glitch_once(
+                                    num_value,
+                                    "HYXi Virtual Glitch Filter: Prevented %s drop (%s -> %s)",
                                     self._key,
                                     self._last_valid_value,
                                     num_value,
                                 )
-                                self._last_logged_glitch = num_value
+                                return self._last_valid_value
+
+                        # Anti-Spike Check
+                        elif (num_value - self._last_valid_value) > 100.0:
+                            self._log_glitch_once(
+                                num_value,
+                                "HYXi Virtual High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                                self._key,
+                                self._last_valid_value,
+                                num_value,
+                            )
                             return self._last_valid_value
 
                 self._last_logged_glitch = None
