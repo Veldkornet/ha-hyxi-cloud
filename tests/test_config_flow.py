@@ -1,8 +1,13 @@
 """Tests for the ConfigFlow _validate_input logic."""
+
 import sys
 import types
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
+
 
 @pytest.fixture(autouse=True, scope="module")
 def mock_ha_environment():
@@ -21,11 +26,18 @@ def mock_ha_environment():
     sys.modules["homeassistant.const"] = mock_ha
 
     mock_ce = types.ModuleType("mock_ce")
+
     class RealConfigFlow:
-        def __init_subclass__(cls, **kwargs): pass
-        def __init__(self): pass
+        def __init_subclass__(cls, **kwargs):
+            pass
+
+        def __init__(self):
+            pass
+
     class RealOptionsFlow:
-        def __init_subclass__(cls, **kwargs): pass
+        def __init_subclass__(cls, **kwargs):
+            pass
+
     mock_ce.ConfigFlow = RealConfigFlow
     mock_ce.OptionsFlow = RealOptionsFlow
     mock_ce.ConfigEntry = MagicMock()
@@ -40,11 +52,13 @@ def mock_ha_environment():
 
     # Force a clean import of the module under test
     import importlib
+
     for m in list(sys.modules.keys()):
-        if 'hyxi' in m and m != 'hyxi_cloud_api':
+        if "hyxi" in m and m != "hyxi_cloud_api":
             del sys.modules[m]
 
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
     importlib.reload(config_flow_mod)
 
     yield config_flow_mod
@@ -53,11 +67,13 @@ def mock_ha_environment():
     sys.modules.clear()
     sys.modules.update(original_modules)
 
+
 @pytest.fixture
 def mock_hyxi_client():
     client_mock = AsyncMock()
     client_mock._refresh_token = AsyncMock()
     return client_mock
+
 
 @pytest.fixture
 def config_flow(mock_ha_environment):
@@ -66,30 +82,39 @@ def config_flow(mock_ha_environment):
     flow.hass = MagicMock()
     return flow
 
+
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
 @patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
-async def test_validate_input_success(mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client):
+async def test_validate_input_success(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
     mock_api_client_class.return_value = mock_hyxi_client
     mock_hyxi_client._refresh_token.return_value = True
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result is None
 
+
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
 @patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
-async def test_validate_input_invalid_auth(mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client):
+async def test_validate_input_invalid_auth(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
     mock_api_client_class.return_value = mock_hyxi_client
     mock_hyxi_client._refresh_token.return_value = False
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result == "invalid_auth"
 
+
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
 @patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
-async def test_validate_input_cannot_connect(mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client):
+async def test_validate_input_cannot_connect(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
     mock_api_client_class.return_value = mock_hyxi_client
     mock_hyxi_client._refresh_token.side_effect = Exception("Connection Failed")
 
