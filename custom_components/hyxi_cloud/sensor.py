@@ -16,6 +16,9 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+# Constants for optimization
+INT_SENSOR_KEYS = {"batsoc", "batsoh", "signalval"}
+
 SENSOR_TYPES = [
     # Power Sensors
     SensorEntityDescription(
@@ -396,7 +399,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             return None
 
         check_key = self.entity_description.key.lower()
-        if check_key in ["batsoc", "batsoh", "signalval"]:
+        if check_key in INT_SENSOR_KEYS:
             try:
                 return int(round(float(value), 0))
             except (

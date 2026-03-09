@@ -1,40 +1,40 @@
 import sys
-from datetime import datetime
 from unittest.mock import MagicMock
-
-import pytest
-
 
 # 1. THE BULLETPROOF MOCK
 class FakeBase:
     pass
 
-
 class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
 
-
 class FakeSensorEntity(FakeBase):
     pass
 
-
+# Mock everything before importing HyxiSensor
 mock_ha = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
-mock_sensor = MagicMock()
-mock_sensor.SensorEntity = FakeSensorEntity
-mock_sensor.SensorStateClass = MagicMock()
-mock_sensor.SensorDeviceClass = MagicMock()
-sys.modules["homeassistant.components.sensor"] = mock_sensor
-mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+sys.modules["homeassistant.components.sensor"] = mock_ha
 sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
+sys.modules["homeassistant.config_entries"] = mock_ha
+sys.modules["homeassistant.core"] = mock_ha
+sys.modules["homeassistant.exceptions"] = mock_ha
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
+sys.modules["homeassistant.const"] = mock_ha
+sys.modules["hyxi_cloud_api"] = mock_ha
+
+mock_ha.SensorEntity = FakeSensorEntity
+mock_ha.CoordinatorEntity = FakeCoordinatorEntity
+mock_ha.SensorStateClass = MagicMock()
+mock_ha.SensorDeviceClass = MagicMock()
 
 from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
-
+from datetime import datetime, UTC
+import pytest
 
 @pytest.fixture
 def base_sensor():
@@ -116,3 +116,14 @@ def test_late_night_correction(base_sensor):
 
     print(f"[Night Correction] Jumped from 2742.0 to {val} kWh")
     assert val == 2743.5  # Should be ALLOWED
+
+def test_int_sensor_keys(base_sensor):
+    """Verify that batsoc, batsoh, and signalval are correctly converted to int."""
+    sensor, coordinator = base_sensor
+
+    for key in ["batSoc", "batSoh", "signalVal"]:
+        sensor.entity_description.key = key
+        sensor.entity_description.native_unit_of_measurement = "%"
+        coordinator.data["SN123"]["metrics"][key] = "85.6"
+        assert sensor.native_value == 86
+        assert isinstance(sensor.native_value, int)
