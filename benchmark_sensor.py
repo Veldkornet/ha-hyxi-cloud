@@ -30,8 +30,8 @@ class FakeSensorEntity(FakeBase):
 mock_ha.SensorEntity = FakeSensorEntity
 mock_ha.CoordinatorEntity = FakeCoordinatorEntity
 
-import timeit
-from custom_components.hyxi_cloud.sensor import HyxiSensor
+import timeit  # noqa: E402, I001
+from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402, I001
 
 def benchmark():
     coordinator = MagicMock()
