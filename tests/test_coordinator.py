@@ -58,7 +58,9 @@ def test_safe_float():
     # just a MagicMock instead of the real class. We should test the module function directly
     # if it's available, but here the test just wants to verify the behavior of `get_battery_summary`.
     # Let's bypass testing `get_battery_summary` if the class is completely mocked out by conftest.py.
-    if isinstance(HyxiDataUpdateCoordinator, type) and not issubclass(HyxiDataUpdateCoordinator, MagicMock):
+    if isinstance(HyxiDataUpdateCoordinator, type) and not issubclass(
+        HyxiDataUpdateCoordinator, MagicMock
+    ):
         mock_entry = MagicMock()
         mock_entry.data = {"access_key": "ak", "secret_key": "sk", "base_url": "url"}
         mock_entry.options = {"update_interval": 5}
