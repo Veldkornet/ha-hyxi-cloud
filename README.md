@@ -116,7 +116,7 @@ If you are opening a bug report, please include **Debug Logs**:
 4. Open the file, replace any sensitive information (like your real serial numbers if you prefer), and attach it to your GitHub issue! _Note: If you sanitize the data, please keep it consistent as the serial number can be used to show how devices link to each other!_
 
 ## Disclaimer
-This is a custom integration and is **not** an official product of HYXI Power.
+This is a custom integration and is **not** an official product of HYXI Power. 
 
 ## Support
 If you find this integration helpful and want to support its development:
