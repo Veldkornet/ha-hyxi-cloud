@@ -527,7 +527,11 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                         try:
                             self._last_valid_value = float(old_state.state)
                         except (ValueError, TypeError):
-                            pass
+                            _LOGGER.debug(
+                                "HYXi Initialization: Could not parse previous state '%s' for %s",
+                                old_state.state,
+                                self.entity_id,
+                            )
 
                 if self._last_valid_value is not None:
                     # Anti-Dip Check
