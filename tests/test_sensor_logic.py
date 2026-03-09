@@ -23,8 +23,14 @@ class FakeSensorEntity(FakeBase):
 
 # Create a mock homeassistant environment BEFORE importing integration code
 mock_ha = MagicMock()
+mock_ha.__path__ = []  # IMPORTANT for nested module resolution
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
+sys.modules["homeassistant.config_entries"] = mock_ha
+sys.modules["homeassistant.core"] = mock_ha
+sys.modules["homeassistant.exceptions"] = mock_ha
+sys.modules["homeassistant.const"] = mock_ha
+sys.modules["hyxi_cloud_api"] = mock_ha
 
 # We need SensorEntityDescription to retain its attributes instead of being a generic mock
 mock_sensor = MagicMock()
@@ -49,6 +55,7 @@ mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from original
 sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
 sys.modules["hyxi_cloud_api"] = mock_ha
 
@@ -115,6 +122,25 @@ def test_timestamp_scaling(base_sensor):
     # 13 Digits
     sensor.coordinator.data["SN123"]["metrics"]["collectTime"] = 1741248000000
     assert isinstance(sensor.native_value, datetime)
+
+
+def test_collecttime_error_handling(base_sensor):
+    """Verify that invalid collectTime values are caught and return None."""
+    sensor, coordinator = base_sensor
+    sensor.entity_description.key = "collectTime"
+
+    # Test ValueError (unparseable string)
+    coordinator.data["SN123"]["metrics"]["collectTime"] = "invalid_timestamp"
+    assert sensor.native_value is None
+
+    # Test TypeError (invalid type like dict or list)
+    coordinator.data["SN123"]["metrics"]["collectTime"] = {"time": 123}
+    assert sensor.native_value is None
+
+    # Test extreme value causing OverflowError/OSError in datetime.fromtimestamp
+    # A huge number that passes the 10-digit check but is still too large for datetime
+    coordinator.data["SN123"]["metrics"]["collectTime"] = 1000000000000000000
+    assert sensor.native_value is None
 
 
 def test_rounding_protection(base_sensor):
