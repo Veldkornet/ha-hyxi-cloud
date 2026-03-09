@@ -108,6 +108,8 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         self.entry = entry
         self.sn = sn
         self._attr_unique_id = f"{entry.entry_id}_{sn}_device_alarm"
+        self._alarms = []
+        self._active_alarms_count = 0
 
         device_data = coordinator.data.get(sn, {})
         self._attr_device_info = {
@@ -118,20 +120,34 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
             "sw_version": device_data.get("sw_version"),
             "hw_version": device_data.get("hw_version"),
         }
+        self._update_internal_state()
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._update_internal_state()
+        super()._handle_coordinator_update()
+
+    def _update_internal_state(self) -> None:
+        """Process alarm states once per update."""
+        self._alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
+
+        count = 0
+        for a in self._alarms:
+            state = a.get("alarmState")
+            if state in ("0", "1", 0, 1):
+                count += 1
+
+        self._active_alarms_count = count
 
     @property
     def is_on(self) -> bool:
         """Return True if any active alarms exist."""
-        alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
-        return any(str(a.get("alarmState")) in ("0", "1") for a in alarms)
+        return self._active_alarms_count > 0
 
     @property
     def extra_state_attributes(self):
         """Return raw alarm list."""
-        alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
         return {
-            "active_alarms_count": len(
-                [a for a in alarms if str(a.get("alarmState")) in ("0", "1")]
-            ),
-            "raw_alarms_payload": alarms,
+            "active_alarms_count": self._active_alarms_count,
+            "raw_alarms_payload": self._alarms,
         }
