@@ -552,7 +552,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
         if key.lower() in ("batsoc", "batsoh", "signalval", "avg_soc", "avg_soh"):
             try:
                 return int(round(float(value), 0))
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return None
 
         if key == "collectTime":
@@ -561,7 +561,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except (ValueError, TypeError, OSError):
+            except ValueError, TypeError, OSError:
                 return None
 
         if key == "last_seen":
@@ -575,7 +575,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
             if old_state and old_state.state not in (None, "unknown", "unavailable"):
                 try:
                     self._last_valid_value = float(old_state.state)
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     pass
 
     def _apply_glitch_filter(self, num_value):
@@ -648,7 +648,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
             self._last_logged_glitch = None
             self._last_valid_value = num_value
             return num_value
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return value
 
 
