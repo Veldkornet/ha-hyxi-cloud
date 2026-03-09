@@ -16,22 +16,27 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.const"] = mock_ha
 sys.modules["hyxi_cloud_api"] = mock_ha
 
+
 # Now we can mock the specific classes and constants
 class FakeBase:
     pass
+
 
 class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
 
+
 class FakeSensorEntity(FakeBase):
     pass
+
 
 mock_ha.SensorEntity = FakeSensorEntity
 mock_ha.CoordinatorEntity = FakeCoordinatorEntity
 
 import timeit  # noqa: E402, I001
 from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402, I001
+
 
 def benchmark():
     coordinator = MagicMock()
@@ -40,7 +45,7 @@ def benchmark():
     # Case 1: Key is in the list
     description_in = MagicMock()
     description_in.key = "batSoc"
-    description_in.native_unit_of_measurement = None # Avoid heavy block
+    description_in.native_unit_of_measurement = None  # Avoid heavy block
     description_in.state_class = "measurement"
     sensor_in = HyxiSensor(coordinator, "SN123", description_in)
     sensor_in.hass = None
@@ -48,7 +53,7 @@ def benchmark():
     # Case 2: Key is NOT in the list
     description_out = MagicMock()
     description_out.key = "other"
-    description_out.native_unit_of_measurement = None # Avoid heavy block
+    description_out.native_unit_of_measurement = None  # Avoid heavy block
     description_out.state_class = "measurement"
     sensor_out = HyxiSensor(coordinator, "SN123", description_out)
     sensor_out.hass = None
@@ -58,12 +63,13 @@ def benchmark():
     print("Benchmarking key IN list...")
     t_in = timeit.timeit(lambda: sensor_in.native_value, number=iterations)
     print(f"Executed {iterations} times in {t_in:.4f} seconds")
-    print(f"Average time: {t_in/iterations*1e6:.4f} microseconds")
+    print(f"Average time: {t_in / iterations * 1e6:.4f} microseconds")
 
     print("\\nBenchmarking key NOT IN list...")
     t_out = timeit.timeit(lambda: sensor_out.native_value, number=iterations)
     print(f"Executed {iterations} times in {t_out:.4f} seconds")
-    print(f"Average time: {t_out/iterations*1e6:.4f} microseconds")
+    print(f"Average time: {t_out / iterations * 1e6:.4f} microseconds")
+
 
 if __name__ == "__main__":
     benchmark()
