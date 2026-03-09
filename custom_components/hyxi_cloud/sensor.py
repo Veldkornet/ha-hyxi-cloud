@@ -9,7 +9,6 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -420,7 +419,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return
 
-    device_registry = dr.async_get(hass)
     entities = []
 
     # Pre-register devices to fix 'via_device' order dependency
@@ -524,7 +522,10 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                     ):
                         try:
                             self._last_valid_value = float(old_state.state)
-                        except (ValueError, TypeError):
+                        except (
+                            ValueError,
+                            TypeError,
+                        ):
                             _LOGGER.debug(
                                 "HYXI Initialization: Could not parse previous state '%s' for %s",
                                 old_state.state,
@@ -567,7 +568,10 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
             self._last_logged_glitch = None
             self._last_valid_value = num_value
             return num_value
-        except (ValueError, TypeError):
+        except (
+            ValueError,
+            TypeError,
+        ):
             return value
 
 
@@ -629,7 +633,10 @@ class HyxiSensor(HyxiBaseSensor):
         if self.entity_description.key.lower() in INT_SENSOR_KEYS:
             try:
                 return int(round(float(value), 0))
-            except (ValueError, TypeError):
+            except (
+                ValueError,
+                TypeError,
+            ):
                 return None
 
         if self.entity_description.key == "collectTime":
@@ -638,7 +645,11 @@ class HyxiSensor(HyxiBaseSensor):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except (ValueError, TypeError, OSError):
+            except (
+                ValueError,
+                TypeError,
+                OSError,
+            ):
                 return None
 
         if self.entity_description.key == "last_seen":
