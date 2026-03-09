@@ -45,6 +45,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(minutes=interval),
+            config_entry=entry,
         )
         self.client = client
         self.entry = entry

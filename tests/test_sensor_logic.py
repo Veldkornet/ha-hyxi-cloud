@@ -6,10 +6,56 @@ from unittest.mock import MagicMock
 
 import pytest
 
-if "hyxi_cloud_api" not in sys.modules:
-    sys.modules["hyxi_cloud_api"] = MagicMock()
 
-from custom_components.hyxi_cloud.sensor import HyxiSensor
+# 1. THE BULLETPROOF MOCK
+class FakeBase:
+    pass
+
+
+class FakeCoordinatorEntity(FakeBase):
+    def __init__(self, coordinator, context=None, **kwargs):
+        self.coordinator = coordinator
+
+
+class FakeSensorEntity(FakeBase):
+    pass
+
+
+# Create a mock homeassistant environment BEFORE importing integration code
+mock_ha = MagicMock()
+sys.modules["homeassistant"] = mock_ha
+sys.modules["homeassistant.components"] = mock_ha
+
+# We need SensorEntityDescription to retain its attributes instead of being a generic mock
+mock_sensor = MagicMock()
+
+
+def mock_sensor_entity_description(**kwargs):
+    desc = MagicMock()
+    for k, v in kwargs.items():
+        setattr(desc, k, v)
+    return desc
+
+
+mock_sensor.SensorEntityDescription = mock_sensor_entity_description
+mock_sensor.SensorEntity = FakeSensorEntity
+mock_sensor.SensorDeviceClass = MagicMock()
+mock_sensor.SensorStateClass = MagicMock()
+
+sys.modules["homeassistant.components.sensor"] = mock_sensor
+
+# Other mocked dependencies
+mock_coordinator = MagicMock()
+mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from original
+sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+sys.modules["homeassistant.util"] = mock_ha
+
+import custom_components.hyxi_cloud.sensor  # noqa: E402
+
+importlib.reload(custom_components.hyxi_cloud.sensor)
+
+from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
 
 
 @pytest.fixture
