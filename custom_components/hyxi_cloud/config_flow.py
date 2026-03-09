@@ -26,7 +26,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 
 class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for HYXi Cloud."""
+    """Handle a config flow for HYXI Cloud."""
 
     VERSION = 1
 
@@ -73,7 +73,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             error = await self._validate_input(user_input)
             if not error:
-                return self.async_create_entry(title="HYXi Cloud", data=user_input)
+                return self.async_create_entry(title="HYXI Cloud", data=user_input)
 
             errors["base"] = error
 
@@ -112,7 +112,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle HYXi optional settings (The Slider)."""
+    """Handle HYXI optional settings (The Slider)."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
@@ -124,9 +124,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=user_input)
 
         # Pull current values or defaults
-        current_battery = self._config_entry.options.get(
-            "enable_virtual_battery", False
-        )
         current_interval = self._config_entry.options.get("update_interval", 5)
 
         options_schema = vol.Schema(
@@ -135,8 +132,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required("update_interval", default=current_interval): vol.All(
                     vol.Coerce(int), vol.Range(min=1, max=60)
                 ),
-                # Checkbox for Virtual Battery
-                vol.Optional("enable_virtual_battery", default=current_battery): bool,
             }
         )
 

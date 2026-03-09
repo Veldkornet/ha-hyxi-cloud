@@ -2,16 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connexion à HYXi Cloud",
-        "description": "Entrez vos identifiants Open API. Vous pouvez les générer sur la [plateforme développeur HYXiPOWER]({link}).",
+        "title": "Connexion à HYXI Cloud",
+        "description": "Entrez vos identifiants Open API. Vous pouvez les générer sur la [plateforme développeur HYXIPOWER]({link}).",
         "data": {
           "access_key": "Clé d'accès (AK)",
           "secret_key": "Clé secrète (SK)"
         }
       },
       "reauth_confirm": {
-        "title": "Réauthentification HYXi Cloud",
-        "description": "Votre clé d'accès ou clé secrète n'est plus valide. Veuillez entrer vos nouveaux identifiants pour reprendre la surveillance solaire. Vous les trouverez sur la [plateforme développeur HYXiPOWER]({link}).",
+        "title": "Réauthentification HYXI Cloud",
+        "description": "Votre clé d'accès ou clé secrète n'est plus valide. Veuillez entrer vos nouveaux identifiants pour reprendre la surveillance solaire. Vous les trouverez sur la [plateforme développeur HYXIPOWER]({link}).",
         "data": {
           "access_key": "Clé d'accès (AK)",
           "secret_key": "Clé secrète (SK)"
@@ -19,23 +19,22 @@
       }
     },
     "error": {
-      "cannot_connect": "Échec de la connexion aux serveurs HYXi",
+      "cannot_connect": "Échec de la connexion aux serveurs HYXI",
       "invalid_auth": "Clé d'accès ou clé secrète invalide",
       "unknown": "Une erreur inattendue est survenue"
     },
     "abort": {
-      "already_configured": "Ce compte HYXi est déjà configuré.",
+      "already_configured": "Ce compte HYXI est déjà configuré.",
       "reauth_successful": "Réauthentification réussie"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Configuration du système HYXi",
-        "description": "Ajustez la façon dont votre intégration communique avec le cloud HYXi et comment elle affiche votre matériel.\n\n---",
+        "title": "Configuration du système HYXI",
+        "description": "Ajustez la façon dont votre intégration communique avec le cloud HYXI.\n\n---",
         "data": {
-          "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)",
-          "enable_virtual_battery": "Activer la batterie virtuelle agrégée (Nécessite 2+ batteries)"
+          "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)"
         }
       }
     }

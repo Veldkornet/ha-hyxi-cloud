@@ -186,36 +186,6 @@ def test_batsoc_batsoh_casting(base_sensor):
     assert sensor.native_value is None
 
 
-def test_virtual_battery_soc_soh_casting():
-    """Verify that the virtual battery properly casts avg_soc and avg_soh to ints."""
-    from custom_components.hyxi_cloud.sensor import HyxiBatterySystemSensor
-
-    coordinator = MagicMock()
-    # Mocking get_battery_summary rather than relying on internal raw data
-    coordinator.get_battery_summary.return_value = {"avg_soc": 49.0, "avg_soh": 98.6}
-
-    entry = MagicMock()
-    entry.entry_id = "test_entry"
-
-    # Test avg_soc
-    desc_soc = MagicMock()
-    desc_soc.key = "avg_soc"
-    sensor_soc = HyxiBatterySystemSensor(coordinator, entry, desc_soc)
-    sensor_soc.hass = None
-    assert sensor_soc.native_value == 49
-
-    # Test avg_soh
-    desc_soh = MagicMock()
-    desc_soh.key = "avg_soh"
-    sensor_soh = HyxiBatterySystemSensor(coordinator, entry, desc_soh)
-    sensor_soh.hass = None
-    assert sensor_soh.native_value == 99
-
-    # Test invalid string gracefully handled
-    coordinator.get_battery_summary.return_value = {"avg_soh": "invalid"}
-    assert sensor_soh.native_value is None
-
-
 @pytest.mark.asyncio
 async def test_new_api_metrics_registration():
     """Verify that all new PV, Phase, Battery, and Status sensors instantiate correctly."""

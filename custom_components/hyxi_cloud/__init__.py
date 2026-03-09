@@ -1,4 +1,4 @@
-"""HYXi Cloud Integration for Home Assistant."""
+"""HYXI Cloud Integration for Home Assistant."""
 # pylint: disable=wrong-import-position
 
 import sys
@@ -25,13 +25,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up HYXi Cloud from a config entry."""
+    """Set up HYXI Cloud from a config entry."""
 
     access_key = entry.data.get(CONF_ACCESS_KEY)
     secret_key = entry.data.get(CONF_SECRET_KEY)
 
     if not access_key or not secret_key:
-        _LOGGER.error("HYXi Integration could not find Access/Secret keys.")
+        _LOGGER.error("HYXI Integration could not find Access/Secret keys.")
         return False
 
     session = async_get_clientsession(hass)
@@ -45,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Authentication failed during setup")
         raise
     except Exception as err:
-        _LOGGER.warning("HYXi Cloud not ready: %s", err)
+        _LOGGER.warning("HYXI Cloud not ready: %s", err)
         raise ConfigEntryNotReady(f"Connection error: {err}") from err
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
@@ -66,5 +66,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry when options change."""
-    _LOGGER.debug("HYXi: Options updated, reloading integration to apply new settings")
+    _LOGGER.debug("HYXI: Options updated, reloading integration to apply new settings")
     await hass.config_entries.async_reload(entry.entry_id)

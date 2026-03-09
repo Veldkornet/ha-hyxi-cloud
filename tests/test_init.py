@@ -133,7 +133,7 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
 
             assert "Connection error: Timeout" in str(exc.value)
             mock_logger.assert_called_with(
-                "HYXi Cloud not ready: %s",
+                "HYXI Cloud not ready: %s",
                 mock_coordinator.async_config_entry_first_refresh.side_effect,
             )
 
@@ -148,5 +148,5 @@ async def test_async_setup_entry_missing_keys(mock_hass):
         result = await async_setup_entry(mock_hass, entry)
         assert result is False
         mock_logger.assert_called_with(
-            "HYXi Integration could not find Access/Secret keys."
+            "HYXI Integration could not find Access/Secret keys."
         )

@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We actively provide security updates for the following versions of HYXi Cloud:
+We actively provide security updates for the following versions of HYXI Cloud:
 
 | Version | Supported          |
 | ------- | ------------------ |

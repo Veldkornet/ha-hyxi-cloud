@@ -1,4 +1,4 @@
-"""HYXi Cloud Sensor platform."""
+"""HYXI Cloud Sensor platform."""
 
 import logging
 from datetime import UTC
@@ -16,6 +16,9 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+# Constants for optimization
+INT_SENSOR_KEYS = {"batsoc", "batsoh", "signalval"}
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -395,65 +398,13 @@ SENSOR_TYPES = [
         icon="mdi:solar-power-variant",
     ),
 ]
-VSYS_SENSORS = [
-    SensorEntityDescription(
-        key="avg_soc",
-        native_unit_of_measurement="%",
-        suggested_display_precision=0,
-        device_class=SensorDeviceClass.BATTERY,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="avg_soh",
-        icon="mdi:heart-pulse",
-        native_unit_of_measurement="%",
-        suggested_display_precision=0,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
-    SensorEntityDescription(
-        key="total_pbat",
-        icon="mdi:flash",
-        native_unit_of_measurement="W",
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="bat_charging",
-        icon="mdi:battery-arrow-up",
-        native_unit_of_measurement="W",
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="bat_discharging",
-        icon="mdi:battery-arrow-down",
-        native_unit_of_measurement="W",
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    SensorEntityDescription(
-        key="bat_charge_total",
-        icon="mdi:battery-plus-variant",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    SensorEntityDescription(
-        key="bat_discharge_total",
-        icon="mdi:battery-minus-variant",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-]
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up HYXi sensors."""
+    """Set up HYXI sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if not coordinator.data:
-        _LOGGER.warning("HYXi Setup: No data available in coordinator during setup")
+        _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return
 
     device_registry = dr.async_get(hass)
@@ -466,7 +417,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, sn)},
             name=dev_data.get("device_name", f"Device {sn}"),
-            manufacturer="HYXi Power",
+            manufacturer="HYXI Power",
             model=dev_data.get("model"),
             sw_version=dev_data.get("sw_version"),
             hw_version=dev_data.get("hw_version"),
@@ -481,7 +432,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 config_entry_id=entry.entry_id,
                 identifiers={(DOMAIN, bat_sn)},
                 name=f"Battery {bat_sn}",
-                manufacturer="HYXi Power",
+                manufacturer="HYXI Power",
                 model="Energy Storage System",
                 serial_number=bat_sn,
                 via_device=(DOMAIN, sn),
@@ -496,9 +447,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         "bat_discharge_total",
         "bat_charging",
         "bat_discharging",
-        "batCap",
-        "maxChargePower",
-        "maxDischargePower",
         "batV",
         "batI",
     ]
@@ -511,7 +459,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         metrics = dev_data.get("metrics", {})
 
         _LOGGER.debug(
-            "HYXi Processing Device %s (Type: %s). Metrics keys: %s",
+            "HYXI Processing Device %s (Type: %s). Metrics keys: %s",
             sn,
             device_type,
             list(metrics.keys()),
@@ -540,34 +488,93 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
-    # 3. Aggregate System View
-    battery_sns = []
-    for sn, dev in coordinator.data.items():
-        dtype = str(dev.get("device_type_code", "")).upper()
-        if (
-            "BATTERY" in dtype
-            or "EMS" in dtype
-            or "HYBRID" in dtype
-            or "ALL_IN_ONE" in dtype
-        ):
-            battery_sns.append(sn)
-
-    if len(battery_sns) > 1:
-        enable_virtual = entry.options.get("enable_virtual_battery", False)
-        if enable_virtual:
-            _LOGGER.debug("HYXi Aggregator: Creating 'Battery System' entities...")
-            for description in VSYS_SENSORS:
-                entities.append(
-                    HyxiBatterySystemSensor(coordinator, entry, description)
-                )
-
     # FINAL REGISTRATION
     if entities:
         async_add_entities(entities)
 
 
-class HyxiSensor(CoordinatorEntity, SensorEntity):
-    """Representation of a Physical HYXi Sensor."""
+class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
+    """Base class for HYXI sensors with shared logic."""
+
+    def __init__(self, coordinator):
+        """Initialize the base sensor."""
+        super().__init__(coordinator)
+        self._last_valid_value = None
+        self._last_logged_glitch = None
+
+    def _process_numeric_value(self, value):
+        """Common numeric processing for sensors."""
+        if value is None or value == "":
+            return None
+
+        if self.entity_description.native_unit_of_measurement is None:
+            return value
+
+        try:
+            num_value = round(float(value), 2)
+
+            if self.entity_description.state_class in (
+                SensorStateClass.TOTAL_INCREASING,
+                "total_increasing",
+            ):
+                if self._last_valid_value is None and self.hass is not None:
+                    old_state = self.hass.states.get(self.entity_id)
+                    if old_state and old_state.state not in (
+                        None,
+                        "unknown",
+                        "unavailable",
+                    ):
+                        try:
+                            self._last_valid_value = float(old_state.state)
+                        except ValueError, TypeError:
+                            _LOGGER.debug(
+                                "HYXI Initialization: Could not parse previous state '%s' for %s",
+                                old_state.state,
+                                self.entity_id,
+                            )
+
+                if self._last_valid_value is not None:
+                    # Anti-Dip Check
+                    if num_value < self._last_valid_value:
+                        # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
+                        # AND the drop is significant (meaning it's not just a tiny dip).
+                        is_valid_reset = (0.0 <= num_value <= 0.1) and (
+                            (self._last_valid_value - num_value)
+                            > (self._last_valid_value * 0.5)
+                        )
+
+                        if not is_valid_reset:
+                            if self._last_logged_glitch != num_value:
+                                _LOGGER.debug(
+                                    "HYXI Glitch Filter: Prevented %s drop (%s -> %s)",
+                                    self.entity_description.key,
+                                    self._last_valid_value,
+                                    num_value,
+                                )
+                                self._last_logged_glitch = num_value
+                            return self._last_valid_value
+
+                    # Anti-Spike Check
+                    elif (num_value - self._last_valid_value) > 100.0:
+                        if self._last_logged_glitch != num_value:
+                            _LOGGER.debug(
+                                "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                                self.entity_description.key,
+                                self._last_valid_value,
+                                num_value,
+                            )
+                            self._last_logged_glitch = num_value
+                        return self._last_valid_value
+
+            self._last_logged_glitch = None
+            self._last_valid_value = num_value
+            return num_value
+        except ValueError, TypeError:
+            return value
+
+
+class HyxiSensor(HyxiBaseSensor):
+    """Representation of a Physical HYXI Sensor."""
 
     _attr_has_entity_name = True
 
@@ -575,8 +582,6 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._sn = sn
-        self._last_valid_value = None
-        self._last_logged_glitch = None
 
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
@@ -590,9 +595,6 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             "bat_charge_total",
             "bat_discharge_total",
             "batSoh",
-            "batCap",
-            "maxChargePower",
-            "maxDischargePower",
             "batV",
             "batI",
         ]
@@ -602,7 +604,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
                 "name": f"Battery {bat_sn}",
-                "manufacturer": "HYXi Power",
+                "manufacturer": "HYXI Power",
                 "model": "Energy Storage System",
                 "serial_number": bat_sn,
                 "via_device": (DOMAIN, sn),
@@ -612,7 +614,7 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, sn)},
                 "name": dev_data.get("device_name", f"Device {sn}"),
-                "manufacturer": "HYXi Power",
+                "manufacturer": "HYXI Power",
                 "model": dev_data.get("model"),
                 "sw_version": dev_data.get("sw_version"),
                 "hw_version": dev_data.get("hw_version"),
@@ -638,13 +640,10 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
         if value is None or value == "":
             return None
 
-        if self.entity_description.key.lower() in ("batsoc", "batsoh", "signalval"):
+        if self.entity_description.key.lower() in INT_SENSOR_KEYS:
             try:
                 return int(round(float(value), 0))
-            except (
-                ValueError,
-                TypeError,
-            ):
+            except ValueError, TypeError:
                 return None
 
         if self.entity_description.key == "collectTime":
@@ -653,90 +652,13 @@ class HyxiSensor(CoordinatorEntity, SensorEntity):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except (
-                ValueError,
-                TypeError,
-                OSError,
-            ):
+            except ValueError, TypeError, OSError:
                 return None
 
         if self.entity_description.key == "last_seen":
             return dt_util.parse_datetime(str(value))
 
-        if self.entity_description.native_unit_of_measurement is not None:
-            try:
-                num_value = round(float(value), 2)
-
-                if self.entity_description.state_class in (
-                    SensorStateClass.TOTAL_INCREASING,
-                    "total_increasing",
-                ):
-                    if self._last_valid_value is None and self.hass is not None:
-                        old_state = self.hass.states.get(self.entity_id)
-                        if old_state and old_state.state not in (
-                            None,
-                            "unknown",
-                            "unavailable",
-                        ):
-                            try:
-                                self._last_valid_value = float(old_state.state)
-                            except (
-                                ValueError,
-                                TypeError,
-                            ):
-                                # The previous state was non-numeric (e.g. 'unavailable').
-                                # Safely ignore it so we don't crash.
-                                pass
-
-                    if self._last_valid_value is not None:
-                        # --- LOWER BOUND CHECK ---
-                        if num_value < self._last_valid_value:
-                            # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
-                            # AND the drop is significant (meaning it's not just a tiny dip).
-                            # Otherwise, it's a glitch and should be blocked.
-                            is_valid_reset = (0.0 <= num_value <= 0.1) and (
-                                (self._last_valid_value - num_value)(
-                                    self._last_valid_value * 0.5
-                                )
-                            )
-
-                            if not is_valid_reset:
-                                self._log_glitch_once(
-                                    num_value,
-                                    "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
-                                    self.entity_description.key,
-                                    self._last_valid_value,
-                                    num_value,
-                                )
-                                return self._last_valid_value
-
-                            _LOGGER.debug(
-                                "HYXi Midnight Reset detected for %s",
-                                self.entity_description.key,
-                            )
-
-                        # --- UPPER BOUND CHECK ---
-                        elif (num_value - self._last_valid_value) > 100.0:
-                            self._log_glitch_once(
-                                num_value,
-                                "HYXi High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
-                                self.entity_description.key,
-                                self._last_valid_value,
-                                num_value,
-                            )
-                            return self._last_valid_value
-
-                # Reset the gatekeeper if we finally get a valid new value
-                self._last_logged_glitch = None
-                self._last_valid_value = num_value
-                return num_value
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return value
-
-        return value
+        return self._process_numeric_value(value)
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
@@ -752,8 +674,8 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_integration_last_updated"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXi Cloud Service",
-            "manufacturer": "HYXi Power",
+            "name": "HYXI Cloud Service",
+            "manufacturer": "HYXI Power",
             "model": "Cloud API Bridge",
         }
 
@@ -766,117 +688,3 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         if self.coordinator.last_update_success:
             return dt_util.utcnow()
         return None
-
-
-class HyxiBatterySystemSensor(CoordinatorEntity, SensorEntity):
-    """Virtual sensor representing the combined battery storage."""
-
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator, entry, description):
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._key = description.key
-        self._last_valid_value = None
-        self._last_logged_glitch = None
-
-        self._attr_unique_id = f"hyxi_vsys_{entry.entry_id}_{description.key}"
-        self._attr_translation_key = description.key.lower()
-        self.entity_id = f"sensor.hyxi_vsys_{entry.entry_id}_{description.key.lower()}"
-
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"hyxi_system_{entry.entry_id}")},
-            "name": "HYXi Battery System",
-            "manufacturer": "HYXi Power",
-            "model": "Aggregated Storage",
-        }
-
-    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
-        """Helper to log glitch prevention only once per glitch value."""
-        if self._last_logged_glitch != num_value:
-            _LOGGER.debug(message, *args)
-            self._last_logged_glitch = num_value
-
-    @property
-    def native_value(self):
-        """Value with floating point protection and anti-dip persistence."""
-        summary = self.coordinator.get_battery_summary()
-        if not summary:
-            return None
-        value = summary.get(self._key)
-
-        if value is None or value == "":
-            return None
-
-        if self._key in ("avg_soc", "avg_soh"):
-            try:
-                return int(round(float(value), 0))
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return None
-
-        if self.entity_description.native_unit_of_measurement is not None:
-            try:
-                num_value = round(float(value), 2)
-
-                if self.entity_description.state_class in (
-                    SensorStateClass.TOTAL_INCREASING,
-                    "total_increasing",
-                ):
-                    if self._last_valid_value is None and self.hass is not None:
-                        old_state = self.hass.states.get(self.entity_id)
-                        if old_state and old_state.state not in (
-                            None,
-                            "unknown",
-                            "unavailable",
-                        ):
-                            try:
-                                self._last_valid_value = float(old_state.state)
-                            except (
-                                ValueError,
-                                TypeError,
-                            ):
-                                # The previous state was non-numeric (e.g. 'unavailable').
-                                # Safely ignore it so we don't crash.
-                                pass
-
-                    if self._last_valid_value is not None:
-                        # Anti-Dip Check
-                        if num_value < self._last_valid_value:
-                            is_valid_reset = num_value <= 0.1 and (
-                                self._last_valid_value - num_value
-                            ) > (self._last_valid_value * 0.5)
-
-                            if not is_valid_reset:
-                                self._log_glitch_once(
-                                    num_value,
-                                    "HYXi Virtual Glitch Filter: Prevented %s drop (%s -> %s)",
-                                    self._key,
-                                    self._last_valid_value,
-                                    num_value,
-                                )
-                                return self._last_valid_value
-
-                        # Anti-Spike Check
-                        elif (num_value - self._last_valid_value) > 100.0:
-                            self._log_glitch_once(
-                                num_value,
-                                "HYXi Virtual High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
-                                self._key,
-                                self._last_valid_value,
-                                num_value,
-                            )
-                            return self._last_valid_value
-
-                self._last_logged_glitch = None
-                self._last_valid_value = num_value
-                return num_value
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return value
-
-        return value
