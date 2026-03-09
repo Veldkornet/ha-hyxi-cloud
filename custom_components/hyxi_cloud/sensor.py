@@ -9,7 +9,6 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -19,6 +18,20 @@ _LOGGER = logging.getLogger(__name__)
 
 # Constants for optimization
 INT_SENSOR_KEYS = {"batsoc", "batsoh", "signalval"}
+
+BATTERY_SENSORS = {
+    "batSoc",
+    "pbat",
+    "batSoh",
+    "bat_charge_total",
+    "bat_discharge_total",
+    "bat_charging",
+    "bat_discharging",
+    "batV",
+    "batI",
+}
+COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode"}
+HEARTBEAT_SENSORS = {"last_seen"}
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -407,51 +420,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return
 
-    device_registry = dr.async_get(hass)
     entities = []
-
-    # Pre-register devices to fix 'via_device' order dependency
-    for sn, dev_data in coordinator.data.items():
-        # Pre-register parent device
-        device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, sn)},
-            name=dev_data.get("device_name", f"Device {sn}"),
-            manufacturer="HYXI Power",
-            model=dev_data.get("model"),
-            sw_version=dev_data.get("sw_version"),
-            hw_version=dev_data.get("hw_version"),
-            serial_number=sn,
-        )
-
-        # Pre-register child battery device if it exists
-        metrics = dev_data.get("metrics", {})
-        bat_sn = metrics.get("batSn")
-        if bat_sn:
-            device_registry.async_get_or_create(
-                config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, bat_sn)},
-                name=f"Battery {bat_sn}",
-                manufacturer="HYXI Power",
-                model="Energy Storage System",
-                serial_number=bat_sn,
-                via_device=(DOMAIN, sn),
-            )
-
-    # Filter constants
-    battery_sensors = [
-        "batSoc",
-        "pbat",
-        "batSoh",
-        "bat_charge_total",
-        "bat_discharge_total",
-        "bat_charging",
-        "bat_discharging",
-        "batV",
-        "batI",
-    ]
-    collector_sensors = ["signalIntensity", "signalVal", "wifiVer", "comMode"]
-    heartbeat_sensor = ["last_seen"]
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
@@ -469,9 +438,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
             key = description.key
             should_add = False
 
-            if key in heartbeat_sensor:
+            if key in HEARTBEAT_SENSORS:
                 should_add = True
-            elif key in collector_sensors:
+            elif key in COLLECTOR_SENSORS:
                 if "COLLECTOR" in device_type or "DMU" in device_type:
                     should_add = True
             elif key in metrics and metrics[key] is not None:
@@ -479,7 +448,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     should_add = True
 
             if should_add:
-                if key in battery_sensors and (
+                if key in BATTERY_SENSORS and (
                     "COLLECTOR" in device_type or "DMU" in device_type
                 ):
                     continue
@@ -593,19 +562,7 @@ class HyxiSensor(HyxiBaseSensor):
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
-        bat_keys = [
-            "batSoc",
-            "pbat",
-            "bat_charging",
-            "bat_discharging",
-            "bat_charge_total",
-            "bat_discharge_total",
-            "batSoh",
-            "batV",
-            "batI",
-        ]
-
-        if description.key in bat_keys and bat_sn:
+        if description.key in BATTERY_SENSORS and bat_sn:
             self._actual_sn = bat_sn
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
