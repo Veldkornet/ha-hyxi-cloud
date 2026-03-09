@@ -19,6 +19,19 @@ _LOGGER = logging.getLogger(__name__)
 
 # Constants for optimization
 INT_SENSOR_KEYS = {"batsoc", "batsoh", "signalval"}
+BATTERY_SENSORS = {
+    "batSoc",
+    "pbat",
+    "batSoh",
+    "bat_charge_total",
+    "bat_discharge_total",
+    "bat_charging",
+    "bat_discharging",
+    "batV",
+    "batI",
+}
+COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode"}
+HEARTBEAT_SENSORS = {"last_seen"}
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -438,21 +451,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 via_device=(DOMAIN, sn),
             )
 
-    # Filter constants
-    battery_sensors = [
-        "batSoc",
-        "pbat",
-        "batSoh",
-        "bat_charge_total",
-        "bat_discharge_total",
-        "bat_charging",
-        "bat_discharging",
-        "batV",
-        "batI",
-    ]
-    collector_sensors = ["signalIntensity", "signalVal", "wifiVer", "comMode"]
-    heartbeat_sensor = ["last_seen"]
-
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
         device_type = str(dev_data.get("device_type_code", "")).upper()
@@ -469,9 +467,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
             key = description.key
             should_add = False
 
-            if key in heartbeat_sensor:
+            if key in HEARTBEAT_SENSORS:
                 should_add = True
-            elif key in collector_sensors:
+            elif key in COLLECTOR_SENSORS:
                 if "COLLECTOR" in device_type or "DMU" in device_type:
                     should_add = True
             elif key in metrics and metrics[key] is not None:
@@ -479,7 +477,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     should_add = True
 
             if should_add:
-                if key in battery_sensors and (
+                if key in BATTERY_SENSORS and (
                     "COLLECTOR" in device_type or "DMU" in device_type
                 ):
                     continue
@@ -526,7 +524,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                     ):
                         try:
                             self._last_valid_value = float(old_state.state)
-                        except ValueError, TypeError:
+                        except (ValueError, TypeError):
                             _LOGGER.debug(
                                 "HYXI Initialization: Could not parse previous state '%s' for %s",
                                 old_state.state,
@@ -569,7 +567,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
             self._last_logged_glitch = None
             self._last_valid_value = num_value
             return num_value
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return value
 
 
@@ -587,19 +585,7 @@ class HyxiSensor(HyxiBaseSensor):
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
-        bat_keys = [
-            "batSoc",
-            "pbat",
-            "bat_charging",
-            "bat_discharging",
-            "bat_charge_total",
-            "bat_discharge_total",
-            "batSoh",
-            "batV",
-            "batI",
-        ]
-
-        if description.key in bat_keys and bat_sn:
+        if description.key in BATTERY_SENSORS and bat_sn:
             self._actual_sn = bat_sn
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
@@ -643,7 +629,7 @@ class HyxiSensor(HyxiBaseSensor):
         if self.entity_description.key.lower() in INT_SENSOR_KEYS:
             try:
                 return int(round(float(value), 0))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 return None
 
         if self.entity_description.key == "collectTime":
@@ -652,7 +638,7 @@ class HyxiSensor(HyxiBaseSensor):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except ValueError, TypeError, OSError:
+            except (ValueError, TypeError, OSError):
                 return None
 
         if self.entity_description.key == "last_seen":
