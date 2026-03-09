@@ -1,7 +1,10 @@
 """Tests for the __init__ setup logic."""
 
 import sys
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
 
 # We mock the external API dependency since it is not part of HA
@@ -15,8 +18,10 @@ sys.modules["hyxi_cloud_api"] = mock_api
 #
 # The safest fix is to patch the exceptions module *inside* the integration namespace during the tests.
 
+
 class FakeAuthFailed(Exception):
     pass
+
 
 class FakeNotReady(Exception):
     pass
@@ -25,17 +30,19 @@ class FakeNotReady(Exception):
 @pytest.fixture(autouse=True)
 def unmock_exceptions():
     """Force __init__.py to use real Python Exceptions for its except blocks."""
-    with patch("custom_components.hyxi_cloud.ConfigEntryAuthFailed", FakeAuthFailed), \
-         patch("custom_components.hyxi_cloud.ConfigEntryNotReady", FakeNotReady):
+    with (
+        patch("custom_components.hyxi_cloud.ConfigEntryAuthFailed", FakeAuthFailed),
+        patch("custom_components.hyxi_cloud.ConfigEntryNotReady", FakeNotReady),
+    ):
         yield
 
 
-from custom_components.hyxi_cloud import (
-    async_setup_entry,
-    async_unload_entry,
-    async_reload_entry,
-)
-from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY, DOMAIN
+from custom_components.hyxi_cloud import async_reload_entry  # noqa: E402
+from custom_components.hyxi_cloud import async_setup_entry  # noqa: E402
+from custom_components.hyxi_cloud import async_unload_entry  # noqa: E402
+from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY  # noqa: E402
+from custom_components.hyxi_cloud.const import CONF_SECRET_KEY  # noqa: E402
+from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -67,10 +74,16 @@ async def test_async_setup_entry_auth_failed():
     entry = MagicMock()
     entry.data = {CONF_ACCESS_KEY: "ak", CONF_SECRET_KEY: "sk"}
 
-    with patch("custom_components.hyxi_cloud.HyxiDataUpdateCoordinator") as mock_coordinator_class, \
-         patch("custom_components.hyxi_cloud.async_get_clientsession"):
+    with (
+        patch(
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+    ):
         mock_coordinator = mock_coordinator_class.return_value
-        mock_coordinator.async_config_entry_first_refresh = AsyncMock(side_effect=FakeAuthFailed)
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(
+            side_effect=FakeAuthFailed
+        )
 
         with pytest.raises(FakeAuthFailed):
             await async_setup_entry(hass, entry)
@@ -83,10 +96,16 @@ async def test_async_setup_entry_generic_exception():
     entry = MagicMock()
     entry.data = {CONF_ACCESS_KEY: "ak", CONF_SECRET_KEY: "sk"}
 
-    with patch("custom_components.hyxi_cloud.HyxiDataUpdateCoordinator") as mock_coordinator_class, \
-         patch("custom_components.hyxi_cloud.async_get_clientsession"):
+    with (
+        patch(
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+    ):
         mock_coordinator = mock_coordinator_class.return_value
-        mock_coordinator.async_config_entry_first_refresh = AsyncMock(side_effect=Exception("Some connection error"))
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(
+            side_effect=Exception("Some connection error")
+        )
 
         with pytest.raises(FakeNotReady) as exc_info:
             await async_setup_entry(hass, entry)
@@ -105,9 +124,12 @@ async def test_async_setup_entry_success():
     entry.data = {CONF_ACCESS_KEY: "ak", CONF_SECRET_KEY: "sk"}
     entry.entry_id = "test_entry_id"
 
-    with patch("custom_components.hyxi_cloud.HyxiDataUpdateCoordinator") as mock_coordinator_class, \
-         patch("custom_components.hyxi_cloud.async_get_clientsession"):
-
+    with (
+        patch(
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+    ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock()
 
@@ -117,7 +139,10 @@ async def test_async_setup_entry_success():
         assert hass.data[DOMAIN][entry.entry_id] == mock_coordinator
 
         from custom_components.hyxi_cloud.const import PLATFORMS
-        hass.config_entries.async_forward_entry_setups.assert_called_once_with(entry, PLATFORMS)
+
+        hass.config_entries.async_forward_entry_setups.assert_called_once_with(
+            entry, PLATFORMS
+        )
         entry.add_update_listener.assert_called_once()
         entry.async_on_unload.assert_called_once()
 
@@ -134,6 +159,7 @@ async def test_async_unload_entry():
     hass.data = {DOMAIN: {"test_entry_id": MagicMock()}}
 
     from custom_components.hyxi_cloud.const import PLATFORMS
+
     result = await async_unload_entry(hass, entry)
 
     assert result is True
