@@ -7,35 +7,18 @@ from unittest.mock import patch
 
 import pytest
 
-# We mock the external API dependency since it is not part of HA
+
+class FakeConfigEntryAuthFailed(Exception):
+    pass
+
+
+class FakeConfigEntryNotReady(Exception):
+    pass
+
+
+# Mock HYXi API since it requires external package
 mock_api = MagicMock()
 sys.modules["hyxi_cloud_api"] = mock_api
-
-# This test requires real exceptions to be thrown and caught in `__init__.py`.
-# Because `pytest` runs `test_coordinator.py` first (which completely mocks `sys.modules["homeassistant.exceptions"]`
-# with a `MagicMock`), by the time we reach this test, `ConfigEntryAuthFailed` inside
-# `custom_components/hyxi_cloud/__init__.py` is a mock, breaking `try/except` blocks.
-#
-# The safest fix is to patch the exceptions module *inside* the integration namespace during the tests.
-
-
-class FakeAuthFailed(Exception):
-    pass
-
-
-class FakeNotReady(Exception):
-    pass
-
-
-@pytest.fixture(autouse=True)
-def unmock_exceptions():
-    """Force __init__.py to use real Python Exceptions for its except blocks."""
-    with (
-        patch("custom_components.hyxi_cloud.ConfigEntryAuthFailed", FakeAuthFailed),
-        patch("custom_components.hyxi_cloud.ConfigEntryNotReady", FakeNotReady),
-    ):
-        yield
-
 
 from custom_components.hyxi_cloud import async_reload_entry  # noqa: E402
 from custom_components.hyxi_cloud import async_setup_entry  # noqa: E402
@@ -43,6 +26,22 @@ from custom_components.hyxi_cloud import async_unload_entry  # noqa: E402
 from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY  # noqa: E402
 from custom_components.hyxi_cloud.const import CONF_SECRET_KEY  # noqa: E402
 from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+from custom_components.hyxi_cloud.const import PLATFORMS  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def mock_exceptions():
+    """Ensure exceptions are proper Exception classes."""
+    with (
+        patch(
+            "custom_components.hyxi_cloud.ConfigEntryAuthFailed",
+            FakeConfigEntryAuthFailed,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.ConfigEntryNotReady", FakeConfigEntryNotReady
+        ),
+    ):
+        yield
 
 
 @pytest.mark.asyncio
@@ -82,10 +81,10 @@ async def test_async_setup_entry_auth_failed():
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
-            side_effect=FakeAuthFailed
+            side_effect=FakeConfigEntryAuthFailed
         )
 
-        with pytest.raises(FakeAuthFailed):
+        with pytest.raises(FakeConfigEntryAuthFailed):
             await async_setup_entry(hass, entry)
 
 
@@ -107,7 +106,7 @@ async def test_async_setup_entry_generic_exception():
             side_effect=Exception("Some connection error")
         )
 
-        with pytest.raises(FakeNotReady) as exc_info:
+        with pytest.raises(FakeConfigEntryNotReady) as exc_info:
             await async_setup_entry(hass, entry)
 
         assert "Some connection error" in str(exc_info.value)
@@ -138,8 +137,6 @@ async def test_async_setup_entry_success():
         assert result is True
         assert hass.data[DOMAIN][entry.entry_id] == mock_coordinator
 
-        from custom_components.hyxi_cloud.const import PLATFORMS
-
         hass.config_entries.async_forward_entry_setups.assert_called_once_with(
             entry, PLATFORMS
         )
@@ -157,8 +154,6 @@ async def test_async_unload_entry():
     entry.entry_id = "test_entry_id"
 
     hass.data = {DOMAIN: {"test_entry_id": MagicMock()}}
-
-    from custom_components.hyxi_cloud.const import PLATFORMS
 
     result = await async_unload_entry(hass, entry)
 

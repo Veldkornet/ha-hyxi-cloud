@@ -18,12 +18,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the binary sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    entities = [HyxiConnectivitySensor(coordinator, entry)]
-
-    for device_sn in coordinator.data:
-        entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
-
-    async_add_entities(entities)
+    async_add_entities([HyxiConnectivitySensor(coordinator, entry)])
 
 
 class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
@@ -93,45 +88,3 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
     def available(self) -> bool:
         """Always stay available so the user can see the 'Disconnected' state."""
         return True
-
-
-class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
-    """Representation of a HYXi Cloud device active alarm sensor."""
-
-    _attr_device_class = BinarySensorDeviceClass.PROBLEM
-    _attr_has_entity_name = True
-    _attr_translation_key = "device_alarm"
-
-    def __init__(self, coordinator, entry, sn):
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.entry = entry
-        self.sn = sn
-        self._attr_unique_id = f"{entry.entry_id}_{sn}_device_alarm"
-
-        device_data = coordinator.data.get(sn, {})
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": device_data.get("device_name", f"HYXi {sn}"),
-            "manufacturer": "HYXiPower",
-            "model": device_data.get("model", "Unknown"),
-            "sw_version": device_data.get("sw_version"),
-            "hw_version": device_data.get("hw_version"),
-        }
-
-    @property
-    def is_on(self) -> bool:
-        """Return True if any active alarms exist."""
-        alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
-        return any(str(a.get("alarmState")) in ("0", "1") for a in alarms)
-
-    @property
-    def extra_state_attributes(self):
-        """Return raw alarm list."""
-        alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
-        return {
-            "active_alarms_count": len(
-                [a for a in alarms if str(a.get("alarmState")) in ("0", "1")]
-            ),
-            "raw_alarms_payload": alarms,
-        }
