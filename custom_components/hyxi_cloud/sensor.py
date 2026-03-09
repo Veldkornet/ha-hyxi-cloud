@@ -526,7 +526,10 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                     ):
                         try:
                             self._last_valid_value = float(old_state.state)
-                        except (ValueError, TypeError):  # fmt: skip
+                        except (
+                            ValueError,
+                            TypeError,
+                        ):
                             _LOGGER.debug(
                                 "HYXI Initialization: Could not parse previous state '%s' for %s",
                                 old_state.state,
@@ -569,7 +572,10 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
             self._last_logged_glitch = None
             self._last_valid_value = num_value
             return num_value
-        except (ValueError, TypeError):  # fmt: skip
+        except (
+            ValueError,
+            TypeError,
+        ):
             return value
 
 
@@ -643,7 +649,10 @@ class HyxiSensor(HyxiBaseSensor):
         if self.entity_description.key.lower() in INT_SENSOR_KEYS:
             try:
                 return int(round(float(value), 0))
-            except (ValueError, TypeError):  # fmt: skip
+            except (
+                ValueError,
+                TypeError,
+            ):
                 return None
 
         if self.entity_description.key == "collectTime":
@@ -652,7 +661,11 @@ class HyxiSensor(HyxiBaseSensor):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except (ValueError, TypeError, OSError):  # fmt: skip
+            except (
+                ValueError,
+                TypeError,
+                OSError,
+            ):
                 return None
 
         if self.entity_description.key == "last_seen":
