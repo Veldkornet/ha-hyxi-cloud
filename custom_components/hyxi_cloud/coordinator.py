@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for HYXi Cloud."""
+"""DataUpdateCoordinator for HYXI Cloud."""
 
 import logging
 from datetime import timedelta
@@ -28,14 +28,14 @@ def _safe_float(value) -> float:
 
 
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from HYXi API."""
+    """Class to manage fetching data from HYXI API."""
 
     def __init__(self, hass: HomeAssistant, client: HyxiApiClient, entry: ConfigEntry):
         """Initialize the coordinator with dynamic interval."""
         interval = entry.options.get("update_interval", 5)
 
         _LOGGER.debug(
-            "Initializing HYXi Coordinator for '%s' with polling interval: %s minutes",
+            "Initializing HYXI Coordinator for '%s' with polling interval: %s minutes",
             entry.title,
             interval,
         )
@@ -45,6 +45,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(minutes=interval),
+            config_entry=entry,
         )
         self.client = client
         self.entry = entry
@@ -66,7 +67,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             if result is None:
                 self.hyxi_metadata["last_attempts"] = 3  # Hard fail after retries
                 raise UpdateFailed(
-                    "HYXi Cloud unreachable. Check internet or API status."
+                    "HYXI Cloud unreachable. Check internet or API status."
                 )
 
             # ✅ Success! Update metadata attributes.
@@ -82,56 +83,6 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         except UpdateFailed:
             raise
         except Exception as err:
-            _LOGGER.error("Unexpected error in HYXi update: %s", err)
+            _LOGGER.error("Unexpected error in HYXI update: %s", err)
             self.hyxi_metadata["last_attempts"] += 1
             raise UpdateFailed(f"Unexpected error: {err}") from err
-
-    def get_battery_summary(self):
-        """Calculate aggregated data across all battery units."""
-        if not self.data:
-            return None
-
-        def _safe_float(value):
-            try:
-                return float(value or 0)
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return 0.0
-
-        totals = {
-            "total_pbat": 0.0,
-            "avg_soc": 0.0,
-            "avg_soh": 0.0,
-            "bat_charge_total": 0.0,
-            "bat_discharge_total": 0.0,
-            "bat_charging": 0.0,
-            "bat_discharging": 0.0,
-            "count": 0,
-        }
-
-        for _sn, dev in self.data.items():
-            dtype = str(dev.get("device_type_code", "")).upper()
-            if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
-                metrics = dev.get("metrics", {})
-
-                totals["total_pbat"] += _safe_float(metrics.get("pbat"))
-                totals["avg_soc"] += _safe_float(metrics.get("batSoc"))
-                totals["avg_soh"] += _safe_float(metrics.get("batSoh"))
-                totals["bat_charge_total"] += _safe_float(
-                    metrics.get("bat_charge_total")
-                )
-                totals["bat_discharge_total"] += _safe_float(
-                    metrics.get("bat_discharge_total")
-                )
-                totals["bat_charging"] += _safe_float(metrics.get("bat_charging"))
-                totals["bat_discharging"] += _safe_float(metrics.get("bat_discharging"))
-                totals["count"] += 1
-
-        if totals["count"] == 0:
-            return None
-
-        totals["avg_soc"] = round(totals["avg_soc"] / totals["count"], 1)
-        totals["avg_soh"] = round(totals["avg_soh"] / totals["count"], 1)
-        return totals

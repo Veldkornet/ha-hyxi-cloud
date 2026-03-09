@@ -1,18 +1,18 @@
 {
-  "title": "HYXi Cloud",
+  "title": "HYXI Cloud",
   "config": {
     "step": {
       "user": {
-        "title": "Connect to HYXi Cloud",
-        "description": "Enter your Open API credentials. You can generate these at the [HYXiPOWER Developer Platform]({link}).",
+        "title": "Connect to HYXI Cloud",
+        "description": "Enter your Open API credentials. You can generate these at the [HYXIPOWER Developer Platform]({link}).",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
         }
       },
       "reauth_confirm": {
-        "title": "Re-authenticate HYXi Cloud",
-        "description": "Your Access Key or Secret Key is no longer valid. Please enter your new credentials to resume solar monitoring. You can find these at the [HYXiPOWER Developer Platform]({link}).",
+        "title": "Re-authenticate HYXI Cloud",
+        "description": "Your Access Key or Secret Key is no longer valid. Please enter your new credentials to resume solar monitoring. You can find these at the [HYXIPOWER Developer Platform]({link}).",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
@@ -20,23 +20,22 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to HYXi servers",
+      "cannot_connect": "Failed to connect to HYXI servers",
       "invalid_auth": "Invalid Access Key or Secret Key",
       "unknown": "Unexpected error occurred"
     },
     "abort": {
-      "already_configured": "This HYXi account is already configured.",
+      "already_configured": "This HYXI account is already configured.",
       "reauth_successful": "Re-authentication was successful"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "HYXi System Configuration",
-        "description": "Adjust how your integration communicates with the HYXi Cloud and how it displays your hardware.\n\n---",
+        "title": "HYXI System Configuration",
+        "description": "Adjust how your integration communicates with the HYXI Cloud.\n\n---",
         "data": {
-          "update_interval": "Polling Interval (1-60 Minutes, Default: 5)",
-          "enable_virtual_battery": "Enable Aggregated Virtual Battery (Requires 2+ batteries)"
+          "update_interval": "Polling Interval (1-60 Minutes, Default: 5)"
         }
       }
     }

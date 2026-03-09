@@ -23,8 +23,14 @@ class FakeSensorEntity(FakeBase):
 
 # Create a mock homeassistant environment BEFORE importing integration code
 mock_ha = MagicMock()
+mock_ha.__path__ = []  # IMPORTANT for nested module resolution
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
+sys.modules["homeassistant.config_entries"] = mock_ha
+sys.modules["homeassistant.core"] = mock_ha
+sys.modules["homeassistant.exceptions"] = mock_ha
+sys.modules["homeassistant.const"] = mock_ha
+sys.modules["hyxi_cloud_api"] = mock_ha
 
 # We need SensorEntityDescription to retain its attributes instead of being a generic mock
 mock_sensor = MagicMock()
@@ -49,7 +55,9 @@ mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from original
 sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
+sys.modules["hyxi_cloud_api"] = mock_ha
 
 import custom_components.hyxi_cloud.sensor  # noqa: E402
 
@@ -116,6 +124,25 @@ def test_timestamp_scaling(base_sensor):
     assert isinstance(sensor.native_value, datetime)
 
 
+def test_collecttime_error_handling(base_sensor):
+    """Verify that invalid collectTime values are caught and return None."""
+    sensor, coordinator = base_sensor
+    sensor.entity_description.key = "collectTime"
+
+    # Test ValueError (unparseable string)
+    coordinator.data["SN123"]["metrics"]["collectTime"] = "invalid_timestamp"
+    assert sensor.native_value is None
+
+    # Test TypeError (invalid type like dict or list)
+    coordinator.data["SN123"]["metrics"]["collectTime"] = {"time": 123}
+    assert sensor.native_value is None
+
+    # Test extreme value causing OverflowError/OSError in datetime.fromtimestamp
+    # A huge number that passes the 10-digit check but is still too large for datetime
+    coordinator.data["SN123"]["metrics"]["collectTime"] = 1000000000000000000
+    assert sensor.native_value is None
+
+
 def test_rounding_protection(base_sensor):
     """Ensure floating point noise (2.73199999) is rounded correctly."""
     sensor, coordinator = base_sensor
@@ -157,36 +184,6 @@ def test_batsoc_batsoh_casting(base_sensor):
     # Test invalid string gracefully handled
     coordinator.data["SN123"]["metrics"]["batSoh"] = "invalid"
     assert sensor.native_value is None
-
-
-def test_virtual_battery_soc_soh_casting():
-    """Verify that the virtual battery properly casts avg_soc and avg_soh to ints."""
-    from custom_components.hyxi_cloud.sensor import HyxiBatterySystemSensor
-
-    coordinator = MagicMock()
-    # Mocking get_battery_summary rather than relying on internal raw data
-    coordinator.get_battery_summary.return_value = {"avg_soc": 49.0, "avg_soh": 98.6}
-
-    entry = MagicMock()
-    entry.entry_id = "test_entry"
-
-    # Test avg_soc
-    desc_soc = MagicMock()
-    desc_soc.key = "avg_soc"
-    sensor_soc = HyxiBatterySystemSensor(coordinator, entry, desc_soc)
-    sensor_soc.hass = None
-    assert sensor_soc.native_value == 49
-
-    # Test avg_soh
-    desc_soh = MagicMock()
-    desc_soh.key = "avg_soh"
-    sensor_soh = HyxiBatterySystemSensor(coordinator, entry, desc_soh)
-    sensor_soh.hass = None
-    assert sensor_soh.native_value == 99
-
-    # Test invalid string gracefully handled
-    coordinator.get_battery_summary.return_value = {"avg_soh": "invalid"}
-    assert sensor_soh.native_value is None
 
 
 @pytest.mark.asyncio
@@ -297,3 +294,67 @@ async def test_new_api_metrics_registration():
         assert key in registered_keys, (
             f"Sensor '{key}' was not registered by async_setup_entry"
         )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_no_data():
+    """Verify that async_setup_entry returns early when coordinator has no data."""
+    from custom_components.hyxi_cloud.const import DOMAIN
+    from custom_components.hyxi_cloud.sensor import async_setup_entry
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    coordinator = MagicMock()
+    coordinator.data = {}
+    hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+    mock_async_add_entities = MagicMock()
+    await async_setup_entry(hass, entry, mock_async_add_entities)
+
+    # Should exit early and not add any entities if data is empty
+    mock_async_add_entities.assert_not_called()
+
+    # Also test None
+    coordinator.data = None
+    await async_setup_entry(hass, entry, mock_async_add_entities)
+
+    # Should exit early and not add any entities if data is None
+    mock_async_add_entities.assert_not_called()
+
+
+def test_sensor_int_conversion_error(base_sensor):
+    """Test that invalid numeric strings or objects return None for batSoc, batSoh, signalVal."""
+    sensor, coordinator = base_sensor
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "100"
+
+    # Test keys: batsoc, batsoh, signalval (case insensitive in sensor.py)
+    for key in ["batSoc", "batSoh", "signalVal"]:
+        sensor.entity_description.key = key
+
+        # Test valid string
+        coordinator.data["SN123"]["metrics"][key] = "85.5"
+        assert sensor.native_value == 86
+
+        # Test invalid string
+        coordinator.data["SN123"]["metrics"][key] = "invalid_string"
+        assert sensor.native_value is None
+
+        # Test non-numeric object
+        coordinator.data["SN123"]["metrics"][key] = {"unexpected": "data"}
+        assert sensor.native_value is None
+
+        # Test None value (handled by earlier check but good to verify)
+        coordinator.data["SN123"]["metrics"][key] = None
+        assert sensor.native_value is None
+
+        # Test empty string (handled by earlier check)
+        coordinator.data["SN123"]["metrics"][key] = ""
+        assert sensor.native_value is None
+
+
+def test_float_conversion_error(base_sensor):
+    """Verify that a non-numeric string gracefully falls back."""
+    sensor, coordinator = base_sensor
+    coordinator.data["SN123"]["metrics"]["totalE"] = "bad_data"
+    assert sensor.native_value == "bad_data"

@@ -1,7 +1,7 @@
 # HYXI
 ![HYXI Logo](https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/custom_components/hyxi_cloud/brand/logo.png)
 
-### [HYXiPower](https://www.hyxipower.com/) Cloud Integration for Home Assistant
+### [HYXIPower](https://www.hyxipower.com/) Cloud Integration for Home Assistant
 **Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
@@ -88,21 +88,21 @@ For systems with multiple physical battery units, this integration automatically
 
 ## ⚙️ Setup & Configuration
 
-1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXiPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
+1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXIPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
    
    > **Important:** 
-   > Use the same email address that your devices are registered to in the HYXi app.
-2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXi Cloud**.
+   > Use the same email address that your devices are registered to in the HYXI app.
+2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXI Cloud**.
 Or alternatively, add the integration with the following:
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=hyxi_cloud)
 
 ## Configuration
 
-1. Enter your **Access Key** and **Secret Key** from the HYXi Open API portal.
+1. Enter your **Access Key** and **Secret Key** from the HYXI Open API portal.
 
 ### Optional Features (Options Flow)
-Click the **Configure** button on the HYXi integration card to access:
+Click the **Configure** button on the HYXI integration card to access:
 * **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
 * **Enable Aggregated Virtual Battery:** Combine data from 2+ batteries into single "System" sensors.
 
@@ -110,13 +110,13 @@ Click the **Configure** button on the HYXi integration card to access:
 
 If you are opening a bug report, please include **Debug Logs**:
 **How to enable and download debug logs:**
-1. Go to **Settings > Devices & Services** > **HYXi Cloud**.
+1. Go to **Settings > Devices & Services** > **HYXI Cloud**.
 2. Click the three dots (⋮) and select **Enable debug logging**.
 3. Wait 5-10 minutes, then click **Disable debug logging** to download the file.
 4. Open the file, replace any sensitive information (like your real serial numbers if you prefer), and attach it to your GitHub issue! _Note: If you sanitize the data, please keep it consistent as the serial number can be used to show how devices link to each other!_
 
 ## Disclaimer
-This is a custom integration and is **not** an official product of HYXi Power. 
+This is a custom integration and is **not** an official product of HYXI Power.
 
 ## Support
 If you find this integration helpful and want to support its development:
