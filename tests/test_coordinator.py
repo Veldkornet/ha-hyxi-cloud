@@ -28,6 +28,9 @@ class DummyDataUpdateCoordinator:
 mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
 mock_coordinator.UpdateFailed = Exception
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+import importlib
+if 'custom_components.hyxi_cloud.coordinator' in sys.modules:
+    importlib.reload(sys.modules['custom_components.hyxi_cloud.coordinator'])
 
 mock_api = MagicMock()
 sys.modules["hyxi_cloud_api"] = mock_api
