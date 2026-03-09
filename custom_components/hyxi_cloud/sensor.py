@@ -9,7 +9,6 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -407,36 +406,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return
 
-    device_registry = dr.async_get(hass)
     entities = []
-
-    # Pre-register devices to fix 'via_device' order dependency
-    for sn, dev_data in coordinator.data.items():
-        # Pre-register parent device
-        device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, sn)},
-            name=dev_data.get("device_name", f"Device {sn}"),
-            manufacturer="HYXI Power",
-            model=dev_data.get("model"),
-            sw_version=dev_data.get("sw_version"),
-            hw_version=dev_data.get("hw_version"),
-            serial_number=sn,
-        )
-
-        # Pre-register child battery device if it exists
-        metrics = dev_data.get("metrics", {})
-        bat_sn = metrics.get("batSn")
-        if bat_sn:
-            device_registry.async_get_or_create(
-                config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, bat_sn)},
-                name=f"Battery {bat_sn}",
-                manufacturer="HYXI Power",
-                model="Energy Storage System",
-                serial_number=bat_sn,
-                via_device=(DOMAIN, sn),
-            )
 
     # Filter constants
     battery_sensors = [

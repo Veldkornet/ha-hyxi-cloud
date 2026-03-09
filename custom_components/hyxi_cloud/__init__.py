@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from hyxi_cloud_api import HyxiApiClient
 
@@ -49,6 +50,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(f"Connection error: {err}") from err
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+    device_registry = dr.async_get(hass)
+
+    # Pre-register devices to fix 'via_device' order dependency
+    for sn, dev_data in coordinator.data.items():
+        # Pre-register parent device
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, sn)},
+            name=dev_data.get("device_name", f"Device {sn}"),
+            manufacturer="HYXI Power",
+            model=dev_data.get("model"),
+            sw_version=dev_data.get("sw_version"),
+            hw_version=dev_data.get("hw_version"),
+            serial_number=sn,
+        )
+
+        # Pre-register child battery device if it exists
+        metrics = dev_data.get("metrics", {})
+        bat_sn = metrics.get("batSn")
+        if bat_sn:
+            device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, bat_sn)},
+                name=f"Battery {bat_sn}",
+                manufacturer="HYXI Power",
+                model="Energy Storage System",
+                serial_number=bat_sn,
+                via_device=(DOMAIN, sn),
+            )
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
