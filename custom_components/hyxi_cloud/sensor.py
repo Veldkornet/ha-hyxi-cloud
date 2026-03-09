@@ -9,6 +9,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -455,9 +456,36 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXi Setup: No data available in coordinator during setup")
         return
 
-    # Registration order to fix 'via_device'
-    parent_entities = []
-    child_entities = []
+    device_registry = dr.async_get(hass)
+    entities = []
+
+    # Pre-register devices to fix 'via_device' order dependency
+    for sn, dev_data in coordinator.data.items():
+        # Pre-register parent device
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, sn)},
+            name=dev_data.get("device_name", f"Device {sn}"),
+            manufacturer="HYXi Power",
+            model=dev_data.get("model"),
+            sw_version=dev_data.get("sw_version"),
+            hw_version=dev_data.get("hw_version"),
+            serial_number=sn,
+        )
+
+        # Pre-register child battery device if it exists
+        metrics = dev_data.get("metrics", {})
+        bat_sn = metrics.get("batSn")
+        if bat_sn:
+            device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, bat_sn)},
+                name=f"Battery {bat_sn}",
+                manufacturer="HYXi Power",
+                model="Energy Storage System",
+                serial_number=bat_sn,
+                via_device=(DOMAIN, sn),
+            )
 
     # Filter constants
     battery_sensors = [
@@ -507,13 +535,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     "COLLECTOR" in device_type or "DMU" in device_type
                 ):
                     continue
-                if key in battery_sensors and metrics.get("batSn"):
-                    child_entities.append(HyxiSensor(coordinator, sn, description))
-                else:
-                    parent_entities.append(HyxiSensor(coordinator, sn, description))
+                entities.append(HyxiSensor(coordinator, sn, description))
 
     # 2. Integration Health
-    parent_entities.append(HyxiLastUpdateSensor(coordinator, entry))
+    entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
     # 3. Aggregate System View
     battery_sns = []
@@ -532,16 +557,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if enable_virtual:
             _LOGGER.debug("HYXi Aggregator: Creating 'Battery System' entities...")
             for description in VSYS_SENSORS:
-                parent_entities.append(
+                entities.append(
                     HyxiBatterySystemSensor(coordinator, entry, description)
                 )
 
-    # FINAL REGISTRATION: Register Inverters/Service first, then Children
-    if parent_entities:
-        async_add_entities(parent_entities)
-
-    if child_entities:
-        async_add_entities(child_entities)
+    # FINAL REGISTRATION
+    if entities:
+        async_add_entities(entities)
 
 
 class HyxiSensor(CoordinatorEntity, SensorEntity):
