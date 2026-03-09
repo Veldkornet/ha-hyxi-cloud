@@ -4,44 +4,16 @@
 import sys
 from unittest.mock import MagicMock
 
-mock_ha = MagicMock()
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-sys.modules["homeassistant.core"] = mock_ha
-sys.modules["homeassistant.exceptions"] = mock_ha
-sys.modules["homeassistant.helpers"] = mock_ha
+# Remove homeassistant mocking as it is installed in the test environment
 
-mock_util = MagicMock()
-sys.modules["homeassistant.util"] = mock_util
+if "hyxi_cloud_api" not in sys.modules:
+    sys.modules["hyxi_cloud_api"] = MagicMock()
 
-mock_config = MagicMock()
-sys.modules["homeassistant.config_entries"] = mock_config
-
-mock_coordinator = MagicMock()
-
-
-class DummyDataUpdateCoordinator:
-    def __init__(self, hass, logger, name, update_interval):  # pylint: disable=unused-argument
-        self.data = {}
-
-
-mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
-mock_coordinator.UpdateFailed = Exception
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
-
-mock_api = MagicMock()
-sys.modules["hyxi_cloud_api"] = mock_api
-
-mock_const = MagicMock()
-mock_const.DOMAIN = "hyxi_cloud"
-sys.modules["custom_components.hyxi_cloud.const"] = mock_const
-
-
-from custom_components.hyxi_cloud.coordinator import (  # noqa: E402, I001
+# Since Home Assistant is installed via pip in the environment, we can import things directly
+from custom_components.hyxi_cloud.coordinator import (
     HyxiDataUpdateCoordinator,
     _safe_float,
 )
-
 
 def test_safe_float():
     """Verify _safe_float extraction handles normal values and edge cases."""

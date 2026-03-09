@@ -8,45 +8,10 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+if "hyxi_cloud_api" not in sys.modules:
+    sys.modules["hyxi_cloud_api"] = MagicMock()
 
-# ==========================================
-# 1. THE BULLETPROOF MOCK
-# ==========================================
-class FakeBase:
-    pass
-
-
-class FakeCoordinatorEntity(FakeBase):
-    def __init__(self, coordinator, context=None, **kwargs):  # pylint: disable=unused-argument
-        self.coordinator = coordinator
-
-
-class FakeSensorEntity(FakeBase):
-    pass
-
-
-mock_ha = MagicMock()
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-mock_sensor = MagicMock()
-mock_sensor.SensorEntity = FakeSensorEntity
-mock_sensor.SensorStateClass = MagicMock()
-mock_sensor.SensorDeviceClass = MagicMock()
-sys.modules["homeassistant.components.sensor"] = mock_sensor
-mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
-sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
-sys.modules["homeassistant.util"] = mock_ha
-
-# Now it's safe to import the sensor
-# pylint: disable-next=wrong-import-position
-from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
-
-# ==========================================
-# 2. THE FUZZ TEST
-# ==========================================
-
+from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 @given(new_val=st.floats(allow_nan=True, allow_infinity=True))
 def test_fuzz_sensor_anti_dip_logic(new_val):
