@@ -32,10 +32,9 @@
     "step": {
       "init": {
         "title": "HYXi Systeemconfiguratie",
-        "description": "Pas aan hoe uw integratie communiceert met de HYXi Cloud en hoe uw hardware wordt weergegeven.\n\n---",
+        "description": "Pas aan hoe uw integratie communiceert met de HYXi Cloud.\n\n---",
         "data": {
-          "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
-          "enable_virtual_battery": "Schakel samengevoegde virtuele batterij in (Vereist 2+ batterijen)"
+          "update_interval": "Update-interval (1-60 minuten, Standaard: 5)"
         }
       }
     }

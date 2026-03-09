@@ -6,6 +6,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+#Git compares
+*.diff
+
 # Python build/dist artifacts
 *.egg-info/
 .eggs/

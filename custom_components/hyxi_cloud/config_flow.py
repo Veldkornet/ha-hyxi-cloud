@@ -124,9 +124,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=user_input)
 
         # Pull current values or defaults
-        current_battery = self._config_entry.options.get(
-            "enable_virtual_battery", False
-        )
         current_interval = self._config_entry.options.get("update_interval", 5)
 
         options_schema = vol.Schema(
@@ -135,8 +132,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required("update_interval", default=current_interval): vol.All(
                     vol.Coerce(int), vol.Range(min=1, max=60)
                 ),
-                # Checkbox for Virtual Battery
-                vol.Optional("enable_virtual_battery", default=current_battery): bool,
             }
         )
 

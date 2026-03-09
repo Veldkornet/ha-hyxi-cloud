@@ -32,10 +32,9 @@
     "step": {
       "init": {
         "title": "HYXi Systemkonfiguration",
-        "description": "Passen Sie an, wie Ihre Integration mit der HYXi Cloud kommuniziert und wie Ihre Hardware angezeigt wird.\n\n---",
+        "description": "Passen Sie an, wie Ihre Integration mit der HYXi Cloud kommuniziert.\n\n---",
         "data": {
-          "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
-          "enable_virtual_battery": "Aggregierte virtuelle Batterie aktivieren (Erfordert 2+ Batterien)"
+          "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)"
         }
       }
     }
