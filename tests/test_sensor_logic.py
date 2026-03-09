@@ -19,21 +19,34 @@ class FakeSensorEntity(FakeBase):
     pass
 
 
-mock_ha = MagicMock()
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-mock_sensor = MagicMock()
+def create_mock_package(name):
+    mock_pkg = MagicMock()
+    mock_pkg.__path__ = []
+    sys.modules[name] = mock_pkg
+    return mock_pkg
+
+create_mock_package("homeassistant")
+create_mock_package("homeassistant.components")
+create_mock_package("homeassistant.components.sensor")
+create_mock_package("homeassistant.helpers")
+create_mock_package("homeassistant.helpers.update_coordinator")
+create_mock_package("homeassistant.util")
+create_mock_package("homeassistant.config_entries")
+create_mock_package("homeassistant.core")
+create_mock_package("homeassistant.exceptions")
+create_mock_package("homeassistant.helpers.aiohttp_client")
+create_mock_package("homeassistant.const")
+create_mock_package("hyxi_cloud_api")
+
+mock_sensor = sys.modules["homeassistant.components.sensor"]
 mock_sensor.SensorEntity = FakeSensorEntity
 mock_sensor.SensorStateClass = MagicMock()
 mock_sensor.SensorDeviceClass = MagicMock()
-sys.modules["homeassistant.components.sensor"] = mock_sensor
-mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
-sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
-sys.modules["homeassistant.util"] = mock_ha
 
-from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
+mock_coordinator = sys.modules["homeassistant.helpers.update_coordinator"]
+mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+
+from custom_components.hyxi_cloud.sensor import HyxiSensor, HyxiBatterySystemSensor  # noqa: E402
 
 
 @pytest.fixture
@@ -116,3 +129,40 @@ def test_late_night_correction(base_sensor):
 
     print(f"[Night Correction] Jumped from 2742.0 to {val} kWh")
     assert val == 2743.5  # Should be ALLOWED
+
+
+def test_vsys_anti_dip():
+    """Validate anti-dip and anti-spike for virtual system sensors."""
+    coordinator = MagicMock()
+    # Summary data for virtual sensor
+    coordinator.get_battery_summary.return_value = {"bat_charge_total": 500.0}
+
+    description = MagicMock()
+    description.key = "bat_charge_total"
+    description.native_unit_of_measurement = "kWh"
+    description.state_class = "total_increasing"
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    sensor = HyxiBatterySystemSensor(coordinator, entry, description)
+    sensor.hass = None
+
+    # 1. Baseline
+    assert sensor.native_value == 500.0
+
+    # 2. Small Dip (Blocked)
+    coordinator.get_battery_summary.return_value = {"bat_charge_total": 499.5}
+    assert sensor.native_value == 500.0
+
+    # 3. Impossible Spike (Blocked)
+    coordinator.get_battery_summary.return_value = {"bat_charge_total": 601.0}
+    assert sensor.native_value == 500.0
+
+    # 4. Valid Increase (Allowed)
+    coordinator.get_battery_summary.return_value = {"bat_charge_total": 505.0}
+    assert sensor.native_value == 505.0
+
+    # 5. Midnight Reset (Allowed)
+    coordinator.get_battery_summary.return_value = {"bat_charge_total": 0.05}
+    assert sensor.native_value == 0.05
