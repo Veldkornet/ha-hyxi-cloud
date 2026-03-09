@@ -186,9 +186,6 @@ def test_batsoc_batsoh_casting(base_sensor):
     assert sensor.native_value is None
 
 
-
-
-
 @pytest.mark.asyncio
 async def test_new_api_metrics_registration():
     """Verify that all new PV, Phase, Battery, and Status sensors instantiate correctly."""
