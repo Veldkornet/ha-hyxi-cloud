@@ -9,6 +9,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -455,9 +456,36 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXi Setup: No data available in coordinator during setup")
         return
 
-    # Registration order to fix 'via_device'
-    parent_entities = []
-    child_entities = []
+    device_registry = dr.async_get(hass)
+    entities = []
+
+    # Pre-register devices to fix 'via_device' order dependency
+    for sn, dev_data in coordinator.data.items():
+        # Pre-register parent device
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, sn)},
+            name=dev_data.get("device_name", f"Device {sn}"),
+            manufacturer="HYXi Power",
+            model=dev_data.get("model"),
+            sw_version=dev_data.get("sw_version"),
+            hw_version=dev_data.get("hw_version"),
+            serial_number=sn,
+        )
+
+        # Pre-register child battery device if it exists
+        metrics = dev_data.get("metrics", {})
+        bat_sn = metrics.get("batSn")
+        if bat_sn:
+            device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, bat_sn)},
+                name=f"Battery {bat_sn}",
+                manufacturer="HYXi Power",
+                model="Energy Storage System",
+                serial_number=bat_sn,
+                via_device=(DOMAIN, sn),
+            )
 
     # Filter constants
     battery_sensors = [
@@ -507,19 +535,21 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     "COLLECTOR" in device_type or "DMU" in device_type
                 ):
                     continue
-                if key in battery_sensors and metrics.get("batSn"):
-                    child_entities.append(HyxiSensor(coordinator, sn, description))
-                else:
-                    parent_entities.append(HyxiSensor(coordinator, sn, description))
+                entities.append(HyxiSensor(coordinator, sn, description))
 
     # 2. Integration Health
-    parent_entities.append(HyxiLastUpdateSensor(coordinator, entry))
+    entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
     # 3. Aggregate System View
     battery_sns = []
     for sn, dev in coordinator.data.items():
         dtype = str(dev.get("device_type_code", "")).upper()
-        if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
+        if (
+            "BATTERY" in dtype
+            or "EMS" in dtype
+            or "HYBRID" in dtype
+            or "ALL_IN_ONE" in dtype
+        ):
             battery_sns.append(sn)
 
     if len(battery_sns) > 1:
@@ -527,16 +557,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if enable_virtual:
             _LOGGER.debug("HYXi Aggregator: Creating 'Battery System' entities...")
             for description in VSYS_SENSORS:
-                parent_entities.append(
+                entities.append(
                     HyxiBatterySystemSensor(coordinator, entry, description)
                 )
 
-    # FINAL REGISTRATION: Register Inverters/Service first, then Children
-    if parent_entities:
-        async_add_entities(parent_entities)
-
-    if child_entities:
-        async_add_entities(child_entities)
+    # FINAL REGISTRATION
+    if entities:
+        async_add_entities(entities)
 
 
 class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
@@ -552,7 +579,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
         if key.lower() in ("batsoc", "batsoh", "signalval", "avg_soc", "avg_soh"):
             try:
                 return int(round(float(value), 0))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 return None
 
         if key == "collectTime":
@@ -561,7 +588,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                 if val_int > 9999999999:
                     val_int = val_int / 1000
                 return datetime.fromtimestamp(val_int, tz=UTC)
-            except ValueError, TypeError, OSError:
+            except (ValueError, TypeError, OSError):
                 return None
 
         if key == "last_seen":
@@ -575,7 +602,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
             if old_state and old_state.state not in (None, "unknown", "unavailable"):
                 try:
                     self._last_valid_value = float(old_state.state)
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     pass
 
     def _apply_glitch_filter(self, num_value):
@@ -648,7 +675,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
             self._last_logged_glitch = None
             self._last_valid_value = num_value
             return num_value
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return value
 
 
@@ -707,11 +734,18 @@ class HyxiSensor(HyxiBaseSensor):
         self._attr_translation_key = description.key.lower()
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
 
+    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
+        """Helper to log glitch prevention only once per glitch value."""
+        if self._last_logged_glitch != num_value:
+            _LOGGER.debug(message, *args)
+            self._last_logged_glitch = num_value
+
     @property
     def native_value(self):
         """Returns the sensor value with correct data typing and anti-dip protection."""
         metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
         value = metrics.get(self.entity_description.key)
+
         return self._process_numeric_value(value)
 
 
@@ -765,6 +799,12 @@ class HyxiBatterySystemSensor(HyxiBaseSensor):
             "model": "Aggregated Storage",
         }
 
+    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
+        """Helper to log glitch prevention only once per glitch value."""
+        if self._last_logged_glitch != num_value:
+            _LOGGER.debug(message, *args)
+            self._last_logged_glitch = num_value
+
     @property
     def native_value(self):
         """Value with floating point protection and anti-dip persistence."""
@@ -772,4 +812,5 @@ class HyxiBatterySystemSensor(HyxiBaseSensor):
         if not summary:
             return None
         value = summary.get(self._key)
+
         return self._process_numeric_value(value)
