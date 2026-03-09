@@ -113,7 +113,12 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
         for _sn, dev in self.data.items():
             dtype = str(dev.get("device_type_code", "")).upper()
-            if any(x in dtype for x in ["BATTERY", "EMS", "HYBRID", "ALL_IN_ONE"]):
+            if (
+                "BATTERY" in dtype
+                or "EMS" in dtype
+                or "HYBRID" in dtype
+                or "ALL_IN_ONE" in dtype
+            ):
                 metrics = dev.get("metrics", {})
 
                 totals["total_pbat"] += _safe_float(metrics.get("pbat"))
