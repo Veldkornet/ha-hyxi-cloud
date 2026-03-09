@@ -351,3 +351,4 @@ def test_sensor_int_conversion_error(base_sensor):
         # Test empty string (handled by earlier check)
         coordinator.data["SN123"]["metrics"][key] = ""
         assert sensor.native_value is None
+
