@@ -106,4 +106,4 @@ if HAS_HYPOTHESIS:
 else:
 
     def test_fuzz_sensor_anti_dip_logic_skipped():
-        pytest.skip("Hypothesis not installed")
+        pytest.skip("hypothesis not installed")
