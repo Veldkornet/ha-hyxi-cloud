@@ -2,16 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Verbinden met HYXi Cloud",
-        "description": "Voer uw Open API inloggegevens in. U kunt deze genereren op het [HYXiPOWER Developer Platform]({link}).",
+        "title": "Verbinden met HYXI Cloud",
+        "description": "Voer uw Open API inloggegevens in. U kunt deze genereren op het [HYXIPOWER Developer Platform]({link}).",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
         }
       },
       "reauth_confirm": {
-        "title": "HYXi Cloud opnieuw verifiëren",
-        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer uw nieuwe inloggegevens in om de zonnemonitoring te hervatten. U kunt deze vinden op het [HYXiPOWER Developer Platform]({link}).",
+        "title": "HYXI Cloud opnieuw verifiëren",
+        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer uw nieuwe inloggegevens in om de zonnemonitoring te hervatten. U kunt deze vinden op het [HYXIPOWER Developer Platform]({link}).",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
@@ -19,20 +19,20 @@
       }
     },
     "error": {
-      "cannot_connect": "Kan geen verbinding maken met de HYXi servers",
+      "cannot_connect": "Kan geen verbinding maken met de HYXI servers",
       "invalid_auth": "Ongeldige Access Key of Secret Key",
       "unknown": "Er is een onverwachte fout opgetreden"
     },
     "abort": {
-      "already_configured": "Dit HYXi account is al geconfigureerd.",
+      "already_configured": "Dit HYXI account is al geconfigureerd.",
       "reauth_successful": "Herauthenticatie was succesvol"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "HYXi Systeemconfiguratie",
-        "description": "Pas aan hoe uw integratie communiceert met de HYXi Cloud.\n\n---",
+        "title": "HYXI Systeemconfiguratie",
+        "description": "Pas aan hoe uw integratie communiceert met de HYXI Cloud.\n\n---",
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)"
         }

@@ -1,4 +1,4 @@
-"""DataUpdateCoordinator for HYXi Cloud."""
+"""DataUpdateCoordinator for HYXI Cloud."""
 
 import logging
 from datetime import timedelta
@@ -28,14 +28,14 @@ def _safe_float(value) -> float:
 
 
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching data from HYXi API."""
+    """Class to manage fetching data from HYXI API."""
 
     def __init__(self, hass: HomeAssistant, client: HyxiApiClient, entry: ConfigEntry):
         """Initialize the coordinator with dynamic interval."""
         interval = entry.options.get("update_interval", 5)
 
         _LOGGER.debug(
-            "Initializing HYXi Coordinator for '%s' with polling interval: %s minutes",
+            "Initializing HYXI Coordinator for '%s' with polling interval: %s minutes",
             entry.title,
             interval,
         )
@@ -67,7 +67,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             if result is None:
                 self.hyxi_metadata["last_attempts"] = 3  # Hard fail after retries
                 raise UpdateFailed(
-                    "HYXi Cloud unreachable. Check internet or API status."
+                    "HYXI Cloud unreachable. Check internet or API status."
                 )
 
             # ✅ Success! Update metadata attributes.
@@ -83,6 +83,6 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         except UpdateFailed:
             raise
         except Exception as err:
-            _LOGGER.error("Unexpected error in HYXi update: %s", err)
+            _LOGGER.error("Unexpected error in HYXI update: %s", err)
             self.hyxi_metadata["last_attempts"] += 1
             raise UpdateFailed(f"Unexpected error: {err}") from err

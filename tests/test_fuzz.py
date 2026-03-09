@@ -1,4 +1,4 @@
-"""Fuzz testing for HYXi sensor logic."""
+"""Fuzz testing for HYXI sensor logic."""
 
 import math
 import sys

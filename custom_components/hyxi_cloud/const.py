@@ -1,4 +1,4 @@
-"""Constants for the HYXi Cloud integration."""
+"""Constants for the HYXI Cloud integration."""
 
 from homeassistant.const import Platform
 

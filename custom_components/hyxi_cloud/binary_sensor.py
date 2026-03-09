@@ -1,4 +1,4 @@
-"""Binary sensor platform for HYXi Cloud."""
+"""Binary sensor platform for HYXI Cloud."""
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.binary_sensor import BinarySensorEntity
@@ -27,7 +27,7 @@ async def async_setup_entry(
 
 
 class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
-    """Representation of a HYXi Cloud connectivity sensor."""
+    """Representation of a HYXI Cloud connectivity sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_has_entity_name = True
@@ -39,8 +39,8 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_connectivity"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXi Cloud Service",
-            "manufacturer": "HYXiPower",
+            "name": "HYXI Cloud Service",
+            "manufacturer": "HYXIPower",
             "configuration_url": "https://www.hyxicloud.com",
         }
 
@@ -96,7 +96,7 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
 
 
 class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
-    """Representation of a HYXi Cloud device active alarm sensor."""
+    """Representation of a HYXI Cloud device active alarm sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_has_entity_name = True
@@ -112,8 +112,8 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         device_data = coordinator.data.get(sn, {})
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
-            "name": device_data.get("device_name", f"HYXi {sn}"),
-            "manufacturer": "HYXiPower",
+            "name": device_data.get("device_name", f"HYXI {sn}"),
+            "manufacturer": "HYXIPower",
             "model": device_data.get("model", "Unknown"),
             "sw_version": device_data.get("sw_version"),
             "hw_version": device_data.get("hw_version"),

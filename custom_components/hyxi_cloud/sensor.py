@@ -1,4 +1,4 @@
-"""HYXi Cloud Sensor platform."""
+"""HYXI Cloud Sensor platform."""
 
 import logging
 from datetime import UTC
@@ -401,10 +401,10 @@ SENSOR_TYPES = [
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up HYXi sensors."""
+    """Set up HYXI sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     if not coordinator.data:
-        _LOGGER.warning("HYXi Setup: No data available in coordinator during setup")
+        _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return
 
     device_registry = dr.async_get(hass)
@@ -417,7 +417,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, sn)},
             name=dev_data.get("device_name", f"Device {sn}"),
-            manufacturer="HYXi Power",
+            manufacturer="HYXI Power",
             model=dev_data.get("model"),
             sw_version=dev_data.get("sw_version"),
             hw_version=dev_data.get("hw_version"),
@@ -432,7 +432,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 config_entry_id=entry.entry_id,
                 identifiers={(DOMAIN, bat_sn)},
                 name=f"Battery {bat_sn}",
-                manufacturer="HYXi Power",
+                manufacturer="HYXI Power",
                 model="Energy Storage System",
                 serial_number=bat_sn,
                 via_device=(DOMAIN, sn),
@@ -459,7 +459,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         metrics = dev_data.get("metrics", {})
 
         _LOGGER.debug(
-            "HYXi Processing Device %s (Type: %s). Metrics keys: %s",
+            "HYXI Processing Device %s (Type: %s). Metrics keys: %s",
             sn,
             device_type,
             list(metrics.keys()),
@@ -494,7 +494,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
-    """Base class for HYXi sensors with shared logic."""
+    """Base class for HYXI sensors with shared logic."""
 
     def __init__(self, coordinator):
         """Initialize the base sensor."""
@@ -528,7 +528,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                             self._last_valid_value = float(old_state.state)
                         except (ValueError, TypeError):
                             _LOGGER.debug(
-                                "HYXi Initialization: Could not parse previous state '%s' for %s",
+                                "HYXI Initialization: Could not parse previous state '%s' for %s",
                                 old_state.state,
                                 self.entity_id,
                             )
@@ -546,7 +546,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                         if not is_valid_reset:
                             if self._last_logged_glitch != num_value:
                                 _LOGGER.debug(
-                                    "HYXi Glitch Filter: Prevented %s drop (%s -> %s)",
+                                    "HYXI Glitch Filter: Prevented %s drop (%s -> %s)",
                                     self.entity_description.key,
                                     self._last_valid_value,
                                     num_value,
@@ -558,7 +558,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                     elif (num_value - self._last_valid_value) > 100.0:
                         if self._last_logged_glitch != num_value:
                             _LOGGER.debug(
-                                "HYXi High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                                "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
                                 self.entity_description.key,
                                 self._last_valid_value,
                                 num_value,
@@ -574,7 +574,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
 
 
 class HyxiSensor(HyxiBaseSensor):
-    """Representation of a Physical HYXi Sensor."""
+    """Representation of a Physical HYXI Sensor."""
 
     _attr_has_entity_name = True
 
@@ -604,7 +604,7 @@ class HyxiSensor(HyxiBaseSensor):
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
                 "name": f"Battery {bat_sn}",
-                "manufacturer": "HYXi Power",
+                "manufacturer": "HYXI Power",
                 "model": "Energy Storage System",
                 "serial_number": bat_sn,
                 "via_device": (DOMAIN, sn),
@@ -614,7 +614,7 @@ class HyxiSensor(HyxiBaseSensor):
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, sn)},
                 "name": dev_data.get("device_name", f"Device {sn}"),
-                "manufacturer": "HYXi Power",
+                "manufacturer": "HYXI Power",
                 "model": dev_data.get("model"),
                 "sw_version": dev_data.get("sw_version"),
                 "hw_version": dev_data.get("hw_version"),
@@ -673,8 +673,8 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_integration_last_updated"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXi Cloud Service",
-            "manufacturer": "HYXi Power",
+            "name": "HYXI Cloud Service",
+            "manufacturer": "HYXI Power",
             "model": "Cloud API Bridge",
         }
 

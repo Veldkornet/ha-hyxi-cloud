@@ -1,4 +1,4 @@
-"""Tests for the HYXi Cloud binary sensor logic."""
+"""Tests for the HYXI Cloud binary sensor logic."""
 # pylint: disable=wrong-import-position, unused-argument, import-outside-toplevel, redefined-outer-name, invalid-name
 
 import sys
