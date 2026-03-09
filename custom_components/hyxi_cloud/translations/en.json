@@ -44,9 +44,6 @@
     "binary_sensor": {
       "connectivity": {
         "name": "Cloud Status"
-      },
-      "device_alarm": {
-        "name": "Active Alarms"
       }
     },
     "sensor": {
@@ -226,11 +223,6 @@
       },
       "ph3p": {
         "name": "Phase 3 Power"
-      }
-    },
-    "binary_sensor": {
-      "device_alarm": {
-        "name": "Active Alarms"
       }
     }
   }
