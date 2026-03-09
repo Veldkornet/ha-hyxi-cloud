@@ -18,9 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ACCESS_KEY): str,
-        vol.Required(
-            CONF_SECRET_KEY
-        ): selector.TextSelector(
+        vol.Required(CONF_SECRET_KEY): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
     }
