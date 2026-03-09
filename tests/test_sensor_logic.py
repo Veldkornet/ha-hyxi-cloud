@@ -22,16 +22,28 @@ class FakeSensorEntity(FakeBase):
 mock_ha = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
+sys.modules["homeassistant.components.sensor"] = mock_ha
+sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
+sys.modules["homeassistant.util"] = mock_ha
+sys.modules["homeassistant.config_entries"] = mock_ha
+sys.modules["homeassistant.core"] = mock_ha
+sys.modules["homeassistant.exceptions"] = mock_ha
+sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
+sys.modules["homeassistant.const"] = mock_ha
+
+# Mock hyxi_cloud_api
+sys.modules["hyxi_cloud_api"] = MagicMock()
+
 mock_sensor = MagicMock()
 mock_sensor.SensorEntity = FakeSensorEntity
 mock_sensor.SensorStateClass = MagicMock()
 mock_sensor.SensorDeviceClass = MagicMock()
 sys.modules["homeassistant.components.sensor"] = mock_sensor
+
 mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
-sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
-sys.modules["homeassistant.util"] = mock_ha
 
 from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
 
