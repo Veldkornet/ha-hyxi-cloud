@@ -1,17 +1,22 @@
 """Tests for the HYXi Cloud binary sensor logic."""
+# pylint: disable=wrong-import-position, unused-argument, import-outside-toplevel, redefined-outer-name, invalid-name
 
 import sys
 from unittest.mock import MagicMock
 
+
 class FakeBase:
     pass
+
 
 class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
 
+
 class FakeBinarySensorEntity(FakeBase):
     pass
+
 
 mock_ha = MagicMock()
 mock_ha.__path__ = []
@@ -20,9 +25,13 @@ sys.modules["homeassistant.components"] = mock_ha
 
 mock_binary_sensor = MagicMock()
 mock_binary_sensor.BinarySensorEntity = FakeBinarySensorEntity
+
+
 class FakeBinarySensorDeviceClass:
     PROBLEM = "problem"
     CONNECTIVITY = "connectivity"
+
+
 mock_binary_sensor.BinarySensorDeviceClass = FakeBinarySensorDeviceClass
 sys.modules["homeassistant.components.binary_sensor"] = mock_binary_sensor
 
@@ -39,8 +48,8 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.const"] = mock_ha
 sys.modules["homeassistant.helpers.entity_platform"] = mock_ha
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from custom_components.hyxi_cloud.binary_sensor import HyxiDeviceAlarmSensor
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass  # noqa: E402, I001
+from custom_components.hyxi_cloud.binary_sensor import HyxiDeviceAlarmSensor  # noqa: E402, I001
 
 
 def test_alarm_sensor_active():
@@ -62,7 +71,10 @@ def test_alarm_sensor_active():
 
     assert sensor.is_on is True
     assert sensor.extra_state_attributes["active_alarms_count"] == 1
-    assert getattr(sensor, "device_class", sensor._attr_device_class) == BinarySensorDeviceClass.PROBLEM
+    assert (
+        getattr(sensor, "device_class", sensor._attr_device_class)
+        == BinarySensorDeviceClass.PROBLEM
+    )
 
 
 def test_alarm_sensor_restored():
