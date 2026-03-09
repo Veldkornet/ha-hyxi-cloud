@@ -33,11 +33,18 @@ class DummyDataUpdateCoordinator:
 
 
 mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
-mock_coordinator.UpdateFailed = type("UpdateFailed", (Exception,), {})
+# We cannot try/except import from homeassistant here because it will hit
+# our mocked modules and raise an AttributeError on __spec__.
+# Instead, we define our exception types locally first, assign them to the mocks,
+# and use these local types in the test assertions below.
+ConfigEntryAuthFailed = type("ConfigEntryAuthFailed", (Exception,), {})
+UpdateFailed = type("UpdateFailed", (Exception,), {})
+
+mock_coordinator.UpdateFailed = UpdateFailed
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 
 mock_exceptions = sys.modules["homeassistant.exceptions"]
-mock_exceptions.ConfigEntryAuthFailed = type("ConfigEntryAuthFailed", (Exception,), {})
+mock_exceptions.ConfigEntryAuthFailed = ConfigEntryAuthFailed
 
 mock_api = MagicMock()
 sys.modules["hyxi_cloud_api"] = mock_api
@@ -48,8 +55,6 @@ sys.modules["custom_components.hyxi_cloud.const"] = mock_const
 
 
 import pytest  # noqa: E402
-from homeassistant.exceptions import ConfigEntryAuthFailed  # noqa: E402
-from homeassistant.helpers.update_coordinator import UpdateFailed  # noqa: E402
 
 from custom_components.hyxi_cloud.coordinator import (  # noqa: E402, I001
     HyxiDataUpdateCoordinator,
