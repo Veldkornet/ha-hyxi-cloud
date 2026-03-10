@@ -81,7 +81,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         except (
             ConfigEntryAuthFailed,
             UpdateFailed,
-        ):  # pylint: disable=try-except-raise
+        ):
             raise
         except Exception as err:
             _LOGGER.error("Unexpected error in HYXI update: %s", err)
