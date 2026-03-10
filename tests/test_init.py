@@ -21,7 +21,9 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
     class ConfigEntryNotReady(Exception):
         pass
 
-    sys.modules["homeassistant.exceptions"].ConfigEntryAuthFailed = ConfigEntryAuthFailed
+    sys.modules[
+        "homeassistant.exceptions"
+    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
     sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady
 
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
