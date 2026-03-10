@@ -78,9 +78,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             # Return pure device dictionary
             return devices
 
-        except ConfigEntryAuthFailed:
-            raise
-        except UpdateFailed:
+        except (ConfigEntryAuthFailed, UpdateFailed):
             raise
         except Exception as err:
             _LOGGER.error("Unexpected error in HYXI update: %s", err)
