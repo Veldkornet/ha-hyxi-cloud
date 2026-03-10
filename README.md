@@ -27,7 +27,6 @@
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
-- **🔋 Virtual Battery System:** Automatically aggregates multiple physical battery units into a single system view.
 - **Clean UI:** Precision-tuned data with multi-language support (English, French, German, Dutch).
 
 ## 📥 Installation
@@ -78,13 +77,6 @@ This integration includes a specialized diagnostic system to help you distinguis
 | **Connection Quality** | API Stability tracking. | Reports "Excellent" or "Degraded" based on API retry attempts. |
 | **Data Freshness** | Sync latency tracking. | Compares hardware `collectTime` to current time to detect "Stale" data. |
 | **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
-
-### 🔋 Virtual Battery Management
-For systems with multiple physical battery units, this integration automatically creates a **Virtual System Battery**. 
-
-* **Aggregated View:** Combines SOC, SOH, and Power across all units into a single "System" entity for easy dashboarding.
-* **Balanced Metrics:** Uses weighted averages for State of Charge (SOC) to ensure your "Full" or "Empty" readings are accurate across the entire bank.
-* **Individual Monitoring:** You can still access individual battery telemetry for cell-level health checks.
 
 ## ⚙️ Setup & Configuration
 
