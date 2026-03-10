@@ -33,6 +33,7 @@ if "hyxi_cloud_api" not in sys.modules:
     sys.modules["hyxi_cloud_api"] = MagicMock()
 
 # Now we can safely import our component code
+# Double check that we get exception classes (if the suite runs another test first, they might be MagicMocks)
 # noqa flags tell Ruff to ignore the "import not at top of file" rule here
 import custom_components.hyxi_cloud.__init__ as hc_init  # noqa: E402
 from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
