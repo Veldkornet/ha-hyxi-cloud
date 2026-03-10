@@ -1,12 +1,10 @@
 import sys
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
-import pytest
-
 if "homeassistant.exceptions" not in sys.modules or not hasattr(
     sys.modules["homeassistant.exceptions"], "ConfigEntryAuthFailed"
 ):
@@ -23,9 +21,7 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
     class ConfigEntryNotReady(Exception):
         pass
 
-    sys.modules[
-        "homeassistant.exceptions"
-    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
+    sys.modules["homeassistant.exceptions"].ConfigEntryAuthFailed = ConfigEntryAuthFailed
     sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady
 
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
@@ -35,14 +31,17 @@ if "hyxi_cloud_api" not in sys.modules:
     sys.modules["hyxi_cloud_api"] = MagicMock()
 
 # Now we can safely import our component code
-# Double check that we get exception classes (if the suite runs another test first, they might be MagicMocks)
+# noqa flags tell Ruff to ignore the "import not at top of file" rule here
 import custom_components.hyxi_cloud.__init__ as hc_init  # noqa: E402
+from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+from custom_components.hyxi_cloud.const import PLATFORMS  # noqa: E402
+
 ConfigEntryAuthFailed = hc_init.ConfigEntryAuthFailed
 ConfigEntryNotReady = hc_init.ConfigEntryNotReady
 async_setup_entry = hc_init.async_setup_entry
 async_unload_entry = hc_init.async_unload_entry
-from custom_components.hyxi_cloud.const import DOMAIN
-from custom_components.hyxi_cloud.const import PLATFORMS
+
+# ... keep the rest of your file exactly the same from here down!
 
 if not isinstance(hc_init.ConfigEntryAuthFailed, type) or not issubclass(
     hc_init.ConfigEntryAuthFailed, Exception
