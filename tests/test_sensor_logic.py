@@ -21,6 +21,10 @@ class FakeSensorEntity(FakeBase):
     pass
 
 
+class FakeRestoreEntity(FakeBase):
+    pass
+
+
 # Create a mock homeassistant environment BEFORE importing integration code
 mock_ha = MagicMock()
 mock_ha.__path__ = []  # IMPORTANT for nested module resolution
@@ -30,6 +34,7 @@ sys.modules["homeassistant.config_entries"] = mock_ha
 sys.modules["homeassistant.core"] = mock_ha
 sys.modules["homeassistant.exceptions"] = mock_ha
 sys.modules["homeassistant.const"] = mock_ha
+sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["hyxi_cloud_api"] = mock_ha
 
 # We need SensorEntityDescription to retain its attributes instead of being a generic mock
@@ -53,7 +58,11 @@ sys.modules["homeassistant.components.sensor"] = mock_sensor
 # Other mocked dependencies
 mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from original
+mock_restore = MagicMock()
+mock_restore.RestoreEntity = FakeRestoreEntity
+
 sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.restore_state"] = mock_restore
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
