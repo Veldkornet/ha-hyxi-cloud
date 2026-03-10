@@ -34,6 +34,7 @@ class FakeSensorEntity(FakeBase):
 class FakeRestoreEntity(FakeBase):
     pass
 
+
 mock_ha = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha

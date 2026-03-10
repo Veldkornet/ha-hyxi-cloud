@@ -201,6 +201,7 @@ async def test_async_reload_entry(mock_hass, mock_entry):
     """Test reload of a config entry."""
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_logger:
         from custom_components.hyxi_cloud.__init__ import async_reload_entry
+
         await async_reload_entry(mock_hass, mock_entry)
 
         mock_logger.assert_called_with(

@@ -24,6 +24,7 @@ class FakeSensorEntity(FakeBase):
 class FakeRestoreEntity(FakeBase):
     pass
 
+
 # Create a mock homeassistant environment BEFORE importing integration code
 mock_ha = MagicMock()
 mock_ha.__path__ = []  # IMPORTANT for nested module resolution
