@@ -91,3 +91,39 @@ def test_alarm_sensor_restored():
 
     assert sensor.is_on is False
     assert sensor.extra_state_attributes["active_alarms_count"] == 0
+
+
+def test_connectivity_sensor():
+    """Test the connectivity sensor logic."""
+    from custom_components.hyxi_cloud.binary_sensor import HyxiConnectivitySensor
+
+    coordinator = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    sensor = HyxiConnectivitySensor(coordinator, entry)
+
+    # Test 'is_on'
+    coordinator.last_update_success = True
+    assert sensor.is_on is True
+
+    # Test 'extra_state_attributes' when successful
+    coordinator.data = {"last_update": "2023-10-27T10:00:00Z"}
+    coordinator.hyxi_metadata = {"last_attempts": 0}
+    coordinator.last_exception = None
+    attrs = sensor.extra_state_attributes
+    assert attrs["last_update"] == "2023-10-27T10:00:00Z"
+    assert "last_exception" not in attrs
+
+    # Test 'extra_state_attributes' when offline
+    coordinator.last_update_success = False
+    coordinator.last_exception = Exception("Connection timed out")
+    attrs = sensor.extra_state_attributes
+    assert attrs["last_update"] == "2023-10-27T10:00:00Z"
+    assert attrs["last_exception"] == "Connection timed out"
+
+    # Test 'extra_state_attributes' when offline but no exception
+    coordinator.last_update_success = False
+    coordinator.last_exception = None
+    attrs = sensor.extra_state_attributes
+    assert "last_exception" not in attrs
