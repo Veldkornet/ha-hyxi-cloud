@@ -91,7 +91,7 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
             "cloud_endpoint": "open.hyxicloud.com",
             "last_update": self.coordinator.data.get("last_update")
             if self.coordinator.data
-            else None
+            else None,
         }
 
         if not self.coordinator.last_update_success and self.coordinator.last_exception:
