@@ -117,13 +117,9 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
                 "model": "Model 1",
                 "sw_version": "v1",
                 "hw_version": "hw1",
-                "metrics": {
-                    "batSn": "TEST_BAT_1"
-                }
+                "metrics": {"batSn": "TEST_BAT_1"},
             },
-            "TEST_SN_2": {
-                "metrics": {}
-            }
+            "TEST_SN_2": {"metrics": {}},
         }
 
         mock_registry = MagicMock()
@@ -167,6 +163,29 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         mock_entry.async_on_unload.assert_called_once_with(
             mock_entry.add_update_listener.return_value
         )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_api_client_error(mock_hass, mock_entry):
+    """Test setup failing when API client creation or earlier step raises Exception."""
+    with (
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch(
+            "custom_components.hyxi_cloud.__init__.HyxiApiClient",
+            side_effect=Exception("API Client failed"),
+        ),
+    ):
+        with patch(
+            "custom_components.hyxi_cloud.__init__._LOGGER.warning"
+        ) as mock_logger:
+            with pytest.raises(ConfigEntryNotReady) as exc:
+                await async_setup_entry(mock_hass, mock_entry)
+
+            assert "Connection error: API Client failed" in str(exc.value)
+            mock_logger.assert_called_with(
+                "HYXI Cloud not ready: %s",
+                exc.value.__context__,
+            )
 
 
 @pytest.mark.asyncio
@@ -271,5 +290,9 @@ async def test_async_reload_entry(mock_hass, mock_entry):
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_logger:
         await async_reload_entry(mock_hass, mock_entry)
 
-        mock_logger.assert_called_with("HYXI: Options updated, reloading integration to apply new settings")
-        mock_hass.config_entries.async_reload.assert_called_once_with(mock_entry.entry_id)
+        mock_logger.assert_called_with(
+            "HYXI: Options updated, reloading integration to apply new settings"
+        )
+        mock_hass.config_entries.async_reload.assert_called_once_with(
+            mock_entry.entry_id
+        )
