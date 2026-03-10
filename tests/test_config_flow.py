@@ -28,6 +28,7 @@ def mock_ha_environment():
     # Need to override callback so it doesn't destroy the method it wraps
     def fake_callback(func):
         return func
+
     mock_ha.callback = fake_callback
 
     mock_ce = types.ModuleType("mock_ce")
@@ -132,7 +133,9 @@ async def test_validate_input_cannot_connect(
 
 @pytest.mark.asyncio
 async def test_step_user_show_form(config_flow):
-    config_flow.async_show_form = MagicMock(return_value={"type": "form", "step_id": "user", "errors": {}})
+    config_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "user", "errors": {}}
+    )
     result = await config_flow.async_step_user(user_input=None)
 
     assert result["type"] == "form"
@@ -162,7 +165,13 @@ async def test_step_user_validation_error(mock_validate_input, config_flow):
     mock_validate_input.return_value = "invalid_auth"
     config_flow.async_set_unique_id = AsyncMock()
     config_flow._abort_if_unique_id_configured = MagicMock()
-    config_flow.async_show_form = MagicMock(return_value={"type": "form", "step_id": "user", "errors": {"base": "invalid_auth"}})
+    config_flow.async_show_form = MagicMock(
+        return_value={
+            "type": "form",
+            "step_id": "user",
+            "errors": {"base": "invalid_auth"},
+        }
+    )
 
     user_input = {"access_key": "x", "secret_key": "y"}
     result = await config_flow.async_step_user(user_input=user_input)
@@ -175,19 +184,27 @@ async def test_step_user_validation_error(mock_validate_input, config_flow):
 @pytest.mark.asyncio
 async def test_step_reauth(config_flow):
     config_flow.context = {"entry_id": "test_entry_id"}
-    config_flow.hass.config_entries.async_get_entry = MagicMock(return_value="mock_entry")
-    config_flow.async_step_reauth_confirm = AsyncMock(return_value={"type": "form", "step_id": "reauth_confirm"})
+    config_flow.hass.config_entries.async_get_entry = MagicMock(
+        return_value="mock_entry"
+    )
+    config_flow.async_step_reauth_confirm = AsyncMock(
+        return_value={"type": "form", "step_id": "reauth_confirm"}
+    )
 
     result = await config_flow.async_step_reauth(entry_data={})
 
     assert config_flow.reauth_entry == "mock_entry"
-    config_flow.hass.config_entries.async_get_entry.assert_called_once_with("test_entry_id")
+    config_flow.hass.config_entries.async_get_entry.assert_called_once_with(
+        "test_entry_id"
+    )
     assert result["step_id"] == "reauth_confirm"
 
 
 @pytest.mark.asyncio
 async def test_step_reauth_confirm_show_form(config_flow):
-    config_flow.async_show_form = MagicMock(return_value={"type": "form", "step_id": "reauth_confirm", "errors": {}})
+    config_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "reauth_confirm", "errors": {}}
+    )
 
     result = await config_flow.async_step_reauth_confirm(user_input=None)
 
@@ -201,21 +218,31 @@ async def test_step_reauth_confirm_show_form(config_flow):
 async def test_step_reauth_confirm_success(mock_validate_input, config_flow):
     mock_validate_input.return_value = None
     config_flow.reauth_entry = "mock_entry"
-    config_flow.async_update_reload_and_abort = MagicMock(return_value={"type": "abort", "reason": "reauth_successful"})
+    config_flow.async_update_reload_and_abort = MagicMock(
+        return_value={"type": "abort", "reason": "reauth_successful"}
+    )
 
     user_input = {"access_key": "x", "secret_key": "y"}
     result = await config_flow.async_step_reauth_confirm(user_input=user_input)
 
     assert result["type"] == "abort"
     assert result["reason"] == "reauth_successful"
-    config_flow.async_update_reload_and_abort.assert_called_once_with("mock_entry", data=user_input)
+    config_flow.async_update_reload_and_abort.assert_called_once_with(
+        "mock_entry", data=user_input
+    )
 
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
 async def test_step_reauth_confirm_validation_error(mock_validate_input, config_flow):
     mock_validate_input.return_value = "invalid_auth"
-    config_flow.async_show_form = MagicMock(return_value={"type": "form", "step_id": "reauth_confirm", "errors": {"base": "invalid_auth"}})
+    config_flow.async_show_form = MagicMock(
+        return_value={
+            "type": "form",
+            "step_id": "reauth_confirm",
+            "errors": {"base": "invalid_auth"},
+        }
+    )
 
     user_input = {"access_key": "x", "secret_key": "y"}
     result = await config_flow.async_step_reauth_confirm(user_input=user_input)
@@ -227,6 +254,7 @@ async def test_step_reauth_confirm_validation_error(mock_validate_input, config_
 
 def test_get_options_flow(mock_ha_environment):
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
     config_entry = MagicMock()
 
     # In Home Assistant, @callback does not prevent calling the method.
@@ -243,11 +271,14 @@ def test_get_options_flow(mock_ha_environment):
 @pytest.mark.asyncio
 async def test_options_flow_show_form(mock_ha_environment):
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
     config_entry = MagicMock()
     config_entry.options = {"update_interval": 10}
 
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
-    options_flow.async_show_form = MagicMock(return_value={"type": "form", "step_id": "init"})
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
 
     result = await options_flow.async_step_init(user_input=None)
 
@@ -263,6 +294,7 @@ async def test_options_flow_show_form(mock_ha_environment):
 @pytest.mark.asyncio
 async def test_options_flow_success(mock_ha_environment):
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
     config_entry = MagicMock()
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
