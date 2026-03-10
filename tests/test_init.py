@@ -10,12 +10,25 @@ import pytest
 if "homeassistant.exceptions" not in sys.modules or not hasattr(
     sys.modules["homeassistant.exceptions"], "ConfigEntryAuthFailed"
 ):
-    mock_ha = MagicMock()
     if "homeassistant" not in sys.modules:
-        sys.modules["homeassistant"] = mock_ha
-        sys.modules["homeassistant.components"] = mock_ha
-        sys.modules["homeassistant.core"] = mock_ha
-        sys.modules["homeassistant.exceptions"] = mock_ha
+        m = MagicMock()
+        m.__path__ = []
+        sys.modules["homeassistant"] = m
+        sys.modules["homeassistant.components"] = m
+        sys.modules["homeassistant.core"] = m
+        sys.modules["homeassistant.const"] = m
+        sys.modules["homeassistant.config_entries"] = m
+        sys.modules["homeassistant.helpers"] = m
+        sys.modules["homeassistant.helpers.device_registry"] = m
+        sys.modules["homeassistant.helpers.aiohttp_client"] = m
+        sys.modules["homeassistant.helpers.update_coordinator"] = m
+        sys.modules["homeassistant.util"] = m
+    if "homeassistant.exceptions" not in sys.modules:
+        sys.modules["homeassistant.exceptions"] = MagicMock()
+
+    # Pre-mock const so it's not resolved deeply causing __spec__ errors
+    if "homeassistant.const" not in sys.modules:
+        sys.modules["homeassistant.const"] = MagicMock()
 
     class ConfigEntryAuthFailed(Exception):
         pass
@@ -181,3 +194,18 @@ async def test_async_unload_entry_failure(mock_hass, mock_entry):
         mock_entry, PLATFORMS
     )
     assert mock_entry.entry_id in mock_hass.data[DOMAIN]
+
+
+@pytest.mark.asyncio
+async def test_async_reload_entry(mock_hass, mock_entry):
+    """Test reload of a config entry."""
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_logger:
+        from custom_components.hyxi_cloud.__init__ import async_reload_entry
+        await async_reload_entry(mock_hass, mock_entry)
+
+        mock_logger.assert_called_with(
+            "HYXI: Options updated, reloading integration to apply new settings"
+        )
+        mock_hass.config_entries.async_reload.assert_called_once_with(
+            mock_entry.entry_id
+        )
