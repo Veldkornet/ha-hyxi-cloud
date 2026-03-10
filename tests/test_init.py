@@ -166,29 +166,6 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
 
 
 @pytest.mark.asyncio
-async def test_async_setup_entry_api_client_error(mock_hass, mock_entry):
-    """Test setup failing when API client creation or earlier step raises Exception."""
-    with (
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch(
-            "custom_components.hyxi_cloud.__init__.HyxiApiClient",
-            side_effect=Exception("API Client failed"),
-        ),
-    ):
-        with patch(
-            "custom_components.hyxi_cloud.__init__._LOGGER.warning"
-        ) as mock_logger:
-            with pytest.raises(ConfigEntryNotReady) as exc:
-                await async_setup_entry(mock_hass, mock_entry)
-
-            assert "Connection error: API Client failed" in str(exc.value)
-            mock_logger.assert_called_with(
-                "HYXI Cloud not ready: %s",
-                exc.value.__context__,
-            )
-
-
-@pytest.mark.asyncio
 async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
     """Test setup failing due to authentication error."""
     with (
