@@ -481,7 +481,10 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
             if (last_state := await self.async_get_last_state()) is not None:
                 try:
                     self._last_valid_value = float(last_state.state)
-                except (ValueError, TypeError,):
+                except (
+                    ValueError,
+                    TypeError,
+                ):
                     _LOGGER.debug(
                         "HYXI Restore: Could not parse restored state '%s' for %s",
                         last_state.state,
@@ -505,7 +508,10 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
         try:
             self._last_valid_value = float(old_state.state)
-        except (ValueError, TypeError,):
+        except (
+            ValueError,
+            TypeError,
+        ):
             _LOGGER.debug(
                 "HYXI Initialization: Could not parse previous state '%s' for %s",
                 old_state.state,
