@@ -43,8 +43,6 @@ ConfigEntryNotReady = hc_init.ConfigEntryNotReady
 async_setup_entry = hc_init.async_setup_entry
 async_unload_entry = hc_init.async_unload_entry
 
-# ... keep the rest of your file exactly the same from here down!
-
 if not isinstance(hc_init.ConfigEntryAuthFailed, type) or not issubclass(
     hc_init.ConfigEntryAuthFailed, Exception
 ):
