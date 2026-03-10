@@ -59,11 +59,10 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
 sys.modules["hyxi_cloud_api"] = mock_ha
 
-import custom_components.hyxi_cloud.sensor  # noqa: E402
-
-importlib.reload(custom_components.hyxi_cloud.sensor)
-
 from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
+
+sensor_module = importlib.import_module(HyxiSensor.__module__)
+importlib.reload(sensor_module)
 
 
 @pytest.fixture
