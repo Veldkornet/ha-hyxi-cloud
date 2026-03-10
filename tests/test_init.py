@@ -37,10 +37,10 @@ if "hyxi_cloud_api" not in sys.modules:
 # Now we can safely import our component code
 # Double check that we get exception classes (if the suite runs another test first, they might be MagicMocks)
 import custom_components.hyxi_cloud.__init__ as hc_init  # noqa: E402
-from custom_components.hyxi_cloud.__init__ import ConfigEntryAuthFailed
-from custom_components.hyxi_cloud.__init__ import ConfigEntryNotReady
-from custom_components.hyxi_cloud.__init__ import async_setup_entry
-from custom_components.hyxi_cloud.__init__ import async_unload_entry
+ConfigEntryAuthFailed = hc_init.ConfigEntryAuthFailed
+ConfigEntryNotReady = hc_init.ConfigEntryNotReady
+async_setup_entry = hc_init.async_setup_entry
+async_unload_entry = hc_init.async_unload_entry
 from custom_components.hyxi_cloud.const import DOMAIN
 from custom_components.hyxi_cloud.const import PLATFORMS
 
