@@ -91,3 +91,22 @@ def test_alarm_sensor_restored():
 
     assert sensor.is_on is False
     assert sensor.extra_state_attributes["active_alarms_count"] == 0
+
+
+def test_connectivity_sensor_state():
+    """Test connectivity sensor state depends on coordinator success."""
+    from custom_components.hyxi_cloud.binary_sensor import HyxiConnectivitySensor
+
+    coordinator = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    sensor = HyxiConnectivitySensor(coordinator, entry)
+
+    # When last_update_success is True, sensor should be on
+    coordinator.last_update_success = True
+    assert sensor.is_on is True
+
+    # When last_update_success is False, sensor should be off
+    coordinator.last_update_success = False
+    assert sensor.is_on is False
