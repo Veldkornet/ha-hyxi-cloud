@@ -69,4 +69,5 @@ disable = [
     "too-many-locals",            # R0914: Expected in async_setup_entry
     "missing-class-docstring",    # C0115: Optional for test mocks
     "missing-function-docstring", # C0116: Optional for standard HA overrides
+    "try-except-raise",           # W0706: Expected in intentional pass-throughs
 ]
