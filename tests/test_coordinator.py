@@ -68,6 +68,8 @@ def test_safe_float():
     assert _safe_float("invalid") == 0.0
     assert _safe_float(None) == 0.0
     assert _safe_float("") == 0.0
+    assert _safe_float({"a": 1}) == 0.0
+    assert _safe_float([1]) == 0.0
 
     # Since DataUpdateCoordinator is mocked with a plain class DummyDataUpdateCoordinator,
     # HyxiDataUpdateCoordinator is not a MagicMock, but a subclass of DummyDataUpdateCoordinator.
