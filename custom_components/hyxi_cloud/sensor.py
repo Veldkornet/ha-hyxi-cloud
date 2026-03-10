@@ -9,6 +9,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -461,7 +462,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         async_add_entities(entities)
 
 
-class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
+class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
     """Base class for HYXI sensors with shared logic."""
 
     def __init__(self, coordinator):
@@ -469,6 +470,19 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._last_valid_value = None
         self._last_logged_glitch = None
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        if self.entity_description.state_class in (
+            SensorStateClass.TOTAL_INCREASING,
+            "total_increasing",
+        ):
+            if (last_state := await self.async_get_last_state()) is not None:
+                try:
+                    self._last_valid_value = float(last_state.state)
+                except (ValueError, TypeError):
+                    pass
 
     def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
         """Helper to log glitch prevention only once per glitch value."""
@@ -546,8 +560,6 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity):
                 SensorStateClass.TOTAL_INCREASING,
                 "total_increasing",
             ):
-                self._initialize_last_valid_value()
-
                 if self._last_valid_value is not None:
                     dip_result = self._check_anti_dip(num_value)
                     if dip_result is not None:
