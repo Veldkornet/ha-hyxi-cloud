@@ -47,6 +47,12 @@ def mock_ha_environment():
     mock_ce.ConfigFlow = RealConfigFlow
     mock_ce.OptionsFlow = RealOptionsFlow
     mock_ce.ConfigEntry = MagicMock()
+    mock_ce.exceptions = MagicMock()
+
+    class IntentionalTermination(Exception):
+        pass
+
+    mock_ce.exceptions.IntentionalTermination = IntentionalTermination
     sys.modules["homeassistant.config_entries"] = mock_ce
     mock_ha.config_entries = mock_ce
 
@@ -304,3 +310,29 @@ async def test_options_flow_success(mock_ha_environment):
 
     assert result["type"] == "create_entry"
     options_flow.async_create_entry.assert_called_once_with(title="", data=user_input)
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
+async def test_step_user_already_configured(mock_validate_input, config_flow):
+    """Test step_user when the entry is already configured (Unique ID abort)."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    mock_validate_input.return_value = None
+    config_flow.async_set_unique_id = AsyncMock()
+    # Trigger the abort exception
+    config_flow._abort_if_unique_id_configured = MagicMock(
+        side_effect=config_flow_mod.config_entries.exceptions.IntentionalTermination(
+            "already_configured"
+        )
+    )
+
+    user_input = {"access_key": "existing_key", "secret_key": "y"}
+
+    with pytest.raises(
+        config_flow_mod.config_entries.exceptions.IntentionalTermination
+    ):
+        await config_flow.async_step_user(user_input=user_input)
+
+    config_flow.async_set_unique_id.assert_called_once_with("existing_key")
+    config_flow._abort_if_unique_id_configured.assert_called_once()

@@ -27,7 +27,11 @@
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
+<<<<<<< doc-readme-sync
+- **🛡️ Reliable Quality Assurance:** Built with **100% automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
+=======
 - **🛡️ Reliabile Quality Assurance:** Built with **99% automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
+>>>>>>> main
 - **Clean UI:** Precision-tuned data with multi-language support (English, French, German, Dutch).
 
 ## 📥 Installation

@@ -71,10 +71,9 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
 
 # Standardize import style to resolve code scanning alert no. 50
-from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
+import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 
-sensor_module = importlib.import_module(HyxiSensor.__module__)
-importlib.reload(sensor_module)
+importlib.reload(sensor_mod)
 
 
 @pytest.fixture
@@ -87,7 +86,7 @@ def base_sensor():
     description.native_unit_of_measurement = "kWh"
     description.state_class = "total_increasing"
 
-    sensor = HyxiSensor(coordinator, "SN123", description)
+    sensor = sensor_mod.HyxiSensor(coordinator, "SN123", description)
     sensor.hass = None
     return sensor, coordinator
 
@@ -201,7 +200,6 @@ def test_batsoc_batsoh_casting(base_sensor):
 async def test_new_api_metrics_registration():
     """Verify that all new PV, Phase, Battery, and Status sensors instantiate correctly."""
     from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
-    from custom_components.hyxi_cloud.sensor import async_setup_entry  # noqa: E402
 
     hass = MagicMock()
     entry = MagicMock()
@@ -261,7 +259,7 @@ async def test_new_api_metrics_registration():
     def mock_async_add_entities(entities):
         registered_entities.extend(entities)
 
-    await async_setup_entry(hass, entry, mock_async_add_entities)
+    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
 
     # Extract just the string keys of the sensors that were registered (ignoring diagnostics without descriptions)
     registered_keys = [
@@ -311,7 +309,6 @@ async def test_new_api_metrics_registration():
 async def test_async_setup_entry_no_data():
     """Verify that async_setup_entry returns early when coordinator has no data."""
     from custom_components.hyxi_cloud.const import DOMAIN
-    from custom_components.hyxi_cloud.sensor import async_setup_entry
 
     hass = MagicMock()
     entry = MagicMock()
@@ -321,14 +318,14 @@ async def test_async_setup_entry_no_data():
     hass.data = {DOMAIN: {"test_entry": coordinator}}
 
     mock_async_add_entities = MagicMock()
-    await async_setup_entry(hass, entry, mock_async_add_entities)
+    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
 
     # Should exit early and not add any entities if data is empty
     mock_async_add_entities.assert_not_called()
 
     # Also test None
     coordinator.data = None
-    await async_setup_entry(hass, entry, mock_async_add_entities)
+    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
 
     # Should exit early and not add any entities if data is None
     mock_async_add_entities.assert_not_called()
@@ -379,7 +376,7 @@ async def test_sensor_added_to_hass_restoration():
     description.key = "totalE"
     description.state_class = "total_increasing"
 
-    sensor = HyxiSensor(coordinator, "SN123", description)
+    sensor = sensor_mod.HyxiSensor(coordinator, "SN123", description)
     sensor.hass = MagicMock()
 
     # Mock last state
@@ -400,7 +397,7 @@ async def test_sensor_added_to_hass_no_restoration():
     description.key = "totalE"
     description.state_class = "total_increasing"
 
-    sensor = HyxiSensor(coordinator, "SN123", description)
+    sensor = sensor_mod.HyxiSensor(coordinator, "SN123", description)
     sensor.hass = MagicMock()
 
     # Mock missing last state
@@ -419,7 +416,7 @@ async def test_sensor_added_to_hass_invalid_restoration():
     description.key = "totalE"
     description.state_class = "total_increasing"
 
-    sensor = HyxiSensor(coordinator, "SN123", description)
+    sensor = sensor_mod.HyxiSensor(coordinator, "SN123", description)
     sensor.hass = MagicMock()
 
     # Mock invalid last state
@@ -435,14 +432,13 @@ async def test_sensor_added_to_hass_invalid_restoration():
 @pytest.mark.asyncio
 async def test_hyxi_last_update_sensor_failure():
     """Test the diagnostic 'Last Update' sensor failure modes."""
-    from custom_components.hyxi_cloud.sensor import HyxiLastUpdateSensor
 
     coordinator = MagicMock()
     coordinator.last_update_success = False
     entry = MagicMock()
     entry.entry_id = "test_entry"
 
-    sensor = HyxiLastUpdateSensor(coordinator, entry)
+    sensor = sensor_mod.HyxiLastUpdateSensor(coordinator, entry)
 
     assert sensor.available is False
     assert sensor.native_value is None
@@ -472,14 +468,12 @@ async def test_hyxi_last_update_sensor_success():
     from datetime import UTC
     from datetime import datetime
 
-    from custom_components.hyxi_cloud.sensor import HyxiLastUpdateSensor
-
     coordinator = MagicMock()
     coordinator.last_update_success = True
     entry = MagicMock()
     entry.entry_id = "test_entry"
 
-    sensor = HyxiLastUpdateSensor(coordinator, entry)
+    sensor = sensor_mod.HyxiLastUpdateSensor(coordinator, entry)
 
     assert sensor.available is True
     # Patch the internal dt_util used by the sensor module
@@ -529,3 +523,63 @@ def test_hyxi_sensor_last_seen(base_sensor):
             sensor.native_value,
             datetime,
         )
+
+
+@pytest.mark.asyncio
+async def test_sensor_batteries_and_collectors():
+    """Verify that battery sensors are skipped for COLLECTOR devices (Line 454 coverage)."""
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    coordinator = MagicMock()
+
+    # Device with type COLLECTOR that tries to report a battery sensor (batSoc)
+    coordinator.data = {
+        "COLL123": {
+            "device_type_code": "COLLECTOR",
+            "metrics": {
+                "batSoc": 100,  # This should be skipped
+                "signalVal": 80,  # This should be kept
+            },
+        }
+    }
+    hass.data = {"hyxi_cloud": {"test_entry": coordinator}}
+
+    registered_entities = []
+
+    def mock_async_add_entities(entities):
+        registered_entities.extend(entities)
+
+    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
+
+    registered_keys = []
+    for e in registered_entities:
+        if hasattr(e, "entity_description"):
+            registered_keys.append(e.entity_description.key)
+        else:
+            # Handle HyxiLastUpdateSensor which has no description
+            registered_keys.append("LAST_UPDATE")
+
+    assert "signalVal" in registered_keys
+    assert "batSoc" not in registered_keys  # Verified Line 454
+
+
+def test_battery_serial_mapping(base_sensor):
+    """Verify that battery sensors use batSn if available (Line 586-587 coverage)."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "INV123": {
+            "metrics": {"batSoc": 50, "batSn": "BAT_REAL_123"},
+            "device_name": "My Inverter",
+        }
+    }
+    description = MagicMock()
+    description.key = "batSoc"
+
+    # This should hit the battery SN block
+    sensor = sensor_mod.HyxiSensor(coordinator, "INV123", description)
+
+    assert sensor._actual_sn == "BAT_REAL_123"
+    assert sensor._attr_device_info["identifiers"] == {("hyxi_cloud", "BAT_REAL_123")}
+    assert sensor._attr_device_info["name"] == "Battery BAT_REAL_123"

@@ -1,8 +1,11 @@
 """Tests for the binary sensor platform."""
 
+# pylint: disable=redefined-outer-name,import-outside-toplevel,unused-import,wrong-import-order,wrong-import-position
+import importlib
 import sys
 from datetime import UTC
 from datetime import datetime
+from datetime import timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -46,27 +49,16 @@ import homeassistant.util.dt as dt_util  # noqa: E402
 mock_dt = MagicMock()
 mock_dt.UTC = UTC
 mock_dt.parse_datetime = dt_util.parse_datetime
-mock_dt.utcnow = MagicMock(
-    return_value=datetime(
-        2026,
-        3,
-        11,
-        12,
-        0,
-        0,
-        tzinfo=UTC,
-    )
-)
+# Fixed return value for utcnow to be consistent
+mock_dt.utcnow.return_value = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
 sys.modules["homeassistant.util.dt"] = mock_dt
+mock_ha.util.dt = mock_dt  # Ensure both paths work
 
-# Now import the component
-from custom_components.hyxi_cloud.binary_sensor import (  # noqa: E402
-    HyxiConnectivitySensor,
-)
-from custom_components.hyxi_cloud.binary_sensor import (  # noqa: E402
-    HyxiDeviceAlarmSensor,
-)
-from custom_components.hyxi_cloud.binary_sensor import async_setup_entry  # noqa: E402
+# Now import and reload the component to ensure it uses the mock
+import custom_components.hyxi_cloud.binary_sensor as bs_mod  # noqa: E402
+
+importlib.reload(bs_mod)
+
 from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
 
 
@@ -108,18 +100,18 @@ async def test_async_setup_entry(mock_coordinator, mock_entry):
     hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
     async_add_entities = MagicMock()
 
-    await async_setup_entry(hass, mock_entry, async_add_entities)
+    await bs_mod.async_setup_entry(hass, mock_entry, async_add_entities)
 
     assert async_add_entities.called
     entities = async_add_entities.call_args[0][0]
     assert len(entities) == 2
-    assert isinstance(entities[0], HyxiConnectivitySensor)
-    assert isinstance(entities[1], HyxiDeviceAlarmSensor)
+    assert isinstance(entities[0], bs_mod.HyxiConnectivitySensor)
+    assert isinstance(entities[1], bs_mod.HyxiDeviceAlarmSensor)
 
 
 def test_connectivity_sensor_diagnostics(mock_coordinator, mock_entry):
     """Test connectivity sensor error and availability attributes."""
-    sensor = HyxiConnectivitySensor(mock_coordinator, mock_entry)
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
 
     # 1. Test success state
     attrs = sensor.extra_state_attributes
@@ -147,7 +139,7 @@ def test_device_alarm_sensor(mock_coordinator, mock_entry):
         {"alarmState": 0},
     ]
 
-    sensor = HyxiDeviceAlarmSensor(mock_coordinator, mock_entry, "SN123")
+    sensor = bs_mod.HyxiDeviceAlarmSensor(mock_coordinator, mock_entry, "SN123")
 
     assert sensor.is_on is True
     assert sensor.extra_state_attributes["active_alarms_count"] == 2
@@ -158,36 +150,42 @@ def test_device_alarm_sensor(mock_coordinator, mock_entry):
     assert sensor.is_on is False
 
 
-def test_connectivity_sensor_freshness_labels(mock_coordinator, mock_entry):
+@pytest.mark.parametrize(
+    "last_success_offset,expected_label",
+    [
+        (15, "Current (Just now)"),  # < 1m
+        (180, "Fresh (3m ago)"),  # 3m ago
+        (600, "Stale (10m ago)"),  # 10m ago
+    ],
+)
+def test_connectivity_sensor_freshness_labels(
+    mock_coordinator, mock_entry, last_success_offset, expected_label
+):
     """Test data freshness labels in different scenarios."""
-    sensor = HyxiConnectivitySensor(mock_coordinator, mock_entry)
-    now = datetime(
-        2026,
-        3,
-        11,
-        12,
-        0,
-        0,
-        tzinfo=UTC,
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
+    now_val = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
+
+    # Directly override the attributes on the mock object the component is using
+
+    bs_mod.dt_util.utcnow = lambda: now_val
+    # We use a simple lambda with a fallback to handle ISO parsing without Z support if needed
+    bs_mod.dt_util.parse_datetime = lambda s: (
+        datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
     )
 
-    # 1. Check that freshness attribute exists and is populated
-    mock_coordinator.hyxi_metadata["last_success"] = now.isoformat()
-    # Ensure it's not "Unknown"
-    assert sensor.extra_state_attributes["data_freshness"] != "Unknown"
+    mock_coordinator.hyxi_metadata["last_success"] = (
+        now_val - timedelta(seconds=last_success_offset)
+    ).isoformat()
+    assert sensor.extra_state_attributes["data_freshness"] == expected_label
 
-    # 2. Check quality labels (these are more reliable)
-    mock_coordinator.last_update_success = False
-    assert sensor.extra_state_attributes["connection_quality"] == "Offline"
-
-    # 3. Unknown (No data)
+    # 4. Unknown (No data)
     mock_coordinator.hyxi_metadata["last_success"] = None
     assert sensor.extra_state_attributes["data_freshness"] == "Unknown"
 
 
 def test_connectivity_sensor_quality_labels(mock_coordinator, mock_entry):
     """Test connection quality labels."""
-    sensor = HyxiConnectivitySensor(mock_coordinator, mock_entry)
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
 
     # 1. Offline (is_on is False)
     mock_coordinator.last_update_success = False
