@@ -483,20 +483,49 @@ async def test_hyxi_last_update_sensor_success():
 
     assert sensor.available is True
     # Patch the internal dt_util used by the sensor module
-    with patch("custom_components.hyxi_cloud.sensor.dt_util.utcnow", return_value=datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)):
-        assert isinstance(sensor.native_value, datetime)
+    with patch(
+        "custom_components.hyxi_cloud.sensor.dt_util.utcnow",
+        return_value=datetime(
+            2026,
+            3,
+            11,
+            12,
+            0,
+            0,
+            tzinfo=UTC,
+        ),
+    ):
+        assert isinstance(
+            sensor.native_value,
+            datetime,
+        )
 
 
 def test_hyxi_sensor_last_seen(base_sensor):
     """Test the last_seen special case."""
     from datetime import UTC
     from datetime import datetime
+
     sensor, coordinator = base_sensor
     sensor.entity_description.key = "last_seen"
 
     fixed_time_str = "2026-03-11T12:00:00+00:00"
-    fixed_time_dt = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
+    fixed_time_dt = datetime(
+        2026,
+        3,
+        11,
+        12,
+        0,
+        0,
+        tzinfo=UTC,
+    )
     coordinator.data["SN123"]["metrics"]["last_seen"] = fixed_time_str
 
-    with patch("custom_components.hyxi_cloud.sensor.dt_util.parse_datetime", return_value=fixed_time_dt):
-        assert isinstance(sensor.native_value, datetime)
+    with patch(
+        "custom_components.hyxi_cloud.sensor.dt_util.parse_datetime",
+        return_value=fixed_time_dt,
+    ):
+        assert isinstance(
+            sensor.native_value,
+            datetime,
+        )

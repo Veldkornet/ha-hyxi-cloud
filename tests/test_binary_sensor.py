@@ -46,7 +46,17 @@ import homeassistant.util.dt as dt_util  # noqa: E402
 mock_dt = MagicMock()
 mock_dt.UTC = UTC
 mock_dt.parse_datetime = dt_util.parse_datetime
-mock_dt.utcnow = MagicMock(return_value=datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC))
+mock_dt.utcnow = MagicMock(
+    return_value=datetime(
+        2026,
+        3,
+        11,
+        12,
+        0,
+        0,
+        tzinfo=UTC,
+    )
+)
 sys.modules["homeassistant.util.dt"] = mock_dt
 
 # Now import the component
@@ -67,7 +77,15 @@ def mock_coordinator():
     coord.last_update_success = True
     coord.last_exception = None
     coord.data = {"SN123": {"device_name": "Test Device", "alarms": []}}
-    fixed_now = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
+    fixed_now = datetime(
+        2026,
+        3,
+        11,
+        12,
+        0,
+        0,
+        tzinfo=UTC,
+    )
     coord.hyxi_metadata = {
         "last_attempts": 1,
         "last_success": fixed_now.isoformat(),
@@ -143,7 +161,15 @@ def test_device_alarm_sensor(mock_coordinator, mock_entry):
 def test_connectivity_sensor_freshness_labels(mock_coordinator, mock_entry):
     """Test data freshness labels in different scenarios."""
     sensor = HyxiConnectivitySensor(mock_coordinator, mock_entry)
-    now = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
+    now = datetime(
+        2026,
+        3,
+        11,
+        12,
+        0,
+        0,
+        tzinfo=UTC,
+    )
 
     # 1. Check that freshness attribute exists and is populated
     mock_coordinator.hyxi_metadata["last_success"] = now.isoformat()
