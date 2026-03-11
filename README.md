@@ -66,7 +66,7 @@
 > Specifically multiple batteries behind an inverter would be a great addition to confirm working!
 >
 > 1. Enable **Debug Logging** in Home Assistant for this integration.
-> 2. Open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices) and provide a sanitized (remove your ID/Serial) snippet of the API response.
+> 2. Open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices) and attach a snippet of the debug log output.
 > 3. We will verify the sensor mappings and update the integration!
 
 ### 🛡️ Reliability & Diagnostics
@@ -115,7 +115,7 @@ If you are opening a bug report, please include **Debug Logs**:
 1. Go to **Settings > Devices & Services** > **HYXI Cloud**.
 2. Click the three dots (⋮) and select **Enable debug logging**.
 3. Wait 5-10 minutes, then click **Disable debug logging** to download the file.
-4. Open the file, replace any sensitive information (like your real serial numbers if you prefer), and attach it to your GitHub issue! _Note: If you sanitize the data, please keep it consistent as the serial number can be used to show how devices link to each other!_
+4. Attach the downloaded log file to your GitHub issue — **no manual editing needed**, serial numbers, plant IDs, and your home address are automatically masked in the logs.
 
 ## Disclaimer
 This is a custom integration and is **not** an official product of HYXI Power.
