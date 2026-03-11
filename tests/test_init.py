@@ -1,7 +1,5 @@
 import sys
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
@@ -58,6 +56,7 @@ class ConfigEntryNotReady(Exception):
 
 async_setup_entry = hc_init.async_setup_entry
 async_unload_entry = hc_init.async_unload_entry
+async_reload_entry = hc_init.async_reload_entry
 
 # Inject back into the module if they were mocked by mistake during the import process
 hc_init.ConfigEntryAuthFailed = ConfigEntryAuthFailed
@@ -256,7 +255,6 @@ async def test_async_unload_entry_failure(mock_hass, mock_entry):
 @pytest.mark.asyncio
 async def test_async_reload_entry(mock_hass, mock_entry):
     """Test reload config entry."""
-    from custom_components.hyxi_cloud.__init__ import async_reload_entry
 
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_logger:
         await async_reload_entry(mock_hass, mock_entry)
