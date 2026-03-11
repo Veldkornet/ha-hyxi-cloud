@@ -43,6 +43,9 @@
     "binary_sensor": {
       "connectivity": {
         "name": "Cloud Status"
+      },
+      "device_alarm": {
+        "name": "Aktive Probleme"
       }
     },
     "sensor": {
@@ -126,15 +129,6 @@
       },
       "etoday": {
         "name": "Tagesertrag"
-      },
-      "avg_soc": {
-        "name": "Durchschnittliche Batterieladung"
-      },
-      "avg_soh": {
-        "name": "Durchschnittliche Batteriegesundheit"
-      },
-      "total_pbat": {
-        "name": "Gesamte Batterieleistung"
       },
       "ph1loadp": {
         "name": "Phase 1 Verbrauch"

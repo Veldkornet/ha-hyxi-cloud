@@ -44,6 +44,9 @@
     "binary_sensor": {
       "connectivity": {
         "name": "Cloud Status"
+      },
+      "device_alarm": {
+        "name": "Active Problems"
       }
     },
     "sensor": {
@@ -127,15 +130,6 @@
       },
       "etoday": {
         "name": "Energy Today"
-      },
-      "avg_soc": {
-        "name": "Average Battery Charge"
-      },
-      "avg_soh": {
-        "name": "Average Battery Health"
-      },
-      "total_pbat": {
-        "name": "Total Battery Power"
       },
       "ph1loadp": {
         "name": "Phase 1 Load"
