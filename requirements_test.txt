@@ -1,4 +1,5 @@
-pytest
+pytest>=8.0.0
 pytest-asyncio
 pytest-homeassistant-custom-component
-hypothesis
+aiohttp>=3.13.3
+hypothesis>=6.100.0
