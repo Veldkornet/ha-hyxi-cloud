@@ -1,9 +1,12 @@
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
+import pytest
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
-import pytest
 
 if "homeassistant.exceptions" not in sys.modules or not hasattr(
     sys.modules["homeassistant.exceptions"], "ConfigEntryAuthFailed"
