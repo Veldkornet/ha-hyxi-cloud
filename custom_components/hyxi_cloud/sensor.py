@@ -19,13 +19,17 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def mask_sn(sn: str) -> str:
-    """Mask a serial number for logs, showing only first and last characters."""
+    """Mask a serial number for logs, replacing middle chars with X.
+
+    Matches the _mask_id format used in the API library.
+    """
     if not sn:
         return "****"
     sn_str = str(sn)
-    if len(sn_str) < 6:
+    if len(sn_str) < 8:
         return "****"
-    return f"{sn_str[:3]}...{sn_str[-3:]}"
+    middle_len = len(sn_str) - 6
+    return f"{sn_str[:3]}{'X' * middle_len}{sn_str[-3:]}"
 
 
 # Constants for optimization
