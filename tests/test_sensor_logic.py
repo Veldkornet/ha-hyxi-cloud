@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -429,3 +430,70 @@ async def test_sensor_added_to_hass_invalid_restoration():
     await sensor.async_added_to_hass()
 
     assert sensor._last_valid_value is None
+
+
+@pytest.mark.asyncio
+async def test_hyxi_last_update_sensor_failure():
+    """Test the diagnostic 'Last Update' sensor failure modes."""
+    from custom_components.hyxi_cloud.sensor import HyxiLastUpdateSensor
+
+    coordinator = MagicMock()
+    coordinator.last_update_success = False
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    sensor = HyxiLastUpdateSensor(coordinator, entry)
+
+    assert sensor.available is False
+    assert sensor.native_value is None
+
+
+def test_hyxi_base_sensor_direct_unit_return(base_sensor):
+    """Test safety return when no units are defined (e.g. state strings)."""
+    sensor, coordinator = base_sensor
+    sensor.entity_description.native_unit_of_measurement = None
+
+    # Should return exactly what it gets
+    coordinator.data["SN123"]["metrics"]["totalE"] = "Any Value"
+    assert sensor.native_value == "Any Value"
+
+
+def test_hyxi_base_sensor_early_exit_safety(base_sensor):
+    """Test early exits for None/Empty values in _process_numeric_value."""
+    sensor, _ = base_sensor
+    # This specifically tests the _process_numeric_value internal branch
+    assert sensor._process_numeric_value(None) is None
+    assert sensor._process_numeric_value("") is None
+
+
+@pytest.mark.asyncio
+async def test_hyxi_last_update_sensor_success():
+    """Test the diagnostic 'Last Update' sensor success path."""
+    from custom_components.hyxi_cloud.sensor import HyxiLastUpdateSensor
+    from datetime import datetime, UTC
+
+    coordinator = MagicMock()
+    coordinator.last_update_success = True
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    sensor = HyxiLastUpdateSensor(coordinator, entry)
+
+    assert sensor.available is True
+    # Patch the internal dt_util used by the sensor module
+    with patch("custom_components.hyxi_cloud.sensor.dt_util.utcnow", return_value=datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)):
+        assert isinstance(sensor.native_value, datetime)
+
+
+def test_hyxi_sensor_last_seen(base_sensor):
+    """Test the last_seen special case."""
+    from datetime import datetime, UTC
+    sensor, coordinator = base_sensor
+    sensor.entity_description.key = "last_seen"
+
+    fixed_time_str = "2026-03-11T12:00:00+00:00"
+    fixed_time_dt = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
+    coordinator.data["SN123"]["metrics"]["last_seen"] = fixed_time_str
+
+    with patch("custom_components.hyxi_cloud.sensor.dt_util.parse_datetime", return_value=fixed_time_dt):
+        assert isinstance(sensor.native_value, datetime)

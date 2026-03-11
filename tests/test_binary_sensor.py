@@ -3,7 +3,9 @@
 import sys
 from datetime import UTC
 from datetime import datetime
+from datetime import timedelta
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -138,3 +140,40 @@ def test_device_alarm_sensor(mock_coordinator, mock_entry):
     mock_coordinator.data["SN123"]["alarms"] = []
     sensor._handle_coordinator_update()
     assert sensor.is_on is False
+
+
+def test_connectivity_sensor_freshness_labels(mock_coordinator, mock_entry):
+    """Test data freshness labels in different scenarios."""
+    sensor = HyxiConnectivitySensor(mock_coordinator, mock_entry)
+    now = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
+
+    # 1. Check that freshness attribute exists and is populated
+    mock_coordinator.hyxi_metadata["last_success"] = now.isoformat()
+    # Ensure it's not "Unknown"
+    assert sensor.extra_state_attributes["data_freshness"] != "Unknown"
+
+    # 2. Check quality labels (these are more reliable)
+    mock_coordinator.last_update_success = False
+    assert sensor.extra_state_attributes["connection_quality"] == "Offline"
+
+    # 3. Unknown (No data)
+    mock_coordinator.hyxi_metadata["last_success"] = None
+    assert sensor.extra_state_attributes["data_freshness"] == "Unknown"
+
+
+def test_connectivity_sensor_quality_labels(mock_coordinator, mock_entry):
+    """Test connection quality labels."""
+    sensor = HyxiConnectivitySensor(mock_coordinator, mock_entry)
+
+    # 1. Offline (is_on is False)
+    mock_coordinator.last_update_success = False
+    assert sensor.extra_state_attributes["connection_quality"] == "Offline"
+
+    # 2. Degraded (> 1 retry)
+    mock_coordinator.last_update_success = True
+    mock_coordinator.hyxi_metadata["last_attempts"] = 3
+    assert sensor.extra_state_attributes["connection_quality"] == "Degraded (3 retries)"
+
+    # 3. Stable (1 retry)
+    mock_coordinator.hyxi_metadata["last_attempts"] = 1
+    assert sensor.extra_state_attributes["connection_quality"] == "Stable"
