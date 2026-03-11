@@ -30,9 +30,6 @@ def get_translation_keys():
         for k in attr_keys:
             keys["sensor"].add(k.lower())
 
-        # Ensure integration_last_updated is always included if not found by regex
-        keys["sensor"].add("integration_last_updated")
-
     # 2. Binary Sensors from binary_sensor.py
     binary_path = os.path.join(
         os.path.dirname(__file__), "../custom_components/hyxi_cloud/binary_sensor.py"
