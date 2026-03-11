@@ -43,6 +43,9 @@
     "binary_sensor": {
       "connectivity": {
         "name": "Cloud Status"
+      },
+      "device_alarm": {
+        "name": "Actieve Problemen"
       }
     },
     "sensor": {
@@ -126,15 +129,6 @@
       },
       "etoday": {
         "name": "Energie Vandaag"
-      },
-      "avg_soc": {
-        "name": "Gemiddelde Batterijlading"
-      },
-      "avg_soh": {
-        "name": "Gemiddelde Batterijgezondheid"
-      },
-      "total_pbat": {
-        "name": "Totaal Batterijvermogen"
       },
       "ph1loadp": {
         "name": "Fase 1 Belasting"

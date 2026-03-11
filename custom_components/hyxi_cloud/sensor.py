@@ -649,7 +649,7 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
     """Diagnostic sensor for the Integration health."""
 
     _attr_has_entity_name = True
-    _attr_name = "Integration Last Updated"
+    _attr_translation_key = "integration_last_updated"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
