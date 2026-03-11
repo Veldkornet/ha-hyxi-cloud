@@ -216,9 +216,6 @@
       },
       "ph3p": {
         "name": "Fase 3 Vermogen"
-      },
-      "api_status": {
-        "name": "API Verbindingsstatus"
       }
     }
   }

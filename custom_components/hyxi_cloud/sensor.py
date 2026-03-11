@@ -467,7 +467,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
-    entities.append(HyxiApiStatusSensor(coordinator, entry))
 
     # FINAL REGISTRATION
     if entities:
@@ -657,28 +656,6 @@ class HyxiSensor(HyxiBaseSensor):
             return dt_util.parse_datetime(str(value))
 
         return self._process_numeric_value(value)
-
-
-class HyxiApiStatusSensor(CoordinatorEntity, SensorEntity):
-    """Sensor for API Status."""
-
-    _attr_has_entity_name = True
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_translation_key = "api_status"
-
-    def __init__(self, coordinator, entry):
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_api_status"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
-            "manufacturer": "HYXI Power",
-            "model": "Cloud API Bridge",
-        }
-
-    @property
-    def native_value(self):
-        return self.coordinator.hyxi_metadata.get("api_status")
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):

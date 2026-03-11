@@ -217,9 +217,6 @@
       },
       "ph3p": {
         "name": "Phase 3 Power"
-      },
-      "api_status": {
-        "name": "API Connection Status"
       }
     }
   }

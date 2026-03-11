@@ -32,7 +32,6 @@ def get_translation_keys():
 
         # Ensure integration_last_updated is always included if not found by regex
         keys["sensor"].add("integration_last_updated")
-        keys["sensor"].add("api_status")
 
     # 2. Binary Sensors from binary_sensor.py
     binary_path = os.path.join(
