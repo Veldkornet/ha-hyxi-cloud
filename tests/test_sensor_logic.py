@@ -23,7 +23,8 @@ class FakeSensorEntity(FakeBase):
 
 
 class FakeRestoreEntity(FakeBase):
-    async def async_added_to_hass(self): pass
+    async def async_added_to_hass(self):
+        pass
 
 
 # Create a mock homeassistant environment BEFORE importing integration code
@@ -368,6 +369,7 @@ def test_float_conversion_error(base_sensor):
     coordinator.data["SN123"]["metrics"]["totalE"] = "bad_data"
     assert sensor.native_value == "bad_data"
 
+
 @pytest.mark.asyncio
 async def test_sensor_added_to_hass_restoration():
     """Verify that HyxiSensor restores its last state on addition to Home Assistant."""
@@ -388,6 +390,7 @@ async def test_sensor_added_to_hass_restoration():
 
     assert sensor._last_valid_value == 123.45
 
+
 @pytest.mark.asyncio
 async def test_sensor_added_to_hass_no_restoration():
     """Verify that HyxiSensor handles missing last state gracefully."""
@@ -405,6 +408,7 @@ async def test_sensor_added_to_hass_no_restoration():
     await sensor.async_added_to_hass()
 
     assert sensor._last_valid_value is None
+
 
 @pytest.mark.asyncio
 async def test_sensor_added_to_hass_invalid_restoration():

@@ -32,7 +32,8 @@ class FakeSensorEntity(FakeBase):
 
 
 class FakeRestoreEntity(FakeBase):
-    async def async_added_to_hass(self): pass
+    async def async_added_to_hass(self):
+        pass
 
 
 mock_ha = MagicMock()

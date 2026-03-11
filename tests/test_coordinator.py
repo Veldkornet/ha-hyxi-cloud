@@ -104,6 +104,7 @@ async def test_async_update_data_unexpected_error():
     assert "Unexpected error" in str(excinfo.value)
     assert coordinator.hyxi_metadata["last_attempts"] == 1
 
+
 @pytest.mark.asyncio
 async def test_async_update_data_auth_failed():
     """Test auth_failed response is handled."""
@@ -145,10 +146,9 @@ async def test_async_update_data_success():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(return_value={
-        "data": {"SN123": {"metrics": {}}},
-        "attempts": 1
-    })
+    mock_client.get_all_device_data = AsyncMock(
+        return_value={"data": {"SN123": {"metrics": {}}}, "attempts": 1}
+    )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
