@@ -529,3 +529,64 @@ def test_hyxi_sensor_last_seen(base_sensor):
             sensor.native_value,
             datetime,
         )
+
+
+@pytest.mark.asyncio
+async def test_sensor_batteries_and_collectors():
+    """Verify that battery sensors are skipped for COLLECTOR devices (Line 454 coverage)."""
+    from custom_components.hyxi_cloud.sensor import async_setup_entry
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    coordinator = MagicMock()
+
+    # Device with type COLLECTOR that tries to report a battery sensor (batSoc)
+    coordinator.data = {
+        "COLL123": {
+            "device_type_code": "COLLECTOR",
+            "metrics": {
+                "batSoc": 100,  # This should be skipped
+                "signalVal": 80,  # This should be kept
+            },
+        }
+    }
+    hass.data = {"hyxi_cloud": {"test_entry": coordinator}}
+
+    registered_entities = []
+
+    def mock_async_add_entities(entities):
+        registered_entities.extend(entities)
+
+    await async_setup_entry(hass, entry, mock_async_add_entities)
+
+    registered_keys = []
+    for e in registered_entities:
+        if hasattr(e, "entity_description"):
+            registered_keys.append(e.entity_description.key)
+        else:
+            # Handle HyxiLastUpdateSensor which has no description
+            registered_keys.append("LAST_UPDATE")
+
+    assert "signalVal" in registered_keys
+    assert "batSoc" not in registered_keys  # Verified Line 454
+
+
+def test_battery_serial_mapping(base_sensor):
+    """Verify that battery sensors use batSn if available (Line 586-587 coverage)."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "INV123": {
+            "metrics": {"batSoc": 50, "batSn": "BAT_REAL_123"},
+            "device_name": "My Inverter",
+        }
+    }
+    description = MagicMock()
+    description.key = "batSoc"
+
+    # This should hit the battery SN block
+    sensor = HyxiSensor(coordinator, "INV123", description)
+
+    assert sensor._actual_sn == "BAT_REAL_123"
+    assert sensor._attr_device_info["identifiers"] == {("hyxi_cloud", "BAT_REAL_123")}
+    assert sensor._attr_device_info["name"] == "Battery BAT_REAL_123"

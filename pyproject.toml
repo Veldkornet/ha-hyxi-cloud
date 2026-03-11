@@ -71,4 +71,10 @@ disable = [
     "missing-class-docstring",    # C0115: Optional for test mocks
     "missing-function-docstring", # C0116: Optional for standard HA overrides
     "try-except-raise",           # W0706: Expected in intentional pass-throughs
+    "redefined-outer-name",       # W0621: Standard for pytest fixtures
+    "import-outside-toplevel",    # C0415: Standard for HA test module reload
+    "protected-access",           # W0212: Necessary for testing internal state
+    "reimported",                 # W0404: Expected with importlib.reload hacks
+    "duplicate-code",             # R0801: Common setup across test files
+    "unused-argument",            # W0613: Standard for unused test fixtures
 ]
