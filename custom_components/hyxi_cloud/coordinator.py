@@ -54,6 +54,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.hyxi_metadata = {
             "last_attempts": 0,
             "last_success": None,
+            "last_error": None,
         }
 
     async def _async_update_data(self):
@@ -81,9 +82,11 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         except (
             ConfigEntryAuthFailed,
             UpdateFailed,
-        ):
+        ) as err:
+            self.hyxi_metadata["last_error"] = str(err)
             raise
         except Exception as err:
             _LOGGER.error("Unexpected error in HYXI update: %s", err)
             self.hyxi_metadata["last_attempts"] += 1
+            self.hyxi_metadata["last_error"] = str(err)
             raise UpdateFailed(f"Unexpected error: {err}") from err

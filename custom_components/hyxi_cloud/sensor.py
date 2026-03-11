@@ -497,27 +497,6 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
             _LOGGER.debug(message, *args)
             self._last_logged_glitch = num_value
 
-    def _initialize_last_valid_value(self) -> None:
-        """Initialize last valid value from state machine."""
-        if self._last_valid_value is not None or self.hass is None:
-            return
-
-        old_state = self.hass.states.get(self.entity_id)
-        if not old_state or old_state.state in (None, "unknown", "unavailable"):
-            return
-
-        try:
-            self._last_valid_value = float(old_state.state)
-        except (
-            ValueError,
-            TypeError,
-        ):
-            _LOGGER.debug(
-                "HYXI Initialization: Could not parse previous state '%s' for %s",
-                old_state.state,
-                self.entity_id,
-            )
-
     def _check_anti_dip(self, num_value: float) -> float | None:
         """Check for and prevent invalid value drops."""
         if num_value >= self._last_valid_value:

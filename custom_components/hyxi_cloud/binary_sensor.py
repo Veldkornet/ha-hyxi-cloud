@@ -83,13 +83,18 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
         else:
             quality = "Stable"
 
-        return {
+        attrs = {
             "last_attempts": attempts,
             "connection_quality": quality,
             "last_successful_connection": last_success_str,
             "data_freshness": freshness,
             "cloud_endpoint": "open.hyxicloud.com",
+            "last_update": last_success_str,
         }
+
+        attrs["last_error"] = metadata.get("last_error") or "None"
+
+        return attrs
 
     @property
     def available(self) -> bool:
