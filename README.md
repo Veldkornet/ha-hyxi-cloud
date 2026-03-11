@@ -61,7 +61,8 @@
 
 > [!IMPORTANT]
 > ### 🤝 Call for Testers
-> you own a **String Inverter, Micro Inverter, Standalone Batteryor Multiple Batteries**? Your data can help us move these to **✅ Tested**!
+> Do you own a **String Inverter, Micro Inverter, Standalone Battery or Multiple Batteries**? Your data can help us move these to **✅ Tested**!
+> Specifically multiple batteries behind an inverter would be a great addition to confirm working!
 > 
 > 1. Enable **Debug Logging** in Home Assistant for this integration.
 > 2. Open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices) and provide a sanitized (remove your ID/Serial) snippet of the API response.
