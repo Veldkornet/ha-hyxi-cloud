@@ -1,3 +1,7 @@
+"""Performance benchmarks for HYXI Cloud sensor lookups."""
+# ruff: noqa: E402
+# pylint: disable=wrong-import-position
+
 import sys
 from unittest.mock import MagicMock
 
@@ -13,12 +17,17 @@ sys.modules["homeassistant.config_entries"] = mock_ha
 sys.modules["homeassistant.core"] = mock_ha
 sys.modules["homeassistant.exceptions"] = mock_ha
 sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
+sys.modules["homeassistant.helpers.restore_state"] = mock_ha
 sys.modules["homeassistant.const"] = mock_ha
 sys.modules["hyxi_cloud_api"] = mock_ha
 
 
 # Now we can mock the specific classes and constants
 class FakeBase:
+    pass
+
+
+class RestoreEntity(FakeBase):
     pass
 
 
@@ -33,9 +42,15 @@ class FakeSensorEntity(FakeBase):
 
 mock_ha.SensorEntity = FakeSensorEntity
 mock_ha.CoordinatorEntity = FakeCoordinatorEntity
+mock_ha.RestoreEntity = RestoreEntity
 
-import timeit  # noqa: E402, I001
-from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402, I001
+# Standard benchmark imports
+import timeit  # pylint: disable=wrong-import-position # noqa: E402
+
+# Component imports must happen AFTER Home Assistant is mocked
+from custom_components.hyxi_cloud.sensor import (
+    HyxiSensor,  # pylint: disable=wrong-import-position # noqa: E402
+)
 
 
 def benchmark():
