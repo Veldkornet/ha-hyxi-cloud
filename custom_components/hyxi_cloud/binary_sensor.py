@@ -55,16 +55,19 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self):
         """Return diagnostic attributes including freshness metrics."""
-        # 🛠️ Read directly from the class attribute we created in __init__.py
         metadata = getattr(self.coordinator, "hyxi_metadata", {})
         attempts = metadata.get("last_attempts", 0)
-        last_success_str = metadata.get("last_success")
+        last_success = metadata.get("last_success")  # already a datetime object
 
         # 🕰️ Calculate Freshness logic
         freshness = "Unknown"
-        if last_success_str:
-            last_success = dt_util.parse_datetime(last_success_str)
+        last_success_str = None
+        if last_success:
+            # Handle both datetime objects and legacy ISO strings
+            if isinstance(last_success, str):
+                last_success = dt_util.parse_datetime(last_success)
             if last_success:
+                last_success_str = last_success.isoformat()
                 diff = dt_util.utcnow() - last_success
                 minutes = int(diff.total_seconds() / 60)
 
@@ -83,18 +86,14 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
         else:
             quality = "Stable"
 
-        attrs = {
+        return {
             "last_attempts": attempts,
             "connection_quality": quality,
             "last_successful_connection": last_success_str,
             "data_freshness": freshness,
             "cloud_endpoint": "open.hyxicloud.com",
-            "last_update": last_success_str,
+            "last_error": metadata.get("last_error") or "None",
         }
-
-        attrs["last_error"] = metadata.get("last_error") or "None"
-
-        return attrs
 
     @property
     def available(self) -> bool:

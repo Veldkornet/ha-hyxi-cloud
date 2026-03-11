@@ -17,6 +17,21 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def mask_sn(sn: str) -> str:
+    """Mask a serial number for logs, replacing middle chars with X.
+
+    Matches the _mask_id format used in the API library.
+    """
+    if not sn:
+        return "****"
+    sn_str = str(sn)
+    if len(sn_str) < 8:
+        return "****"
+    middle_len = len(sn_str) - 6
+    return f"{sn_str[:3]}{'X' * middle_len}{sn_str[-3:]}"
+
+
 # Constants for optimization
 INT_SENSOR_KEYS = {"batsoc", "batsoh", "signalval"}
 
@@ -432,7 +447,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         _LOGGER.debug(
             "HYXI Processing Device %s (Type: %s). Metrics keys: %s",
-            sn,
+            mask_sn(sn),
             device_type,
             list(metrics.keys()),
         )
@@ -488,7 +503,9 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                     _LOGGER.debug(
                         "HYXI Restore: Could not parse restored state '%s' for %s",
                         last_state.state,
-                        self.entity_id,
+                        mask_sn(self._actual_sn)
+                        if hasattr(self, "_actual_sn")
+                        else self.entity_id,
                     )
 
     def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
@@ -664,11 +681,5 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         }
 
     @property
-    def available(self) -> bool:
-        return self.coordinator.last_update_success
-
-    @property
     def native_value(self):
-        if self.coordinator.last_update_success:
-            return dt_util.utcnow()
-        return None
+        return self.coordinator.hyxi_metadata.get("last_success")

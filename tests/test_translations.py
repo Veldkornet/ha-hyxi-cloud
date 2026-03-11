@@ -24,7 +24,13 @@ def get_translation_keys():
         sensor_keys = re.findall(r'key="([^"]+)"', content)
         for k in sensor_keys:
             keys["sensor"].add(k.lower())
-        # Add the hardcoded one I just fixed
+
+        # Find _attr_translation_key = "something"
+        attr_keys = re.findall(r'_attr_translation_key = "([^"]+)"', content)
+        for k in attr_keys:
+            keys["sensor"].add(k.lower())
+
+        # Ensure integration_last_updated is always included if not found by regex
         keys["sensor"].add("integration_last_updated")
 
     # 2. Binary Sensors from binary_sensor.py

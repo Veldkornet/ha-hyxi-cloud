@@ -80,7 +80,7 @@ def mock_coordinator():
     )
     coord.hyxi_metadata = {
         "last_attempts": 1,
-        "last_success": fixed_now.isoformat(),
+        "last_success": fixed_now,  # datetime object, not ISO string
         "last_error": None,
     }
     return coord
@@ -115,8 +115,11 @@ def test_connectivity_sensor_diagnostics(mock_coordinator, mock_entry):
 
     # 1. Test success state
     attrs = sensor.extra_state_attributes
-    assert attrs["last_update"] == mock_coordinator.hyxi_metadata["last_success"]
+    # last_successful_connection should be a formatted datetime string from the mock
+    assert attrs["last_successful_connection"] is not None
+    assert isinstance(attrs["last_successful_connection"], str)
     assert attrs["last_error"] == "None"
+    assert "last_update" not in attrs  # Removed duplicate key
     assert "last_exception" not in attrs  # Should be gone now
 
     # 2. Test error persistence
