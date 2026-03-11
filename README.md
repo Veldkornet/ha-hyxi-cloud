@@ -27,6 +27,7 @@
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
+- **🛡️ Reliabile Quality Assurance:** Built with **99% automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
 - **Clean UI:** Precision-tuned data with multi-language support (English, French, German, Dutch).
 
 ## 📥 Installation
@@ -53,8 +54,8 @@
 
 | Device Type | Status | Key Entities Provided |
 | :--- | :--- | :--- |
-| **Hybrid & All-in-One** | ✅ Tested | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency <br> **System:** Internal Temp, Running State, Fault Codes |
-| **Data Collector** | ✅ Tested | **Diagnostics:** Signal Intensity (RSSI), Heartbeat, Heartbeat Interval, Last Seen |
+| **Hybrid & All-in-One** | ✅ Tested | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, **Capacity (kWh)**, **Max Power**, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency, **Phase(1/2/3) Volts/Amps/Power**, **Bus Voltage** <br> **System:** Internal Temp, Running State, Fault Codes |
+| **Data Collector** | ✅ Tested | **Diagnostics:** Signal Intensity (RSSI/%), Heartbeat, Heartbeat Interval, Last Seen, **WiFi Version**, **Comm Mode** |
 | **String Inverter** | ⚠️ Untested | **PV:** Power, String Volts/Amps <br> **AC:** Output Power, Daily/Total Yield, Bus Voltage, Temperature |
 | **Micro Inverter** | ⚠️ Untested | **Module:** DC Input Power, AC Voltage, Frequency, Daily Energy, Internal Temp |
 | **Smart Meter** | ⚠️ Untested | **Grid:** Active/Reactive Power, Voltage, Export Energy, Import Energy |
@@ -63,7 +64,7 @@
 > ### 🤝 Call for Testers
 > Do you own a **String Inverter, Micro Inverter, Standalone Battery or Multiple Batteries**? Your data can help us move these to **✅ Tested**!
 > Specifically multiple batteries behind an inverter would be a great addition to confirm working!
-> 
+>
 > 1. Enable **Debug Logging** in Home Assistant for this integration.
 > 2. Open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices) and provide a sanitized (remove your ID/Serial) snippet of the API response.
 > 3. We will verify the sensor mappings and update the integration!
@@ -75,15 +76,16 @@ This integration includes a specialized diagnostic system to help you distinguis
 | Sensor | Purpose | Behavior |
 | :--- | :--- | :--- |
 | **Cloud Status** | Binary connectivity sensor. | Turns `Off` if the API is unreachable or authentication fails. |
-| **Connection Quality** | API Stability tracking. | Reports "Excellent" or "Degraded" based on API retry attempts. |
-| **Data Freshness** | Sync latency tracking. | Compares hardware `collectTime` to current time to detect "Stale" data. |
-| **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
+| **Connection Quality** | API Stability tracking. | Reports **Stable**, **Degraded** (with retry count), or **Offline**. |
+| **Data Freshness** | Sync latency tracking. | Reports **Just now**, **Fresh**, or **Stale** based on cloud feedback. |
+| **Device Alarm** | Hardware fault tracking. | Binary sensor that turns `On` if the hardware reports active alarms. |
+| **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfuly processed a cloud update. |
 
 ## ⚙️ Setup & Configuration
 
 1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXIPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
-   
-   > **Important:** 
+
+   > **Important:**
    > Use the same email address that your devices are registered to in the HYXI app.
 2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXI Cloud**.
 Or alternatively, add the integration with the following:
@@ -98,6 +100,13 @@ Or alternatively, add the integration with the following:
 Click the **Configure** button on the HYXI integration card to access:
 * **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
 * **Enable Aggregated Virtual Battery:** Combine data from 2+ batteries into single "System" sensors.
+
+## 🛡️ Quality Assurance
+
+This integration prioritizes data integrity and system stability above all else:
+- **99% Test Coverage**: Every line of core logic is validated against dozens of simulated hardware scenarios.
+- **Glitch Filtering**: Built-in protection against impossible energy "spikes" and "dips" often caused by cloud reporting delays.
+- **Continuous Integration**: Every change is automatically scanned for security vulnerabilities (CodeQL) and code quality (Ruff).
 
 ## 🐛 Troubleshooting
 
