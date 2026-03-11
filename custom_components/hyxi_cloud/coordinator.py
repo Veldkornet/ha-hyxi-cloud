@@ -55,6 +55,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             "last_attempts": 0,
             "last_success": None,
             "last_error": None,
+            "api_status": "Starting",
         }
 
     async def _async_update_data(self):
@@ -74,7 +75,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             # ✅ Success! Update metadata attributes.
             devices = result["data"]
             self.hyxi_metadata["last_attempts"] = result.get("attempts", 1)
-            self.hyxi_metadata["last_success"] = dt_util.utcnow().isoformat()
+            self.hyxi_metadata["last_success"] = dt_util.utcnow()
+            self.hyxi_metadata["api_status"] = "Online"
+            self.hyxi_metadata["last_error"] = None
 
             # Return pure device dictionary
             return devices
@@ -84,9 +87,11 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             UpdateFailed,
         ) as err:
             self.hyxi_metadata["last_error"] = str(err)
+            self.hyxi_metadata["api_status"] = "Error"
             raise
         except Exception as err:
             _LOGGER.error("Unexpected error in HYXI update: %s", err)
             self.hyxi_metadata["last_attempts"] += 1
             self.hyxi_metadata["last_error"] = str(err)
+            self.hyxi_metadata["api_status"] = "Error"
             raise UpdateFailed(f"Unexpected error: {err}") from err

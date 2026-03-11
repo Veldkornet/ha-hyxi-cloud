@@ -17,6 +17,17 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def mask_sn(sn: str) -> str:
+    """Mask a serial number for logs, showing only first and last characters."""
+    if not sn:
+        return "****"
+    sn_str = str(sn)
+    if len(sn_str) < 6:
+        return "****"
+    return f"{sn_str[:3]}...{sn_str[-3:]}"
+
+
 # Constants for optimization
 INT_SENSOR_KEYS = {"batsoc", "batsoh", "signalval"}
 
@@ -432,7 +443,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         _LOGGER.debug(
             "HYXI Processing Device %s (Type: %s). Metrics keys: %s",
-            sn,
+            mask_sn(sn),
             device_type,
             list(metrics.keys()),
         )
@@ -456,6 +467,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
+    entities.append(HyxiApiStatusSensor(coordinator, entry))
 
     # FINAL REGISTRATION
     if entities:
@@ -488,7 +500,9 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                     _LOGGER.debug(
                         "HYXI Restore: Could not parse restored state '%s' for %s",
                         last_state.state,
-                        self.entity_id,
+                        mask_sn(self._actual_sn)
+                        if hasattr(self, "_actual_sn")
+                        else self.entity_id,
                     )
 
     def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
@@ -645,6 +659,28 @@ class HyxiSensor(HyxiBaseSensor):
         return self._process_numeric_value(value)
 
 
+class HyxiApiStatusSensor(CoordinatorEntity, SensorEntity):
+    """Sensor for API Status."""
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_translation_key = "api_status"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_api_status"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "HYXI Cloud Service",
+            "manufacturer": "HYXI Power",
+            "model": "Cloud API Bridge",
+        }
+
+    @property
+    def native_value(self):
+        return self.coordinator.hyxi_metadata.get("api_status")
+
+
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
     """Diagnostic sensor for the Integration health."""
 
@@ -664,11 +700,5 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         }
 
     @property
-    def available(self) -> bool:
-        return self.coordinator.last_update_success
-
-    @property
     def native_value(self):
-        if self.coordinator.last_update_success:
-            return dt_util.utcnow()
-        return None
+        return self.coordinator.hyxi_metadata.get("last_success")
