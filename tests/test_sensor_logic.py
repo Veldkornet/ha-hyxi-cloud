@@ -2,6 +2,7 @@
 import importlib
 import sys
 from datetime import datetime
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
@@ -19,6 +20,11 @@ class FakeCoordinatorEntity(FakeBase):
 
 class FakeSensorEntity(FakeBase):
     pass
+
+
+class FakeRestoreEntity(FakeBase):
+    async def async_added_to_hass(self):
+        pass
 
 
 # Create a mock homeassistant environment BEFORE importing integration code
@@ -53,17 +59,21 @@ sys.modules["homeassistant.components.sensor"] = mock_sensor
 # Other mocked dependencies
 mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from original
+
+mock_restore = MagicMock()
+mock_restore.RestoreEntity = FakeRestoreEntity
+
 sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.restore_state"] = mock_restore
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
-sys.modules["hyxi_cloud_api"] = mock_ha
 
-import custom_components.hyxi_cloud.sensor  # noqa: E402
-
-importlib.reload(custom_components.hyxi_cloud.sensor)
-
+# Standardize import style to resolve code scanning alert no. 50
 from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
+
+sensor_module = importlib.import_module(HyxiSensor.__module__)
+importlib.reload(sensor_module)
 
 
 @pytest.fixture
@@ -358,3 +368,64 @@ def test_float_conversion_error(base_sensor):
     sensor, coordinator = base_sensor
     coordinator.data["SN123"]["metrics"]["totalE"] = "bad_data"
     assert sensor.native_value == "bad_data"
+
+
+@pytest.mark.asyncio
+async def test_sensor_added_to_hass_restoration():
+    """Verify that HyxiSensor restores its last state on addition to Home Assistant."""
+    coordinator = MagicMock()
+    description = MagicMock()
+    description.key = "totalE"
+    description.state_class = "total_increasing"
+
+    sensor = HyxiSensor(coordinator, "SN123", description)
+    sensor.hass = MagicMock()
+
+    # Mock last state
+    last_state = MagicMock()
+    last_state.state = "123.45"
+    sensor.async_get_last_state = AsyncMock(return_value=last_state)
+
+    await sensor.async_added_to_hass()
+
+    assert sensor._last_valid_value == 123.45
+
+
+@pytest.mark.asyncio
+async def test_sensor_added_to_hass_no_restoration():
+    """Verify that HyxiSensor handles missing last state gracefully."""
+    coordinator = MagicMock()
+    description = MagicMock()
+    description.key = "totalE"
+    description.state_class = "total_increasing"
+
+    sensor = HyxiSensor(coordinator, "SN123", description)
+    sensor.hass = MagicMock()
+
+    # Mock missing last state
+    sensor.async_get_last_state = AsyncMock(return_value=None)
+
+    await sensor.async_added_to_hass()
+
+    assert sensor._last_valid_value is None
+
+
+@pytest.mark.asyncio
+async def test_sensor_added_to_hass_invalid_restoration():
+    """Verify that HyxiSensor handles invalid last state values gracefully."""
+    coordinator = MagicMock()
+    description = MagicMock()
+    description.key = "totalE"
+    description.state_class = "total_increasing"
+
+    sensor = HyxiSensor(coordinator, "SN123", description)
+    sensor.hass = MagicMock()
+
+    # Mock invalid last state
+    last_state = MagicMock()
+    last_state.state = "unknown"
+    sensor.async_get_last_state = AsyncMock(return_value=last_state)
+
+    await sensor.async_added_to_hass()
+
+    assert sensor._last_valid_value is None

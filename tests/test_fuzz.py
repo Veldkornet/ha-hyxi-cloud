@@ -31,6 +31,11 @@ class FakeSensorEntity(FakeBase):
     pass
 
 
+class FakeRestoreEntity(FakeBase):
+    async def async_added_to_hass(self):
+        pass
+
+
 mock_ha = MagicMock()
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
@@ -41,7 +46,13 @@ mock_sensor.SensorDeviceClass = MagicMock()
 sys.modules["homeassistant.components.sensor"] = mock_sensor
 mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+mock_ha.__path__ = []
+
+mock_restore = MagicMock()
+mock_restore.RestoreEntity = FakeRestoreEntity
+
 sys.modules["homeassistant.helpers"] = mock_ha
+sys.modules["homeassistant.helpers.restore_state"] = mock_restore
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.util"] = mock_ha
 

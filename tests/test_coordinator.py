@@ -2,6 +2,7 @@
 # pylint: disable=wrong-import-position
 
 import sys
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 mock_ha = MagicMock()
@@ -68,6 +69,8 @@ def test_safe_float():
     assert _safe_float("invalid") == 0.0
     assert _safe_float(None) == 0.0
     assert _safe_float("") == 0.0
+    assert _safe_float({"a": 1}) == 0.0
+    assert _safe_float([1]) == 0.0
 
     # Since DataUpdateCoordinator is mocked with a plain class DummyDataUpdateCoordinator,
     # HyxiDataUpdateCoordinator is not a MagicMock, but a subclass of DummyDataUpdateCoordinator.
@@ -100,3 +103,59 @@ async def test_async_update_data_unexpected_error():
 
     assert "Unexpected error" in str(excinfo.value)
     assert coordinator.hyxi_metadata["last_attempts"] == 1
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_auth_failed():
+    """Test auth_failed response is handled."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(return_value="auth_failed")
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    with pytest.raises(hc_coord.ConfigEntryAuthFailed):
+        await coordinator._async_update_data()
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_none_result():
+    """Test None response is handled."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(return_value=None)
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    with pytest.raises(hc_coord.UpdateFailed) as excinfo:
+        await coordinator._async_update_data()
+
+    assert "HYXI Cloud unreachable" in str(excinfo.value)
+    assert coordinator.hyxi_metadata["last_attempts"] == 3
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_success():
+    """Test successful data update."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(
+        return_value={"data": {"SN123": {"metrics": {}}}, "attempts": 1}
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    result = await coordinator._async_update_data()
+
+    assert result == {"SN123": {"metrics": {}}}
+    assert coordinator.hyxi_metadata["last_attempts"] == 1
+    assert coordinator.hyxi_metadata["last_success"] is not None
