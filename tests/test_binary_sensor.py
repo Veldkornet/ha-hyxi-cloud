@@ -3,9 +3,7 @@
 import sys
 from datetime import UTC
 from datetime import datetime
-from datetime import timedelta
 from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 

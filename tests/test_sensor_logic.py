@@ -469,8 +469,10 @@ def test_hyxi_base_sensor_early_exit_safety(base_sensor):
 @pytest.mark.asyncio
 async def test_hyxi_last_update_sensor_success():
     """Test the diagnostic 'Last Update' sensor success path."""
+    from datetime import UTC
+    from datetime import datetime
+
     from custom_components.hyxi_cloud.sensor import HyxiLastUpdateSensor
-    from datetime import datetime, UTC
 
     coordinator = MagicMock()
     coordinator.last_update_success = True
@@ -487,7 +489,8 @@ async def test_hyxi_last_update_sensor_success():
 
 def test_hyxi_sensor_last_seen(base_sensor):
     """Test the last_seen special case."""
-    from datetime import datetime, UTC
+    from datetime import UTC
+    from datetime import datetime
     sensor, coordinator = base_sensor
     sensor.entity_description.key = "last_seen"
 
