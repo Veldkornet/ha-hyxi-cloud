@@ -45,10 +45,17 @@ if "hyxi_cloud_api" not in sys.modules:
 # Now we can safely import our component code
 import custom_components.hyxi_cloud.__init__ as hc_init  # noqa: E402
 
+
 # Standardize assignments from head module to avoid duplicate import styles (Alert 49)
 # We use the classes from the mocked homeassistant.exceptions if the module import failed to provide real ones
-class ConfigEntryAuthFailed(Exception): pass
-class ConfigEntryNotReady(Exception): pass
+class ConfigEntryAuthFailed(Exception):
+    pass
+
+
+class ConfigEntryNotReady(Exception):
+    pass
+
+
 async_setup_entry = hc_init.async_setup_entry
 async_unload_entry = hc_init.async_unload_entry
 
@@ -56,7 +63,9 @@ async_unload_entry = hc_init.async_unload_entry
 hc_init.ConfigEntryAuthFailed = ConfigEntryAuthFailed
 hc_init.ConfigEntryNotReady = ConfigEntryNotReady
 
-from custom_components.hyxi_cloud.const import DOMAIN, PLATFORMS  # noqa: E402
+from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+from custom_components.hyxi_cloud.const import PLATFORMS  # noqa: E402
+
 
 @pytest.fixture
 def mock_hass():
@@ -68,7 +77,8 @@ def mock_hass():
 
 @pytest.fixture
 def mock_entry():
-    from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY
+    from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY
+    from custom_components.hyxi_cloud.const import CONF_SECRET_KEY
 
     entry = MagicMock()
     entry.data = {

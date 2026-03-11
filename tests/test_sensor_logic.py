@@ -2,7 +2,8 @@
 import importlib
 import sys
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -374,17 +375,17 @@ async def test_sensor_added_to_hass_restoration():
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
-    
+
     sensor = HyxiSensor(coordinator, "SN123", description)
     sensor.hass = MagicMock()
-    
+
     # Mock last state
     last_state = MagicMock()
     last_state.state = "123.45"
     sensor.async_get_last_state = AsyncMock(return_value=last_state)
-    
+
     await sensor.async_added_to_hass()
-    
+
     assert sensor._last_valid_value == 123.45
 
 @pytest.mark.asyncio
@@ -394,15 +395,15 @@ async def test_sensor_added_to_hass_no_restoration():
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
-    
+
     sensor = HyxiSensor(coordinator, "SN123", description)
     sensor.hass = MagicMock()
-    
+
     # Mock missing last state
     sensor.async_get_last_state = AsyncMock(return_value=None)
-    
+
     await sensor.async_added_to_hass()
-    
+
     assert sensor._last_valid_value is None
 
 @pytest.mark.asyncio
@@ -412,15 +413,15 @@ async def test_sensor_added_to_hass_invalid_restoration():
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
-    
+
     sensor = HyxiSensor(coordinator, "SN123", description)
     sensor.hass = MagicMock()
-    
+
     # Mock invalid last state
     last_state = MagicMock()
     last_state.state = "unknown"
     sensor.async_get_last_state = AsyncMock(return_value=last_state)
-    
+
     await sensor.async_added_to_hass()
-    
+
     assert sensor._last_valid_value is None

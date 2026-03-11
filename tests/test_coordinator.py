@@ -2,7 +2,8 @@
 # pylint: disable=wrong-import-position
 
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 mock_ha = MagicMock()
 sys.modules["homeassistant"] = mock_ha
@@ -133,7 +134,7 @@ async def test_async_update_data_none_result():
 
     with pytest.raises(hc_coord.UpdateFailed) as excinfo:
         await coordinator._async_update_data()
-    
+
     assert "HYXI Cloud unreachable" in str(excinfo.value)
     assert coordinator.hyxi_metadata["last_attempts"] == 3
 
@@ -154,7 +155,7 @@ async def test_async_update_data_success():
     )
 
     result = await coordinator._async_update_data()
-    
+
     assert result == {"SN123": {"metrics": {}}}
     assert coordinator.hyxi_metadata["last_attempts"] == 1
     assert coordinator.hyxi_metadata["last_success"] is not None
