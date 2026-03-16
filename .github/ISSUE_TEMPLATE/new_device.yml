@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Awesome! You have a device that hasn't been mapped yet. 
+        Awesome! You have a device that hasn't been mapped yet.
         **To add support for it, I absolutely need your Home Assistant debug logs.**
   - type: input
     id: device_type
@@ -29,7 +29,7 @@ body:
     attributes:
       label: Debug Logs (REQUIRED)
       description: |
-        Please paste your Home Assistant debug logs here. 
+        Please paste your Home Assistant debug logs here.
         (Go to Settings > Devices & Services > HYXi Cloud > Enable debug logging. Wait 5 minutes, then Disable and download).
       render: shell
     validations:
