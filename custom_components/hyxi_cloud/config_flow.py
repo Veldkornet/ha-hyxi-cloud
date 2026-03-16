@@ -1,3 +1,5 @@
+"""Config flow for HYXI Cloud integration."""
+
 import logging
 
 import voluptuous as vol
@@ -55,7 +57,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             success = await client._refresh_token()
             if not success:
                 return "invalid_auth"
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             _LOGGER.error("Connection error during validation: %s", e)
             return "cannot_connect"
 
