@@ -65,6 +65,14 @@ def mock_ha_environment():
     sys.modules["hyxi_cloud_api"] = mock_ha
     sys.modules["voluptuous"] = mock_ha
 
+    mock_aiohttp = MagicMock()
+
+    class ClientError(Exception):
+        pass
+
+    mock_aiohttp.ClientError = ClientError
+    sys.modules["aiohttp"] = mock_aiohttp
+
     # Force a clean import of the module under test
     import importlib
 
@@ -130,11 +138,39 @@ async def test_validate_input_invalid_auth(
 async def test_validate_input_cannot_connect(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):
+    from aiohttp import ClientError
+
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.side_effect = Exception("Connection Failed")
+    mock_hyxi_client._refresh_token.side_effect = ClientError("Connection Failed")
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result == "cannot_connect"
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
+@patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
+async def test_validate_input_timeout(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
+    mock_api_client_class.return_value = mock_hyxi_client
+    mock_hyxi_client._refresh_token.side_effect = TimeoutError()
+
+    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    assert result == "cannot_connect"
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
+@patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
+async def test_validate_input_unknown_error(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
+    mock_api_client_class.return_value = mock_hyxi_client
+    mock_hyxi_client._refresh_token.side_effect = Exception("Unknown Error")
+
+    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    assert result == "unknown"
 
 
 @pytest.mark.asyncio
