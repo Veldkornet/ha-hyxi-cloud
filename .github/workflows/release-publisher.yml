@@ -17,12 +17,12 @@ jobs:
 
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
           egress-policy: audit
 
       - name: 📥 Checkout Code
-        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 #v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: 📝 Inject Version into Manifest
         run: |
@@ -43,8 +43,8 @@ jobs:
           cd ../..
 
       - name: 🚀 Upload Zip to Release
-        uses: softprops/action-gh-release@1853d73993c8ca1b2c9c1a7fede39682d0ab5c2a # v2.5.3
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           files: hyxi_cloud.zip
           tag_name: ${{ github.event.release.tag_name }}
-          overwrite: true
+          overwrite_files: true
