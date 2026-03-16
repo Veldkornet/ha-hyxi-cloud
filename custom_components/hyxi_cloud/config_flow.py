@@ -1,6 +1,7 @@
 import logging
 
 import voluptuous as vol
+from aiohttp import ClientError
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -55,9 +56,12 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             success = await client._refresh_token()
             if not success:
                 return "invalid_auth"
-        except Exception as e:
+        except (TimeoutError, ClientError) as e:
             _LOGGER.error("Connection error during validation: %s", e)
             return "cannot_connect"
+        except Exception:
+            _LOGGER.exception("Unexpected error during validation")
+            return "unknown"
 
         return None
 
