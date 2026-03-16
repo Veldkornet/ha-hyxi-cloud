@@ -61,7 +61,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except (TimeoutError, ClientError) as e:
             _LOGGER.error("Connection error during validation: %s", e)
             return "cannot_connect"
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.exception("Unexpected error during validation")
             return "unknown"
 
