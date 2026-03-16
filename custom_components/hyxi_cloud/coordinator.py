@@ -23,6 +23,7 @@ def _safe_float(value) -> float:
     except (
         ValueError,
         TypeError,
+        OverflowError,
     ):
         return 0.0
 
