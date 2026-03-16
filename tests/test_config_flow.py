@@ -276,8 +276,6 @@ def test_get_options_flow(mock_ha_environment):
 
 @pytest.mark.asyncio
 async def test_options_flow_show_form_default_fallback(mock_ha_environment):
-    import voluptuous as vol
-
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
 
     config_entry = MagicMock()
