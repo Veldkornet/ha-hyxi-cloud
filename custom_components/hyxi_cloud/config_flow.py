@@ -1,3 +1,5 @@
+"""Config flow for HYXI Cloud integration."""
+
 import logging
 
 import voluptuous as vol
