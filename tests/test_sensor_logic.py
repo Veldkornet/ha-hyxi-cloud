@@ -152,6 +152,12 @@ def test_collecttime_error_handling(base_sensor):
     coordinator.data["SN123"]["metrics"]["collectTime"] = 1000000000000000000
     assert sensor.native_value is None
 
+    # Test OSError explicitly by patching datetime since OverflowError is now ValueError in Python 3.12+
+    with patch("custom_components.hyxi_cloud.sensor.datetime") as mock_dt:
+        mock_dt.fromtimestamp.side_effect = OSError("mocked OSError")
+        coordinator.data["SN123"]["metrics"]["collectTime"] = 1234567890
+        assert sensor.native_value is None
+
 
 def test_rounding_protection(base_sensor):
     """Ensure floating point noise (2.73199999) is rounded correctly."""
