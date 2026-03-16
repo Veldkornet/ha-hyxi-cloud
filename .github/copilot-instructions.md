@@ -3,7 +3,7 @@
 When generating code, suggesting autocompletions, or answering questions for this repository, you must strictly adhere to the Home Assistant custom integration developer standards and the specific architecture of this project.
 
 ## 1. Asynchronous Programming is Mandatory
-* Home Assistant operates on an asynchronous event loop. 
+* Home Assistant operates on an asynchronous event loop.
 * **Never** use synchronous HTTP clients like `requests`. **Always** use `aiohttp` for cloud API calls.
 * **Never** use `time.sleep()`. **Always** use `asyncio.sleep()`.
 * Ensure lifecycle methods (e.g., `async_setup_entry`, `async_unload_entry`) are strictly `async`.
@@ -19,7 +19,7 @@ When generating code, suggesting autocompletions, or answering questions for thi
 * `unique_id` must be truly unique. For HYXi devices, construct it using the device serial number and the sensor key (e.g., `f"{serial_number}_{sensor_key}"`).
 
 ## 4. Logging Standards
-* Do not use `print()`. 
+* Do not use `print()`.
 * Use the standard Python logging module configured for Home Assistant:
   ```python
   import logging

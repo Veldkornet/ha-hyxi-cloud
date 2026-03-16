@@ -91,6 +91,27 @@ def base_sensor():
     return sensor, coordinator
 
 
+def test_mask_sn():
+    """Verify mask_sn correctly hides the middle of serial numbers."""
+    from custom_components.hyxi_cloud.sensor import mask_sn
+
+    # Empty/None handling
+    assert mask_sn(None) == "****"
+    assert mask_sn("") == "****"
+
+    # Short string handling
+    assert mask_sn("1234567") == "****"
+
+    # Exact length of 8
+    assert mask_sn("12345678") == "123XX678"
+
+    # Longer string
+    assert mask_sn("1234567890") == "123XXXX890"
+
+    # Integer values
+    assert mask_sn(12345678) == "123XX678"
+
+
 def test_anti_dip_recovery(base_sensor):
     """Verify the exact scenario in your graph: 2742 -> 2738 -> 2747."""
     sensor, coordinator = base_sensor
@@ -151,6 +172,12 @@ def test_collecttime_error_handling(base_sensor):
     # A huge number that passes the 10-digit check but is still too large for datetime
     coordinator.data["SN123"]["metrics"]["collectTime"] = 1000000000000000000
     assert sensor.native_value is None
+
+    # Test OSError explicitly by patching datetime since OverflowError is now ValueError in Python 3.12+
+    with patch("custom_components.hyxi_cloud.sensor.datetime") as mock_dt:
+        mock_dt.fromtimestamp.side_effect = OSError("mocked OSError")
+        coordinator.data["SN123"]["metrics"]["collectTime"] = 1234567890
+        assert sensor.native_value is None
 
 
 def test_rounding_protection(base_sensor):
@@ -573,3 +600,25 @@ def test_battery_serial_mapping(base_sensor):
     assert sensor._actual_sn == "BAT_REAL_123"
     assert sensor._attr_device_info["identifiers"] == {("hyxi_cloud", "BAT_REAL_123")}
     assert sensor._attr_device_info["name"] == "Battery BAT_REAL_123"
+
+
+def test_log_glitch_once(base_sensor):
+    """Verify that _log_glitch_once logs a glitch value only once."""
+    sensor, _ = base_sensor
+
+    with patch("custom_components.hyxi_cloud.sensor._LOGGER.debug") as mock_debug:
+        # First time with value 123.4
+        sensor._log_glitch_once(123.4, "Test glitch %s", 123.4)
+        mock_debug.assert_called_once_with("Test glitch %s", 123.4)
+        assert sensor._last_logged_glitch == 123.4
+        mock_debug.reset_mock()
+
+        # Second time with same value 123.4 - should NOT log
+        sensor._log_glitch_once(123.4, "Test glitch %s", 123.4)
+        mock_debug.assert_not_called()
+        assert sensor._last_logged_glitch == 123.4
+
+        # Third time with a DIFFERENT value 123.5 - should log again
+        sensor._log_glitch_once(123.5, "Test glitch %s", 123.5)
+        mock_debug.assert_called_once_with("Test glitch %s", 123.5)
+        assert sensor._last_logged_glitch == 123.5
