@@ -39,11 +39,13 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
     ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
     sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady
 
+
+class LocalUpdateFailed(Exception):
+    """Local fallback for update failed."""
+
+
 if "homeassistant.helpers.update_coordinator" not in sys.modules:
     sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
-
-    class LocalUpdateFailed(Exception):
-        pass
 
     sys.modules[
         "homeassistant.helpers.update_coordinator"
@@ -70,10 +72,6 @@ class LocalEntryAuthFailed(Exception):
 
 class LocalEntryNotReady(Exception):
     """Local fallback for entry not ready."""
-
-
-class LocalUpdateFailed(Exception):
-    """Local fallback for update failed."""
 
 
 async_setup_entry = hc_init.async_setup_entry
