@@ -91,19 +91,24 @@ async def test_async_update_data_unexpected_error():
     mock_entry.data = {"access_key": "ak", "secret_key": "sk", "base_url": "url"}
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data.side_effect = Exception("Test unexpected error")
+    mock_client.get_all_device_data = AsyncMock(
+        side_effect=Exception("Test unexpected error")
+    )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
     )
 
     assert coordinator.hyxi_metadata["last_attempts"] == 0
+    assert coordinator.hyxi_metadata["api_status"] == "Starting"
 
-    with pytest.raises(Exception) as excinfo:
+    with pytest.raises(hc_coord.UpdateFailed) as excinfo:
         await coordinator._async_update_data()
 
-    assert "Unexpected error" in str(excinfo.value)
+    assert "Unexpected error: Test unexpected error" in str(excinfo.value)
     assert coordinator.hyxi_metadata["last_attempts"] == 1
+    assert coordinator.hyxi_metadata["last_error"] == "Test unexpected error"
+    assert coordinator.hyxi_metadata["api_status"] == "Error"
 
 
 @pytest.mark.asyncio
