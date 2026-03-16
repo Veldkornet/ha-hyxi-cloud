@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.5 # Use the latest version
+    rev: v0.15.6 # Use the latest version
     hooks:
       # Run the linter
       - id: ruff
@@ -8,19 +8,19 @@ repos:
       # Run the formatter
       - id: ruff-format
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.23.1
+    rev: v8.30.0
     hooks:
       - id: gitleaks
-  - repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 3.0.0
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/pylint-dev/pylint
-    rev: v3.3.4
+    rev: v4.0.5
     hooks:
       - id: pylint

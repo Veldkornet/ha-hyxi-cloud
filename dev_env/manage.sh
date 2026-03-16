@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Get the directory where the script is located
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)" || exit 1
+cd -- "$SCRIPT_DIR" || exit 1
 
-ACTION=$1
+ACTION="$1"
 
 case "$ACTION" in
   sync-git)
@@ -61,12 +61,12 @@ case "$ACTION" in
 
   start)
     echo "🧹 Wiping old Sandbox..."
-    rm -rf ha_testing_config
-    mkdir -p ha_testing_config
+    rm -rf -- ha_testing_config
+    mkdir -p -- ha_testing_config
 
     if [ -d "ha_testing_seed" ]; then
         echo "🌱 Seeding from Golden Image..."
-        cp -Rp ha_testing_seed/. ha_testing_config/
+        cp -Rp -- ha_testing_seed/. ha_testing_config/
     else
         echo "⚠️ No ha_testing_seed found! Starting a fresh instance (Onboarding required)."
     fi
@@ -77,22 +77,6 @@ case "$ACTION" in
     echo "🔗 Linking local HYXi API Development folder..."
     sleep 2
     docker exec ha_dev_hyxi pip install -e /workspaces/hyxi-cloud-api
-
-    # Force Home Assistant to prioritize the local workspace over PyPi cache by injecting it cleanly
-    docker exec ha_dev_hyxi python -c '
-import os
-file_path = "/config/custom_components/hyxi_cloud/__init__.py"
-if os.path.exists(file_path):
-    with open(file_path, "r") as f:
-        lines = f.readlines()
-    if "import sys\n" not in lines:
-        lines.insert(0, "import sys\n")
-        lines.insert(1, "sys.path.insert(0, \"/workspaces/hyxi-cloud-api/src\")\n")
-        with open(file_path, "w") as f:
-            f.writelines(lines)
-'
-    docker restart ha_dev_hyxi
-    # ---------------------------
 
     echo "✅ Ready at http://localhost:8123"
     ;;
@@ -105,26 +89,26 @@ if os.path.exists(file_path):
 
   restart)
     echo "🔄 Restarting Sandbox..."
-    $0 stop
-    $0 start
+    "$0" stop
+    "$0" start
     ;;
   ruff-check)
     echo "🔍 Running Ruff Check..."
-    cd ..
+    cd .. || exit 1
     python3 -m ruff check .
     ;;
   ruff-format)
     echo "🧹 Running Ruff Format..."
-    cd ..
+    cd .. || exit 1
     python3 -m ruff format .
     ;;
   ruff-fix)
     echo "🧹 Running Ruff Fix..."
-    cd ..
+    cd .. || exit 1
     python3 -m ruff check . --fix
     ;;
   *)
-    echo "Usage: $0 {start|stop|restart|ruff-check|ruff-format|ruff-fix}"
+    printf "Usage: %s {start|stop|restart|ruff-check|ruff-format|ruff-fix}\n" "$0"
     exit 1
     ;;
 

@@ -8,6 +8,7 @@ services:
       - "5678:5678"
     environment:
       - TZ=Europe/Amsterdam # Set to your local timezone!
+      - PYTHONPATH=/workspaces/hyxi-cloud-api/src
     volumes:
       # 1. Creates a fake HA config folder inside your project to save test setups
       - ./ha_testing_config:/config
