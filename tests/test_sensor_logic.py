@@ -573,3 +573,17 @@ def test_battery_serial_mapping(base_sensor):
     assert sensor._actual_sn == "BAT_REAL_123"
     assert sensor._attr_device_info["identifiers"] == {("hyxi_cloud", "BAT_REAL_123")}
     assert sensor._attr_device_info["name"] == "Battery BAT_REAL_123"
+
+
+def test_hyxi_base_sensor_conversion_errors(base_sensor):
+    """Test ValueError and TypeError handling in _process_numeric_value."""
+    sensor, _ = base_sensor
+    # Ensure native_unit_of_measurement is set so it doesn't return early
+    sensor.entity_description.native_unit_of_measurement = "W"
+
+    # Test ValueError (uncastable string)
+    assert sensor._process_numeric_value("invalid_float") == "invalid_float"
+
+    # Test TypeError (uncastable object)
+    assert sensor._process_numeric_value({"a": 1}) == {"a": 1}
+    assert sensor._process_numeric_value([1, 2]) == [1, 2]
