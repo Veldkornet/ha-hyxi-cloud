@@ -1,3 +1,5 @@
+"""Tests for the initial setup of the HYXI Cloud integration."""
+
 import sys
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -44,17 +46,16 @@ if "hyxi_cloud_api" not in sys.modules:
     sys.modules["hyxi_cloud_api"] = MagicMock()
 
 # Now we can safely import our component code
-import custom_components.hyxi_cloud.__init__ as hc_init  # noqa: E402
+import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position # noqa: E402
 
 
-# Standardize assignments from head module to avoid duplicate import styles (Alert 49)
-# We use the classes from the mocked homeassistant.exceptions if the module import failed to provide real ones
-class ConfigEntryAuthFailed(Exception):
-    pass
+# Redefine for local use to ensure consistency with mocked environment
+class LocalEntryAuthFailed(Exception):
+    """Local fallback for auth failure."""
 
 
-class ConfigEntryNotReady(Exception):
-    pass
+class LocalEntryNotReady(Exception):
+    """Local fallback for entry not ready."""
 
 
 async_setup_entry = hc_init.async_setup_entry
@@ -65,8 +66,12 @@ async_reload_entry = hc_init.async_reload_entry
 hc_init.ConfigEntryAuthFailed = ConfigEntryAuthFailed
 hc_init.ConfigEntryNotReady = ConfigEntryNotReady
 
-from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
-from custom_components.hyxi_cloud.const import PLATFORMS  # noqa: E402
+from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
+    DOMAIN,
+)
+from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
+    PLATFORMS,
+)
 
 
 @pytest.fixture

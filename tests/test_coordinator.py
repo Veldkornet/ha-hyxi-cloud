@@ -1,9 +1,12 @@
 """Tests for the DataUpdateCoordinator logic."""
 # pylint: disable=wrong-import-position
 
+import importlib
 import sys
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+
+import pytest
 
 mock_ha = MagicMock()
 sys.modules["homeassistant"] = mock_ha
@@ -22,7 +25,9 @@ mock_coordinator = MagicMock()
 
 
 class DummyDataUpdateCoordinator:
-    def __init__(self, hass, logger, name, update_interval, config_entry=None):  # pylint: disable=unused-argument
+    """Dummy class to mock DataUpdateCoordinator."""
+
+    def __init__(self, hass, logger, name, update_interval, config_entry=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
         self.data = {}
 
 
@@ -53,8 +58,7 @@ mock_const.DOMAIN = "hyxi_cloud"
 sys.modules["custom_components.hyxi_cloud.const"] = mock_const
 
 
-import importlib  # noqa: E402, I001
-import custom_components.hyxi_cloud.coordinator as hc_coord  # noqa: E402, I001
+import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position # noqa: E402
 
 importlib.reload(hc_coord)
 
@@ -78,9 +82,6 @@ def test_safe_float():
     # just a MagicMock instead of the real class. We should test the module function directly
     # if it's available, but here the test just wants to verify the behavior of `get_battery_summary`.
     # Let's bypass testing `get_battery_summary` if the class is completely mocked out by conftest.py.
-
-
-import pytest  # noqa: E402
 
 
 @pytest.mark.asyncio
