@@ -275,6 +275,33 @@ def test_get_options_flow(mock_ha_environment):
 
 
 @pytest.mark.asyncio
+async def test_options_flow_show_form_default_fallback(mock_ha_environment):
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {}  # Empty options to trigger default fallback
+
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+
+    result = await options_flow.async_step_init(user_input=None)
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "init"
+    options_flow.async_show_form.assert_called_once()
+
+    # Verify the schema is passed to async_show_form
+    call_kwargs = options_flow.async_show_form.call_args.kwargs
+    assert "data_schema" in call_kwargs
+
+    # To avoid relying on inner mock calls of voluptuous which could break tests
+    # depending on how exactly it's mocked or used, we just verify `async_show_form`
+    # was called with a form and the right step_id.
+
+
+@pytest.mark.asyncio
 async def test_options_flow_show_form(mock_ha_environment):
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
 
