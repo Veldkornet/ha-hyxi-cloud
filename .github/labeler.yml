@@ -10,7 +10,7 @@
   - changed-files:
       - any-glob-to-any-file: "custom_components/hyxi_cloud/*.py"
 
-# 🎨 Style 
+# 🎨 Style
 "style":
   - changed-files:
       - any-glob-to-any-file:
@@ -43,7 +43,7 @@
           - "custom_components/hyxi_cloud/manifest.json"
           - "custom_components/hyxi_cloud/hacs.json"
           - ".gitignore"
-          
+
 # Label for GitHub Actions, Scripts, and Repo Infrastructure
 "ci":
   - changed-files:
@@ -51,7 +51,7 @@
           - ".github/**/*"  # 🚀 Double asterisks catch all subfolders/files
           - "dev_env/**/*"
           - ".vscode/tasks.json"
-          
+
 # 📚 Documentation
 "documentation":
   - changed-files:
