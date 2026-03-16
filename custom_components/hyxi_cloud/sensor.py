@@ -49,6 +49,9 @@ BATTERY_SENSORS = {
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode"}
 HEARTBEAT_SENSORS = {"last_seen"}
 
+BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
+BASE_KEYS_OTHER = HEARTBEAT_SENSORS
+
 SENSOR_TYPES = [
     # Phase Powers
     SensorEntityDescription(
@@ -454,9 +457,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         is_collector_or_dmu = "COLLECTOR" in device_type or "DMU" in device_type
 
-        keys_to_add = set(HEARTBEAT_SENSORS)
         if is_collector_or_dmu:
-            keys_to_add.update(COLLECTOR_SENSORS)
+            keys_to_add = BASE_KEYS_COLLECTOR.copy()
+        else:
+            keys_to_add = BASE_KEYS_OTHER.copy()
 
         for k, v in metrics.items():
             if v is not None and str(v) != "":
