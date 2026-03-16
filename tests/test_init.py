@@ -63,8 +63,8 @@ async_unload_entry = hc_init.async_unload_entry
 async_reload_entry = hc_init.async_reload_entry
 
 # Inject back into the module if they were mocked by mistake during the import process
-hc_init.ConfigEntryAuthFailed = ConfigEntryAuthFailed
-hc_init.ConfigEntryNotReady = ConfigEntryNotReady
+hc_init.ConfigEntryAuthFailed = LocalEntryAuthFailed
+hc_init.ConfigEntryNotReady = LocalEntryNotReady
 
 from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
     DOMAIN,
@@ -178,13 +178,13 @@ async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
-            side_effect=ConfigEntryAuthFailed
+            side_effect=LocalEntryAuthFailed
         )
 
         with patch(
             "custom_components.hyxi_cloud.__init__._LOGGER.error"
         ) as mock_logger:
-            with pytest.raises(ConfigEntryAuthFailed):
+            with pytest.raises(LocalEntryAuthFailed):
                 await async_setup_entry(mock_hass, mock_entry)
 
             mock_logger.assert_called_with("Authentication failed during setup")
@@ -208,7 +208,7 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
         with patch(
             "custom_components.hyxi_cloud.__init__._LOGGER.warning"
         ) as mock_logger:
-            with pytest.raises(ConfigEntryNotReady) as exc:
+            with pytest.raises(LocalEntryNotReady) as exc:
                 await async_setup_entry(mock_hass, mock_entry)
 
             assert "Connection error: Timeout" in str(exc.value)
