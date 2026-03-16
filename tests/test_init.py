@@ -39,8 +39,22 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
     ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
     sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady
 
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
+
+    class LocalUpdateFailed(Exception):
+        pass
+
+    sys.modules[
+        "homeassistant.helpers.update_coordinator"
+    ].UpdateFailed = LocalUpdateFailed
+
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
     sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
+
+if "aiohttp" not in sys.modules:
+    sys.modules["aiohttp"] = MagicMock()
+    sys.modules["aiohttp"].ClientError = type("ClientError", (Exception,), {})
 
 if "hyxi_cloud_api" not in sys.modules:
     sys.modules["hyxi_cloud_api"] = MagicMock()
@@ -58,6 +72,10 @@ class LocalEntryNotReady(Exception):
     """Local fallback for entry not ready."""
 
 
+class LocalUpdateFailed(Exception):
+    """Local fallback for update failed."""
+
+
 async_setup_entry = hc_init.async_setup_entry
 async_unload_entry = hc_init.async_unload_entry
 async_reload_entry = hc_init.async_reload_entry
@@ -65,6 +83,7 @@ async_reload_entry = hc_init.async_reload_entry
 # Inject back into the module if they were mocked by mistake during the import process
 hc_init.ConfigEntryAuthFailed = LocalEntryAuthFailed
 hc_init.ConfigEntryNotReady = LocalEntryNotReady
+hc_init.UpdateFailed = LocalUpdateFailed
 
 from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
     DOMAIN,
@@ -202,7 +221,7 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
-            side_effect=Exception("Timeout")
+            side_effect=LocalUpdateFailed("Timeout")
         )
 
         with patch(
