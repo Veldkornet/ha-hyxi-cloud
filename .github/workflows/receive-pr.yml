@@ -24,7 +24,7 @@ jobs:
           # Save the PR Number and Commit Hash
           echo ${{ github.event.number }} > pr-metadata/pr_number
           echo ${{ github.event.pull_request.head.sha }} > pr-metadata/pr_sha
-          
+
           # Copy the labeler config if it exists
           if [ -f .github/labeler.yml ]; then
             cp .github/labeler.yml pr-metadata/

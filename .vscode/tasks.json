@@ -134,6 +134,21 @@
                 "clear": true,
                 "focus": true
             }
+        },
+        {
+            "label": "Pre-commit: Run All",
+            "type": "shell",
+            "command": "RUFF_CACHE_DIR=/tmp/ruff_cache_ha ./manage.sh lint",
+            "options": {
+                "cwd": "${workspaceFolder}/dev_env"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "focus": true
+            }
         }
     ]
 }
