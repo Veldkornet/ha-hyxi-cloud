@@ -600,3 +600,25 @@ def test_battery_serial_mapping(base_sensor):
     assert sensor._actual_sn == "BAT_REAL_123"
     assert sensor._attr_device_info["identifiers"] == {("hyxi_cloud", "BAT_REAL_123")}
     assert sensor._attr_device_info["name"] == "Battery BAT_REAL_123"
+
+
+def test_log_glitch_once(base_sensor):
+    """Verify that _log_glitch_once logs a glitch value only once."""
+    sensor, _ = base_sensor
+
+    with patch("custom_components.hyxi_cloud.sensor._LOGGER.debug") as mock_debug:
+        # First time with value 123.4
+        sensor._log_glitch_once(123.4, "Test glitch %s", 123.4)
+        mock_debug.assert_called_once_with("Test glitch %s", 123.4)
+        assert sensor._last_logged_glitch == 123.4
+        mock_debug.reset_mock()
+
+        # Second time with same value 123.4 - should NOT log
+        sensor._log_glitch_once(123.4, "Test glitch %s", 123.4)
+        mock_debug.assert_not_called()
+        assert sensor._last_logged_glitch == 123.4
+
+        # Third time with a DIFFERENT value 123.5 - should log again
+        sensor._log_glitch_once(123.5, "Test glitch %s", 123.5)
+        mock_debug.assert_called_once_with("Test glitch %s", 123.5)
+        assert sensor._last_logged_glitch == 123.5
