@@ -3,6 +3,7 @@
 import logging
 from datetime import timedelta
 
+from aiohttp import ClientError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -90,7 +91,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["last_error"] = str(err)
             self.hyxi_metadata["api_status"] = "Error"
             raise
-        except Exception as err:
+        except (ClientError, TimeoutError) as err:
             _LOGGER.error("Unexpected error in HYXI update: %s", err)
             self.hyxi_metadata["last_attempts"] += 1
             self.hyxi_metadata["last_error"] = str(err)

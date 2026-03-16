@@ -96,7 +96,7 @@ async def test_async_update_data_unexpected_error():
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
     mock_client.get_all_device_data = AsyncMock(
-        side_effect=Exception("Test unexpected error")
+        side_effect=TimeoutError("Test unexpected error")
     )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
