@@ -13,7 +13,7 @@ We actively provide security updates for the following versions of HYXI Cloud:
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-If you discover a security vulnerability within this project, please report it privately via **GitHub Private Vulnerability Reporting**. 
+If you discover a security vulnerability within this project, please report it privately via **GitHub Private Vulnerability Reporting**.
 
 1. Go to the [Security tab](https://github.com/Veldkornet/ha-hyxi-cloud/security) of this repository.
 2. Click on **Advisories**.
