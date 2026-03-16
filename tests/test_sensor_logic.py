@@ -614,6 +614,8 @@ def test_hyxi_base_sensor_conversion_errors(base_sensor):
     # Test TypeError (uncastable object)
     assert sensor._process_numeric_value({"a": 1}) == {"a": 1}
     assert sensor._process_numeric_value([1, 2]) == [1, 2]
+
+
 def test_log_glitch_once(base_sensor):
     """Verify that _log_glitch_once logs a glitch value only once."""
     sensor, _ = base_sensor
