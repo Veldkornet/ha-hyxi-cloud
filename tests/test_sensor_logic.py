@@ -91,6 +91,27 @@ def base_sensor():
     return sensor, coordinator
 
 
+def test_mask_sn():
+    """Verify mask_sn correctly hides the middle of serial numbers."""
+    from custom_components.hyxi_cloud.sensor import mask_sn
+
+    # Empty/None handling
+    assert mask_sn(None) == "****"
+    assert mask_sn("") == "****"
+
+    # Short string handling
+    assert mask_sn("1234567") == "****"
+
+    # Exact length of 8
+    assert mask_sn("12345678") == "123XX678"
+
+    # Longer string
+    assert mask_sn("1234567890") == "123XXXX890"
+
+    # Integer values
+    assert mask_sn(12345678) == "123XX678"
+
+
 def test_anti_dip_recovery(base_sensor):
     """Verify the exact scenario in your graph: 2742 -> 2738 -> 2747."""
     sensor, coordinator = base_sensor
