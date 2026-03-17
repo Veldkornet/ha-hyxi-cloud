@@ -8,9 +8,8 @@ on:
   schedule:
     - cron: '30 4 * * 1' # Runs every Monday at 4:30 AM to catch new vulnerabilities
 
-# 🛑 1. Global permissions set to minimum (Read-Only)
 permissions:
-  contents: read
+  contents: none
 
 jobs:
   security-scan:
@@ -26,14 +25,14 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
-          egress-policy: audit
+          egress-policy: block
           allowed-endpoints: >
             api.github.com:443
-            github.com:443
-            pypi.org:443
-            files.pythonhosted.org:443
             api.securityscorecards.dev:443
             api.stepsecurity.io:443
+            files.pythonhosted.org:443
+            github.com:443
+            pypi.org:443
 
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -67,7 +66,10 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
