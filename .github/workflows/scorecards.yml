@@ -46,6 +46,7 @@ jobs:
             api.securityscorecards.dev:443
             github.com:443
             oss-fuzz-build-logs.storage.googleapis.com:443
+            pkg-containers.githubusercontent.com:443
             results-receiver.securityscorecards.dev:443
 
       - name: "Checkout code"
