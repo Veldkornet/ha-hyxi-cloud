@@ -72,6 +72,7 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             files.pythonhosted.org:443
+            ghcr.io:443
             github.com:443
             objects.githubusercontent.com:443
             pypi.org:443
