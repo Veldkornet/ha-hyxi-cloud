@@ -27,6 +27,7 @@ jobs:
         with:
           egress-policy: block
           allowed-endpoints: >
+            api.deps.dev:443
             api.github.com:443
             api.securityscorecards.dev:443
             api.stepsecurity.io:443
@@ -74,6 +75,7 @@ jobs:
         with:
           egress-policy: block
           allowed-endpoints: >
+            api.deps.dev:443
             api.github.com:443
             files.pythonhosted.org:443
             fulcio.sigstore.dev:443
