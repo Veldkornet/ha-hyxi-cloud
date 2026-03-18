@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Connect to HYXI Cloud",
-        "description": "Enter your Open API credentials. You can generate these at the [HYXIPOWER Developer Platform]({link}).",
+        "description": "Enter your **Developer API credentials (AK/SK)**. You can generate these at the [HYXIPOWER Developer Platform]({link}).\n\n**Note:** This requires a separate developer account. If your developer email differs from your app email, you must **Share your Plant** from the app to the developer email first.",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Mit HYXI Cloud verbinden",
-        "description": "Geben Sie Ihre Open API-Zugangsdaten ein. Sie können diese auf der [HYXIPOWER Developer Platform]({link}) generieren.",
+        "description": "Geben Sie Ihre **Entwickler-API-Zugangsdaten (AK/SK)** ein. Sie können diese auf der [HYXIPOWER Developer Platform]({link}) generieren.\n\n**Hinweis:** Dies erfordert ein separates Entwicklerkonto. Wenn sich Ihre Entwickler-E-Mail von Ihrer App-E-Mail unterscheidet, müssen Sie Ihre Anlage zuerst über die App für die Entwickler-E-Mail **freigeben**.",
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)"
