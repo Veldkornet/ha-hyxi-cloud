@@ -35,6 +35,7 @@ jobs:
             ghcr.io:443
             github.com:443
             pkg-containers.githubusercontent.com:443
+            raw.githubusercontent.com:443
             rekor.sigstore.dev:443
             tuf-repo-cdn.sigstore.dev:443
 
