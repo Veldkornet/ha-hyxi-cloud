@@ -46,6 +46,47 @@ BATTERY_SENSORS = {
     "batV",
     "batI",
 }
+
+
+# Helper to map device codes to translation keys for HA sensor states
+DEVICE_TYPE_KEYS = {
+    "1": "hybrid_inverter",
+    "2": "grid_connected_inverter",
+    "3": "collector",
+    "15": "micro_ess",
+    "16": "micro_ess",
+    "106": "hybrid_inverter",
+    "607": "collector",
+}
+
+
+def normalize_device_type(code: str) -> str:
+    """Normalize a device type code/string to a translation key.
+
+    Ensures that values match the keys in strings.json (lowercase, no spaces).
+    """
+    if not code:
+        return "unknown"
+
+    code_str = str(code).upper()
+
+    # 1. Check numeric/direct mapping
+    if code_str in DEVICE_TYPE_KEYS:
+        return DEVICE_TYPE_KEYS[code_str]
+
+    # 2. String mapping (if API returned a name instead of code)
+    if "COLLECTOR" in code_str or "DMU" in code_str:
+        return "collector"
+    if "INVERTER" in code_str:
+        if "GRID" in code_str:
+            return "grid_connected_inverter"
+        return "hybrid_inverter"
+    if "ESS" in code_str or "HALO" in code_str:
+        return "micro_ess"
+
+    return "unknown"
+
+
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode"}
 HEARTBEAT_SENSORS = {"last_seen"}
 
@@ -518,17 +559,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
-        device_type = str(dev_data.get("device_type_code", "")).upper()
+        device_type = normalize_device_type(dev_data.get("device_type_code", ""))
         metrics = dev_data.get("metrics", {})
 
         _LOGGER.debug(
-            "HYXI Processing Device %s (Type: %s). Metrics keys: %s",
+            "HYXI Processing Device %s (Normalized Type: %s). Metrics keys: %s",
             mask_sn(sn),
             device_type,
             list(metrics.keys()),
         )
 
-        is_collector_or_dmu = "COLLECTOR" in device_type or "DMU" in device_type
+        is_collector_or_dmu = device_type == "collector"
 
         if is_collector_or_dmu:
             keys_to_add = BASE_KEYS_COLLECTOR.copy()
