@@ -512,6 +512,7 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="device_type",
+        translation_key="device_type",
         icon="mdi:information-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),

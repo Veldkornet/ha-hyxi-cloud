@@ -58,8 +58,10 @@ if "aiohttp" not in sys.modules:
     sys.modules["aiohttp"] = MagicMock()
     sys.modules["aiohttp"].ClientError = type("ClientError", (Exception,), {})
 
-if "hyxi_cloud_api" not in sys.modules:
-    sys.modules["hyxi_cloud_api"] = MagicMock()
+mock_api = MagicMock()
+mock_api.__name__ = "hyxi_cloud_api"
+mock_api.__version__ = "1.0.4"
+sys.modules["hyxi_cloud_api"] = mock_api
 
 # Now we can safely import our component code
 import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position # noqa: E402
