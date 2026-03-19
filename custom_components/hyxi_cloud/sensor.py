@@ -60,19 +60,26 @@ DEVICE_TYPE_KEYS = {
 }
 
 
-def normalize_device_type(code: str) -> str:
+def normalize_device_type(code: str | int | float) -> str:
     """Normalize a device type code/string to a translation key.
 
     Ensures that values match the keys in strings.json (lowercase, no spaces).
     """
-    if not code:
+    if code is None or code == "":
         return "unknown"
 
-    code_str = str(code).upper()
+    code_str = str(code).upper().strip()
 
-    # 1. Check numeric/direct mapping
-    if code_str in DEVICE_TYPE_KEYS:
-        return DEVICE_TYPE_KEYS[code_str]
+    # 1. Check numeric/direct mapping (handle float strings like "15.0")
+    lookup_key = code_str
+    if "." in code_str:
+        try:
+            lookup_key = str(int(float(code_str)))
+        except (ValueError, TypeError):
+            pass
+
+    if lookup_key in DEVICE_TYPE_KEYS:
+        return DEVICE_TYPE_KEYS[lookup_key]
 
     # 2. String mapping (if API returned a name instead of code)
     if "COLLECTOR" in code_str or "DMU" in code_str:
