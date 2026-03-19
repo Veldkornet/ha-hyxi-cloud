@@ -211,11 +211,11 @@
       "device_type": {
         "name": "Device Type",
         "state": {
-          "HYBRID INVERTER": "Hybrid Inverter",
-          "GRID-CONNECTED INVERTER": "Grid-Connected Inverter",
-          "COLLECTOR": "Datalogger",
-          "MICRO ESS": "Micro ESS",
-          "UNKNOWN": "Unknown"
+          "hybrid_inverter": "Hybrid Inverter",
+          "grid_connected_inverter": "Grid-Connected Inverter",
+          "collector": "Datalogger",
+          "micro_ess": "Micro ESS",
+          "unknown": "Unknown"
         }
       },
       "ratedpower": {

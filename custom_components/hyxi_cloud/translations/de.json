@@ -211,11 +211,11 @@
       "device_type": {
         "name": "Gerätetyp",
         "state": {
-          "HYBRID INVERTER": "Hybrid-Wechselrichter",
-          "GRID-CONNECTED INVERTER": "Netzgekoppelter Wechselrichter",
-          "COLLECTOR": "Datalogger",
-          "MICRO ESS": "Micro-Energiespeichersystem (Micro ESS)",
-          "UNKNOWN": "Unbekannt"
+          "hybrid_inverter": "Hybrid-Wechselrichter",
+          "grid_connected_inverter": "Netzgekoppelter Wechselrichter",
+          "collector": "Datalogger",
+          "micro_ess": "Micro-Energiespeichersystem (Micro ESS)",
+          "unknown": "Unbekannt"
         }
       },
       "ratedpower": {

@@ -211,11 +211,11 @@
       "device_type": {
         "name": "Apparaattype",
         "state": {
-          "HYBRID INVERTER": "Hybride omvormer",
-          "GRID-CONNECTED INVERTER": "Netgekoppelde omvormer",
-          "COLLECTOR": "Datalogger",
-          "MICRO ESS": "Micro-energieopslagsysteem (Micro ESS)",
-          "UNKNOWN": "Onbekend"
+          "hybrid_inverter": "Hybride omvormer",
+          "grid_connected_inverter": "Netgekoppelde omvormer",
+          "collector": "Datalogger",
+          "micro_ess": "Micro-energieopslagsysteem (Micro ESS)",
+          "unknown": "Onbekend"
         }
       },
       "ratedpower": {

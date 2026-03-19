@@ -211,11 +211,11 @@
       "device_type": {
         "name": "Type d'appareil",
         "state": {
-          "HYBRID INVERTER": "Onduleur hybride",
-          "GRID-CONNECTED INVERTER": "Onduleur connecté au réseau",
-          "COLLECTOR": "Collecteur de données",
-          "MICRO ESS": "Système de stockage d'énergie micro (Micro ESS)",
-          "UNKNOWN": "Inconnu"
+          "hybrid_inverter": "Onduleur hybride",
+          "grid_connected_inverter": "Onduleur connecté au réseau",
+          "collector": "Collecteur de données",
+          "micro_ess": "Système de stockage d'énergie micro (Micro ESS)",
+          "unknown": "Inconnu"
         }
       },
       "ratedpower": {
