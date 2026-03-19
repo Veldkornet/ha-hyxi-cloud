@@ -599,8 +599,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             keys_to_add = BASE_KEYS_OTHER.copy()
 
         # Add static device type sensor
-        if device_type:
-            metrics["device_type"] = device_type
+        keys_to_add.add("device_type")
 
         for k, v in metrics.items():
             if v is not None and str(v) != "":
@@ -772,7 +771,19 @@ class HyxiSensor(HyxiBaseSensor):
     @property
     def native_value(self):
         """Returns the sensor value with correct data typing and anti-dip protection."""
-        metrics = self.coordinator.data.get(self._sn, {}).get("metrics", {})
+        dev_data = self.coordinator.data.get(self._sn, {})
+        metrics = dev_data.get("metrics", {})
+
+        # 🚀 SPECIAL CASE: Device Type is derived from persistent metadata, not metrics.
+        if self.entity_description.key == "device_type":
+            raw_code = (
+                dev_data.get("device_type_code")
+                or dev_data.get("deviceType")
+                or dev_data.get("devType")
+                or ""
+            )
+            return normalize_device_type(raw_code)
+
         value = metrics.get(self.entity_description.key)
 
         if value is None or value == "":
