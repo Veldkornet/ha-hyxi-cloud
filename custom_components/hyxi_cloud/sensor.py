@@ -82,6 +82,7 @@ def normalize_device_type(code: str | int | float) -> str:
         try:
             lookup_key = str(int(float(code_str)))
         except (ValueError, TypeError):
+            # If float conversion fails (e.g. string labels), just use original code_str
             pass
 
     if lookup_key in DEVICE_TYPE_KEYS:
