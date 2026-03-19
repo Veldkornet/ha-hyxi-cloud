@@ -423,7 +423,7 @@ SENSOR_TYPES = [
     SensorEntityDescription(
         key="packNum",
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-multiple",
+        icon="mdi:layers-triple",
     ),
     SensorEntityDescription(
         key="batCap",
