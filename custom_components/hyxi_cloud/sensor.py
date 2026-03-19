@@ -57,6 +57,12 @@ DEVICE_TYPE_KEYS = {
     "16": "micro_ess",
     "106": "hybrid_inverter",
     "607": "collector",
+    "HYBRID_INVERTER": "hybrid_inverter",
+    "STRING_INVERTER": "grid_connected_inverter",
+    "MICRO_INVERTER": "grid_connected_inverter",
+    "EMS": "micro_ess",
+    "DMU": "collector",
+    "COLLECTOR": "collector",
 }
 
 
@@ -567,7 +573,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
-        device_type = normalize_device_type(dev_data.get("device_type_code", ""))
+        # Check all possible API keys for device type
+        raw_code = (
+            dev_data.get("device_type_code")
+            or dev_data.get("deviceType")
+            or dev_data.get("devType")
+            or ""
+        )
+        device_type = normalize_device_type(raw_code)
         metrics = dev_data.get("metrics", {})
 
         _LOGGER.debug(
