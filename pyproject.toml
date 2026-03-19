@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ha-hyxi-cloud"
-version = "1.3.5"
+version = "1.3.6"
 description = "HYXI ⚡️🔋☀️ Integration for HomeAssistant using HYXI Cloud ☁️"
 readme = "README.md"
 authors = [
@@ -13,7 +13,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.13.3",
-    "hyxi-cloud-api==1.0.0"
+    "hyxi-cloud-api==1.0.3"
 ]
 
 [project.optional-dependencies]
@@ -73,7 +73,7 @@ disable = [
     "try-except-raise",           # W0706: Expected in intentional pass-throughs
     "redefined-outer-name",       # W0621: Standard for pytest fixtures
     "import-outside-toplevel",    # C0415: Standard for HA test module reload
-    "protected-access",           # W0212: Necessary for testing internal state
+    "protected-access",     # W0212: Necessary for testing internal state
     "reimported",                 # W0404: Expected with importlib.reload hacks
     "duplicate-code",             # R0801: Common setup across test files
     "unused-argument",            # W0613: Standard for unused test fixtures
