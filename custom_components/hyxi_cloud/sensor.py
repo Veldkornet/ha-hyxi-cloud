@@ -57,22 +57,36 @@ DEVICE_TYPE_KEYS = {
     "16": "micro_ess",
     "106": "hybrid_inverter",
     "607": "collector",
+    "HYBRID_INVERTER": "hybrid_inverter",
+    "STRING_INVERTER": "grid_connected_inverter",
+    "MICRO_INVERTER": "grid_connected_inverter",
+    "EMS": "micro_ess",
+    "DMU": "collector",
+    "COLLECTOR": "collector",
 }
 
 
-def normalize_device_type(code: str) -> str:
+def normalize_device_type(code: str | int | float) -> str:
     """Normalize a device type code/string to a translation key.
 
     Ensures that values match the keys in strings.json (lowercase, no spaces).
     """
-    if not code:
+    if code is None or code == "":
         return "unknown"
 
-    code_str = str(code).upper()
+    code_str = str(code).upper().strip()
 
-    # 1. Check numeric/direct mapping
-    if code_str in DEVICE_TYPE_KEYS:
-        return DEVICE_TYPE_KEYS[code_str]
+    # 1. Check numeric/direct mapping (handle float strings like "15.0")
+    lookup_key = code_str
+    if "." in code_str:
+        try:
+            lookup_key = str(int(float(code_str)))
+        except (ValueError, TypeError):
+            # If float conversion fails (e.g. string labels), just use original code_str
+            pass
+
+    if lookup_key in DEVICE_TYPE_KEYS:
+        return DEVICE_TYPE_KEYS[lookup_key]
 
     # 2. String mapping (if API returned a name instead of code)
     if "COLLECTOR" in code_str or "DMU" in code_str:
@@ -560,7 +574,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
-        device_type = normalize_device_type(dev_data.get("device_type_code", ""))
+        # Check all possible API keys for device type
+        raw_code = (
+            dev_data.get("device_type_code")
+            or dev_data.get("deviceType")
+            or dev_data.get("devType")
+            or ""
+        )
+        device_type = normalize_device_type(raw_code)
         metrics = dev_data.get("metrics", {})
 
         _LOGGER.debug(
