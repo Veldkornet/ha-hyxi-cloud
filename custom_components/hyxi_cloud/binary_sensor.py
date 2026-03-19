@@ -11,7 +11,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
-ACTIVE_ALARM_STATES = {"0", "1", 0, 1}
+ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
 
 async def async_setup_entry(
@@ -141,7 +141,10 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         self._alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
 
         self._active_alarms_count = sum(
-            1 for a in self._alarms if a.get("alarmState") in ACTIVE_ALARM_STATES
+            1
+            for a in self._alarms
+            if a.get("alarmState") in ACTIVE_ALARM_STATES
+            or a.get("alarmstate") in ACTIVE_ALARM_STATES
         )
 
     @property
