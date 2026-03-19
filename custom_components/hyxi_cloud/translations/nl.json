@@ -45,7 +45,11 @@
         "name": "Cloud Status"
       },
       "device_alarm": {
-        "name": "Actieve Problemen"
+        "name": "Actieve Problemen",
+        "state": {
+          "off": "Geen",
+          "on": "Probleem"
+        }
       }
     },
     "sensor": {

@@ -12,12 +12,14 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from hyxi_cloud_api import HyxiApiClient
+from hyxi_cloud_api import __version__ as API_VERSION
 
 from .const import BASE_URL
 from .const import CONF_ACCESS_KEY
 from .const import CONF_SECRET_KEY
 from .const import DOMAIN
 from .const import PLATFORMS
+from .const import VERSION
 from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +27,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HYXI Cloud from a config entry."""
+    _LOGGER.debug(
+        "Starting HYXI Cloud Integration (Integration: %s, API: %s)",
+        VERSION,
+        API_VERSION,
+    )
 
     access_key = entry.data.get(CONF_ACCESS_KEY)
     secret_key = entry.data.get(CONF_SECRET_KEY)

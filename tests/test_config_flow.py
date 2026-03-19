@@ -62,7 +62,10 @@ def mock_ha_environment():
     sys.modules["homeassistant.helpers.restore_state"] = mock_ha
     sys.modules["homeassistant.helpers.device_registry"] = mock_ha
     sys.modules["homeassistant.helpers.entity"] = mock_ha
-    sys.modules["hyxi_cloud_api"] = mock_ha
+    mock_api = MagicMock()
+    mock_api.__name__ = "hyxi_cloud_api"
+    mock_api.__version__ = "1.0.4"
+    sys.modules["hyxi_cloud_api"] = mock_api
     sys.modules["voluptuous"] = mock_ha
 
     mock_aiohttp = MagicMock()
