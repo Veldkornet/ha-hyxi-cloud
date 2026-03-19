@@ -58,6 +58,30 @@
       "ppv": {
         "name": "Solar Power"
       },
+      "duisoc": {
+        "name": "Battery SOC"
+      },
+      "cuvolt": {
+        "name": "Battery Voltage"
+      },
+      "cucurr": {
+        "name": "Battery Current"
+      },
+      "cupower": {
+        "name": "Battery Power (EMS)"
+      },
+      "cusoh": {
+        "name": "Battery SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Battery Pack Temp"
+      },
+      "duichargetoday": {
+        "name": "Daily Charge"
+      },
+      "duiunchargetoday": {
+        "name": "Daily Discharge"
+      },
       "home_load": {
         "name": "Home Load"
       },
@@ -99,6 +123,9 @@
       },
       "batcap": {
         "name": "Battery Capacity"
+      },
+      "packnum": {
+        "name": "Battery Pack Count"
       },
       "maxchargepower": {
         "name": "Max Charge Limit"
@@ -179,6 +206,16 @@
           "2": "Offline",
           "3": "Alarm",
           "10": "Not Activated"
+        }
+      },
+      "device_type": {
+        "name": "Device Type",
+        "state": {
+          "HYBRID INVERTER": "Hybrid Inverter",
+          "GRID-CONNECTED INVERTER": "Grid-Connected Inverter",
+          "COLLECTOR": "Datalogger",
+          "MICRO ESS": "Micro ESS",
+          "UNKNOWN": "Unknown"
         }
       },
       "ratedpower": {

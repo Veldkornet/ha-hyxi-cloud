@@ -58,6 +58,30 @@
       "ppv": {
         "name": "Zonne-energie"
       },
+      "duisoc": {
+        "name": "Batterij SOC"
+      },
+      "cuvolt": {
+        "name": "Batterijspanning"
+      },
+      "cucurr": {
+        "name": "Batterijstroom"
+      },
+      "cupower": {
+        "name": "Batterijvermogen (EMS)"
+      },
+      "cusoh": {
+        "name": "Batterij SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Gemiddelde Batterijtemperatuur"
+      },
+      "duichargetoday": {
+        "name": "Dagelijks Laden"
+      },
+      "duiunchargetoday": {
+        "name": "Dagelijks Ontladen"
+      },
       "home_load": {
         "name": "Huisverbruik"
       },
@@ -99,6 +123,9 @@
       },
       "batcap": {
         "name": "Batterijcapaciteit"
+      },
+      "packnum": {
+        "name": "Aantal batterijmodules"
       },
       "maxchargepower": {
         "name": "Max Laadlimiet"
@@ -179,6 +206,16 @@
           "2": "Offline",
           "3": "Alarm",
           "10": "Niet geactiveerd"
+        }
+      },
+      "device_type": {
+        "name": "Apparaattype",
+        "state": {
+          "HYBRID INVERTER": "Hybride omvormer",
+          "GRID-CONNECTED INVERTER": "Netgekoppelde omvormer",
+          "COLLECTOR": "Datalogger",
+          "MICRO ESS": "Micro-energieopslagsysteem (Micro ESS)",
+          "UNKNOWN": "Onbekend"
         }
       },
       "ratedpower": {

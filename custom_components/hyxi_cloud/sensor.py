@@ -183,6 +183,27 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:lan-connect",
     ),
+    SensorEntityDescription(
+        key="maxChargePower",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-arrow-up",
+    ),
+    SensorEntityDescription(
+        key="maxDischargePower",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-arrow-down",
+    ),
+    SensorEntityDescription(
+        key="batCap",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY_STORAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery",
+    ),
     # Phase 1 New Metrics
     SensorEntityDescription(
         key="ph1v",
@@ -226,6 +247,62 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
+    ),
+    # EMS / ESS Specific Metrics
+    SensorEntityDescription(
+        key="duisoc",
+        native_unit_of_measurement="%",
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-high",
+    ),
+    SensorEntityDescription(
+        key="cuvolt",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="cucurr",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:current-ac",
+    ),
+    SensorEntityDescription(
+        key="cupower",
+        native_unit_of_measurement="kW",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-charging",
+    ),
+    SensorEntityDescription(
+        key="cusoh",
+        native_unit_of_measurement="%",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-heart-variant",
+    ),
+    SensorEntityDescription(
+        key="cuavgcelltemp",
+        native_unit_of_measurement="°C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:thermometer",
+    ),
+    SensorEntityDescription(
+        key="duichargetoday",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:battery-plus",
+    ),
+    SensorEntityDescription(
+        key="duiunchargetoday",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:battery-minus",
     ),
     # Phase 3 New Metrics
     SensorEntityDescription(
@@ -343,6 +420,18 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    SensorEntityDescription(
+        key="packNum",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-multiple",
+    ),
+    SensorEntityDescription(
+        key="batCap",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY_STORAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-check",
+    ),
     # Data Integrity
     SensorEntityDescription(
         key="collectTime",
@@ -355,27 +444,6 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:cloud-check-outline",
-    ),
-    # New Device Info Sensors
-    SensorEntityDescription(
-        key="batCap",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY_STORAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-high",
-    ),
-    SensorEntityDescription(
-        key="maxChargePower",
-        native_unit_of_measurement="W",
-        device_class=SensorDeviceClass.POWER,
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
-    SensorEntityDescription(
-        key="maxDischargePower",
-        native_unit_of_measurement="W",
-        device_class=SensorDeviceClass.POWER,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="signalIntensity",
@@ -399,6 +467,11 @@ SENSOR_TYPES = [
     SensorEntityDescription(
         key="comMode",
         icon="mdi:lan",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    SensorEntityDescription(
+        key="device_type",
+        icon="mdi:information-outline",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
@@ -461,6 +534,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
             keys_to_add = BASE_KEYS_COLLECTOR.copy()
         else:
             keys_to_add = BASE_KEYS_OTHER.copy()
+
+        # Add static device type sensor
+        if device_type:
+            metrics["device_type"] = device_type
 
         for k, v in metrics.items():
             if v is not None and str(v) != "":
@@ -617,7 +694,7 @@ class HyxiSensor(HyxiBaseSensor):
             self._actual_sn = sn
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, sn)},
-                "name": dev_data.get("device_name", f"Device {sn}"),
+                "name": dev_data.get("device_name") or f"Device {sn}",
                 "manufacturer": "HYXI Power",
                 "model": dev_data.get("model"),
                 "sw_version": dev_data.get("sw_version"),
