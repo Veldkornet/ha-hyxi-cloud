@@ -58,6 +58,30 @@
       "ppv": {
         "name": "Solarleistung"
       },
+      "duisoc": {
+        "name": "Batterie SOC"
+      },
+      "cuvolt": {
+        "name": "Batteriespannung"
+      },
+      "cucurr": {
+        "name": "Batteriestrom"
+      },
+      "cupower": {
+        "name": "Batterieleistung (EMS)"
+      },
+      "cusoh": {
+        "name": "Batterie SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Batterie Temperatur"
+      },
+      "duichargetoday": {
+        "name": "Täglich Laden"
+      },
+      "duiunchargetoday": {
+        "name": "Täglich Entladen"
+      },
       "home_load": {
         "name": "Hausverbrauch"
       },
@@ -99,6 +123,9 @@
       },
       "batcap": {
         "name": "Batteriekapazität"
+      },
+      "packnum": {
+        "name": "Anzahl der Batteriepacks"
       },
       "maxchargepower": {
         "name": "Max. Ladelimit"
@@ -179,6 +206,16 @@
           "2": "Offline",
           "3": "Alarm",
           "10": "Nicht aktiviert"
+        }
+      },
+      "device_type": {
+        "name": "Gerätetyp",
+        "state": {
+          "hybrid_inverter": "Hybrid-Wechselrichter",
+          "grid_connected_inverter": "Netzgekoppelter Wechselrichter",
+          "collector": "Datalogger",
+          "micro_ess": "Micro-Energiespeichersystem (Micro ESS)",
+          "unknown": "Unbekannt"
         }
       },
       "ratedpower": {

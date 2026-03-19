@@ -58,6 +58,30 @@
       "ppv": {
         "name": "Puissance solaire"
       },
+      "duisoc": {
+        "name": "Batterie SOC"
+      },
+      "cuvolt": {
+        "name": "Tension batterie"
+      },
+      "cucurr": {
+        "name": "Courant batterie"
+      },
+      "cupower": {
+        "name": "Puissance batterie (EMS)"
+      },
+      "cusoh": {
+        "name": "Batterie SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Température moyenne batterie"
+      },
+      "duichargetoday": {
+        "name": "Charge quotidienne"
+      },
+      "duiunchargetoday": {
+        "name": "Décharge quotidienne"
+      },
       "home_load": {
         "name": "Consommation du foyer"
       },
@@ -99,6 +123,9 @@
       },
       "batcap": {
         "name": "Capacité de la batterie"
+      },
+      "packnum": {
+        "name": "Nombre de packs de batteries"
       },
       "maxchargepower": {
         "name": "Limite de charge max"
@@ -179,6 +206,16 @@
           "2": "Hors ligne",
           "3": "Alarme",
           "10": "Non activé"
+        }
+      },
+      "device_type": {
+        "name": "Type d'appareil",
+        "state": {
+          "hybrid_inverter": "Onduleur hybride",
+          "grid_connected_inverter": "Onduleur connecté au réseau",
+          "collector": "Collecteur de données",
+          "micro_ess": "Système de stockage d'énergie micro (Micro ESS)",
+          "unknown": "Inconnu"
         }
       },
       "ratedpower": {
