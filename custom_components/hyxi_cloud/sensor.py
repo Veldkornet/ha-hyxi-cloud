@@ -252,13 +252,7 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-arrow-down",
     ),
-    SensorEntityDescription(
-        key="batCap",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY_STORAGE,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery",
-    ),
+
     # Phase 1 New Metrics
     SensorEntityDescription(
         key="ph1v",
@@ -484,6 +478,7 @@ SENSOR_TYPES = [
         key="batCap",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY_STORAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-check",
     ),
