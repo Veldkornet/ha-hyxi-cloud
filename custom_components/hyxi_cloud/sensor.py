@@ -253,14 +253,6 @@ SENSOR_TYPES = [
         icon="mdi:battery-arrow-down",
     ),
     SensorEntityDescription(
-        key="batCap",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY_STORAGE,
-        entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery",
-    ),
-    # Phase 1 New Metrics
-    SensorEntityDescription(
         key="ph1v",
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
@@ -281,7 +273,6 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
     ),
-    # Phase 2 New Metrics
     SensorEntityDescription(
         key="ph2v",
         native_unit_of_measurement="V",
@@ -303,7 +294,6 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
     ),
-    # EMS / ESS Specific Metrics
     SensorEntityDescription(
         key="duisoc",
         native_unit_of_measurement="%",
@@ -359,7 +349,6 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus",
     ),
-    # Phase 3 New Metrics
     SensorEntityDescription(
         key="ph3v",
         native_unit_of_measurement="V",
@@ -381,7 +370,6 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
     ),
-    # Power Sensors
     SensorEntityDescription(
         key="batSoc",
         native_unit_of_measurement="%",
@@ -438,7 +426,6 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-arrow-down",
     ),
-    # Energy Sensors
     SensorEntityDescription(
         key="totalE",
         native_unit_of_measurement="kWh",
@@ -460,7 +447,6 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus-variant",
     ),
-    # Diagnostics
     SensorEntityDescription(
         key="batSoh",
         native_unit_of_measurement="%",
@@ -484,10 +470,10 @@ SENSOR_TYPES = [
         key="batCap",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY_STORAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-check",
     ),
-    # Data Integrity
     SensorEntityDescription(
         key="collectTime",
         device_class=SensorDeviceClass.TIMESTAMP,
