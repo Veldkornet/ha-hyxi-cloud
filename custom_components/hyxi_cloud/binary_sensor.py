@@ -10,6 +10,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .const import MANUFACTURER
 
 ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
@@ -44,7 +45,7 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "HYXI Cloud Service",
-            "manufacturer": "HYXIPower",
+            "manufacturer": MANUFACTURER,
             "configuration_url": "https://www.hyxicloud.com",
         }
 
@@ -124,7 +125,7 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": device_data.get("device_name", f"HYXI {sn}"),
-            "manufacturer": "HYXIPower",
+            "manufacturer": MANUFACTURER,
             "model": device_data.get("model", "Unknown"),
             "sw_version": device_data.get("sw_version"),
             "hw_version": device_data.get("hw_version"),

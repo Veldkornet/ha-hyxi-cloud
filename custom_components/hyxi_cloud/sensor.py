@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .const import MANUFACTURER
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -733,7 +734,7 @@ class HyxiSensor(HyxiBaseSensor):
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, bat_sn)},
                 "name": f"Battery {bat_sn}",
-                "manufacturer": "HYXI Power",
+                "manufacturer": MANUFACTURER,
                 "model": "Energy Storage System",
                 "serial_number": bat_sn,
                 "via_device": (DOMAIN, sn),
@@ -743,7 +744,7 @@ class HyxiSensor(HyxiBaseSensor):
             self._attr_device_info = {
                 "identifiers": {(DOMAIN, sn)},
                 "name": dev_data.get("device_name") or f"Device {sn}",
-                "manufacturer": "HYXI Power",
+                "manufacturer": MANUFACTURER,
                 "model": dev_data.get("model"),
                 "sw_version": dev_data.get("sw_version"),
                 "hw_version": dev_data.get("hw_version"),
@@ -817,7 +818,7 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "HYXI Cloud Service",
-            "manufacturer": "HYXI Power",
+            "manufacturer": MANUFACTURER,
             "model": "Cloud API Bridge",
         }
 
