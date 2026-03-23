@@ -642,3 +642,36 @@ def test_log_glitch_once(base_sensor):
         sensor._log_glitch_once(123.5, "Test glitch %s", 123.5)
         mock_debug.assert_called_once_with("Test glitch %s", 123.5)
         assert sensor._last_logged_glitch == 123.5
+
+
+@pytest.mark.asyncio
+async def test_base_sensor_added_to_hass_invalid_restoration():
+    """Verify that HyxiBaseSensor handles TypeError and fallback to entity_id."""
+    coordinator = MagicMock()
+    sensor = sensor_mod.HyxiBaseSensor(coordinator)
+
+    # Manually configure the sensor attributes
+    description = MagicMock()
+    description.key = "totalE"
+    description.state_class = "total_increasing"
+    sensor.entity_description = description
+    sensor.entity_id = "sensor.hyxi_test_sensor"
+    sensor.hass = MagicMock()
+
+    # Mock last state with an uncastable object to trigger TypeError
+    last_state = MagicMock()
+    last_state.state = [1]
+    sensor.async_get_last_state = AsyncMock(return_value=last_state)
+
+    with patch("custom_components.hyxi_cloud.sensor._LOGGER.debug") as mock_debug:
+        await sensor.async_added_to_hass()
+
+        # Verify that _last_valid_value is None
+        assert sensor._last_valid_value is None
+
+        # Verify the debug message used entity_id
+        mock_debug.assert_called_once_with(
+            "HYXI Restore: Could not parse restored state '%s' for %s",
+            [1],
+            "sensor.hyxi_test_sensor",
+        )
