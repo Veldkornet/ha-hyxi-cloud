@@ -134,6 +134,26 @@ def test_anti_dip_recovery(base_sensor):
     assert sensor.native_value == 2747.0
 
 
+def test_anti_spike_prevention(base_sensor):
+    """Verify that jumps greater than 100.0 are blocked."""
+    sensor, coordinator = base_sensor
+
+    # Baseline
+    assert sensor.native_value == 2742.0
+
+    # 📈 Valid jump <= 100.0 (allowed)
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2842.0
+    assert sensor.native_value == 2842.0
+
+    # 🚀 Invalid spike > 100.0 (blocked, returns last valid value)
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2943.0
+    assert sensor.native_value == 2842.0
+
+    # 📉 Small increase after spike (allowed)
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2850.0
+    assert sensor.native_value == 2850.0
+
+
 def test_null_data_handling(base_sensor):
     """Ensure the sensor returns None instead of crashing on empty API data."""
     sensor, coordinator = base_sensor
