@@ -775,7 +775,7 @@ class HyxiSensor(HyxiBaseSensor):
         if value is None or value == "":
             return None
 
-        if self.entity_description.key.lower() in INT_SENSOR_KEYS:
+        if self._attr_translation_key in INT_SENSOR_KEYS:
             try:
                 return int(round(float(value), 0))
             except (
