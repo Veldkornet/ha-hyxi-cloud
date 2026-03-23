@@ -642,3 +642,14 @@ def test_log_glitch_once(base_sensor):
         sensor._log_glitch_once(123.5, "Test glitch %s", 123.5)
         mock_debug.assert_called_once_with("Test glitch %s", 123.5)
         assert sensor._last_logged_glitch == 123.5
+
+
+def test_normalize_device_type_invalid_float():
+    """Verify that normalize_device_type gracefully handles float conversion errors."""
+    from custom_components.hyxi_cloud.sensor import normalize_device_type
+
+    # Test error path where float conversion fails
+    assert normalize_device_type("invalid.string") == "unknown"
+
+    # Test valid float string path
+    assert normalize_device_type("1.0") == "hybrid_inverter"
