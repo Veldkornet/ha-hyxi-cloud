@@ -75,6 +75,7 @@ sys.modules["homeassistant.helpers.restore_state"] = mock_restore
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
+sys.modules["aiohttp"] = MagicMock()
 
 # Standardize import style to resolve code scanning alert no. 50
 import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
@@ -177,6 +178,10 @@ def test_collecttime_error_handling(base_sensor):
     # Test extreme value causing OverflowError/OSError in datetime.fromtimestamp
     # A huge number that passes the 10-digit check but is still too large for datetime
     coordinator.data["SN123"]["metrics"]["collectTime"] = 1000000000000000000
+    assert sensor.native_value is None
+
+    # Test extreme overflow value (triggering OverflowError on many platforms)
+    coordinator.data["SN123"]["metrics"]["collectTime"] = 10**25
     assert sensor.native_value is None
 
     # Test OSError explicitly by patching datetime since OverflowError is now ValueError in Python 3.12+

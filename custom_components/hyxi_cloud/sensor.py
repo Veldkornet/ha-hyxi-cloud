@@ -794,6 +794,7 @@ class HyxiSensor(HyxiBaseSensor):
                 ValueError,
                 TypeError,
                 OSError,
+                OverflowError,
             ):
                 return None
 
