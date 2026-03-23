@@ -394,6 +394,23 @@ def test_sensor_int_conversion_error(base_sensor):
         assert sensor.native_value is None
 
 
+def test_sensor_int_conversion_non_numeric_string(base_sensor):
+    """Test ValueError and TypeError handling specifically for INT_SENSOR_KEYS."""
+    sensor, coordinator = base_sensor
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "100"
+
+    # We choose one key from INT_SENSOR_KEYS
+    sensor.entity_description.key = "batSoc"
+
+    # String that raises ValueError on float() conversion
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "non_numeric_string"
+    assert sensor.native_value is None
+
+    # Object that raises TypeError on float() conversion
+    coordinator.data["SN123"]["metrics"]["batSoc"] = {"unexpected": "object"}
+    assert sensor.native_value is None
+
+
 def test_float_conversion_error(base_sensor):
     """Verify that a non-numeric string gracefully falls back."""
     sensor, coordinator = base_sensor
