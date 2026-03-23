@@ -140,11 +140,12 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         """Process alarm states once per update."""
         self._alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
 
+        active_states = ACTIVE_ALARM_STATES
         self._active_alarms_count = sum(
             1
             for a in self._alarms
-            if a.get("alarmState") in ACTIVE_ALARM_STATES
-            or a.get("alarmstate") in ACTIVE_ALARM_STATES
+            if a.get("alarmState") in active_states
+            or a.get("alarmstate") in active_states
         )
 
     @property
