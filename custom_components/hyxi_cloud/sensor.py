@@ -549,6 +549,16 @@ SENSOR_TYPES = [
 SENSOR_TYPES_BY_KEY = {desc.key: desc for desc in SENSOR_TYPES}
 
 
+def _get_raw_device_code(dev_data: dict) -> str:
+    """Extract the raw device type code from device data payload."""
+    return (
+        dev_data.get("device_type_code")
+        or dev_data.get("deviceType")
+        or dev_data.get("devType")
+        or ""
+    )
+
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HYXI sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -561,12 +571,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
         # Check all possible API keys for device type
-        raw_code = (
-            dev_data.get("device_type_code")
-            or dev_data.get("deviceType")
-            or dev_data.get("devType")
-            or ""
-        )
+        raw_code = _get_raw_device_code(dev_data)
         device_type = normalize_device_type(raw_code)
         metrics = dev_data.get("metrics", {})
 
@@ -762,12 +767,7 @@ class HyxiSensor(HyxiBaseSensor):
 
         # 🚀 SPECIAL CASE: Device Type is derived from persistent metadata, not metrics.
         if self.entity_description.key == "device_type":
-            raw_code = (
-                dev_data.get("device_type_code")
-                or dev_data.get("deviceType")
-                or dev_data.get("devType")
-                or ""
-            )
+            raw_code = _get_raw_device_code(dev_data)
             return normalize_device_type(raw_code)
 
         value = metrics.get(self.entity_description.key)
