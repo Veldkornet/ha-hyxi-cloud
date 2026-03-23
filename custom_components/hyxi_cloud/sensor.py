@@ -588,7 +588,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         keys_to_add.add("device_type")
 
         for k, v in metrics.items():
-            if v is not None and str(v) != "":
+            if v is not None and v != "":
                 keys_to_add.add(k)
 
         for key in keys_to_add:
