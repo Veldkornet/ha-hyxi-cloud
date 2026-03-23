@@ -591,12 +591,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
             if v is not None and str(v) != "":
                 keys_to_add.add(k)
 
-        for key in keys_to_add:
-            description = SENSOR_TYPES_BY_KEY.get(key)
-            if description:
-                if key in BATTERY_SENSORS and is_collector_or_dmu:
-                    continue
-                entities.append(HyxiSensor(coordinator, sn, description))
+        valid_keys = keys_to_add.intersection(SENSOR_TYPES_BY_KEY)
+        if is_collector_or_dmu:
+            valid_keys.difference_update(BATTERY_SENSORS)
+
+        for key in valid_keys:
+            description = SENSOR_TYPES_BY_KEY[key]
+            entities.append(HyxiSensor(coordinator, sn, description))
 
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
