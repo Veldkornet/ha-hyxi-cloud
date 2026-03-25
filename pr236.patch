@@ -1,0 +1,27 @@
+commit f06befc37d28f1f667844b6e07e6cbdb75f6abf4
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Mon Mar 23 21:22:47 2026 +0000
+
+    test: Add error path test for normalize_device_type float conversion
+    
+    Co-authored-by: Veldkornet <10297361+Veldkornet@users.noreply.github.com>
+
+diff --git a/tests/test_sensor_logic.py b/tests/test_sensor_logic.py
+index abd86e6..502ff35 100644
+--- a/tests/test_sensor_logic.py
++++ b/tests/test_sensor_logic.py
+@@ -642,3 +642,14 @@ def test_log_glitch_once(base_sensor):
+         sensor._log_glitch_once(123.5, "Test glitch %s", 123.5)
+         mock_debug.assert_called_once_with("Test glitch %s", 123.5)
+         assert sensor._last_logged_glitch == 123.5
++
++
++def test_normalize_device_type_invalid_float():
++    """Verify that normalize_device_type gracefully handles float conversion errors."""
++    from custom_components.hyxi_cloud.sensor import normalize_device_type
++
++    # Test error path where float conversion fails
++    assert normalize_device_type("invalid.string") == "unknown"
++
++    # Test valid float string path
++    assert normalize_device_type("1.0") == "hybrid_inverter"
