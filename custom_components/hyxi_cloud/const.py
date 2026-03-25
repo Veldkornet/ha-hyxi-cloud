@@ -7,6 +7,7 @@ CONF_ACCESS_KEY = "access_key"
 CONF_SECRET_KEY = "secret_key"
 BASE_URL = "https://open.hyxicloud.com"
 
+MANUFACTURER = "HYXI Power"
 VERSION = "1.3.6"
 
 PLATFORMS: list[Platform] = [

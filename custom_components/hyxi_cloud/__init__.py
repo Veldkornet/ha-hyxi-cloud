@@ -18,6 +18,7 @@ from .const import BASE_URL
 from .const import CONF_ACCESS_KEY
 from .const import CONF_SECRET_KEY
 from .const import DOMAIN
+from .const import MANUFACTURER
 from .const import PLATFORMS
 from .const import VERSION
 from .coordinator import HyxiDataUpdateCoordinator
@@ -69,7 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, sn)},
             name=dev_data.get("device_name", f"Device {sn}"),
-            manufacturer="HYXI Power",
+            manufacturer=MANUFACTURER,
             model=dev_data.get("model"),
             sw_version=dev_data.get("sw_version"),
             hw_version=dev_data.get("hw_version"),
@@ -84,7 +85,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 config_entry_id=entry.entry_id,
                 identifiers={(DOMAIN, bat_sn)},
                 name=f"Battery {bat_sn}",
-                manufacturer="HYXI Power",
+                manufacturer=MANUFACTURER,
                 model="Energy Storage System",
                 serial_number=bat_sn,
                 via_device=(DOMAIN, sn),

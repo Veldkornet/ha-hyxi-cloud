@@ -75,6 +75,7 @@ sys.modules["homeassistant.helpers.restore_state"] = mock_restore
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
+sys.modules["aiohttp"] = MagicMock()
 
 # Standardize import style to resolve code scanning alert no. 50
 import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
@@ -134,6 +135,26 @@ def test_anti_dip_recovery(base_sensor):
     assert sensor.native_value == 2747.0
 
 
+def test_anti_spike_prevention(base_sensor):
+    """Verify that jumps greater than 100.0 are blocked."""
+    sensor, coordinator = base_sensor
+
+    # Baseline
+    assert sensor.native_value == 2742.0
+
+    # 📈 Valid jump <= 100.0 (allowed)
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2842.0
+    assert sensor.native_value == 2842.0
+
+    # 🚀 Invalid spike > 100.0 (blocked, returns last valid value)
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2943.0
+    assert sensor.native_value == 2842.0
+
+    # 📉 Small increase after spike (allowed)
+    coordinator.data["SN123"]["metrics"]["totalE"] = 2850.0
+    assert sensor.native_value == 2850.0
+
+
 def test_null_data_handling(base_sensor):
     """Ensure the sensor returns None instead of crashing on empty API data."""
     sensor, coordinator = base_sensor
@@ -177,6 +198,10 @@ def test_collecttime_error_handling(base_sensor):
     # Test extreme value causing OverflowError/OSError in datetime.fromtimestamp
     # A huge number that passes the 10-digit check but is still too large for datetime
     coordinator.data["SN123"]["metrics"]["collectTime"] = 1000000000000000000
+    assert sensor.native_value is None
+
+    # Test extreme overflow value (triggering OverflowError on many platforms)
+    coordinator.data["SN123"]["metrics"]["collectTime"] = 10**25
     assert sensor.native_value is None
 
     # Test OSError explicitly by patching datetime since OverflowError is now ValueError in Python 3.12+
@@ -392,6 +417,23 @@ def test_sensor_int_conversion_error(base_sensor):
         # Test empty string (handled by earlier check)
         coordinator.data["SN123"]["metrics"][key] = ""
         assert sensor.native_value is None
+
+
+def test_sensor_int_conversion_non_numeric_string(base_sensor):
+    """Test ValueError and TypeError handling specifically for INT_SENSOR_KEYS."""
+    sensor, coordinator = base_sensor
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "100"
+
+    # We choose one key from INT_SENSOR_KEYS
+    sensor.entity_description.key = "batSoc"
+
+    # String that raises ValueError on float() conversion
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "non_numeric_string"
+    assert sensor.native_value is None
+
+    # Object that raises TypeError on float() conversion
+    coordinator.data["SN123"]["metrics"]["batSoc"] = {"unexpected": "object"}
+    assert sensor.native_value is None
 
 
 def test_float_conversion_error(base_sensor):
@@ -642,3 +684,36 @@ def test_log_glitch_once(base_sensor):
         sensor._log_glitch_once(123.5, "Test glitch %s", 123.5)
         mock_debug.assert_called_once_with("Test glitch %s", 123.5)
         assert sensor._last_logged_glitch == 123.5
+
+
+@pytest.mark.asyncio
+async def test_base_sensor_added_to_hass_invalid_restoration():
+    """Verify that HyxiBaseSensor handles TypeError and fallback to entity_id."""
+    coordinator = MagicMock()
+    sensor = sensor_mod.HyxiBaseSensor(coordinator)
+
+    # Manually configure the sensor attributes
+    description = MagicMock()
+    description.key = "totalE"
+    description.state_class = "total_increasing"
+    sensor.entity_description = description
+    sensor.entity_id = "sensor.hyxi_test_sensor"
+    sensor.hass = MagicMock()
+
+    # Mock last state with an uncastable object to trigger TypeError
+    last_state = MagicMock()
+    last_state.state = [1]
+    sensor.async_get_last_state = AsyncMock(return_value=last_state)
+
+    with patch("custom_components.hyxi_cloud.sensor._LOGGER.debug") as mock_debug:
+        await sensor.async_added_to_hass()
+
+        # Verify that _last_valid_value is None
+        assert sensor._last_valid_value is None
+
+        # Verify the debug message used entity_id
+        mock_debug.assert_called_once_with(
+            "HYXI Restore: Could not parse restored state '%s' for %s",
+            [1],
+            "sensor.hyxi_test_sensor",
+        )
