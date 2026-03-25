@@ -28,6 +28,7 @@ class DummyDataUpdateCoordinator:
     """Dummy class to mock DataUpdateCoordinator."""
 
     def __init__(self, hass, logger, name, update_interval, config_entry=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
+        self.hass = hass
         self.data = {}
 
 
@@ -51,6 +52,7 @@ mock_config_exceptions.ConfigEntryAuthFailed = DummyConfigEntryAuthFailed
 sys.modules["homeassistant.exceptions"] = mock_config_exceptions
 
 mock_api = MagicMock()
+mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
 
 mock_const = MagicMock()

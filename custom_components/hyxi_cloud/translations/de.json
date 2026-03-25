@@ -156,6 +156,9 @@
       "slave_sw": {
         "name": "Steuersoftware (Neben)"
       },
+      "commode": {
+        "name": "Kommunikationsmodus"
+      },
       "acp": {
         "name": "AC-Leistung"
       },
