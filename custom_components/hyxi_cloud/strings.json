@@ -146,7 +146,7 @@
         "name": "Wi-Fi Signal Quality"
       },
       "wifiver": {
-        "name": "Wi-Fi Firmware"
+        "name": "Wi-Fi Module Software"
       },
       "commode": {
         "name": "Communication Mode"

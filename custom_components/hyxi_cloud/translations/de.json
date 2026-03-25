@@ -145,7 +145,7 @@
         "name": "WLAN-Signalqualität"
       },
       "wifiver": {
-        "name": "WLAN-Firmware"
+        "name": "WLAN-Modul-Software"
       },
       "commode": {
         "name": "Kommunikationsmodus"

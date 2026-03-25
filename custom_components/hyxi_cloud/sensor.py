@@ -731,35 +731,57 @@ class HyxiSensor(HyxiBaseSensor):
         self.entity_description = description
         self._sn = sn
 
+        # Determing actual SN (e.g. Battery SN for battery sensors)
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
         if description.key in BATTERY_SENSORS and bat_sn:
             self._actual_sn = bat_sn
-            self._attr_device_info = {
+        else:
+            self._actual_sn = sn
+
+        self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
+        self._attr_translation_key = description.key.lower()
+        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
+
+    @property
+    def device_info(self):
+        """Return dynamic device information to ensure versions update in UI."""
+        dev_data = self.coordinator.data.get(self._sn, {})
+        metrics = dev_data.get("metrics", {})
+        bat_sn = metrics.get("batSn")
+
+        if self.entity_description.key in BATTERY_SENSORS and bat_sn:
+            return {
                 "identifiers": {(DOMAIN, bat_sn)},
                 "name": f"Battery {bat_sn}",
                 "manufacturer": MANUFACTURER,
                 "model": "Energy Storage System",
                 "serial_number": bat_sn,
-                "via_device": (DOMAIN, sn),
-            }
-        else:
-            self._actual_sn = sn
-            self._attr_device_info = {
-                "identifiers": {(DOMAIN, sn)},
-                "name": dev_data.get("device_name") or f"Device {sn}",
-                "manufacturer": MANUFACTURER,
-                "model": dev_data.get("model"),
-                "sw_version": dev_data.get("sw_version"),
-                "hw_version": dev_data.get("hw_version"),
-                "serial_number": sn,
+                "via_device": (DOMAIN, self._sn),
             }
 
-        self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
-        self._attr_translation_key = description.key.lower()
-        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
+        # For Stick/Inverter, provide dynamic software versions
+        sw_version = dev_data.get("sw_version")
+        hw_version = dev_data.get("hw_version")
+
+        # Combine versions for Datalogger if wifiver is present
+        device_type = normalize_device_type(_get_raw_device_code(dev_data))
+        if device_type == "collector":
+            wifi_ver = metrics.get("wifiVer")
+            if wifi_ver:
+                sw_version = f"{sw_version} (App) / {wifi_ver} (WiFi)"
+
+        return {
+            "identifiers": {(DOMAIN, self._sn)},
+            "name": dev_data.get("device_name") or f"Device {self._sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "sw_version": sw_version,
+            "hw_version": hw_version,
+            "serial_number": self._sn,
+        }
 
     def _parse_device_type(self, dev_data, value):
         return normalize_device_type(_get_raw_device_code(dev_data))
