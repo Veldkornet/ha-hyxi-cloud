@@ -145,6 +145,9 @@
         "name": "Wi-Fi Signaalkwaliteit"
       },
       "wifiver": {
+      "app_sw": {
+        "name": "Applicatiesoftware
+      },
         "name": "Software wifimodule"
       },
       "commode": {

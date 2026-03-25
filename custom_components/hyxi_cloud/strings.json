@@ -148,6 +148,9 @@
       "wifiver": {
         "name": "Wi-Fi Module Software"
       },
+      "app_sw": {
+        "name": "Application Software"
+      },
       "commode": {
         "name": "Communication Mode"
       },

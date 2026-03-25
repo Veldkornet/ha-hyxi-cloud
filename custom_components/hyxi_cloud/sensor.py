@@ -50,11 +50,11 @@ BATTERY_SENSORS = {
 }
 
 
-COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "comMode"}
+COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
 HEARTBEAT_SENSORS = {"last_seen"}
 
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
-BASE_KEYS_OTHER = HEARTBEAT_SENSORS
+BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw"}
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -181,6 +181,18 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="wifiVer",
+        translation_key="wifiver",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:wifi-cog",
+    ),
+    SensorEntityDescription(
+        key="app_sw",
+        translation_key="app_sw",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:application-cog",
     ),
     SensorEntityDescription(
         key="childNum",
@@ -450,11 +462,6 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
-        key="wifiVer",
-        icon="mdi:memory",
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
-    SensorEntityDescription(
         key="comMode",
         icon="mdi:lan",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -548,7 +555,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         valid_keys = keys_to_add.intersection(SENSOR_TYPES_BY_KEY)
         if is_collector_or_dmu:
             valid_keys.difference_update(BATTERY_SENSORS)
-            valid_keys.discard("wifiVer")
+            # Removed: valid_keys.discard("wifiVer") - wifiVer is now explicitly added for collectors
 
         for key in valid_keys:
             description = SENSOR_TYPES_BY_KEY[key]
@@ -711,21 +718,17 @@ class HyxiSensor(HyxiBaseSensor):
                 "via_device": (DOMAIN, self._sn),
             }
 
-        # Combined versions for Stick/Inverter
+        # Simplified dynamic versions for Registry
         sw_version = dev_data.get("sw_version")
         hw_version = dev_data.get("hw_version")
 
-        # Alignment with HYXI App terminology
-        if sw_version:
-            # We prefix with the label to make it clear in the HA "Firmware" row
-            sw_version = f"Application Software: {sw_version}"
-
-        # Combine versions for Datalogger/Stick if wifiver is present
-        device_type = normalize_device_type(_get_raw_device_code(dev_data))
+        # Combine versions for Datalogger if wifiver is present
+        device_type = normalize_device_type(dev_data.get("deviceCode", ""))
         if device_type == "collector":
+            metrics = dev_data.get("metrics", {})
             wifi_ver = metrics.get("wifiVer")
             if wifi_ver:
-                sw_version = f"{sw_version} / Wi-Fi Module Software: {wifi_ver}"
+                sw_version = f"{sw_version} / {wifi_ver}"
 
         return {
             "identifiers": {(DOMAIN, self._sn)},
@@ -786,6 +789,8 @@ class HyxiSensor(HyxiBaseSensor):
 
         if self.entity_description.key == "device_type":
             return self._parse_device_type(dev_data, value)
+        if self.entity_description.key == "app_sw":
+            return dev_data.get("sw_version")
         if self.entity_description.key.lower() in INT_SENSOR_KEYS:
             return self._parse_int_sensor(dev_data, value)
         if self.entity_description.key == "collectTime":

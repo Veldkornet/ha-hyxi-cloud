@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -125,18 +124,13 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             hw_version = dev_data.get("hw_version")
 
             if sw_version:
-                # Align with HYXI App terminology
-                sw_version = f"Application Software: {sw_version}"
-
                 # Check for Collector (607) or similar stick devices
                 device_type = normalize_device_type(dev_data.get("deviceCode", ""))
                 if device_type == "collector":
                     metrics = dev_data.get("metrics", {})
                     wifi_ver = metrics.get("wifiVer")
                     if wifi_ver:
-                        sw_version = f"{sw_version} / Wi-Fi Module Software: {wifi_ver}"
-                        # 🧹 Cleanup: Remove the legacy standalone sensor if it exists
-                        self._async_remove_legacy_wifi_sensor(sn)
+                        sw_version = f"{sw_version} / {wifi_ver}"
 
             # Only update if changed
             if device.sw_version != sw_version or device.hw_version != hw_version:
@@ -144,13 +138,3 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 dev_reg.async_update_device(
                     device.id, sw_version=sw_version, hw_version=hw_version
                 )
-
-    def _async_remove_legacy_wifi_sensor(self, sn):
-        """Remove the standalone wifiVer sensor as it is now in Device Info."""
-        ent_reg = er.async_get(self.hass)
-        # The unique ID format was: hyxi_{sn}_wifiVer
-        unique_id = f"hyxi_{sn}_wifiVer"
-        entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
-        if entity_id:
-            _LOGGER.debug("Removing legacy legacy HYXI wifiVer sensor: %s", entity_id)
-            ent_reg.async_remove(entity_id)

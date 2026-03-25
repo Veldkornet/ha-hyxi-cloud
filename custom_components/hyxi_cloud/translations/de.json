@@ -145,6 +145,9 @@
         "name": "WLAN-Signalqualität"
       },
       "wifiver": {
+      "app_sw": {
+        "name": "Anwendungssoftware
+      },
         "name": "WLAN-Modul-Software"
       },
       "commode": {

@@ -145,6 +145,9 @@
         "name": "Qualité du signal Wi-Fi"
       },
       "wifiver": {
+      "app_sw": {
+        "name": "Logiciel d''application
+      },
         "name": "Logiciel du module Wi-Fi"
       },
       "commode": {
