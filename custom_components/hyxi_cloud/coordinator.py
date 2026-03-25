@@ -66,7 +66,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         # Read Discovery Toggle
         allow_discovery = self.entry.options.get(CONF_BACK_DISCOVERY, False)
         _LOGGER.debug(
-            "HYXI: Recursive device discovery via alarms is %s",
+            "HYXI Recursive device discovery via alarms is %s",
             "ENABLED" if allow_discovery else "DISABLED",
         )
 
