@@ -34,7 +34,8 @@
         "title": "Configuration du système HYXI",
         "description": "Ajustez la façon dont votre intégration communique avec le cloud HYXI.\n\n---",
         "data": {
-          "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)"
+          "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)",
+          "back_discovery": "Activer la découverte via les alarmes (Avancé)"
         }
       }
     }

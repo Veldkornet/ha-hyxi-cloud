@@ -10,6 +10,8 @@ BASE_URL = "https://open.hyxicloud.com"
 MANUFACTURER = "HYXI Power"
 VERSION = "1.3.6"
 
+CONF_BACK_DISCOVERY = "back_discovery"
+
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
