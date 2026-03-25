@@ -550,6 +550,16 @@ SENSOR_TYPES = [
 SENSOR_TYPES_BY_KEY = {desc.key: desc for desc in SENSOR_TYPES}
 
 
+def _get_raw_device_code(dev_data: dict) -> str:
+    """Extract the raw device type code from device data payload."""
+    return (
+        dev_data.get("device_type_code")
+        or dev_data.get("deviceType")
+        or dev_data.get("devType")
+        or ""
+    )
+
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HYXI sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -562,12 +572,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
         # Check all possible API keys for device type
-        raw_code = (
-            dev_data.get("device_type_code")
-            or dev_data.get("deviceType")
-            or dev_data.get("devType")
-            or ""
-        )
+        raw_code = _get_raw_device_code(dev_data)
         device_type = normalize_device_type(raw_code)
         metrics = dev_data.get("metrics", {})
 
@@ -756,54 +761,63 @@ class HyxiSensor(HyxiBaseSensor):
         self._attr_translation_key = description.key.lower()
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
 
+    def _parse_device_type(self, dev_data, value):
+        return normalize_device_type(_get_raw_device_code(dev_data))
+
+    def _parse_int_sensor(self, dev_data, value):
+        if value is None or value == "":
+            return None
+        try:
+            return int(round(float(value), 0))
+        except (
+            ValueError,
+            TypeError,
+        ):
+            return None
+
+    def _parse_collect_time(self, dev_data, value):
+        if value is None or value == "":
+            return None
+        try:
+            val_int = int(value)
+            if val_int > 9999999999:
+                val_int = val_int / 1000
+            return datetime.fromtimestamp(val_int, tz=UTC)
+        except (
+            ValueError,
+            TypeError,
+            OSError,
+            OverflowError,
+        ):
+            return None
+
+    def _parse_last_seen(self, dev_data, value):
+        if value is None or value == "":
+            return None
+        return dt_util.parse_datetime(str(value))
+
+    def _parse_default(self, dev_data, value):
+        if value is None or value == "":
+            return None
+        return self._process_numeric_value(value)
+
     @property
     def native_value(self):
         """Returns the sensor value with correct data typing and anti-dip protection."""
         dev_data = self.coordinator.data.get(self._sn, {})
         metrics = dev_data.get("metrics", {})
-
-        # 🚀 SPECIAL CASE: Device Type is derived from persistent metadata, not metrics.
-        if self.entity_description.key == "device_type":
-            raw_code = (
-                dev_data.get("device_type_code")
-                or dev_data.get("deviceType")
-                or dev_data.get("devType")
-                or ""
-            )
-            return normalize_device_type(raw_code)
-
         value = metrics.get(self.entity_description.key)
 
-        if value is None or value == "":
-            return None
-
+        if self.entity_description.key == "device_type":
+            return self._parse_device_type(dev_data, value)
         if self.entity_description.key.lower() in INT_SENSOR_KEYS:
-            try:
-                return int(round(float(value), 0))
-            except (
-                ValueError,
-                TypeError,
-            ):
-                return None
-
+            return self._parse_int_sensor(dev_data, value)
         if self.entity_description.key == "collectTime":
-            try:
-                val_int = int(value)
-                if val_int > 9999999999:
-                    val_int = val_int / 1000
-                return datetime.fromtimestamp(val_int, tz=UTC)
-            except (
-                ValueError,
-                TypeError,
-                OSError,
-                OverflowError,
-            ):
-                return None
-
+            return self._parse_collect_time(dev_data, value)
         if self.entity_description.key == "last_seen":
-            return dt_util.parse_datetime(str(value))
+            return self._parse_last_seen(dev_data, value)
 
-        return self._process_numeric_value(value)
+        return self._parse_default(dev_data, value)
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
