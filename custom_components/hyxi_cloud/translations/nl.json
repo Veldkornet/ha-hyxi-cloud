@@ -145,13 +145,16 @@
         "name": "Wi-Fi Signaalkwaliteit"
       },
       "wifiver": {
-      "app_sw": {
-        "name": "Applicatiesoftware
-      },
         "name": "Software wifimodule"
       },
-      "commode": {
-        "name": "Communicatiemodus"
+      "app_sw": {
+        "name": "Applicatiesoftware"
+      },
+      "master_sw": {
+        "name": "Controlesoftware (Master)"
+      },
+      "slave_sw": {
+        "name": "Controlesoftware (Secondair)"
       },
       "acp": {
         "name": "AC Vermogen"

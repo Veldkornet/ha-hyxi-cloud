@@ -151,6 +151,12 @@
       "app_sw": {
         "name": "Application Software"
       },
+      "master_sw": {
+        "name": "Control Software (Master)"
+      },
+      "slave_sw": {
+        "name": "Control Software (Secondary)"
+      },
       "commode": {
         "name": "Communication Mode"
       },

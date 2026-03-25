@@ -145,10 +145,16 @@
         "name": "Qualité du signal Wi-Fi"
       },
       "wifiver": {
-      "app_sw": {
-        "name": "Logiciel d''application
-      },
         "name": "Logiciel du module Wi-Fi"
+      },
+      "app_sw": {
+        "name": "Logiciel d'application"
+      },
+      "master_sw": {
+        "name": "Logiciel de contrôle (Principal)"
+      },
+      "slave_sw": {
+        "name": "Logiciel de contrôle (Secondaire)"
       },
       "commode": {
         "name": "Mode de communication"

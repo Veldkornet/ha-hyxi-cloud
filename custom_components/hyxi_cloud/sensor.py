@@ -54,7 +54,7 @@ COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_
 HEARTBEAT_SENSORS = {"last_seen"}
 
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
-BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw"}
+BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw", "swVerMaster", "swVerSlave"}
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -193,6 +193,18 @@ SENSOR_TYPES = [
         translation_key="app_sw",
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:application-cog",
+    ),
+    SensorEntityDescription(
+        key="swVerMaster",
+        translation_key="master_sw",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:chip",
+    ),
+    SensorEntityDescription(
+        key="swVerSlave",
+        translation_key="slave_sw",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:chip",
     ),
     SensorEntityDescription(
         key="childNum",
@@ -698,7 +710,9 @@ class HyxiSensor(HyxiBaseSensor):
             self._actual_sn = sn
 
         self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
-        self._attr_translation_key = description.key.lower()
+        self._attr_translation_key = (
+            description.translation_key or description.key.lower()
+        )
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
 
     @property
@@ -791,6 +805,8 @@ class HyxiSensor(HyxiBaseSensor):
             return self._parse_device_type(dev_data, value)
         if self.entity_description.key == "app_sw":
             return dev_data.get("sw_version")
+        if self.entity_description.key in ["swVerMaster", "swVerSlave"]:
+            return metrics.get(self.entity_description.key)
         if self.entity_description.key.lower() in INT_SENSOR_KEYS:
             return self._parse_int_sensor(dev_data, value)
         if self.entity_description.key == "collectTime":

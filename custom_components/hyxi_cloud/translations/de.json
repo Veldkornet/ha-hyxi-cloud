@@ -145,13 +145,16 @@
         "name": "WLAN-Signalqualität"
       },
       "wifiver": {
-      "app_sw": {
-        "name": "Anwendungssoftware
-      },
         "name": "WLAN-Modul-Software"
       },
-      "commode": {
-        "name": "Kommunikationsmodus"
+      "app_sw": {
+        "name": "Anwendungssoftware"
+      },
+      "master_sw": {
+        "name": "Steuersoftware (Haupt)"
+      },
+      "slave_sw": {
+        "name": "Steuersoftware (Neben)"
       },
       "acp": {
         "name": "AC-Leistung"
