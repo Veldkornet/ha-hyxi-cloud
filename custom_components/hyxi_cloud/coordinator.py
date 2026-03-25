@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import HyxiApiClient
 
+from .const import CONF_BACK_DISCOVERY
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,8 +63,17 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
+        # Read Discovery Toggle
+        allow_discovery = self.entry.options.get(CONF_BACK_DISCOVERY, False)
+        _LOGGER.debug(
+            "HYXI: Recursive device discovery via alarms is %s",
+            "ENABLED" if allow_discovery else "DISABLED",
+        )
+
         try:
-            result = await self.client.get_all_device_data()
+            result = await self.client.get_all_device_data(
+                allow_back_discovery=allow_discovery
+            )
 
             if result == "auth_failed":
                 raise ConfigEntryAuthFailed("Invalid API keys or expired token")

@@ -34,7 +34,8 @@
         "title": "HYXI Systemkonfiguration",
         "description": "Passen Sie an, wie Ihre Integration mit der HYXI Cloud kommuniziert.\n\n---",
         "data": {
-          "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)"
+          "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
+          "back_discovery": "Discovery über Alarme aktivieren (Erweitert)"
         }
       }
     }

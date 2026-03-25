@@ -13,6 +13,7 @@ from hyxi_cloud_api import HyxiApiClient
 from .const import BASE_URL
 from .const import CONF_ACCESS_KEY
 from .const import CONF_SECRET_KEY
+from .const import CONF_BACK_DISCOVERY
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -137,6 +138,11 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required("update_interval", default=current_interval): vol.All(
                     vol.Coerce(int), vol.Range(min=1, max=60)
                 ),
+                # Toggle for Alarm-based discovery
+                vol.Optional(
+                    CONF_BACK_DISCOVERY,
+                    default=self._config_entry.options.get(CONF_BACK_DISCOVERY, False),
+                ): selector.BooleanSelector(),
             }
         )
 
