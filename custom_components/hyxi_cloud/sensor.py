@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .const import MANUFACTURER
+from .const import normalize_device_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,59 +48,6 @@ BATTERY_SENSORS = {
     "batV",
     "batI",
 }
-
-
-# Helper to map device codes to translation keys for HA sensor states
-DEVICE_TYPE_KEYS = {
-    "1": "hybrid_inverter",
-    "2": "grid_connected_inverter",
-    "3": "collector",
-    "15": "micro_ess",
-    "16": "micro_ess",
-    "106": "hybrid_inverter",
-    "607": "collector",
-    "HYBRID_INVERTER": "hybrid_inverter",
-    "STRING_INVERTER": "grid_connected_inverter",
-    "MICRO_INVERTER": "grid_connected_inverter",
-    "EMS": "micro_ess",
-    "DMU": "collector",
-    "COLLECTOR": "collector",
-}
-
-
-def normalize_device_type(code: str | int | float) -> str:
-    """Normalize a device type code/string to a translation key.
-
-    Ensures that values match the keys in strings.json (lowercase, no spaces).
-    """
-    if code is None or code == "":
-        return "unknown"
-
-    code_str = str(code).upper().strip()
-
-    # 1. Check numeric/direct mapping (handle float strings like "15.0")
-    lookup_key = code_str
-    if "." in code_str:
-        try:
-            lookup_key = str(int(float(code_str)))
-        except (ValueError, TypeError):
-            # If float conversion fails (e.g. string labels), just use original code_str
-            pass
-
-    if lookup_key in DEVICE_TYPE_KEYS:
-        return DEVICE_TYPE_KEYS[lookup_key]
-
-    # 2. String mapping (if API returned a name instead of code)
-    if "COLLECTOR" in code_str or "DMU" in code_str:
-        return "collector"
-    if "INVERTER" in code_str:
-        if "GRID" in code_str:
-            return "grid_connected_inverter"
-        return "hybrid_inverter"
-    if "ESS" in code_str or "HALO" in code_str:
-        return "micro_ess"
-
-    return "unknown"
 
 
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "comMode"}
@@ -600,6 +548,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         valid_keys = keys_to_add.intersection(SENSOR_TYPES_BY_KEY)
         if is_collector_or_dmu:
             valid_keys.difference_update(BATTERY_SENSORS)
+            valid_keys.discard("wifiVer")
 
         for key in valid_keys:
             description = SENSOR_TYPES_BY_KEY[key]
@@ -762,20 +711,21 @@ class HyxiSensor(HyxiBaseSensor):
                 "via_device": (DOMAIN, self._sn),
             }
 
-        # For Stick/Inverter, provide dynamic software versions
+        # Combined versions for Stick/Inverter
         sw_version = dev_data.get("sw_version")
         hw_version = dev_data.get("hw_version")
 
         # Alignment with HYXI App terminology
         if sw_version:
-            sw_version = f"{sw_version} (Application Software)"
+            # We prefix with the label to make it clear in the HA "Firmware" row
+            sw_version = f"Application Software: {sw_version}"
 
         # Combine versions for Datalogger/Stick if wifiver is present
         device_type = normalize_device_type(_get_raw_device_code(dev_data))
         if device_type == "collector":
             wifi_ver = metrics.get("wifiVer")
             if wifi_ver:
-                sw_version = f"{sw_version} / {wifi_ver} (Wi-Fi Module Software)"
+                sw_version = f"{sw_version} / Wi-Fi Module Software: {wifi_ver}"
 
         return {
             "identifiers": {(DOMAIN, self._sn)},
