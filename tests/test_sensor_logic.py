@@ -25,6 +25,7 @@ def normalize_device_type(code):
         else:
             str_code = str(f_val)
     except ValueError:
+        # Non-numeric codes are expected; keep original string for matching logic below.
         pass
 
     if (
