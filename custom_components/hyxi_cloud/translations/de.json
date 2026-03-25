@@ -145,7 +145,16 @@
         "name": "WLAN-Signalqualität"
       },
       "wifiver": {
-        "name": "WLAN-Firmware"
+        "name": "WLAN-Modul-Software"
+      },
+      "app_sw": {
+        "name": "Anwendungssoftware"
+      },
+      "master_sw": {
+        "name": "Steuersoftware (Haupt)"
+      },
+      "slave_sw": {
+        "name": "Steuersoftware (Neben)"
       },
       "commode": {
         "name": "Kommunikationsmodus"

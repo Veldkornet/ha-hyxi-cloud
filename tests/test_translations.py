@@ -20,12 +20,20 @@ def get_translation_keys():
     )
     with open(sensor_path, encoding="utf-8") as f:
         content = f.read()
-        # Find key="something"
-        sensor_keys = re.findall(r'key="([^"]+)"', content)
-        for k in sensor_keys:
-            keys["sensor"].add(k.lower())
 
-        # Find _attr_translation_key = "something"
+        # Regex to find SensorEntityDescription blocks and extract key and translation_key
+        # This is a bit more robust than just finding all key= and translation_key=
+        blocks = re.findall(r"SensorEntityDescription\((.*?)\)", content, re.DOTALL)
+        for block in blocks:
+            key_match = re.search(r'key="([^"]+)"', block)
+            trans_match = re.search(r'translation_key="([^"]+)"', block)
+
+            if trans_match:
+                keys["sensor"].add(trans_match.group(1).lower())
+            elif key_match:
+                keys["sensor"].add(key_match.group(1).lower())
+
+        # Find _attr_translation_key = "something" (for the class itself)
         attr_keys = re.findall(r'_attr_translation_key = "([^"]+)"', content)
         for k in attr_keys:
             keys["sensor"].add(k.lower())

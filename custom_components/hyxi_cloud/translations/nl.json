@@ -145,7 +145,16 @@
         "name": "Wi-Fi Signaalkwaliteit"
       },
       "wifiver": {
-        "name": "Wi-Fi Firmware"
+        "name": "Software wifimodule"
+      },
+      "app_sw": {
+        "name": "Applicatiesoftware"
+      },
+      "master_sw": {
+        "name": "Controlesoftware (Master)"
+      },
+      "slave_sw": {
+        "name": "Controlesoftware (Secondair)"
       },
       "commode": {
         "name": "Communicatiemodus"

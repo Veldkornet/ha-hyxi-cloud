@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .const import MANUFACTURER
+from .const import normalize_device_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,64 +50,11 @@ BATTERY_SENSORS = {
 }
 
 
-# Helper to map device codes to translation keys for HA sensor states
-DEVICE_TYPE_KEYS = {
-    "1": "hybrid_inverter",
-    "2": "grid_connected_inverter",
-    "3": "collector",
-    "15": "micro_ess",
-    "16": "micro_ess",
-    "106": "hybrid_inverter",
-    "607": "collector",
-    "HYBRID_INVERTER": "hybrid_inverter",
-    "STRING_INVERTER": "grid_connected_inverter",
-    "MICRO_INVERTER": "grid_connected_inverter",
-    "EMS": "micro_ess",
-    "DMU": "collector",
-    "COLLECTOR": "collector",
-}
-
-
-def normalize_device_type(code: str | int | float) -> str:
-    """Normalize a device type code/string to a translation key.
-
-    Ensures that values match the keys in strings.json (lowercase, no spaces).
-    """
-    if code is None or code == "":
-        return "unknown"
-
-    code_str = str(code).upper().strip()
-
-    # 1. Check numeric/direct mapping (handle float strings like "15.0")
-    lookup_key = code_str
-    if "." in code_str:
-        try:
-            lookup_key = str(int(float(code_str)))
-        except (ValueError, TypeError):
-            # If float conversion fails (e.g. string labels), just use original code_str
-            pass
-
-    if lookup_key in DEVICE_TYPE_KEYS:
-        return DEVICE_TYPE_KEYS[lookup_key]
-
-    # 2. String mapping (if API returned a name instead of code)
-    if "COLLECTOR" in code_str or "DMU" in code_str:
-        return "collector"
-    if "INVERTER" in code_str:
-        if "GRID" in code_str:
-            return "grid_connected_inverter"
-        return "hybrid_inverter"
-    if "ESS" in code_str or "HALO" in code_str:
-        return "micro_ess"
-
-    return "unknown"
-
-
-COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode"}
+COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
 HEARTBEAT_SENSORS = {"last_seen"}
 
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
-BASE_KEYS_OTHER = HEARTBEAT_SENSORS
+BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw", "swVerMaster", "swVerSlave"}
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -233,6 +181,30 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="wifiVer",
+        translation_key="wifiver",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:wifi-cog",
+    ),
+    SensorEntityDescription(
+        key="app_sw",
+        translation_key="app_sw",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:application-cog",
+    ),
+    SensorEntityDescription(
+        key="swVerMaster",
+        translation_key="master_sw",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:chip",
+    ),
+    SensorEntityDescription(
+        key="swVerSlave",
+        translation_key="slave_sw",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:chip",
     ),
     SensorEntityDescription(
         key="childNum",
@@ -502,11 +474,6 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
-        key="wifiVer",
-        icon="mdi:memory",
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
-    SensorEntityDescription(
         key="comMode",
         icon="mdi:lan",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -599,7 +566,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         valid_keys = keys_to_add.intersection(SENSOR_TYPES_BY_KEY)
         if is_collector_or_dmu:
-            valid_keys.difference_update(BATTERY_SENSORS)
+            # Case-insensitive removal of battery sensors
+            bat_sensors_lower = {s.lower() for s in BATTERY_SENSORS}
+            valid_keys = {k for k in valid_keys if k.lower() not in bat_sensors_lower}
+            # Removed: valid_keys.discard("wifiVer") - wifiVer is now explicitly added for collectors
 
         for key in valid_keys:
             description = SENSOR_TYPES_BY_KEY[key]
@@ -731,35 +701,60 @@ class HyxiSensor(HyxiBaseSensor):
         self.entity_description = description
         self._sn = sn
 
+        # Determing actual SN (e.g. Battery SN for battery sensors)
         dev_data = coordinator.data.get(sn, {})
         metrics = dev_data.get("metrics", {})
         bat_sn = metrics.get("batSn")
 
         if description.key in BATTERY_SENSORS and bat_sn:
             self._actual_sn = bat_sn
-            self._attr_device_info = {
+        else:
+            self._actual_sn = sn
+
+        self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
+        self._attr_translation_key = (
+            description.translation_key or description.key.lower()
+        )
+        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
+
+    @property
+    def device_info(self):
+        """Return dynamic device information to ensure versions update in UI."""
+        dev_data = self.coordinator.data.get(self._sn, {})
+        metrics = dev_data.get("metrics", {})
+        bat_sn = metrics.get("batSn")
+
+        if self.entity_description.key in BATTERY_SENSORS and bat_sn:
+            return {
                 "identifiers": {(DOMAIN, bat_sn)},
                 "name": f"Battery {bat_sn}",
                 "manufacturer": MANUFACTURER,
                 "model": "Energy Storage System",
                 "serial_number": bat_sn,
-                "via_device": (DOMAIN, sn),
-            }
-        else:
-            self._actual_sn = sn
-            self._attr_device_info = {
-                "identifiers": {(DOMAIN, sn)},
-                "name": dev_data.get("device_name") or f"Device {sn}",
-                "manufacturer": MANUFACTURER,
-                "model": dev_data.get("model"),
-                "sw_version": dev_data.get("sw_version"),
-                "hw_version": dev_data.get("hw_version"),
-                "serial_number": sn,
+                "via_device": (DOMAIN, self._sn),
             }
 
-        self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
-        self._attr_translation_key = description.key.lower()
-        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
+        # Simplified dynamic versions for Registry
+        sw_version = dev_data.get("sw_version")
+        hw_version = dev_data.get("hw_version")
+
+        # Combine versions for Datalogger if wifiver is present
+        device_type = normalize_device_type(dev_data.get("deviceCode", ""))
+        if device_type == "collector":
+            metrics = dev_data.get("metrics", {})
+            wifi_ver = metrics.get("wifiVer")
+            if wifi_ver:
+                sw_version = f"{sw_version} / {wifi_ver}"
+
+        return {
+            "identifiers": {(DOMAIN, self._sn)},
+            "name": dev_data.get("device_name") or f"Device {self._sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "sw_version": sw_version,
+            "hw_version": hw_version,
+            "serial_number": self._sn,
+        }
 
     def _parse_device_type(self, dev_data, value):
         return normalize_device_type(_get_raw_device_code(dev_data))
@@ -810,6 +805,10 @@ class HyxiSensor(HyxiBaseSensor):
 
         if self.entity_description.key == "device_type":
             return self._parse_device_type(dev_data, value)
+        if self.entity_description.key == "app_sw":
+            return dev_data.get("sw_version")
+        if self.entity_description.key in ["swVerMaster", "swVerSlave"]:
+            return metrics.get(self.entity_description.key)
         if self.entity_description.key.lower() in INT_SENSOR_KEYS:
             return self._parse_int_sensor(dev_data, value)
         if self.entity_description.key == "collectTime":
