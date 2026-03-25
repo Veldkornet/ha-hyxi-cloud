@@ -13,7 +13,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.13.3",
-    "hyxi-cloud-api==1.0.5"
+    "hyxi-cloud-api==1.0.6"
 ]
 
 [project.optional-dependencies]
