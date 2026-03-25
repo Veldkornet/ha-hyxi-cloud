@@ -12,8 +12,8 @@ from hyxi_cloud_api import HyxiApiClient
 
 from .const import BASE_URL
 from .const import CONF_ACCESS_KEY
-from .const import CONF_SECRET_KEY
 from .const import CONF_BACK_DISCOVERY
+from .const import CONF_SECRET_KEY
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)

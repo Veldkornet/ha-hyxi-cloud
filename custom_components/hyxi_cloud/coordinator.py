@@ -1,7 +1,7 @@
 """DataUpdateCoordinator for HYXI Cloud."""
 
-import logging
 from datetime import timedelta
+import logging
 
 from aiohttp import ClientError
 from homeassistant.config_entries import ConfigEntry
