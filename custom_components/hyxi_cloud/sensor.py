@@ -102,7 +102,7 @@ def normalize_device_type(code: str | int | float) -> str:
     return "unknown"
 
 
-COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode"}
+COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "comMode"}
 HEARTBEAT_SENSORS = {"last_seen"}
 
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
@@ -766,12 +766,16 @@ class HyxiSensor(HyxiBaseSensor):
         sw_version = dev_data.get("sw_version")
         hw_version = dev_data.get("hw_version")
 
-        # Combine versions for Datalogger if wifiver is present
+        # Alignment with HYXI App terminology
+        if sw_version:
+            sw_version = f"{sw_version} (Application Software)"
+
+        # Combine versions for Datalogger/Stick if wifiver is present
         device_type = normalize_device_type(_get_raw_device_code(dev_data))
         if device_type == "collector":
             wifi_ver = metrics.get("wifiVer")
             if wifi_ver:
-                sw_version = f"{sw_version} (App) / {wifi_ver} (WiFi)"
+                sw_version = f"{sw_version} / {wifi_ver} (Wi-Fi Module Software)"
 
         return {
             "identifiers": {(DOMAIN, self._sn)},
