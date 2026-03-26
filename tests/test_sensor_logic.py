@@ -818,7 +818,7 @@ def test_normalize_device_type_invalid_float():
 
 def test_anti_spike_direct_call(base_sensor):
     """Directly test _check_anti_spike logic and coverage."""
-    sensor, coordinator = base_sensor
+    sensor, _ = base_sensor
 
     # Initialize _last_valid_value
     sensor._last_valid_value = 100.0
