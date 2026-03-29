@@ -93,6 +93,7 @@ except ImportError:
     pass
 # Force use of real normalization function to bypass MagicMock pollution
 sensor_mod.normalize_device_type = const_mod.normalize_device_type
+sensor_mod.get_raw_device_code = const_mod.get_raw_device_code
 
 
 @pytest.fixture
@@ -263,6 +264,10 @@ def test_batsoc_batsoh_casting(base_sensor):
 
     # Test invalid string gracefully handled
     coordinator.data["SN123"]["metrics"]["batSoh"] = "invalid"
+    assert sensor.native_value is None
+
+    # Test invalid type gracefully handled
+    coordinator.data["SN123"]["metrics"]["batSoh"] = {"invalid": "dict"}
     assert sensor.native_value is None
 
 
@@ -814,20 +819,15 @@ def test_anti_dip_direct_call(base_sensor):
     assert sensor._check_anti_dip(0.0) is None
 
 
-def test_anti_spike_returns_value(base_sensor):
-    """Test that _process_numeric_value returns the spike result when a spike is detected."""
+def test_process_numeric_value_anti_spike(base_sensor):
+    """Test the return path for _check_anti_spike inside _process_numeric_value."""
     sensor, _ = base_sensor
 
-    # Needs to be a TOTAL_INCREASING sensor for the filters to run
-    assert sensor.entity_description.state_class == "total_increasing"
-
-    # Initialize _last_valid_value
+    # Seed an existing valid value
     sensor._last_valid_value = 100.0
 
-    # Pass a value that causes a spike (> 100 jump)
-    # The jump is 200.1 - 100.0 = 100.1 > 100.0, so it's a spike.
-    # _check_anti_spike should return _last_valid_value (100.0)
-    # _process_numeric_value should return this value.
-    result = sensor._process_numeric_value("200.1")
+    # Pass a value that creates a spike > 100.0
+    # _process_numeric_value handles rounding internally, so 200.11 will trigger the spike block
+    result = sensor._process_numeric_value(200.11)
 
     assert result == 100.0

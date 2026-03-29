@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .const import MANUFACTURER
+from .const import get_raw_device_code
 from .const import normalize_device_type
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,7 +49,6 @@ BATTERY_SENSORS = {
     "batV",
     "batI",
 }
-BATTERY_SENSORS_LOWER = {s.lower() for s in BATTERY_SENSORS}
 
 
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
@@ -518,16 +518,6 @@ SENSOR_TYPES = [
 SENSOR_TYPES_BY_KEY = {desc.key: desc for desc in SENSOR_TYPES}
 
 
-def _get_raw_device_code(dev_data: dict) -> str:
-    """Extract the raw device type code from device data payload."""
-    return (
-        dev_data.get("device_type_code")
-        or dev_data.get("deviceType")
-        or dev_data.get("devType")
-        or ""
-    )
-
-
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up HYXI sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -540,7 +530,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
         # Check all possible API keys for device type
-        raw_code = _get_raw_device_code(dev_data)
+        raw_code = get_raw_device_code(dev_data)
         device_type = normalize_device_type(raw_code)
         metrics = dev_data.get("metrics", {})
 
@@ -554,16 +544,33 @@ async def async_setup_entry(hass, entry, async_add_entities):
         is_collector_or_dmu = device_type == "collector"
 
         base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
+        local_battery_sensors = BATTERY_SENSORS
 
-        for key, description in SENSOR_TYPES_BY_KEY.items():
-            if is_collector_or_dmu and key.lower() in BATTERY_SENSORS_LOWER:
+        # 1. Base keys that are always added
+        for key in base_keys:
+            if is_collector_or_dmu and key in local_battery_sensors:
+                continue
+            description = SENSOR_TYPES_BY_KEY.get(key)
+            if description:
+                entities.append(HyxiSensor(coordinator, sn, description))
+
+        # Device type is always added
+        description = SENSOR_TYPES_BY_KEY.get("device_type")
+        if description:
+            entities.append(HyxiSensor(coordinator, sn, description))
+
+        # 2. Dynamic Metric Keys
+        # Only iterate over actual metrics returned by the device rather than all possible sensor models
+        for key, v in metrics.items():
+            if key == "device_type" or key in base_keys:
                 continue
 
-            if key == "device_type" or key in base_keys:
-                entities.append(HyxiSensor(coordinator, sn, description))
-            else:
-                v = metrics.get(key)
-                if v is not None and v != "":
+            if is_collector_or_dmu and key in local_battery_sensors:
+                continue
+
+            if v is not None and v != "":
+                description = SENSOR_TYPES_BY_KEY.get(key)
+                if description:
                     entities.append(HyxiSensor(coordinator, sn, description))
 
     # 2. Integration Health
@@ -739,7 +746,7 @@ class HyxiSensor(HyxiBaseSensor):
         hw_version = dev_data.get("hw_version")
 
         # Combine versions for Datalogger if wifiver is present
-        device_type = normalize_device_type(dev_data.get("deviceCode", ""))
+        device_type = normalize_device_type(get_raw_device_code(dev_data))
         if device_type == "collector":
             metrics = dev_data.get("metrics", {})
             wifi_ver = metrics.get("wifiVer")
@@ -757,7 +764,7 @@ class HyxiSensor(HyxiBaseSensor):
         }
 
     def _parse_device_type(self, dev_data, value):
-        return normalize_device_type(_get_raw_device_code(dev_data))
+        return normalize_device_type(get_raw_device_code(dev_data))
 
     def _parse_int_sensor(self, dev_data, value):
         if value is None or value == "":
