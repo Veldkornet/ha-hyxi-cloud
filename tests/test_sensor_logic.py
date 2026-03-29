@@ -80,9 +80,12 @@ sys.modules["homeassistant.util"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
 # Standardize import style to resolve code scanning alert no. 50
+import custom_components.hyxi_cloud.const as const_mod  # noqa: E402
 import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 
+
 importlib.reload(sensor_mod)
+
 
 
 @pytest.fixture
@@ -253,6 +256,10 @@ def test_batsoc_batsoh_casting(base_sensor):
 
     # Test invalid string gracefully handled
     coordinator.data["SN123"]["metrics"]["batSoh"] = "invalid"
+    assert sensor.native_value is None
+
+    # Test invalid type gracefully handled
+    coordinator.data["SN123"]["metrics"]["batSoh"] = {"invalid": "dict"}
     assert sensor.native_value is None
 
 
@@ -725,6 +732,8 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
         )
 
 
+
+
 def test_anti_spike_direct_call(base_sensor):
     """Directly test _check_anti_spike logic and coverage."""
     sensor, _ = base_sensor
@@ -737,3 +746,29 @@ def test_anti_spike_direct_call(base_sensor):
 
     # Invalid jump > 100.0 returns _last_valid_value
     assert sensor._check_anti_spike(200.1) == 100.0
+
+
+def test_anti_dip_direct_call(base_sensor):
+    """Directly test _check_anti_dip logic and coverage."""
+    sensor, _ = base_sensor
+
+    # Initialize _last_valid_value
+    sensor._last_valid_value = 100.0
+
+    # Test valid reset (new value is practically zero AND drop is > 50%)
+    # This covers the `return None` path at the end of the method
+    assert sensor._check_anti_dip(0.0) is None
+
+
+def test_process_numeric_value_anti_spike(base_sensor):
+    """Test the return path for _check_anti_spike inside _process_numeric_value."""
+    sensor, _ = base_sensor
+
+    # Seed an existing valid value
+    sensor._last_valid_value = 100.0
+
+    # Pass a value that creates a spike > 100.0
+    # _process_numeric_value handles rounding internally, so 200.11 will trigger the spike block
+    result = sensor._process_numeric_value(200.11)
+
+    assert result == 100.0

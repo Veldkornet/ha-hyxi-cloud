@@ -1,6 +1,8 @@
 """Tests for the hyxi_cloud const module."""
 
+
 from custom_components.hyxi_cloud.const import normalize_device_type
+
 
 
 def test_normalize_device_type():
@@ -56,3 +58,11 @@ def test_normalize_device_type_invalid_float():
 
     # Test valid float string path
     assert normalize_device_type("1.0") == "hybrid_inverter"
+from custom_components.hyxi_cloud.const import get_raw_device_code
+
+def test_get_raw_device_code():
+    assert get_raw_device_code({"device_type_code": "1"}) == "1"
+    assert get_raw_device_code({"deviceType": "2"}) == "2"
+    assert get_raw_device_code({"devType": "3"}) == "3"
+    assert get_raw_device_code({"deviceCode": "4"}) == "4"
+    assert get_raw_device_code({}) == ""
