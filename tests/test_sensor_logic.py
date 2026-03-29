@@ -86,11 +86,15 @@ import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 try:
     importlib.reload(const_mod)
 except ImportError:
+    # reload failures are intentionally ignored because the modules have already
+    # been imported and the tests can still run.
     pass
 try:
     importlib.reload(sensor_mod)
 except ImportError:
-    pass
+    # If sensor_mod cannot be reloaded, we skip the tests to avoid silent failures
+    # or carrying over stale MagicMock pollution from other test files.
+    pytest.skip("Could not reload sensor_mod; skipping to avoid stale mock pollution")
 # Force use of real normalization function to bypass MagicMock pollution
 sensor_mod.normalize_device_type = const_mod.normalize_device_type
 sensor_mod.get_raw_device_code = const_mod.get_raw_device_code
