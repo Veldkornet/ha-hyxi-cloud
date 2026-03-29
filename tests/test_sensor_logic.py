@@ -11,7 +11,18 @@ from unittest.mock import patch
 import pytest
 
 
-# Local implementation of normalize_device_type to avoid mock pollution in tests
+# Local implementation to avoid mock pollution in tests
+def get_raw_device_code(dev_data: dict) -> str:
+    """Extract the raw device type code from device data payload."""
+    return (
+        dev_data.get("device_type_code")
+        or dev_data.get("deviceType")
+        or dev_data.get("devType")
+        or dev_data.get("deviceCode")
+        or ""
+    )
+
+
 def normalize_device_type(code):
     """Local helper for testing."""
     if code is None or code == "":
@@ -121,6 +132,7 @@ import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 importlib.reload(sensor_mod)
 # Force use of real normalization function to bypass MagicMock pollution
 sensor_mod.normalize_device_type = normalize_device_type
+sensor_mod.get_raw_device_code = get_raw_device_code
 
 
 @pytest.fixture
@@ -832,3 +844,18 @@ def test_anti_spike_direct_call(base_sensor):
 
     # Invalid jump > 100.0 returns _last_valid_value
     assert sensor._check_anti_spike(200.1) == 100.0
+
+
+def test_process_numeric_value_anti_spike(base_sensor):
+    """Test the return path for _check_anti_spike inside _process_numeric_value."""
+    sensor, _ = base_sensor
+
+    # Seed an existing valid value
+    sensor._last_valid_value = 100.0
+
+    # Pass a value that creates a spike > 100.0
+    # _process_numeric_value handles rounding internally, so 200.11 will trigger the spike block
+    result = sensor._process_numeric_value(200.11)
+
+    # It should return the original valid value, covering `return spike_result`
+    assert result == 100.0
