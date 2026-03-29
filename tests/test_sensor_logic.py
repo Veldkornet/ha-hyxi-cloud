@@ -11,42 +11,6 @@ from unittest.mock import patch
 import pytest
 
 
-# Local implementation of normalize_device_type to avoid mock pollution in tests
-def normalize_device_type(code):
-    """Local helper for testing."""
-    if code is None or code == "":
-        return "unknown"
-    str_code = str(code).upper().strip()
-    # Try float conversion to handle "1.0" -> "1"
-    try:
-        f_val = float(str_code)
-        if f_val.is_integer():
-            str_code = str(int(f_val))
-        else:
-            str_code = str(f_val)
-    except ValueError:
-        # Non-numeric codes are expected; keep original string for matching logic below.
-        pass
-
-    if (
-        str_code in ("3", "607", "DMU", "COLLECTOR")
-        or "COLLECTOR" in str_code
-        or "DMU" in str_code
-    ):
-        return "collector"
-    if str_code in ("1", "106", "HYBRID_INVERTER") or (
-        "INVERTER" in str_code and "GRID" not in str_code
-    ):
-        return "hybrid_inverter"
-    if str_code in ("2", "STRING_INVERTER", "MICRO_INVERTER") or (
-        "INVERTER" in str_code and "GRID" in str_code
-    ):
-        return "grid_connected_inverter"
-    if str_code in ("15", "16", "EMS") or "ESS" in str_code or "HALO" in str_code:
-        return "micro_ess"
-    return "unknown"
-
-
 # 1. THE BULLETPROOF MOCK
 class FakeBase:
     pass
@@ -116,11 +80,19 @@ sys.modules["homeassistant.util"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
 # Standardize import style to resolve code scanning alert no. 50
+import custom_components.hyxi_cloud.const as const_mod  # noqa: E402
 import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 
-importlib.reload(sensor_mod)
+try:
+    importlib.reload(const_mod)
+except ImportError:
+    pass
+try:
+    importlib.reload(sensor_mod)
+except ImportError:
+    pass
 # Force use of real normalization function to bypass MagicMock pollution
-sensor_mod.normalize_device_type = normalize_device_type
+sensor_mod.normalize_device_type = const_mod.normalize_device_type
 
 
 @pytest.fixture
@@ -762,7 +734,7 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
 def test_normalize_device_type():
     """Test the normalization of device types."""
     # We use the one from sensor_mod to avoid MagicMock pollution
-    normalize_device_type_local = normalize_device_type
+    normalize_device_type_local = sensor_mod.normalize_device_type
 
     # 1. Empty string / None
     assert normalize_device_type_local(None) == "unknown"
@@ -807,7 +779,7 @@ def test_normalize_device_type():
 
 def test_normalize_device_type_invalid_float():
     """Verify that normalize_device_type gracefully handles float conversion errors."""
-    normalize_device_type_local = normalize_device_type
+    normalize_device_type_local = sensor_mod.normalize_device_type
 
     # Test error path where float conversion fails
     assert normalize_device_type_local("invalid.string") == "unknown"
