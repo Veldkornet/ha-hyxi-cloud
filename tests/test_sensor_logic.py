@@ -95,7 +95,12 @@ except ImportError:
     # If sensor_mod cannot be reloaded, we skip the tests to avoid silent failures
     # or carrying over stale MagicMock pollution from other test files.
     pytest.skip("Could not reload sensor_mod; skipping to avoid stale mock pollution")
-# Force use of real normalization function to bypass MagicMock pollution
+
+# Wire up real const.py functions into sensor_mod to bypass MagicMock pollution.
+# This ensures that any test-level patch() targeting
+# 'custom_components.hyxi_cloud.sensor.normalize_device_type' or
+# 'custom_components.hyxi_cloud.sensor.get_raw_device_code'
+# correctly overrides the real implementations rather than a MagicMock.
 sensor_mod.normalize_device_type = const_mod.normalize_device_type
 sensor_mod.get_raw_device_code = const_mod.get_raw_device_code
 
@@ -613,20 +618,28 @@ def test_hyxi_sensor_last_seen(base_sensor):
 
 @pytest.mark.asyncio
 async def test_sensor_batteries_and_collectors():
-    """Verify that battery sensors are skipped for COLLECTOR devices (Line 454 coverage)."""
+    """Verify that battery sensors are skipped for COLLECTOR devices.
+
+    Uses the real normalize_device_type + get_raw_device_code pipeline from
+    const.py (wired in at module level) rather than patching normalize_device_type.
+    This is more resilient: it tests the full lookup chain and is immune to
+    import-order issues where a patch may miss its target because the name was
+    bound before the patch was applied.
+    """
 
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "test_entry"
     coordinator = MagicMock()
 
-    # Device with type COLLECTOR that tries to report a battery sensor (batSoc)
+    # 'device_type_code': 'COLLECTOR' is handled by get_raw_device_code, then
+    # normalize_device_type maps 'COLLECTOR' -> 'collector' via DEVICE_TYPE_KEYS.
     coordinator.data = {
         "COLL123": {
             "device_type_code": "COLLECTOR",
             "metrics": {
-                "batSoc": 100,  # This should be skipped
-                "signalVal": 80,  # This should be kept
+                "batSoc": 100,  # Must be skipped for collector devices
+                "signalVal": 80,  # Must be registered
             },
         }
     }
@@ -637,22 +650,22 @@ async def test_sensor_batteries_and_collectors():
     def mock_async_add_entities(entities):
         registered_entities.extend(entities)
 
-    with patch(
-        "custom_components.hyxi_cloud.sensor.normalize_device_type",
-        return_value="collector",
-    ):
-        await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
+    # No patch needed: the real pipeline in const.py correctly identifies
+    # 'COLLECTOR' as device_type='collector', triggering the battery skip.
+    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
 
     registered_keys = []
     for e in registered_entities:
         if hasattr(e, "entity_description"):
             registered_keys.append(e.entity_description.key)
         else:
-            # Handle HyxiLastUpdateSensor which has no description
+            # Handle HyxiLastUpdateSensor which has no entity_description
             registered_keys.append("LAST_UPDATE")
 
-    assert "signalVal" in registered_keys
-    assert "batSoc" not in registered_keys  # Verified Line 454
+    assert "signalVal" in registered_keys, "signalVal must be registered for collector"
+    assert "batSoc" not in registered_keys, (
+        "batSoc must be skipped for collector devices"
+    )
 
 
 def test_battery_serial_mapping(base_sensor):
