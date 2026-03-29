@@ -49,7 +49,6 @@ BATTERY_SENSORS = {
     "batV",
     "batI",
 }
-BATTERY_SENSORS_LOWER = {s.lower() for s in BATTERY_SENSORS}
 
 
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
@@ -545,16 +544,33 @@ async def async_setup_entry(hass, entry, async_add_entities):
         is_collector_or_dmu = device_type == "collector"
 
         base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
+        local_battery_sensors = BATTERY_SENSORS
 
-        for key, description in SENSOR_TYPES_BY_KEY.items():
-            if is_collector_or_dmu and key.lower() in BATTERY_SENSORS_LOWER:
+        # 1. Base keys that are always added
+        for key in base_keys:
+            if is_collector_or_dmu and key in local_battery_sensors:
+                continue
+            description = SENSOR_TYPES_BY_KEY.get(key)
+            if description:
+                entities.append(HyxiSensor(coordinator, sn, description))
+
+        # Device type is always added
+        description = SENSOR_TYPES_BY_KEY.get("device_type")
+        if description:
+            entities.append(HyxiSensor(coordinator, sn, description))
+
+        # 2. Dynamic Metric Keys
+        # Only iterate over actual metrics returned by the device rather than all possible sensor models
+        for key, v in metrics.items():
+            if key == "device_type" or key in base_keys:
                 continue
 
-            if key == "device_type" or key in base_keys:
-                entities.append(HyxiSensor(coordinator, sn, description))
-            else:
-                v = metrics.get(key)
-                if v is not None and v != "":
+            if is_collector_or_dmu and key in local_battery_sensors:
+                continue
+
+            if v is not None and v != "":
+                description = SENSOR_TYPES_BY_KEY.get(key)
+                if description:
                     entities.append(HyxiSensor(coordinator, sn, description))
 
     # 2. Integration Health
