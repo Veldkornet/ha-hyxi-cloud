@@ -555,16 +555,38 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
 
-        for key, description in SENSOR_TYPES_BY_KEY.items():
-            if is_collector_or_dmu and key.lower() in BATTERY_SENSORS_LOWER:
-                continue
-
-            if key == "device_type" or key in base_keys:
-                entities.append(HyxiSensor(coordinator, sn, description))
-            else:
-                v = metrics.get(key)
-                if v is not None and v != "":
+        if is_collector_or_dmu:
+            for key in ("device_type", *base_keys):
+                if key.lower() not in BATTERY_SENSORS_LOWER:
+                    description = SENSOR_TYPES_BY_KEY.get(key)
+                    if description:
+                        entities.append(HyxiSensor(coordinator, sn, description))
+            for key, v in metrics.items():
+                if (
+                    v is not None
+                    and v != ""
+                    and key != "device_type"
+                    and key not in base_keys
+                    and key.lower() not in BATTERY_SENSORS_LOWER
+                ):
+                    description = SENSOR_TYPES_BY_KEY.get(key)
+                    if description:
+                        entities.append(HyxiSensor(coordinator, sn, description))
+        else:
+            for key in ("device_type", *base_keys):
+                description = SENSOR_TYPES_BY_KEY.get(key)
+                if description:
                     entities.append(HyxiSensor(coordinator, sn, description))
+            for key, v in metrics.items():
+                if (
+                    v is not None
+                    and v != ""
+                    and key != "device_type"
+                    and key not in base_keys
+                ):
+                    description = SENSOR_TYPES_BY_KEY.get(key)
+                    if description:
+                        entities.append(HyxiSensor(coordinator, sn, description))
 
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
