@@ -687,6 +687,15 @@ class HyxiSensor(HyxiBaseSensor):
 
     _attr_has_entity_name = True
 
+    _PARSERS = {
+        "device_type": "_parse_device_type",
+        "app_sw": "_parse_app_sw",
+        "swvermaster": "_parse_sw_ver",
+        "swverslave": "_parse_sw_ver",
+        "collecttime": "_parse_collect_time",
+        "last_seen": "_parse_last_seen",
+    }
+
     def __init__(self, coordinator, sn, description):
         super().__init__(coordinator)
         self.entity_description = description
@@ -782,6 +791,12 @@ class HyxiSensor(HyxiBaseSensor):
             return None
         return dt_util.parse_datetime(str(value))
 
+    def _parse_app_sw(self, dev_data, value):
+        return dev_data.get("sw_version")
+
+    def _parse_sw_ver(self, dev_data, value):
+        return value
+
     def _parse_default(self, dev_data, value):
         if value is None or value == "":
             return None
@@ -792,20 +807,18 @@ class HyxiSensor(HyxiBaseSensor):
         """Returns the sensor value with correct data typing and anti-dip protection."""
         dev_data = self.coordinator.data.get(self._sn, {})
         metrics = dev_data.get("metrics", {})
-        value = metrics.get(self.entity_description.key)
+        key = self.entity_description.key
+        value = metrics.get(key)
 
-        if self.entity_description.key == "device_type":
-            return self._parse_device_type(dev_data, value)
-        if self.entity_description.key == "app_sw":
-            return dev_data.get("sw_version")
-        if self.entity_description.key in ["swVerMaster", "swVerSlave"]:
-            return metrics.get(self.entity_description.key)
-        if self.entity_description.key.lower() in INT_SENSOR_KEYS:
+        key_lower = key.lower()
+
+        if key_lower in INT_SENSOR_KEYS:
             return self._parse_int_sensor(dev_data, value)
-        if self.entity_description.key == "collectTime":
-            return self._parse_collect_time(dev_data, value)
-        if self.entity_description.key == "last_seen":
-            return self._parse_last_seen(dev_data, value)
+
+        parser_name = self._PARSERS.get(key_lower)
+        if parser_name:
+            parser = getattr(self, parser_name)
+            return parser(dev_data, value)
 
         return self._parse_default(dev_data, value)
 
