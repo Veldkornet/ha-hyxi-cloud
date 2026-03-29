@@ -30,17 +30,6 @@ DEVICE_TYPE_KEYS = {
 }
 
 
-def get_raw_device_code(dev_data: dict) -> str:
-    """Extract the raw device type code from device data payload."""
-    return (
-        dev_data.get("device_type_code")
-        or dev_data.get("deviceType")
-        or dev_data.get("devType")
-        or dev_data.get("deviceCode")
-        or ""
-    )
-
-
 def normalize_device_type(code: str | int | float) -> str:
     """Normalize a device type code/string to a translation key.
 
