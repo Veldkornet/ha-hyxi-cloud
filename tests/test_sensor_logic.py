@@ -828,3 +828,34 @@ def test_anti_spike_direct_call(base_sensor):
 
     # Invalid jump > 100.0 returns _last_valid_value
     assert sensor._check_anti_spike(200.1) == 100.0
+
+
+def test_anti_dip_direct_call(base_sensor):
+    """Directly test _check_anti_dip logic and coverage."""
+    sensor, _ = base_sensor
+
+    # Initialize _last_valid_value
+    sensor._last_valid_value = 100.0
+
+    # Test valid reset (new value is practically zero AND drop is > 50%)
+    # This covers the `return None` path at the end of the method
+    assert sensor._check_anti_dip(0.0) is None
+
+
+def test_anti_spike_returns_value(base_sensor):
+    """Test that _process_numeric_value returns the spike result when a spike is detected."""
+    sensor, _ = base_sensor
+
+    # Needs to be a TOTAL_INCREASING sensor for the filters to run
+    assert sensor.entity_description.state_class == "total_increasing"
+
+    # Initialize _last_valid_value
+    sensor._last_valid_value = 100.0
+
+    # Pass a value that causes a spike (> 100 jump)
+    # The jump is 200.1 - 100.0 = 100.1 > 100.0, so it's a spike.
+    # _check_anti_spike should return _last_valid_value (100.0)
+    # _process_numeric_value should return this value.
+    result = sensor._process_numeric_value("200.1")
+
+    assert result == 100.0
