@@ -305,6 +305,10 @@ def test_batsoc_batsoh_casting(base_sensor):
     coordinator.data["SN123"]["metrics"]["batSoh"] = "invalid"
     assert sensor.native_value is None
 
+    # Test invalid type gracefully handled
+    coordinator.data["SN123"]["metrics"]["batSoh"] = {"invalid": "dict"}
+    assert sensor.native_value is None
+
 
 @pytest.mark.asyncio
 async def test_new_api_metrics_registration():
