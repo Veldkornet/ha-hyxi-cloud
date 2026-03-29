@@ -11,42 +11,6 @@ from unittest.mock import patch
 import pytest
 
 
-# Local implementation of normalize_device_type to avoid mock pollution in tests
-def normalize_device_type(code):
-    """Local helper for testing."""
-    if code is None or code == "":
-        return "unknown"
-    str_code = str(code).upper().strip()
-    # Try float conversion to handle "1.0" -> "1"
-    try:
-        f_val = float(str_code)
-        if f_val.is_integer():
-            str_code = str(int(f_val))
-        else:
-            str_code = str(f_val)
-    except ValueError:
-        # Non-numeric codes are expected; keep original string for matching logic below.
-        pass
-
-    if (
-        str_code in ("3", "607", "DMU", "COLLECTOR")
-        or "COLLECTOR" in str_code
-        or "DMU" in str_code
-    ):
-        return "collector"
-    if str_code in ("1", "106", "HYBRID_INVERTER") or (
-        "INVERTER" in str_code and "GRID" not in str_code
-    ):
-        return "hybrid_inverter"
-    if str_code in ("2", "STRING_INVERTER", "MICRO_INVERTER") or (
-        "INVERTER" in str_code and "GRID" in str_code
-    ):
-        return "grid_connected_inverter"
-    if str_code in ("15", "16", "EMS") or "ESS" in str_code or "HALO" in str_code:
-        return "micro_ess"
-    return "unknown"
-
-
 # 1. THE BULLETPROOF MOCK
 class FakeBase:
     pass
@@ -119,8 +83,6 @@ sys.modules["aiohttp"] = MagicMock()
 import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 
 importlib.reload(sensor_mod)
-# Force use of real normalization function to bypass MagicMock pollution
-sensor_mod.normalize_device_type = normalize_device_type
 
 
 @pytest.fixture
@@ -656,7 +618,11 @@ async def test_sensor_batteries_and_collectors():
     def mock_async_add_entities(entities):
         registered_entities.extend(entities)
 
-    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
+    with patch(
+        "custom_components.hyxi_cloud.sensor.normalize_device_type",
+        return_value="collector",
+    ):
+        await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
 
     registered_keys = []
     for e in registered_entities:
@@ -757,63 +723,6 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
             [1],
             "sensor.hyxi_test_sensor",
         )
-
-
-def test_normalize_device_type():
-    """Test the normalization of device types."""
-    # We use the one from sensor_mod to avoid MagicMock pollution
-    normalize_device_type_local = normalize_device_type
-
-    # 1. Empty string / None
-    assert normalize_device_type_local(None) == "unknown"
-    assert normalize_device_type_local("") == "unknown"
-
-    # 2. Exact device code string
-    assert normalize_device_type_local("1") == "hybrid_inverter"
-    assert normalize_device_type_local("3") == "collector"
-
-    # 3. Float string direct mapping
-    assert normalize_device_type_local("15.0") == "micro_ess"
-    assert normalize_device_type_local("16.0") == "micro_ess"
-
-    # 4. Int/Float input
-    assert normalize_device_type_local(1) == "hybrid_inverter"
-    assert normalize_device_type_local(15.0) == "micro_ess"
-
-    # 5. String aliases defined in DEVICE_TYPE_KEYS
-    assert normalize_device_type_local("EMS") == "micro_ess"
-    assert normalize_device_type_local("COLLECTOR") == "collector"
-
-    # 6. Substring match (if API returned a name instead of code)
-    assert normalize_device_type_local("SOME_COLLECTOR") == "collector"
-    assert normalize_device_type_local("FOO_DMU_BAR") == "collector"
-    assert normalize_device_type_local("GRID_INVERTER") == "grid_connected_inverter"
-    assert normalize_device_type_local("MY_INVERTER") == "hybrid_inverter"
-    assert normalize_device_type_local("HALO_DEVICE") == "micro_ess"
-    assert normalize_device_type_local("ESS_DEVICE") == "micro_ess"
-
-    # 7. Case insensitivity and whitespace handling
-    assert normalize_device_type_local(" EMS ") == "micro_ess"
-    assert normalize_device_type_local("dmu") == "collector"
-
-    # 8. Failed float conversions fallbacks to original logic
-    assert normalize_device_type_local("20.ABC") == "unknown"
-    assert normalize_device_type_local("15.0.0") == "unknown"
-
-    # 9. Unmatched strings
-    assert normalize_device_type_local("UNKNOWN_DEVICE") == "unknown"
-    assert normalize_device_type_local("RANDOM_STRING") == "unknown"
-
-
-def test_normalize_device_type_invalid_float():
-    """Verify that normalize_device_type gracefully handles float conversion errors."""
-    normalize_device_type_local = normalize_device_type
-
-    # Test error path where float conversion fails
-    assert normalize_device_type_local("invalid.string") == "unknown"
-
-    # Test valid float string path
-    assert normalize_device_type_local("1.0") == "hybrid_inverter"
 
 
 def test_anti_spike_direct_call(base_sensor):
