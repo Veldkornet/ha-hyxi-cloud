@@ -11,7 +11,18 @@ from unittest.mock import patch
 import pytest
 
 
-# Local implementation of normalize_device_type to avoid mock pollution in tests
+# Local implementation to avoid mock pollution in tests
+def get_raw_device_code(dev_data: dict) -> str:
+    """Extract the raw device type code from device data payload."""
+    return (
+        dev_data.get("device_type_code")
+        or dev_data.get("deviceType")
+        or dev_data.get("devType")
+        or dev_data.get("deviceCode")
+        or ""
+    )
+
+
 def normalize_device_type(code):
     """Local helper for testing."""
     if code is None or code == "":
@@ -121,6 +132,7 @@ import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 importlib.reload(sensor_mod)
 # Force use of real normalization function to bypass MagicMock pollution
 sensor_mod.normalize_device_type = normalize_device_type
+sensor_mod.get_raw_device_code = get_raw_device_code
 
 
 @pytest.fixture
