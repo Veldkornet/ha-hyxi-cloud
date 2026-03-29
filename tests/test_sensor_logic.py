@@ -840,3 +840,18 @@ def test_anti_spike_direct_call(base_sensor):
 
     # Invalid jump > 100.0 returns _last_valid_value
     assert sensor._check_anti_spike(200.1) == 100.0
+
+
+def test_process_numeric_value_anti_spike(base_sensor):
+    """Test the return path for _check_anti_spike inside _process_numeric_value."""
+    sensor, _ = base_sensor
+
+    # Seed an existing valid value
+    sensor._last_valid_value = 100.0
+
+    # Pass a value that creates a spike > 100.0
+    # _process_numeric_value handles rounding internally, so 200.11 will trigger the spike block
+    result = sensor._process_numeric_value(200.11)
+
+    # It should return the original valid value, covering `return spike_result`
+    assert result == 100.0
