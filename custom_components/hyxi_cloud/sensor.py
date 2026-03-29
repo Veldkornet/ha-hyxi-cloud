@@ -48,6 +48,7 @@ BATTERY_SENSORS = {
     "batV",
     "batI",
 }
+BATTERY_SENSORS_LOWER = {s.lower() for s in BATTERY_SENSORS}
 
 
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
@@ -552,28 +553,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         is_collector_or_dmu = device_type == "collector"
 
-        if is_collector_or_dmu:
-            keys_to_add = BASE_KEYS_COLLECTOR.copy()
-        else:
-            keys_to_add = BASE_KEYS_OTHER.copy()
+        base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
 
-        # Add static device type sensor
-        keys_to_add.add("device_type")
+        for key, description in SENSOR_TYPES_BY_KEY.items():
+            if is_collector_or_dmu and key.lower() in BATTERY_SENSORS_LOWER:
+                continue
 
-        for k, v in metrics.items():
-            if v is not None and v != "":
-                keys_to_add.add(k)
-
-        valid_keys = keys_to_add.intersection(SENSOR_TYPES_BY_KEY)
-        if is_collector_or_dmu:
-            # Case-insensitive removal of battery sensors
-            bat_sensors_lower = {s.lower() for s in BATTERY_SENSORS}
-            valid_keys = {k for k in valid_keys if k.lower() not in bat_sensors_lower}
-            # Removed: valid_keys.discard("wifiVer") - wifiVer is now explicitly added for collectors
-
-        for key in valid_keys:
-            description = SENSOR_TYPES_BY_KEY[key]
-            entities.append(HyxiSensor(coordinator, sn, description))
+            if key == "device_type" or key in base_keys:
+                entities.append(HyxiSensor(coordinator, sn, description))
+            else:
+                v = metrics.get(key)
+                if v is not None and v != "":
+                    entities.append(HyxiSensor(coordinator, sn, description))
 
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
