@@ -572,7 +572,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 description = SENSOR_TYPES_BY_KEY.get(key)
                 if description:
                     entities.append(HyxiSensor(coordinator, sn, description))
-
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
