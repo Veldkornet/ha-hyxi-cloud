@@ -1,6 +1,5 @@
 """Tests for const.py."""
 
-import pytest
 from custom_components.hyxi_cloud.const import normalize_device_type
 
 
