@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .const import MANUFACTURER
 from .const import get_raw_device_code
+from .const import get_software_version
 from .const import mask_sn
 from .const import normalize_device_type
 
@@ -739,16 +740,8 @@ class HyxiSensor(HyxiBaseSensor):
             }
 
         # Simplified dynamic versions for Registry
-        sw_version = dev_data.get("sw_version")
+        sw_version = get_software_version(dev_data)
         hw_version = dev_data.get("hw_version")
-
-        # Combine versions for Datalogger if wifiver is present
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
-        if device_type == "collector":
-            metrics = dev_data.get("metrics", {})
-            wifi_ver = metrics.get("wifiVer")
-            if wifi_ver:
-                sw_version = f"{sw_version} / {wifi_ver}"
 
         return {
             "identifiers": {(DOMAIN, self._sn)},
