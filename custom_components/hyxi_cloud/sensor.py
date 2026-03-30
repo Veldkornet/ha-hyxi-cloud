@@ -704,6 +704,15 @@ class HyxiSensor(HyxiBaseSensor):
             description.translation_key or description.key.lower()
         )
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
+
+        key_lower = description.key.lower()
+        if key_lower in INT_SENSOR_KEYS:
+            self._parser_func = self._parse_int_sensor
+        elif parser_name := self._PARSERS.get(key_lower):
+            self._parser_func = getattr(self, parser_name)
+        else:
+            self._parser_func = self._parse_default
+
         self._update_native_value()
 
     @callback
@@ -804,19 +813,7 @@ class HyxiSensor(HyxiBaseSensor):
         key = self.entity_description.key
         value = metrics.get(key)
 
-        key_lower = key.lower()
-
-        if key_lower in INT_SENSOR_KEYS:
-            self._attr_native_value = self._parse_int_sensor(dev_data, value)
-            return
-
-        parser_name = self._PARSERS.get(key_lower)
-        if parser_name:
-            parser = getattr(self, parser_name)
-            self._attr_native_value = parser(dev_data, value)
-            return
-
-        self._attr_native_value = self._parse_default(dev_data, value)
+        self._attr_native_value = self._parser_func(dev_data, value)
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
