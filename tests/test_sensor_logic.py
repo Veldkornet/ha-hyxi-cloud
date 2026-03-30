@@ -767,8 +767,16 @@ def test_anti_spike_direct_call(base_sensor):
     # Valid jump <= 100.0 returns None (meaning let it through)
     assert sensor._check_anti_spike(200.0) is None
 
-    # Invalid jump > 100.0 returns _last_valid_value
-    assert sensor._check_anti_spike(200.1) == 100.0
+    # Invalid jump > 100.0 returns _last_valid_value and logs glitch
+    with patch.object(sensor, "_log_glitch_once") as mock_log:
+        assert sensor._check_anti_spike(200.1) == 100.0
+        mock_log.assert_called_once_with(
+            200.1,
+            "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+            sensor.entity_description.key,
+            100.0,
+            200.1,
+        )
 
 
 def test_anti_dip_direct_call(base_sensor):
