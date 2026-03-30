@@ -9,6 +9,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.components.sensor import SensorStateClass
+from homeassistant.core import callback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -579,6 +580,9 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
         self._last_valid_value = None
         self._last_logged_glitch = None
 
+    def _update_native_value(self):
+        """Update the cached native value. Should be overridden by subclasses."""
+
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added."""
         await super().async_added_to_hass()
@@ -589,6 +593,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
             if (last_state := await self.async_get_last_state()) is not None:
                 try:
                     self._last_valid_value = float(last_state.state)
+                    self._update_native_value()
                 except (
                     ValueError,
                     TypeError,
@@ -712,6 +717,13 @@ class HyxiSensor(HyxiBaseSensor):
             description.translation_key or description.key.lower()
         )
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
+        self._update_native_value()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._update_native_value()
+        super()._handle_coordinator_update()
 
     @property
     def device_info(self):
@@ -798,9 +810,8 @@ class HyxiSensor(HyxiBaseSensor):
             return None
         return self._process_numeric_value(value)
 
-    @property
-    def native_value(self):
-        """Returns the sensor value with correct data typing and anti-dip protection."""
+    def _update_native_value(self):
+        """Update the cached native value."""
         dev_data = self.coordinator.data.get(self._sn, {})
         metrics = dev_data.get("metrics", {})
         key = self.entity_description.key
@@ -809,14 +820,16 @@ class HyxiSensor(HyxiBaseSensor):
         key_lower = key.lower()
 
         if key_lower in INT_SENSOR_KEYS:
-            return self._parse_int_sensor(dev_data, value)
+            self._attr_native_value = self._parse_int_sensor(dev_data, value)
+            return
 
         parser_name = self._PARSERS.get(key_lower)
         if parser_name:
             parser = getattr(self, parser_name)
-            return parser(dev_data, value)
+            self._attr_native_value = parser(dev_data, value)
+            return
 
-        return self._parse_default(dev_data, value)
+        self._attr_native_value = self._parse_default(dev_data, value)
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
@@ -836,7 +849,14 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
             "manufacturer": MANUFACTURER,
             "model": "Cloud API Bridge",
         }
+        self._update_native_value()
 
-    @property
-    def native_value(self):
-        return self.coordinator.hyxi_metadata.get("last_success")
+    def _update_native_value(self):
+        """Update the cached native value."""
+        self._attr_native_value = self.coordinator.hyxi_metadata.get("last_success")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._update_native_value()
+        super()._handle_coordinator_update()
