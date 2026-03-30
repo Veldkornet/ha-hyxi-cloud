@@ -23,7 +23,39 @@ sys.modules["homeassistant.helpers.device_registry"] = MagicMock()
 sys.modules["homeassistant.helpers.entity_platform"] = MagicMock()
 sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
 sys.modules["homeassistant.util"] = MagicMock()
-sys.modules["aiohttp"] = MagicMock()
+
+
+class MockClientError(Exception):
+    """Mock ClientError."""
+
+
+mock_aiohttp = MagicMock()
+mock_aiohttp.ClientError = MockClientError
+sys.modules["aiohttp"] = mock_aiohttp
+
+
+class MockUpdateFailed(Exception):
+    """Mock UpdateFailed."""
+
+
+mock_coordinator = MagicMock()
+mock_coordinator.UpdateFailed = MockUpdateFailed
+sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+
+
+class MockConfigEntryAuthFailed(Exception):
+    """Mock ConfigEntryAuthFailed."""
+
+
+class MockConfigEntryNotReady(Exception):
+    """Mock ConfigEntryNotReady."""
+
+
+mock_exceptions = MagicMock()
+mock_exceptions.ConfigEntryAuthFailed = MockConfigEntryAuthFailed
+mock_exceptions.ConfigEntryNotReady = MockConfigEntryNotReady
+sys.modules["homeassistant.exceptions"] = mock_exceptions
+
 # Robustly mock hyxi_cloud_api with required __version__
 mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
