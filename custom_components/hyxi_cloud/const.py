@@ -55,6 +55,19 @@ def get_raw_device_code(dev_data: dict) -> str:
     )
 
 
+def get_software_version(dev_data: dict) -> str | None:
+    """Extract and format the software version for a device."""
+    sw_version = dev_data.get("sw_version")
+    if sw_version:
+        device_type = normalize_device_type(get_raw_device_code(dev_data))
+        if device_type == "collector":
+            metrics = dev_data.get("metrics", {})
+            wifi_ver = metrics.get("wifiVer")
+            if wifi_ver:
+                sw_version = f"{sw_version} / {wifi_ver}"
+    return sw_version
+
+
 def normalize_device_type(code: str | int | float) -> str:
     """Normalize a device type code/string to a translation key.
 
