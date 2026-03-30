@@ -21,18 +21,6 @@ from .const import normalize_device_type
 _LOGGER = logging.getLogger(__name__)
 
 
-def _safe_float(value) -> float:
-    """Helper to safely convert values to float."""
-    try:
-        return float(value or 0)
-    except (
-        ValueError,
-        TypeError,
-        OverflowError,
-    ):
-        return 0.0
-
-
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from HYXI API."""
 
