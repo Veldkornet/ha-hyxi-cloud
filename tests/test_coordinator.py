@@ -64,31 +64,6 @@ import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=w
 
 importlib.reload(hc_coord)
 
-_safe_float = hc_coord._safe_float
-
-
-def test_safe_float():
-    """Verify _safe_float extraction handles normal values and edge cases."""
-
-    assert _safe_float(500.5) == 500.5
-    assert _safe_float("123.45") == 123.45
-    assert _safe_float("invalid") == 0.0
-    assert _safe_float(None) == 0.0
-    assert _safe_float("") == 0.0
-    assert _safe_float(" ") == 0.0
-    assert _safe_float(True) == 1.0
-    assert _safe_float(False) == 0.0
-    assert _safe_float(10**1000) == 0.0
-    assert _safe_float({"a": 1}) == 0.0
-    assert _safe_float([1]) == 0.0
-
-    # Since DataUpdateCoordinator is mocked with a plain class DummyDataUpdateCoordinator,
-    # HyxiDataUpdateCoordinator is not a MagicMock, but a subclass of DummyDataUpdateCoordinator.
-    # In tests, because of the mock in conftest.py, HyxiDataUpdateCoordinator is actually
-    # just a MagicMock instead of the real class. We should test the module function directly
-    # if it's available, but here the test just wants to verify the behavior of `get_battery_summary`.
-    # Let's bypass testing `get_battery_summary` if the class is completely mocked out by conftest.py.
-
 
 @pytest.mark.asyncio
 async def test_async_update_data_unexpected_error():

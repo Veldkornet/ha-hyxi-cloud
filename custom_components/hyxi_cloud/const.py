@@ -30,6 +30,20 @@ DEVICE_TYPE_KEYS = {
 }
 
 
+def mask_sn(sn: str) -> str:
+    """Mask a serial number for logs, replacing middle chars with X.
+
+    Matches the _mask_id format used in the API library.
+    """
+    if not sn:
+        return "****"
+    sn_str = str(sn)
+    if len(sn_str) < 8:
+        return "****"
+    middle_len = len(sn_str) - 6
+    return f"{sn_str[:3]}{'X' * middle_len}{sn_str[-3:]}"
+
+
 def get_raw_device_code(dev_data: dict) -> str:
     """Extract the raw device type code from device data payload."""
     return (

@@ -1,7 +1,23 @@
 """Tests for the hyxi_cloud const module."""
 
 from custom_components.hyxi_cloud.const import get_raw_device_code
+from custom_components.hyxi_cloud.const import mask_sn
 from custom_components.hyxi_cloud.const import normalize_device_type
+
+
+def test_mask_sn():
+    """Verify mask_sn correctly obscures serial numbers."""
+    # 1. Normal SN (8+ chars)
+    assert mask_sn("12345678") == "123XX678"
+    assert mask_sn("SN123456789") == "SN1XXXXX789"
+
+    # 2. Short SN (< 8 chars)
+    assert mask_sn("1234567") == "****"
+    assert mask_sn("123") == "****"
+
+    # 3. Empty or None
+    assert mask_sn("") == "****"
+    assert mask_sn(None) == "****"
 
 
 def test_normalize_device_type():
@@ -57,6 +73,30 @@ def test_normalize_device_type_invalid_float():
 
     # Test valid float string path
     assert normalize_device_type("1.0") == "hybrid_inverter"
+
+
+def test_normalize_device_type_extra_edge_cases():
+    """Extra edge cases for normalize_device_type."""
+    # Boolean inputs (converted to "TRUE"/"FALSE")
+    assert normalize_device_type(True) == "unknown"
+    assert normalize_device_type(False) == "unknown"
+
+    # Large numbers
+    assert normalize_device_type(999999) == "unknown"
+    assert normalize_device_type(1e10) == "unknown"
+
+    # Special characters
+    assert normalize_device_type("!!!") == "unknown"
+    assert normalize_device_type("@#$%") == "unknown"
+
+    # Float strings with decimals (verify truncation/rounding behavior)
+    # "15.9" -> float(15.9) -> int(15.9) -> 15 -> "15" -> "micro_ess"
+    assert normalize_device_type("15.9") == "micro_ess"
+    assert normalize_device_type("2.1") == "grid_connected_inverter"
+
+    # Whitespace and casing combinations
+    assert normalize_device_type("  InVeRtEr  ") == "hybrid_inverter"
+    assert normalize_device_type("\tgrid_inverter\n") == "grid_connected_inverter"
 
 
 def test_get_raw_device_code():

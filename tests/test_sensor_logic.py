@@ -20,9 +20,14 @@ class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
 
+    def _handle_coordinator_update(self) -> None:
+        pass
+
 
 class FakeSensorEntity(FakeBase):
-    pass
+    @property
+    def native_value(self):
+        return getattr(self, "_attr_native_value", None)
 
 
 class FakeRestoreEntity(FakeBase):
@@ -34,6 +39,7 @@ class FakeRestoreEntity(FakeBase):
 mock_ha = MagicMock()
 mock_ha.__name__ = "mock_ha"
 mock_ha.__path__ = []  # IMPORTANT for nested module resolution
+mock_ha.callback = lambda func: func
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
 sys.modules["homeassistant.config_entries"] = mock_ha
@@ -103,6 +109,7 @@ except ImportError:
 # correctly overrides the real implementations rather than a MagicMock.
 sensor_mod.normalize_device_type = const_mod.normalize_device_type
 sensor_mod.get_raw_device_code = const_mod.get_raw_device_code
+sensor_mod.mask_sn = const_mod.mask_sn
 
 
 @pytest.fixture
@@ -150,10 +157,12 @@ def test_anti_dip_recovery(base_sensor):
 
     # 📉 The Dip (Should be blocked)
     coordinator.data["SN123"]["metrics"]["totalE"] = 2738.0
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 2742.0
 
     # 📈 The Recovery (Should be allowed as it's a valid increase from baseline)
     coordinator.data["SN123"]["metrics"]["totalE"] = 2747.0
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 2747.0
 
 
@@ -166,14 +175,17 @@ def test_anti_spike_prevention(base_sensor):
 
     # 📈 Valid jump <= 100.0 (allowed)
     coordinator.data["SN123"]["metrics"]["totalE"] = 2842.0
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 2842.0
 
     # 🚀 Invalid spike > 100.0 (blocked, returns last valid value)
     coordinator.data["SN123"]["metrics"]["totalE"] = 2943.0
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 2842.0
 
     # 📉 Small increase after spike (allowed)
     coordinator.data["SN123"]["metrics"]["totalE"] = 2850.0
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 2850.0
 
 
@@ -181,9 +193,11 @@ def test_null_data_handling(base_sensor):
     """Ensure the sensor returns None instead of crashing on empty API data."""
     sensor, coordinator = base_sensor
     coordinator.data["SN123"]["metrics"]["totalE"] = None
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
     coordinator.data["SN123"]["metrics"]["totalE"] = ""
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
 
@@ -197,10 +211,12 @@ def test_timestamp_scaling(base_sensor):
 
     # 10 Digits
     sensor.coordinator.data["SN123"]["metrics"]["collectTime"] = 1741248000
+    sensor._handle_coordinator_update()
     assert isinstance(sensor.native_value, datetime)
 
     # 13 Digits
     sensor.coordinator.data["SN123"]["metrics"]["collectTime"] = 1741248000000
+    sensor._handle_coordinator_update()
     assert isinstance(sensor.native_value, datetime)
 
 
@@ -211,25 +227,30 @@ def test_collecttime_error_handling(base_sensor):
 
     # Test ValueError (unparseable string)
     coordinator.data["SN123"]["metrics"]["collectTime"] = "invalid_timestamp"
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
     # Test TypeError (invalid type like dict or list)
     coordinator.data["SN123"]["metrics"]["collectTime"] = {"time": 123}
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
     # Test extreme value causing OverflowError/OSError in datetime.fromtimestamp
     # A huge number that passes the 10-digit check but is still too large for datetime
     coordinator.data["SN123"]["metrics"]["collectTime"] = 1000000000000000000
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
     # Test extreme overflow value (triggering OverflowError on many platforms)
     coordinator.data["SN123"]["metrics"]["collectTime"] = 10**25
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
     # Test OSError explicitly by patching datetime since OverflowError is now ValueError in Python 3.12+
     with patch("custom_components.hyxi_cloud.sensor.datetime") as mock_dt:
         mock_dt.fromtimestamp.side_effect = OSError("mocked OSError")
         coordinator.data["SN123"]["metrics"]["collectTime"] = 1234567890
+        sensor._handle_coordinator_update()
         assert sensor.native_value is None
 
 
@@ -237,6 +258,7 @@ def test_rounding_protection(base_sensor):
     """Ensure floating point noise (2.73199999) is rounded correctly."""
     sensor, coordinator = base_sensor
     coordinator.data["SN123"]["metrics"]["totalE"] = 2742.123456
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 2742.12
 
 
@@ -251,6 +273,7 @@ def test_late_night_correction(base_sensor):
     # 02:00 AM - Cloud 'finds' 1.5kWh missed from earlier in the day
     # Even though it's night, this is a valid increase < 100kWh.
     coordinator.data["SN123"]["metrics"]["totalE"] = 2743.5
+    sensor._handle_coordinator_update()
     val = sensor.native_value
 
     print(f"[Night Correction] Jumped from 2742.0 to {val} kWh")
@@ -264,19 +287,23 @@ def test_batsoc_batsoh_casting(base_sensor):
     # Test batSoc
     sensor.entity_description.key = "batSoc"
     coordinator.data["SN123"]["metrics"]["batSoc"] = 85.6
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 86
 
     # Test batSoh
     sensor.entity_description.key = "batSoh"
     coordinator.data["SN123"]["metrics"]["batSoh"] = 99.1
+    sensor._handle_coordinator_update()
     assert sensor.native_value == 99
 
     # Test invalid string gracefully handled
     coordinator.data["SN123"]["metrics"]["batSoh"] = "invalid"
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
     # Test invalid type gracefully handled
     coordinator.data["SN123"]["metrics"]["batSoh"] = {"invalid": "dict"}
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
 
@@ -426,22 +453,27 @@ def test_sensor_int_conversion_error(base_sensor):
 
         # Test valid string
         coordinator.data["SN123"]["metrics"][key] = "85.5"
+        sensor._handle_coordinator_update()
         assert sensor.native_value == 86
 
         # Test invalid string
         coordinator.data["SN123"]["metrics"][key] = "invalid_string"
+        sensor._handle_coordinator_update()
         assert sensor.native_value is None
 
         # Test non-numeric object
         coordinator.data["SN123"]["metrics"][key] = {"unexpected": "data"}
+        sensor._handle_coordinator_update()
         assert sensor.native_value is None
 
         # Test None value (handled by earlier check but good to verify)
         coordinator.data["SN123"]["metrics"][key] = None
+        sensor._handle_coordinator_update()
         assert sensor.native_value is None
 
         # Test empty string (handled by earlier check)
         coordinator.data["SN123"]["metrics"][key] = ""
+        sensor._handle_coordinator_update()
         assert sensor.native_value is None
 
 
@@ -455,10 +487,12 @@ def test_sensor_int_conversion_non_numeric_string(base_sensor):
 
     # String that raises ValueError on float() conversion
     coordinator.data["SN123"]["metrics"]["batSoc"] = "non_numeric_string"
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
     # Object that raises TypeError on float() conversion
     coordinator.data["SN123"]["metrics"]["batSoc"] = {"unexpected": "object"}
+    sensor._handle_coordinator_update()
     assert sensor.native_value is None
 
 
@@ -466,6 +500,7 @@ def test_float_conversion_error(base_sensor):
     """Verify that a non-numeric string gracefully falls back."""
     sensor, coordinator = base_sensor
     coordinator.data["SN123"]["metrics"]["totalE"] = "bad_data"
+    sensor._handle_coordinator_update()
     assert sensor.native_value == "bad_data"
 
 
@@ -473,6 +508,7 @@ def test_float_conversion_error(base_sensor):
 async def test_sensor_added_to_hass_restoration():
     """Verify that HyxiSensor restores its last state on addition to Home Assistant."""
     coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"totalE": None}}}
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
@@ -494,6 +530,7 @@ async def test_sensor_added_to_hass_restoration():
 async def test_sensor_added_to_hass_no_restoration():
     """Verify that HyxiSensor handles missing last state gracefully."""
     coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"totalE": None}}}
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
@@ -513,6 +550,7 @@ async def test_sensor_added_to_hass_no_restoration():
 async def test_sensor_added_to_hass_invalid_restoration():
     """Verify that HyxiSensor handles invalid last state values gracefully."""
     coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"totalE": None}}}
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
@@ -552,6 +590,7 @@ def test_hyxi_base_sensor_direct_unit_return(base_sensor):
 
     # Should return exactly what it gets
     coordinator.data["SN123"]["metrics"]["totalE"] = "Any Value"
+    sensor._handle_coordinator_update()
     assert sensor.native_value == "Any Value"
 
 
@@ -610,6 +649,7 @@ def test_hyxi_sensor_last_seen(base_sensor):
         "custom_components.hyxi_cloud.sensor.dt_util.parse_datetime",
         return_value=fixed_time_dt,
     ):
+        sensor._handle_coordinator_update()
         assert isinstance(
             sensor.native_value,
             datetime,
@@ -738,9 +778,9 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
     sensor.entity_id = "sensor.hyxi_test_sensor"
     sensor.hass = MagicMock()
 
-    # Mock last state with an uncastable object to trigger TypeError
+    # Mock last state with a non-floatable value to trigger ValueError/TypeError
     last_state = MagicMock()
-    last_state.state = [1]
+    last_state.state = "not-a-number"
     sensor.async_get_last_state = AsyncMock(return_value=last_state)
 
     with patch("custom_components.hyxi_cloud.sensor._LOGGER.debug") as mock_debug:
@@ -752,7 +792,7 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
         # Verify the debug message used entity_id
         mock_debug.assert_called_once_with(
             "HYXI Restore: Could not parse restored state '%s' for %s",
-            [1],
+            "not-a-number",
             "sensor.hyxi_test_sensor",
         )
 

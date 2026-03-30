@@ -26,9 +26,14 @@ class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):  # pylint: disable=unused-argument
         self.coordinator = coordinator
 
+    def _handle_coordinator_update(self) -> None:
+        pass
+
 
 class FakeSensorEntity(FakeBase):
-    pass
+    @property
+    def native_value(self):
+        return getattr(self, "_attr_native_value", None)
 
 
 class FakeRestoreEntity(FakeBase):
@@ -37,6 +42,7 @@ class FakeRestoreEntity(FakeBase):
 
 
 mock_ha = MagicMock()
+mock_ha.callback = lambda func: func
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
 mock_sensor = MagicMock()
@@ -93,6 +99,7 @@ if HAS_HYPOTHESIS:
 
         # 2. Inject the fuzzed/randomized value from Hypothesis
         coordinator.data["SN123"]["metrics"]["totalE"] = new_val
+        sensor._handle_coordinator_update()
 
         # 3. Trigger the property getter
         result = None
