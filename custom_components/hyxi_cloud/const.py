@@ -8,7 +8,7 @@ CONF_SECRET_KEY = "secret_key"
 BASE_URL = "https://open.hyxicloud.com"
 
 MANUFACTURER = "HYXI Power"
-VERSION = "1.3.6"
+VERSION = "1.3.8"
 
 CONF_BACK_DISCOVERY = "back_discovery"
 
