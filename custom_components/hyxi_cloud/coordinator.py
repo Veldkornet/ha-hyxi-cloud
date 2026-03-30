@@ -16,6 +16,7 @@ from hyxi_cloud_api import HyxiApiClient
 from .const import CONF_BACK_DISCOVERY
 from .const import DOMAIN
 from .const import get_raw_device_code
+from .const import mask_sn
 from .const import normalize_device_type
 
 _LOGGER = logging.getLogger(__name__)
@@ -135,7 +136,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Only update if changed
             if device.sw_version != sw_version or device.hw_version != hw_version:
-                _LOGGER.debug("Updating device registry for %s: %s", sn, sw_version)
+                _LOGGER.debug(
+                    "Updating device registry for %s: %s", mask_sn(sn), sw_version
+                )
                 dev_reg.async_update_device(
                     device.id, sw_version=sw_version, hw_version=hw_version
                 )
