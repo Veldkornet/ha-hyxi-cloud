@@ -792,7 +792,7 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
         # Verify the debug message used entity_id
         mock_debug.assert_called_once_with(
             "HYXI Restore: Could not parse restored state '%s' for %s",
-            [1],
+            "not-a-number",
             "sensor.hyxi_test_sensor",
         )
 
