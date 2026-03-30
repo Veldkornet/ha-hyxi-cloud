@@ -507,6 +507,7 @@ def test_float_conversion_error(base_sensor):
 async def test_sensor_added_to_hass_restoration():
     """Verify that HyxiSensor restores its last state on addition to Home Assistant."""
     coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"totalE": None}}}
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
@@ -528,6 +529,7 @@ async def test_sensor_added_to_hass_restoration():
 async def test_sensor_added_to_hass_no_restoration():
     """Verify that HyxiSensor handles missing last state gracefully."""
     coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"totalE": None}}}
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
@@ -547,6 +549,7 @@ async def test_sensor_added_to_hass_no_restoration():
 async def test_sensor_added_to_hass_invalid_restoration():
     """Verify that HyxiSensor handles invalid last state values gracefully."""
     coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"totalE": None}}}
     description = MagicMock()
     description.key = "totalE"
     description.state_class = "total_increasing"
@@ -557,6 +560,8 @@ async def test_sensor_added_to_hass_invalid_restoration():
     # Mock invalid last state
     last_state = MagicMock()
     last_state.state = "unknown"
+    # Ensure float() conversion of mock doesn't return 1.0
+    last_state.state.__float__.side_effect = ValueError("Not a float")
     sensor.async_get_last_state = AsyncMock(return_value=last_state)
 
     await sensor.async_added_to_hass()
