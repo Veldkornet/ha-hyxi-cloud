@@ -560,8 +560,6 @@ async def test_sensor_added_to_hass_invalid_restoration():
     # Mock invalid last state
     last_state = MagicMock()
     last_state.state = "unknown"
-    # Ensure float() conversion of mock doesn't return 1.0
-    last_state.state.__float__.side_effect = ValueError("Not a float")
     sensor.async_get_last_state = AsyncMock(return_value=last_state)
 
     await sensor.async_added_to_hass()
@@ -779,9 +777,9 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
     sensor.entity_id = "sensor.hyxi_test_sensor"
     sensor.hass = MagicMock()
 
-    # Mock last state with an uncastable object to trigger TypeError
+    # Mock last state with a non-floatable value to trigger ValueError/TypeError
     last_state = MagicMock()
-    last_state.state = [1]
+    last_state.state = "not-a-number"
     sensor.async_get_last_state = AsyncMock(return_value=last_state)
 
     with patch("custom_components.hyxi_cloud.sensor._LOGGER.debug") as mock_debug:
