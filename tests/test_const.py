@@ -1,7 +1,23 @@
 """Tests for the hyxi_cloud const module."""
 
 from custom_components.hyxi_cloud.const import get_raw_device_code
+from custom_components.hyxi_cloud.const import mask_sn
 from custom_components.hyxi_cloud.const import normalize_device_type
+
+
+def test_mask_sn():
+    """Verify mask_sn correctly obscures serial numbers."""
+    # 1. Normal SN (8+ chars)
+    assert mask_sn("12345678") == "123XX678"
+    assert mask_sn("SN123456789") == "SN1XXXXX789"
+
+    # 2. Short SN (< 8 chars)
+    assert mask_sn("1234567") == "****"
+    assert mask_sn("123") == "****"
+
+    # 3. Empty or None
+    assert mask_sn("") == "****"
+    assert mask_sn(None) == "****"
 
 
 def test_normalize_device_type():
