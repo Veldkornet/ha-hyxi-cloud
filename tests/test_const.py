@@ -59,6 +59,30 @@ def test_normalize_device_type_invalid_float():
     assert normalize_device_type("1.0") == "hybrid_inverter"
 
 
+def test_normalize_device_type_extra_edge_cases():
+    """Extra edge cases for normalize_device_type."""
+    # Boolean inputs (converted to "TRUE"/"FALSE")
+    assert normalize_device_type(True) == "unknown"
+    assert normalize_device_type(False) == "unknown"
+
+    # Large numbers
+    assert normalize_device_type(999999) == "unknown"
+    assert normalize_device_type(1e10) == "unknown"
+
+    # Special characters
+    assert normalize_device_type("!!!") == "unknown"
+    assert normalize_device_type("@#$%") == "unknown"
+
+    # Float strings with decimals (verify truncation/rounding behavior)
+    # "15.9" -> float(15.9) -> int(15.9) -> 15 -> "15" -> "micro_ess"
+    assert normalize_device_type("15.9") == "micro_ess"
+    assert normalize_device_type("2.1") == "grid_connected_inverter"
+
+    # Whitespace and casing combinations
+    assert normalize_device_type("  InVeRtEr  ") == "hybrid_inverter"
+    assert normalize_device_type("\tgrid_inverter\n") == "grid_connected_inverter"
+
+
 def test_get_raw_device_code():
     assert get_raw_device_code({"device_type_code": "1"}) == "1"
     assert get_raw_device_code({"deviceType": "2"}) == "2"
