@@ -23,6 +23,10 @@ sys.modules["homeassistant.helpers.device_registry"] = MagicMock()
 sys.modules["homeassistant.helpers.entity_platform"] = MagicMock()
 sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
 sys.modules["homeassistant.util"] = MagicMock()
+sys.modules["homeassistant.const"] = MagicMock()
+sys.modules["homeassistant.exceptions"] = MagicMock()
+sys.modules["aiohttp"] = MagicMock()
+
 # Robustly mock hyxi_cloud_api with required __version__
 mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
