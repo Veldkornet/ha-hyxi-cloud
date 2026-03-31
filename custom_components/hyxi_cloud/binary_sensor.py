@@ -121,7 +121,7 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         self._alarms = []
         self._active_alarms_count = 0
 
-        device_data = coordinator.data.get(sn, {})
+        device_data = coordinator.data.get(sn) or {}
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": device_data.get("device_name", f"HYXI {sn}"),
@@ -139,7 +139,7 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
 
     def _update_internal_state(self) -> None:
         """Process alarm states once per update."""
-        self._alarms = self.coordinator.data.get(self.sn, {}).get("alarms", [])
+        self._alarms = (self.coordinator.data.get(self.sn) or {}).get("alarms") or []
 
         active_states = ACTIVE_ALARM_STATES
         self._active_alarms_count = sum(
