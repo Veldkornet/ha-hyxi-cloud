@@ -521,7 +521,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         # Check all possible API keys for device type
         raw_code = get_raw_device_code(dev_data)
         device_type = normalize_device_type(raw_code)
-        metrics = dev_data.get("metrics", {})
+        metrics = dev_data.get("metrics") or {}
 
         _LOGGER.debug(
             "HYXI Processing Device %s (Normalized Type: %s). Metrics keys: %s",
@@ -691,8 +691,8 @@ class HyxiSensor(HyxiBaseSensor):
         self._sn = sn
 
         # Determing actual SN (e.g. Battery SN for battery sensors)
-        dev_data = coordinator.data.get(sn, {})
-        metrics = dev_data.get("metrics", {})
+        dev_data = coordinator.data.get(sn) or {}
+        metrics = dev_data.get("metrics") or {}
         bat_sn = metrics.get("batSn")
 
         if description.key in BATTERY_SENSORS and bat_sn:
@@ -700,13 +700,11 @@ class HyxiSensor(HyxiBaseSensor):
         else:
             self._actual_sn = sn
 
-        self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
-        self._attr_translation_key = (
-            description.translation_key or description.key.lower()
-        )
-        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
-
         key_lower = description.key.lower()
+        self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
+        self._attr_translation_key = description.translation_key or key_lower
+        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{key_lower}"
+
         if key_lower in INT_SENSOR_KEYS:
             self._parser_func = self._parse_int_sensor
         elif parser_name := self._PARSERS.get(key_lower):
@@ -725,8 +723,8 @@ class HyxiSensor(HyxiBaseSensor):
     @property
     def device_info(self):
         """Return dynamic device information to ensure versions update in UI."""
-        dev_data = self.coordinator.data.get(self._sn, {})
-        metrics = dev_data.get("metrics", {})
+        dev_data = self.coordinator.data.get(self._sn) or {}
+        metrics = dev_data.get("metrics") or {}
         bat_sn = metrics.get("batSn")
 
         if self.entity_description.key in BATTERY_SENSORS and bat_sn:
@@ -801,8 +799,8 @@ class HyxiSensor(HyxiBaseSensor):
 
     def _update_native_value(self):
         """Update the cached native value."""
-        dev_data = self.coordinator.data.get(self._sn, {})
-        metrics = dev_data.get("metrics", {})
+        dev_data = self.coordinator.data.get(self._sn) or {}
+        metrics = dev_data.get("metrics") or {}
         key = self.entity_description.key
         value = metrics.get(key)
 
