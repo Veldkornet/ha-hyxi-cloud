@@ -15,9 +15,8 @@ from hyxi_cloud_api import HyxiApiClient
 
 from .const import CONF_BACK_DISCOVERY
 from .const import DOMAIN
-from .const import get_raw_device_code
+from .const import get_software_version
 from .const import mask_sn
-from .const import normalize_device_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -110,17 +109,8 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 continue
 
             # We reuse the logic from sensor.py to generate the exact strings
-            sw_version = dev_data.get("sw_version")
+            sw_version = get_software_version(dev_data)
             hw_version = dev_data.get("hw_version")
-
-            if sw_version:
-                # Check for Collector (607) or similar stick devices
-                device_type = normalize_device_type(get_raw_device_code(dev_data))
-                if device_type == "collector":
-                    metrics = dev_data.get("metrics", {})
-                    wifi_ver = metrics.get("wifiVer")
-                    if wifi_ver:
-                        sw_version = f"{sw_version} / {wifi_ver}"
 
             # Only update if changed
             if device.sw_version != sw_version or device.hw_version != hw_version:

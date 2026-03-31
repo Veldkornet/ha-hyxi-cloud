@@ -205,6 +205,7 @@ def test_timestamp_scaling(base_sensor):
     """Verify 10-digit (sec) and 13-digit (ms) timestamps both work."""
     sensor, _ = base_sensor
     sensor.entity_description.key = "collectTime"
+    sensor._parser_func = sensor._parse_collect_time
     sensor.entity_description.native_unit_of_measurement = (
         None  # Timestamps don't have units
     )
@@ -224,6 +225,7 @@ def test_collecttime_error_handling(base_sensor):
     """Verify that invalid collectTime values are caught and return None."""
     sensor, coordinator = base_sensor
     sensor.entity_description.key = "collectTime"
+    sensor._parser_func = sensor._parse_collect_time
 
     # Test ValueError (unparseable string)
     coordinator.data["SN123"]["metrics"]["collectTime"] = "invalid_timestamp"
@@ -286,12 +288,14 @@ def test_batsoc_batsoh_casting(base_sensor):
 
     # Test batSoc
     sensor.entity_description.key = "batSoc"
+    sensor._parser_func = sensor._parse_int_sensor
     coordinator.data["SN123"]["metrics"]["batSoc"] = 85.6
     sensor._handle_coordinator_update()
     assert sensor.native_value == 86
 
     # Test batSoh
     sensor.entity_description.key = "batSoh"
+    sensor._parser_func = sensor._parse_int_sensor
     coordinator.data["SN123"]["metrics"]["batSoh"] = 99.1
     sensor._handle_coordinator_update()
     assert sensor.native_value == 99
@@ -450,6 +454,7 @@ def test_sensor_int_conversion_error(base_sensor):
     # Test keys: batsoc, batsoh, signalval (case insensitive in sensor.py)
     for key in ["batSoc", "batSoh", "signalVal"]:
         sensor.entity_description.key = key
+        sensor._parser_func = sensor._parse_int_sensor
 
         # Test valid string
         coordinator.data["SN123"]["metrics"][key] = "85.5"
@@ -484,6 +489,7 @@ def test_sensor_int_conversion_non_numeric_string(base_sensor):
 
     # We choose one key from INT_SENSOR_KEYS
     sensor.entity_description.key = "batSoc"
+    sensor._parser_func = sensor._parse_int_sensor
 
     # String that raises ValueError on float() conversion
     coordinator.data["SN123"]["metrics"]["batSoc"] = "non_numeric_string"
@@ -632,6 +638,7 @@ def test_hyxi_sensor_last_seen(base_sensor):
 
     sensor, coordinator = base_sensor
     sensor.entity_description.key = "last_seen"
+    sensor._parser_func = sensor._parse_last_seen
 
     fixed_time_str = "2026-03-11T12:00:00+00:00"
     fixed_time_dt = datetime(

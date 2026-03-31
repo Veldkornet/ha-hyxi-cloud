@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .const import MANUFACTURER
 from .const import get_raw_device_code
+from .const import get_software_version
 from .const import mask_sn
 from .const import normalize_device_type
 
@@ -704,6 +705,15 @@ class HyxiSensor(HyxiBaseSensor):
             description.translation_key or description.key.lower()
         )
         self.entity_id = f"sensor.hyxi_{self._actual_sn}_{description.key.lower()}"
+
+        key_lower = description.key.lower()
+        if key_lower in INT_SENSOR_KEYS:
+            self._parser_func = self._parse_int_sensor
+        elif parser_name := self._PARSERS.get(key_lower):
+            self._parser_func = getattr(self, parser_name)
+        else:
+            self._parser_func = self._parse_default
+
         self._update_native_value()
 
     @callback
@@ -730,16 +740,8 @@ class HyxiSensor(HyxiBaseSensor):
             }
 
         # Simplified dynamic versions for Registry
-        sw_version = dev_data.get("sw_version")
+        sw_version = get_software_version(dev_data)
         hw_version = dev_data.get("hw_version")
-
-        # Combine versions for Datalogger if wifiver is present
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
-        if device_type == "collector":
-            metrics = dev_data.get("metrics", {})
-            wifi_ver = metrics.get("wifiVer")
-            if wifi_ver:
-                sw_version = f"{sw_version} / {wifi_ver}"
 
         return {
             "identifiers": {(DOMAIN, self._sn)},
@@ -804,19 +806,7 @@ class HyxiSensor(HyxiBaseSensor):
         key = self.entity_description.key
         value = metrics.get(key)
 
-        key_lower = key.lower()
-
-        if key_lower in INT_SENSOR_KEYS:
-            self._attr_native_value = self._parse_int_sensor(dev_data, value)
-            return
-
-        parser_name = self._PARSERS.get(key_lower)
-        if parser_name:
-            parser = getattr(self, parser_name)
-            self._attr_native_value = parser(dev_data, value)
-            return
-
-        self._attr_native_value = self._parse_default(dev_data, value)
+        self._attr_native_value = self._parser_func(dev_data, value)
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
