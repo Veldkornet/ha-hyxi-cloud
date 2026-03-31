@@ -41,9 +41,15 @@ sys.modules["homeassistant.const"] = mock_ha
 sys.modules["homeassistant.core"] = mock_ha
 sys.modules["homeassistant.helpers"] = mock_ha
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
-sys.modules["homeassistant.util"] = mock_ha
+
+mock_util = MagicMock()
+mock_util.__spec__ = None
+sys.modules["homeassistant.util"] = mock_util
 
 # We need a real-ish dt_util for parsing to work in the component
+mock_dt = MagicMock()
+mock_dt.__spec__ = None
+sys.modules["homeassistant.util.dt"] = mock_dt
 import homeassistant.util.dt as dt_util  # noqa: E402
 
 mock_dt = MagicMock()
