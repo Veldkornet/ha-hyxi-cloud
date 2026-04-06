@@ -65,7 +65,7 @@ jobs:
           sarif_file: bandit-results.sarif
 
       - name: OSV-Scanner (Dependency Vulnerabilities)
-        uses: google/osv-scanner-action@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
+        uses: google/osv-scanner-action/osv-scanner-action@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
 
   dependency-review:
     name: Dependency Review
