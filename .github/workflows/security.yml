@@ -41,6 +41,7 @@ jobs:
             rekor.sigstore.dev:443
             tuf-repo-cdn.sigstore.dev:443
             github-releases.s3.amazonaws.com:443
+            api.osv.dev:443
 
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -62,6 +63,9 @@ jobs:
         if: always() # Ensures results upload even if Bandit finds a 'Failed' security hole
         with:
           sarif_file: bandit-results.sarif
+
+      - name: OSV-Scanner (Dependency Vulnerabilities)
+        uses: google/osv-scanner-action@c51854704019a247608d928f370c98740469d4b5 # v2.3.5
 
   dependency-review:
     name: Dependency Review
