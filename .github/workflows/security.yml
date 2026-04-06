@@ -80,6 +80,7 @@ jobs:
         with:
           egress-policy: block
           allowed-endpoints: >
+            api.osv.dev:443
             api.deps.dev:443
             api.github.com:443
             files.pythonhosted.org:443
