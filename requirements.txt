@@ -1,5 +1,5 @@
 # Integration Dependencies
-aiohttp>=3.13.3
+aiohttp>=3.13.4
 voluptuous>=0.13.1
 hyxi-cloud-api==1.0.8
 
