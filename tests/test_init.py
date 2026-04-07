@@ -155,23 +155,59 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         assert mock_hass.data[DOMAIN][mock_entry.entry_id] is mock_coordinator
 
         # Check parent devices and child device registration
+        # Pass 1: SN_1, SN_2
+        # Pass 2: BAT_1 (linked to SN_1)
         assert mock_registry.async_get_or_create.call_count == 3
 
         # We can optionally inspect the calls made to async_get_or_create:
         calls = mock_registry.async_get_or_create.call_args_list
-        # Call 1: Parent TEST_SN_1
+        # Call 1: Base TEST_SN_1
         assert calls[0].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")}
         assert calls[0].kwargs["name"] == "Test Device 1"
         assert calls[0].kwargs["serial_number"] == "TEST_SN_1"
 
-        # Call 2: Child TEST_BAT_1
-        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
-        assert calls[1].kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
-        assert calls[1].kwargs["serial_number"] == "TEST_BAT_1"
+        # Call 2: Base TEST_SN_2
+        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")}
+        assert calls[1].kwargs["name"] == "Device TEST_SN_2"
 
-        # Call 3: Parent TEST_SN_2
-        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")}
-        assert calls[2].kwargs["name"] == "Device TEST_SN_2"
+        # Call 3: Battery TEST_BAT_1 (Pass 2)
+        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
+        assert calls[2].kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
+        assert calls[2].kwargs["serial_number"] == "TEST_BAT_1"
+
+    # Test Parent Collector relationship (Pass 2)
+    with (
+        patch(
+            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+    ):
+        mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock()
+        mock_coordinator.data = {
+            "CHILD_SN_1": {
+                "device_name": "Child Device",
+                "metrics": {"parentSn": "PARENT_SN_1"},
+            },
+            "PARENT_SN_1": {"device_name": "Parent Device", "metrics": {}},
+        }
+
+        mock_registry = MagicMock()
+        mock_dr_get.return_value = mock_registry
+
+        await async_setup_entry(mock_hass, mock_entry)
+
+        # Call count: 2 (Pass 1) + 1 (Pass 2 for ParentSn) = 3
+        assert mock_registry.async_get_or_create.call_count == 3
+        calls = mock_registry.async_get_or_create.call_args_list
+
+        # Verify child links via_device to parent in Pass 2
+        # Call 3 is the update call for CHILD_SN_1 in Pass 2
+        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "CHILD_SN_1")}
+        assert calls[2].kwargs["via_device"] == (DOMAIN, "PARENT_SN_1")
 
         # Check platforms setup forwarded
         mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
