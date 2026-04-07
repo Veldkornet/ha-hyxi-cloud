@@ -738,7 +738,9 @@ class HyxiSensor(HyxiBaseSensor):
             }
 
         # Simplified dynamic versions for Registry
-        sw_version = get_software_version(dev_data)
+        sw_version = dev_data.get("_sw_version_cached") or get_software_version(
+            dev_data
+        )
         hw_version = dev_data.get("hw_version")
 
         return {

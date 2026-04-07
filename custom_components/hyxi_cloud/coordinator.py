@@ -104,12 +104,15 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         """Sync software/hardware versions to the Device Registry."""
         dev_reg = dr.async_get(self.hass)
         for sn, dev_data in devices.items():
+            # We reuse the logic from sensor.py to generate the exact strings
+            # and cache it for the individual sensors to avoid re-calculation
+            sw_version = get_software_version(dev_data)
+            dev_data["_sw_version_cached"] = sw_version
+
             device = dev_reg.async_get_device(identifiers={(DOMAIN, sn)})
             if not device:
                 continue
 
-            # We reuse the logic from sensor.py to generate the exact strings
-            sw_version = get_software_version(dev_data)
             hw_version = dev_data.get("hw_version")
 
             # Only update if changed
