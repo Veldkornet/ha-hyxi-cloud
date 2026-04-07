@@ -198,7 +198,7 @@ def test_hyxi_alarm_sensor_missing_metric(mock_coordinator):
 
     mock_coordinator.data = {"SN123": {"metrics": {"other_key": "123"}}}
 
-    sensor = bs_mod.HyxiAlarmSensor(mock_coordinator, "SN123")
+    sensor = bs_mod.HyxiAlarmSensor(mock_coordinator, "SN123")  # pylint: disable=no-member
 
     with patch.object(type(sensor), "is_on", new_callable=PropertyMock) as mock_is_on:
         mock_is_on.return_value = False
