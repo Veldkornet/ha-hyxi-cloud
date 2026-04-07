@@ -2,8 +2,8 @@
 
 # pylint: disable=wrong-import-position
 
-import time
 import sys
+import time
 from unittest.mock import MagicMock
 
 
