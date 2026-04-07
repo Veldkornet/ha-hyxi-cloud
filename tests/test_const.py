@@ -105,3 +105,39 @@ def test_get_raw_device_code():
     assert get_raw_device_code({"devType": "3"}) == "3"
     assert get_raw_device_code({"deviceCode": "4"}) == "4"
     assert get_raw_device_code({}) == ""
+
+
+def test_get_software_version():
+    """Test get_software_version handles different version field combinations."""
+    from custom_components.hyxi_cloud.const import get_software_version
+
+    # 1. Base case: sw_version present
+    assert get_software_version({"sw_version": "V1.0.0"}) == "V1.0.0"
+
+    # 2. Collector with wifiVer
+    dev_data = {
+        "sw_version": "V1.0.0",
+        "device_type_code": "3",  # collector
+        "metrics": {"wifiVer": "W1.0"},
+    }
+    assert get_software_version(dev_data) == "V1.0.0 / W1.0"
+
+    # 3. Fallback: master and slave
+    dev_data = {"metrics": {"swVerMaster": "M1.0", "swVerSlave": "S1.0"}}
+    assert get_software_version(dev_data) == "Master: M1.0 | Slave: S1.0"
+
+    # 4. Fallback: only master
+    dev_data = {
+        "metrics": {
+            "swVerMaster": "M1.0",
+        }
+    }
+    assert get_software_version(dev_data) == "M1.0"
+
+    # 5. Fallback: only slave
+    dev_data = {"metrics": {"swVerSlave": "S1.0"}}
+    assert get_software_version(dev_data) == "S1.0"
+
+    # 6. Edge case: nothing present
+    assert get_software_version({}) is None
+    assert get_software_version({"metrics": {}}) is None

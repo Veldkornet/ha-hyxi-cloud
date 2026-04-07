@@ -65,7 +65,20 @@ def get_software_version(dev_data: dict) -> str | None:
             wifi_ver = metrics.get("wifiVer")
             if wifi_ver:
                 sw_version = f"{sw_version} / {wifi_ver}"
-    return sw_version
+        return sw_version
+
+    metrics = dev_data.get("metrics", {})
+    sw_master = metrics.get("swVerMaster")
+    sw_slave = metrics.get("swVerSlave")
+
+    if sw_master and sw_slave:
+        return f"Master: {sw_master} | Slave: {sw_slave}"
+    if sw_master:
+        return sw_master
+    if sw_slave:
+        return sw_slave
+
+    return None
 
 
 def normalize_device_type(code: str | int | float) -> str:
