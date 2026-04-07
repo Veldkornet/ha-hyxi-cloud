@@ -159,10 +159,15 @@ async def test_async_sync_device_metadata_no_change():
     )
 
     mock_dev_reg = MagicMock()
-    mock_const.get_software_version.return_value = "1.2.3"
-
-    with patch(
-        "custom_components.hyxi_cloud.coordinator.dr.async_get", return_value=mock_dev_reg
+    with (
+        patch(
+            "custom_components.hyxi_cloud.coordinator.dr.async_get",
+            return_value=mock_dev_reg,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.coordinator.get_software_version",
+            return_value="1.2.3",
+        ),
     ):
         mock_device = MagicMock()
         mock_device.sw_version = "1.2.3"
@@ -186,10 +191,15 @@ async def test_async_sync_device_metadata_with_change():
     )
 
     mock_dev_reg = MagicMock()
-    mock_const.get_software_version.return_value = "1.2.3"
-
-    with patch(
-        "custom_components.hyxi_cloud.coordinator.dr.async_get", return_value=mock_dev_reg
+    with (
+        patch(
+            "custom_components.hyxi_cloud.coordinator.dr.async_get",
+            return_value=mock_dev_reg,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.coordinator.get_software_version",
+            return_value="1.2.3",
+        ),
     ):
         mock_device = MagicMock()
         mock_device.sw_version = "1.2.2"
@@ -216,7 +226,8 @@ async def test_async_sync_device_metadata_device_not_found():
 
     mock_dev_reg = MagicMock()
     with patch(
-        "custom_components.hyxi_cloud.coordinator.dr.async_get", return_value=mock_dev_reg
+        "custom_components.hyxi_cloud.coordinator.dr.async_get",
+        return_value=mock_dev_reg,
     ):
         mock_dev_reg.async_get_device.return_value = None
 
