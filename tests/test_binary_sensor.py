@@ -208,3 +208,19 @@ def test_connectivity_sensor_quality_labels(mock_coordinator, mock_entry):
     # 3. Stable (1 retry)
     mock_coordinator.hyxi_metadata["last_attempts"] = 1
     assert sensor.extra_state_attributes["connection_quality"] == "Stable"
+
+
+def test_connectivity_sensor_always_available(mock_coordinator, mock_entry):
+    """Test that the connectivity sensor is always available."""
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
+
+    # 1. Normal state
+    assert sensor.available is True
+
+    # 2. Offline state (is_on = False)
+    mock_coordinator.last_update_success = False
+    assert sensor.available is True
+
+    # 3. API Status Error
+    mock_coordinator.hyxi_metadata["api_status"] = "error"
+    assert sensor.available is True
