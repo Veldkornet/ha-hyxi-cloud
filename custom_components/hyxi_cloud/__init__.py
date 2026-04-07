@@ -63,9 +63,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     device_registry = dr.async_get(hass)
 
-    # Pre-register devices to fix 'via_device' order dependency
+    # Pre-register devices to fix 'via_device' order dependency (Two-pass)
+    # Pass 1: Ensure all base devices exist in the registry
     for sn, dev_data in coordinator.data.items():
-        # Pre-register parent device
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, sn)},
@@ -77,8 +77,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             serial_number=sn,
         )
 
-        # Pre-register child battery device if it exists
+    # Pass 2: Establish relationships (Battery -> Inverter, Inverter -> Collector)
+    for sn, dev_data in coordinator.data.items():
         metrics = dev_data.get("metrics", {})
+
+        # 1. Handle Battery relationship
         bat_sn = metrics.get("batSn")
         if bat_sn:
             device_registry.async_get_or_create(
@@ -89,6 +92,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 model="Energy Storage System",
                 serial_number=bat_sn,
                 via_device=(DOMAIN, sn),
+            )
+
+        # 2. Handle Parent Collector relationship
+        parent_sn = metrics.get("parentSn")
+        if parent_sn:
+            device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, sn)},
+                via_device=(DOMAIN, parent_sn),
             )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

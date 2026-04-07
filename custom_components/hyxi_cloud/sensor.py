@@ -737,6 +737,10 @@ class HyxiSensor(HyxiBaseSensor):
                 "via_device": (DOMAIN, self._sn),
             }
 
+        # Handle Parent Collector relationship
+        parent_sn = metrics.get("parentSn")
+        via_device = (DOMAIN, parent_sn) if parent_sn else None
+
         # Simplified dynamic versions for Registry
         sw_version = get_software_version(dev_data)
         hw_version = dev_data.get("hw_version")
@@ -749,6 +753,7 @@ class HyxiSensor(HyxiBaseSensor):
             "sw_version": sw_version,
             "hw_version": hw_version,
             "serial_number": self._sn,
+            "via_device": via_device,
         }
 
     def _parse_device_type(self, dev_data, value):
