@@ -743,7 +743,7 @@ class HyxiSensor(HyxiBaseSensor):
         )
         hw_version = dev_data.get("hw_version")
 
-        return {
+        info = {
             "identifiers": {(DOMAIN, self._sn)},
             "name": dev_data.get("device_name") or f"Device {self._sn}",
             "manufacturer": MANUFACTURER,
@@ -752,6 +752,13 @@ class HyxiSensor(HyxiBaseSensor):
             "hw_version": hw_version,
             "serial_number": self._sn,
         }
+
+        # Handle Parent Collector relationship
+        parent_sn = metrics.get("parentSn")
+        if parent_sn:
+            info["via_device"] = (DOMAIN, parent_sn)
+
+        return info
 
     def _parse_device_type(self, dev_data, value):
         return normalize_device_type(get_raw_device_code(dev_data))
