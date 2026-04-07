@@ -143,6 +143,7 @@ async def test_async_update_data_success():
 
     result = await coordinator._async_update_data()
 
-    assert result == {"SN123": {"metrics": {}}}
+    # We only care about the metrics in this test; _sw_version_cached is added by optimization
+    assert result["SN123"]["metrics"] == {}
     assert coordinator.hyxi_metadata["last_attempts"] == 1
     assert coordinator.hyxi_metadata["last_success"] is not None

@@ -1,5 +1,7 @@
 """Benchmark for HyxiSensor.device_info property."""
 
+# pylint: disable=wrong-import-position
+
 import time
 import sys
 from unittest.mock import MagicMock
@@ -57,8 +59,8 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 sys.modules["homeassistant.util"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
-import custom_components.hyxi_cloud.sensor as sensor_mod
-import custom_components.hyxi_cloud.const as const_mod
+import custom_components.hyxi_cloud.const as const_mod  # noqa: E402
+import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
 
 # Wire up real const.py functions
 sensor_mod.normalize_device_type = const_mod.normalize_device_type
