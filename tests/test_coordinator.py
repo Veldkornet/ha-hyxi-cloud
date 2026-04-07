@@ -5,6 +5,7 @@ import importlib
 import sys
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -146,3 +147,80 @@ async def test_async_update_data_success():
     assert result == {"SN123": {"metrics": {}}}
     assert coordinator.hyxi_metadata["last_attempts"] == 1
     assert coordinator.hyxi_metadata["last_success"] is not None
+
+
+@pytest.mark.asyncio
+async def test_async_sync_device_metadata_no_change():
+    """Test that device registry is not updated if versions match."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+
+    mock_dev_reg = MagicMock()
+    mock_const.get_software_version.return_value = "1.2.3"
+
+    with patch(
+        "custom_components.hyxi_cloud.coordinator.dr.async_get", return_value=mock_dev_reg
+    ):
+        mock_device = MagicMock()
+        mock_device.sw_version = "1.2.3"
+        mock_device.hw_version = "V1"
+        mock_device.id = "device_id"
+        mock_dev_reg.async_get_device.return_value = mock_device
+
+        devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
+        await coordinator._async_sync_device_metadata(devices)
+
+        mock_dev_reg.async_update_device.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_sync_device_metadata_with_change():
+    """Test that device registry is updated if versions differ."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+
+    mock_dev_reg = MagicMock()
+    mock_const.get_software_version.return_value = "1.2.3"
+
+    with patch(
+        "custom_components.hyxi_cloud.coordinator.dr.async_get", return_value=mock_dev_reg
+    ):
+        mock_device = MagicMock()
+        mock_device.sw_version = "1.2.2"
+        mock_device.hw_version = "V1"
+        mock_device.id = "device_id"
+        mock_dev_reg.async_get_device.return_value = mock_device
+
+        devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
+        await coordinator._async_sync_device_metadata(devices)
+
+        mock_dev_reg.async_update_device.assert_called_once_with(
+            "device_id", sw_version="1.2.3", hw_version="V1"
+        )
+
+
+@pytest.mark.asyncio
+async def test_async_sync_device_metadata_device_not_found():
+    """Test that it handles case where device is not in registry."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+
+    mock_dev_reg = MagicMock()
+    with patch(
+        "custom_components.hyxi_cloud.coordinator.dr.async_get", return_value=mock_dev_reg
+    ):
+        mock_dev_reg.async_get_device.return_value = None
+
+        devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
+        await coordinator._async_sync_device_metadata(devices)
+
+        mock_dev_reg.async_update_device.assert_not_called()
