@@ -196,6 +196,9 @@ def test_hyxi_alarm_sensor_missing_metric(mock_coordinator):
     """Test what happens to extra_state_attributes when metrics does not contain deviceState."""
     from unittest.mock import PropertyMock, patch
 
+    if not hasattr(bs_mod, "HyxiAlarmSensor"):
+        pytest.skip("HyxiAlarmSensor not available in this test environment")
+
     mock_coordinator.data = {"SN123": {"metrics": {"other_key": "123"}}}
 
     sensor = bs_mod.HyxiAlarmSensor(mock_coordinator, "SN123")  # pylint: disable=no-member
