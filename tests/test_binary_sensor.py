@@ -192,6 +192,26 @@ def test_connectivity_sensor_freshness_labels(
     assert sensor.extra_state_attributes["data_freshness"] == "Unknown"
 
 
+def test_hyxi_alarm_sensor_missing_metric(mock_coordinator):
+    """Test what happens to extra_state_attributes when metrics does not contain deviceState."""
+    from unittest.mock import PropertyMock
+    from unittest.mock import patch
+
+    if not hasattr(bs_mod, "HyxiAlarmSensor"):
+        pytest.skip("HyxiAlarmSensor not available in this test environment")
+
+    mock_coordinator.data = {"SN123": {"metrics": {"other_key": "123"}}}
+
+    sensor = bs_mod.HyxiAlarmSensor(mock_coordinator, "SN123")  # pylint: disable=no-member
+
+    with patch.object(type(sensor), "is_on", new_callable=PropertyMock) as mock_is_on:
+        mock_is_on.return_value = False
+        attrs = sensor.extra_state_attributes
+
+        assert attrs["status_code"] == "Unknown"
+        assert attrs["status_message"] == "Alarm"
+
+
 def test_connectivity_sensor_quality_labels(mock_coordinator, mock_entry):
     """Test connection quality labels."""
     sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
