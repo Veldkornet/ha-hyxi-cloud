@@ -7,8 +7,6 @@ from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from unittest.mock import MagicMock
-from unittest.mock import PropertyMock
-from unittest.mock import patch
 
 import pytest
 
@@ -194,6 +192,22 @@ def test_connectivity_sensor_freshness_labels(
     assert sensor.extra_state_attributes["data_freshness"] == "Unknown"
 
 
+def test_hyxi_alarm_sensor_missing_metric(mock_coordinator):
+    """Test what happens to extra_state_attributes when metrics does not contain deviceState."""
+    from unittest.mock import PropertyMock, patch
+
+    mock_coordinator.data = {"SN123": {"metrics": {"other_key": "123"}}}
+
+    sensor = bs_mod.HyxiAlarmSensor(mock_coordinator, "SN123")
+
+    with patch.object(type(sensor), "is_on", new_callable=PropertyMock) as mock_is_on:
+        mock_is_on.return_value = False
+        attrs = sensor.extra_state_attributes
+
+        assert attrs["status_code"] == "Unknown"
+        assert attrs["status_message"] == "Alarm"
+
+
 def test_connectivity_sensor_quality_labels(mock_coordinator, mock_entry):
     """Test connection quality labels."""
     sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
@@ -210,17 +224,3 @@ def test_connectivity_sensor_quality_labels(mock_coordinator, mock_entry):
     # 3. Stable (1 retry)
     mock_coordinator.hyxi_metadata["last_attempts"] = 1
     assert sensor.extra_state_attributes["connection_quality"] == "Stable"
-
-
-def test_hyxi_alarm_sensor_missing_metric(mock_coordinator):
-    """Test what happens to extra_state_attributes when metrics does not contain deviceState."""
-    mock_coordinator.data = {"SN123": {"metrics": {"other_key": "123"}}}
-
-    sensor = bs_mod.HyxiAlarmSensor(mock_coordinator, "SN123")
-
-    with patch.object(type(sensor), "is_on", new_callable=PropertyMock) as mock_is_on:
-        mock_is_on.return_value = False
-        attrs = sensor.extra_state_attributes
-
-        assert attrs["status_code"] == "Unknown"
-        assert attrs["status_message"] == "Alarm"
