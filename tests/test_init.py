@@ -175,7 +175,21 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         assert calls[2].kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
         assert calls[2].kwargs["serial_number"] == "TEST_BAT_1"
 
-    # Test Parent Collector relationship (Pass 2)
+        # Check platforms setup forwarded
+        mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
+            mock_entry, PLATFORMS
+        )
+
+        # Check listener added
+        mock_entry.add_update_listener.assert_called_once()
+        mock_entry.async_on_unload.assert_called_once_with(
+            mock_entry.add_update_listener.return_value
+        )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
+    """Test successful setup of entry with parentSn relationship."""
     with (
         patch(
             "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
@@ -198,7 +212,9 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         mock_registry = MagicMock()
         mock_dr_get.return_value = mock_registry
 
-        await async_setup_entry(mock_hass, mock_entry)
+        result = await async_setup_entry(mock_hass, mock_entry)
+
+        assert result is True
 
         # Call count: 2 (Pass 1) + 1 (Pass 2 for ParentSn) = 3
         assert mock_registry.async_get_or_create.call_count == 3
