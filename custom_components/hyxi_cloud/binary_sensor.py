@@ -127,9 +127,9 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
 
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
-            "name": device_data.get("device_name", f"HYXI {sn}"),
+            "name": device_data.get("device_name") or f"Device {sn}",
             "manufacturer": MANUFACTURER,
-            "model": device_data.get("model", "Unknown"),
+            "model": device_data.get("model"),
             "sw_version": device_data.get("sw_version"),
             "hw_version": device_data.get("hw_version"),
         }
