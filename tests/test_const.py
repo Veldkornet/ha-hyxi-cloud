@@ -1,6 +1,7 @@
 """Tests for the hyxi_cloud const module."""
 
 from custom_components.hyxi_cloud.const import get_raw_device_code
+from custom_components.hyxi_cloud.const import get_software_version
 from custom_components.hyxi_cloud.const import mask_sn
 from custom_components.hyxi_cloud.const import normalize_device_type
 
@@ -109,8 +110,6 @@ def test_get_raw_device_code():
 
 def test_get_software_version():
     """Test get_software_version handles different version field combinations."""
-    from custom_components.hyxi_cloud.const import get_software_version
-
     # 1. Base case: sw_version present
     assert get_software_version({"sw_version": "V1.0.0"}) == "V1.0.0"
 
