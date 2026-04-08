@@ -9,8 +9,8 @@ from custom_components.hyxi_cloud.const import normalize_device_type
 def test_mask_sn():
     """Verify mask_sn correctly obscures serial numbers."""
     # 1. Normal SN (8+ chars)
-    assert mask_sn("12345678") == "123XX678"
-    assert mask_sn("SN123456789") == "SN1XXXXX789"
+    assert mask_sn("12345678") == "XXXX5678"
+    assert mask_sn("SN123456789") == "XXXXXXX6789"
 
     # 2. Short SN (< 8 chars)
     assert mask_sn("1234567") == "****"
