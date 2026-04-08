@@ -36,18 +36,20 @@ case "$ACTION" in
   reset-dev)
     echo "☢️  Preparing to hard reset 'dev' to 'main'..."
 
-    # Safety Check: Are there uncommitted changes?
-    if ! git diff-index --quiet HEAD --; then
+    # Safety Check: Use --force to skip
+    git update-index --refresh -q > /dev/null 2>&1
+    if [[ "$2" != "--force" ]] && ! git diff-index --quiet HEAD --; then
         echo "❌ ERROR: You have uncommitted changes! Commit them or stash them first."
+        echo "💡 Use './manage.sh reset-dev --force' to nuke all local changes and mirror main."
         exit 1
     fi
 
     echo "☁️  Fetching latest from GitHub..."
     git fetch --all
 
-    echo "🏠 Updating local 'main'..."
+    echo "🏠 Mirroring local 'main' to GitHub 'main'..."
     git checkout main
-    git pull origin main
+    git reset --hard origin/main
 
     echo "🧹 Wiping 'dev' and matching it to 'main'..."
     git checkout dev
