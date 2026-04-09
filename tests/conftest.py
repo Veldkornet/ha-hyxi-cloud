@@ -1,11 +1,11 @@
 """Configuration for pytest."""
 
-import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 # This adds the root directory to the path so 'custom_components' can be found
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 
 # Custom Exception classes to avoid TypeError when catching

@@ -3,6 +3,8 @@
 import logging
 from datetime import UTC
 from datetime import datetime
+from typing import Any
+from typing import ClassVar
 
 from homeassistant.components.sensor import EntityCategory
 from homeassistant.components.sensor import SensorDeviceClass
@@ -135,6 +137,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    # Hardware Capabilities
     SensorEntityDescription(
         key="f",
         native_unit_of_measurement="Hz",
@@ -178,6 +181,7 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:wifi-cog",
     ),
+    # Maintenance Sensors
     SensorEntityDescription(
         key="app_sw",
         translation_key="app_sw",
@@ -215,6 +219,7 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-arrow-down",
     ),
+    # Phase Powers Detailed
     SensorEntityDescription(
         key="ph1v",
         native_unit_of_measurement="V",
@@ -257,6 +262,28 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
     ),
+    SensorEntityDescription(
+        key="ph3v",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:home-lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="ph3i",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:home-lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="ph3p",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:home-lightning-bolt",
+    ),
+    # ESS / Battery Management (ESS specific)
     SensorEntityDescription(
         key="duisoc",
         native_unit_of_measurement="%",
@@ -312,27 +339,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus",
     ),
-    SensorEntityDescription(
-        key="ph3v",
-        native_unit_of_measurement="V",
-        device_class=SensorDeviceClass.VOLTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
-    ),
-    SensorEntityDescription(
-        key="ph3i",
-        native_unit_of_measurement="A",
-        device_class=SensorDeviceClass.CURRENT,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
-    ),
-    SensorEntityDescription(
-        key="ph3p",
-        native_unit_of_measurement="W",
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
-    ),
+    # Hybrid Inverter Core Sensors
     SensorEntityDescription(
         key="batSoc",
         native_unit_of_measurement="%",
@@ -514,7 +521,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return
 
-    entities = []
+    entities: list[SensorEntity] = []
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
@@ -684,8 +691,7 @@ class HyxiSensor(HyxiBaseSensor):
     """Representation of a Physical HYXI Sensor."""
 
     _attr_has_entity_name = True
-
-    _PARSERS = {
+    _PARSERS: ClassVar[dict[str, str]] = {
         "device_type": "_parse_device_type",
         "app_sw": "_parse_app_sw",
         "swvermaster": "_parse_sw_ver",
@@ -694,12 +700,13 @@ class HyxiSensor(HyxiBaseSensor):
         "last_seen": "_parse_last_seen",
     }
 
-    def __init__(self, coordinator, sn, description):
+    def __init__(self, coordinator: Any, sn: str, description: Any) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
         self.entity_description = description
         self._sn = sn
 
-        # Determing actual SN (e.g. Battery SN for battery sensors)
+        # Determine actual SN (e.g. Battery SN for battery sensors)
         dev_data = coordinator.data.get(sn) or {}
         metrics = dev_data.get("metrics") or {}
         bat_sn = metrics.get("batSn")
@@ -746,7 +753,7 @@ class HyxiSensor(HyxiBaseSensor):
                 "via_device": (DOMAIN, self._sn),
             }
 
-        # Simplified dynamic versions for Registry
+        # Determine if we need to apply any state-mapping for specific types
         sw_version = dev_data.get("_sw_version_cached") or get_software_version(
             dev_data
         )

@@ -234,7 +234,7 @@ def test_collecttime_error_handling(base_sensor):
     sensor.entity_description.key = "collectTime"
     sensor._parser_func = sensor._parse_collect_time
 
-    # Test ValueError (unparseable string)
+    # Test ValueError (unparsable string)
     coordinator.data["SN123"]["metrics"]["collectTime"] = "invalid_timestamp"
     sensor._handle_coordinator_update()
     assert sensor.native_value is None
@@ -321,7 +321,7 @@ def test_batsoc_batsoh_casting(base_sensor):
 @pytest.mark.asyncio
 async def test_new_api_metrics_registration():
     """Verify that all new PV, Phase, Battery, and Status sensors instantiate correctly."""
-    from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+    from custom_components.hyxi_cloud.const import DOMAIN
 
     hass = MagicMock()
     entry = MagicMock()

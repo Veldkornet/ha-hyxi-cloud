@@ -22,7 +22,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the binary sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    entities = [HyxiConnectivitySensor(coordinator, entry)]
+    entities: list[BinarySensorEntity] = [HyxiConnectivitySensor(coordinator, entry)]
 
     for device_sn in coordinator.data:
         entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
