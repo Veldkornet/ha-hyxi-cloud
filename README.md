@@ -96,7 +96,7 @@ Or alternatively, add the integration with the following:
 ### Optional Features (Options Flow)
 Click the **Configure** button on the HYXI integration card to access:
 * **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
-* **Enable Aggregated Virtual Battery:** Combine data from 2+ batteries into single "System" sensors.
+* **Enable Discovery via Alarms:** Proactively discover child devices reporting active alarms (Advanced).
 
 ## 🛡️ Quality Assurance
 
