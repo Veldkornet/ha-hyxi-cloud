@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Csatlakozás a HYXI Cloudhoz",
+        "description": "Adja meg **fejlesztői API hitelesítő adatait (AK/SK)**. Ezeket a [HYXIPOWER fejlesztői platformon]({link}) hozhatja létre.\n\n**Megjegyzés:** Ehhez külön fejlesztői fiókra van szükség. Ha a fejlesztői e-mail-címe eltér az alkalmazásban használt e-mail-címétől, először **meg kell osztania az üzemét (Plant)** az alkalmazásból a fejlesztői e-mail-címre.",
+        "data": {
+          "access_key": "Hozzáférési kulcs (AK)",
+          "secret_key": "Titkos kulcs (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "HYXI Cloud újrahitelesítése",
+        "description": "A hozzáférési kulcsa vagy a titkos kulcsa már nem érvényes. Kérjük, adja meg az új hitelesítő adatait a napelemes figyelés folytatásához. Ezeket a [HYXIPOWER fejlesztői platformon]({link}) találja meg.",
+        "data": {
+          "access_key": "Hozzáférési kulcs (AK)",
+          "secret_key": "Titkos kulcs (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nem sikerült csatlakozni a HYXI szerverekhez",
+      "invalid_auth": "Érvénytelen hozzáférési kulcs vagy titkos kulcs",
+      "unknown": "Váratlan hiba történt"
+    },
+    "abort": {
+      "already_configured": "Ez a HYXI fiók már be van konfigurálva.",
+      "reauth_successful": "Az újrahitelesítés sikeres volt"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXI rendszerkonfiguráció",
+        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\n---",
+        "data": {
+          "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
+          "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Felhő állapota"
+      },
+      "device_alarm": {
+        "name": "Aktív problémák",
+        "state": {
+          "off": "Nincs",
+          "on": "Probléma"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Akkumulátor töltöttségi szintje"
+      },
+      "pbat": {
+        "name": "Akkumulátor teljesítmény"
+      },
+      "ppv": {
+        "name": "Napelem teljesítmény"
+      },
+      "duisoc": {
+        "name": "Akkumulátor SOC"
+      },
+      "cuvolt": {
+        "name": "Akkumulátor feszültség"
+      },
+      "cucurr": {
+        "name": "Akkumulátor áramerősség"
+      },
+      "cupower": {
+        "name": "Akkumulátor teljesítmény (EMS)"
+      },
+      "cusoh": {
+        "name": "Akkumulátor SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Akkumulátorcsomag hőmérséklet"
+      },
+      "duichargetoday": {
+        "name": "Napi töltés"
+      },
+      "duiunchargetoday": {
+        "name": "Napi kisütés"
+      },
+      "home_load": {
+        "name": "Ház terhelése"
+      },
+      "grid_import": {
+        "name": "Hálózati import"
+      },
+      "grid_export": {
+        "name": "Hálózati export"
+      },
+      "bat_charging": {
+        "name": "Akkumulátor töltődik"
+      },
+      "bat_discharging": {
+        "name": "Akkumulátor merül"
+      },
+      "totale": {
+        "name": "Teljes energiahozam"
+      },
+      "bat_charge_total": {
+        "name": "Teljes akkumulátor töltés"
+      },
+      "bat_discharge_total": {
+        "name": "Teljes akkumulátor kisütés"
+      },
+      "batsoh": {
+        "name": "Akkumulátor egészségi állapota"
+      },
+      "tinv": {
+        "name": "Belső hőmérséklet"
+      },
+      "collecttime": {
+        "name": "Adatgyűjtés ideje"
+      },
+      "last_seen": {
+        "name": "Utolsó felhő szinkronizáció"
+      },
+      "integration_last_updated": {
+        "name": "Integráció utoljára frissítve"
+      },
+      "batcap": {
+        "name": "Akkumulátor kapacitás"
+      },
+      "packnum": {
+        "name": "Akkumulátorcsomagok száma"
+      },
+      "maxchargepower": {
+        "name": "Max. töltési limit"
+      },
+      "maxdischargepower": {
+        "name": "Max. kisütési limit"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi jelerősség"
+      },
+      "signalval": {
+        "name": "Wi-Fi jelminőség"
+      },
+      "wifiver": {
+        "name": "Wi-Fi modul szoftver"
+      },
+      "app_sw": {
+        "name": "Alkalmazás szoftver"
+      },
+      "master_sw": {
+        "name": "Vezérlő szoftver (Master)"
+      },
+      "slave_sw": {
+        "name": "Vezérlő szoftver (Secondary)"
+      },
+      "commode": {
+        "name": "Kommunikációs mód"
+      },
+      "acp": {
+        "name": "AC teljesítmény"
+      },
+      "vac": {
+        "name": "AC feszültség"
+      },
+      "vpv": {
+        "name": "PV feszültség"
+      },
+      "etoday": {
+        "name": "Mai energia"
+      },
+      "ph1loadp": {
+        "name": "1. fázis terhelés"
+      },
+      "ph2loadp": {
+        "name": "2. fázis terhelés"
+      },
+      "ph3loadp": {
+        "name": "3. fázis terhelés"
+      },
+      "pv1v": {
+        "name": "PV1 feszültség"
+      },
+      "pv2v": {
+        "name": "PV2 feszültség"
+      },
+      "pv1i": {
+        "name": "PV1 áramerősség"
+      },
+      "pv2i": {
+        "name": "PV2 áramerősség"
+      },
+      "pv1p": {
+        "name": "PV1 teljesítmény"
+      },
+      "pv2p": {
+        "name": "PV2 teljesítmény"
+      },
+      "batv": {
+        "name": "Akkumulátor feszültség"
+      },
+      "bati": {
+        "name": "Akkumulátor áramerősség"
+      },
+      "vbus": {
+        "name": "Busz feszültség"
+      },
+      "f": {
+        "name": "Hálózati frekvencia"
+      },
+      "ace": {
+        "name": "AC energia"
+      },
+      "devicestate": {
+        "name": "Eszköz állapota",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Riasztás",
+          "10": "Nincs aktiválva"
+        }
+      },
+      "device_type": {
+        "name": "Eszköz típusa",
+        "state": {
+          "hybrid_inverter": "Hibrid inverter",
+          "grid_connected_inverter": "Hálózatra kapcsolt inverter",
+          "collector": "Adatgyűjtő",
+          "micro_ess": "Micro ESS",
+          "unknown": "Ismeretlen"
+        }
+      },
+      "ratedpower": {
+        "name": "Névleges teljesítmény"
+      },
+      "ratedvoltage": {
+        "name": "Névleges feszültség"
+      },
+      "childnum": {
+        "name": "Csatlakoztatott eszközök"
+      },
+      "ph1v": {
+        "name": "1. fázis feszültség"
+      },
+      "ph1i": {
+        "name": "1. fázis áramerősség"
+      },
+      "ph1p": {
+        "name": "1. fázis teljesítmény"
+      },
+      "ph2v": {
+        "name": "2. fázis feszültség"
+      },
+      "ph2i": {
+        "name": "2. fázis áramerősség"
+      },
+      "ph2p": {
+        "name": "2. fázis teljesítmény"
+      },
+      "ph3v": {
+        "name": "3. fázis feszültség"
+      },
+      "ph3i": {
+        "name": "3. fázis áramerősség"
+      },
+      "ph3p": {
+        "name": "3. fázis teljesítmény"
+      }
+    }
+  }
+}

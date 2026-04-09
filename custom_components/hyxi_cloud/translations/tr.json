@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HYXI Cloud'a Bağlan",
+        "description": "**Geliştirici API kimlik bilgilerinizi (AK/SK)** girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) üzerinden oluşturabilirsiniz.\n\n**Not:** Bu işlem ayrı bir geliştirici hesabı gerektirir. Geliştirici e-postanız uygulama e-postanızdan farklıysa, önce uygulamadan geliştirici e-postasına **Tesisinizi Paylaşmanız** gerekir.",
+        "data": {
+          "access_key": "Erişim Anahtarı (AK)",
+          "secret_key": "Gizli Anahtar (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "HYXI Cloud Kimliğini Yeniden Doğrula",
+        "description": "Erişim Anahtarınız veya Gizli Anahtarınız artık geçerli değil. Güneş enerjisi izlemeye devam etmek için lütfen yeni kimlik bilgilerinizi girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) adresinde bulabilirsiniz.",
+        "data": {
+          "access_key": "Erişim Anahtarı (AK)",
+          "secret_key": "Gizli Anahtar (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "HYXI sunucularına bağlanılamadı",
+      "invalid_auth": "Geçersiz Erişim Anahtarı veya Gizli Anahtar",
+      "unknown": "Beklenmedik bir hata oluştu"
+    },
+    "abort": {
+      "already_configured": "Bu HYXI hesabı zaten yapılandırılmış.",
+      "reauth_successful": "Kimlik yeniden doğrulaması başarılı oldu"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXI Sistem Yapılandırması",
+        "description": "Entegrasyonunuzun HYXI Cloud ile nasıl iletişim kuracağını ayarlayın.\n\n---",
+        "data": {
+          "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
+          "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Bulut Durumu"
+      },
+      "device_alarm": {
+        "name": "Aktif Sorunlar",
+        "state": {
+          "off": "Yok",
+          "on": "Sorun"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Batarya Şarj Durumu"
+      },
+      "pbat": {
+        "name": "Batarya Gücü"
+      },
+      "ppv": {
+        "name": "Güneş Gücü"
+      },
+      "duisoc": {
+        "name": "Batarya SOC"
+      },
+      "cuvolt": {
+        "name": "Batarya Voltajı"
+      },
+      "cucurr": {
+        "name": "Batarya Akımı"
+      },
+      "cupower": {
+        "name": "Batarya Gücü (EMS)"
+      },
+      "cusoh": {
+        "name": "Batarya SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Batarya Paketi Sıcaklığı"
+      },
+      "duichargetoday": {
+        "name": "Günlük Şarj"
+      },
+      "duiunchargetoday": {
+        "name": "Günlük Deşarj"
+      },
+      "home_load": {
+        "name": "Ev Yükü"
+      },
+      "grid_import": {
+        "name": "Şebekeden Alınan"
+      },
+      "grid_export": {
+        "name": "Şebekeye Verilen"
+      },
+      "bat_charging": {
+        "name": "Batarya Şarj Oluyor"
+      },
+      "bat_discharging": {
+        "name": "Batarya Deşarj Oluyor"
+      },
+      "totale": {
+        "name": "Toplam Enerji Verimi"
+      },
+      "bat_charge_total": {
+        "name": "Toplam Batarya Şarjı"
+      },
+      "bat_discharge_total": {
+        "name": "Toplam Batarya Deşarjı"
+      },
+      "batsoh": {
+        "name": "Batarya Sağlık Durumu"
+      },
+      "tinv": {
+        "name": "İç Sıcaklık"
+      },
+      "collecttime": {
+        "name": "Veri Toplama Zamanı"
+      },
+      "last_seen": {
+        "name": "Son Bulut Senkronizasyonu"
+      },
+      "integration_last_updated": {
+        "name": "Entegrasyon Son Güncelleme"
+      },
+      "batcap": {
+        "name": "Batarya Kapasitesi"
+      },
+      "packnum": {
+        "name": "Batarya Paketi Sayısı"
+      },
+      "maxchargepower": {
+        "name": "Maks. Şarj Limiti"
+      },
+      "maxdischargepower": {
+        "name": "Maks. Deşarj Limiti"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi Sinyal Gücü"
+      },
+      "signalval": {
+        "name": "Wi-Fi Sinyal Kalitesi"
+      },
+      "wifiver": {
+        "name": "Wi-Fi Modülü Yazılımı"
+      },
+      "app_sw": {
+        "name": "Uygulama Yazılımı"
+      },
+      "master_sw": {
+        "name": "Kontrol Yazılımı (Ana)"
+      },
+      "slave_sw": {
+        "name": "Kontrol Yazılımı (İkincil)"
+      },
+      "commode": {
+        "name": "İletişim Modu"
+      },
+      "acp": {
+        "name": "AC Güç"
+      },
+      "vac": {
+        "name": "AC Voltaj"
+      },
+      "vpv": {
+        "name": "PV Voltajı"
+      },
+      "etoday": {
+        "name": "Bugünkü Enerji"
+      },
+      "ph1loadp": {
+        "name": "Faz 1 Yükü"
+      },
+      "ph2loadp": {
+        "name": "Faz 2 Yükü"
+      },
+      "ph3loadp": {
+        "name": "Faz 3 Yükü"
+      },
+      "pv1v": {
+        "name": "PV1 Voltajı"
+      },
+      "pv2v": {
+        "name": "PV2 Voltajı"
+      },
+      "pv1i": {
+        "name": "PV1 Akımı"
+      },
+      "pv2i": {
+        "name": "PV2 Akımı"
+      },
+      "pv1p": {
+        "name": "PV1 Gücü"
+      },
+      "pv2p": {
+        "name": "PV2 Gücü"
+      },
+      "batv": {
+        "name": "Batarya Voltajı"
+      },
+      "bati": {
+        "name": "Batarya Akımı"
+      },
+      "vbus": {
+        "name": "Bus Voltajı"
+      },
+      "f": {
+        "name": "Şebeke Frekansı"
+      },
+      "ace": {
+        "name": "AC Enerji"
+      },
+      "devicestate": {
+        "name": "Cihaz Durumu",
+        "state": {
+          "1": "Çevrimiçi",
+          "2": "Çevrimdışı",
+          "3": "Alarm",
+          "10": "Etkin Değil"
+        }
+      },
+      "device_type": {
+        "name": "Cihaz Tipi",
+        "state": {
+          "hybrid_inverter": "Hibrit İnverter",
+          "grid_connected_inverter": "Şebekeye Bağlı İnverter",
+          "collector": "Veri Toplayıcı",
+          "micro_ess": "Mikro ESS",
+          "unknown": "Bilinmiyor"
+        }
+      },
+      "ratedpower": {
+        "name": "Nominal Güç"
+      },
+      "ratedvoltage": {
+        "name": "Nominal Voltaj"
+      },
+      "childnum": {
+        "name": "Bağlı Cihazlar"
+      },
+      "ph1v": {
+        "name": "Faz 1 Voltajı"
+      },
+      "ph1i": {
+        "name": "Faz 1 Akımı"
+      },
+      "ph1p": {
+        "name": "Faz 1 Gücü"
+      },
+      "ph2v": {
+        "name": "Faz 2 Voltajı"
+      },
+      "ph2i": {
+        "name": "Faz 2 Akımı"
+      },
+      "ph2p": {
+        "name": "Faz 2 Gücü"
+      },
+      "ph3v": {
+        "name": "Faz 3 Voltajı"
+      },
+      "ph3i": {
+        "name": "Faz 3 Akımı"
+      },
+      "ph3p": {
+        "name": "Faz 3 Gücü"
+      }
+    }
+  }
+}

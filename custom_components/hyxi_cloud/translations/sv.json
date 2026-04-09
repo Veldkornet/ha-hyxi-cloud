@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Anslut till HYXI Cloud",
+        "description": "Ange dina **API-uppgifter för utvecklare (AK/SK)**. Du kan generera dessa på [HYXIPOWER Developer Platform]({link}).\n\n**Obs:** Detta kräver ett separat utvecklarkonto. Om din utvecklar-e-post skiljer sig från din app-e-post måste du först **Dela din anläggning** från appen till utvecklar-e-posten.",
+        "data": {
+          "access_key": "Åtkomstnyckel (AK)",
+          "secret_key": "Hemlig nyckel (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Återautentisera HYXI Cloud",
+        "description": "Din åtkomstnyckel eller hemliga nyckel är inte längre giltig. Ange dina nya uppgifter för att återuppta solcellsövervakningen. Du hittar dessa på [HYXIPOWER Developer Platform]({link}).",
+        "data": {
+          "access_key": "Åtkomstnyckel (AK)",
+          "secret_key": "Hemlig nyckel (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Misslyckades att ansluta till HYXI-servrar",
+      "invalid_auth": "Ogiltig åtkomstnyckel eller hemlig nyckel",
+      "unknown": "Oväntat fel uppstod"
+    },
+    "abort": {
+      "already_configured": "Detta HYXI-konto är redan konfigurerat.",
+      "reauth_successful": "Återautentiseringen lyckades"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXI Systemkonfiguration",
+        "description": "Justera hur din integration kommunicerar med HYXI Cloud.\n\n---",
+        "data": {
+          "update_interval": "Uppdateringsintervall (1-60 minuter, standard: 5)",
+          "back_discovery": "Aktivera upptäckt via larm (Avancerat)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Molnstatus"
+      },
+      "device_alarm": {
+        "name": "Aktiva problem",
+        "state": {
+          "off": "Inga",
+          "on": "Problem"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Batteriets laddningsnivå"
+      },
+      "pbat": {
+        "name": "Batterieffekt"
+      },
+      "ppv": {
+        "name": "Soleffekt"
+      },
+      "duisoc": {
+        "name": "Batteri SOC"
+      },
+      "cuvolt": {
+        "name": "Batterispänning"
+      },
+      "cucurr": {
+        "name": "Batteriström"
+      },
+      "cupower": {
+        "name": "Batterieffekt (EMS)"
+      },
+      "cusoh": {
+        "name": "Batteri SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Batteripaket-temp"
+      },
+      "duichargetoday": {
+        "name": "Daglig laddning"
+      },
+      "duiunchargetoday": {
+        "name": "Daglig urladdning"
+      },
+      "home_load": {
+        "name": "Huslast"
+      },
+      "grid_import": {
+        "name": "Nätimport"
+      },
+      "grid_export": {
+        "name": "Nätexport"
+      },
+      "bat_charging": {
+        "name": "Batteri laddar"
+      },
+      "bat_discharging": {
+        "name": "Batteri laddar ur"
+      },
+      "totale": {
+        "name": "Total energiutbyte"
+      },
+      "bat_charge_total": {
+        "name": "Total batteriladdning"
+      },
+      "bat_discharge_total": {
+        "name": "Total batteriurladdning"
+      },
+      "batsoh": {
+        "name": "Batterihälsa"
+      },
+      "tinv": {
+        "name": "Intern temperatur"
+      },
+      "collecttime": {
+        "name": "Datainsamlingstid"
+      },
+      "last_seen": {
+        "name": "Senaste molnsynk"
+      },
+      "integration_last_updated": {
+        "name": "Integrationen senast uppdaterad"
+      },
+      "batcap": {
+        "name": "Batterikapacitet"
+      },
+      "packnum": {
+        "name": "Antal batteripaket"
+      },
+      "maxchargepower": {
+        "name": "Max laddningsgräns"
+      },
+      "maxdischargepower": {
+        "name": "Max urladdningsgräns"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi-signalstyrka"
+      },
+      "signalval": {
+        "name": "Wi-Fi-signalkvalitet"
+      },
+      "wifiver": {
+        "name": "Wi-Fi-modul mjukvara"
+      },
+      "app_sw": {
+        "name": "Applikationsmjukvara"
+      },
+      "master_sw": {
+        "name": "Kontrollmjukvara (Huvud)"
+      },
+      "slave_sw": {
+        "name": "Kontrollmjukvara (Sekundär)"
+      },
+      "commode": {
+        "name": "Kommunikationsläge"
+      },
+      "acp": {
+        "name": "AC-effekt"
+      },
+      "vac": {
+        "name": "AC-spänning"
+      },
+      "vpv": {
+        "name": "PV-spänning"
+      },
+      "etoday": {
+        "name": "Energi idag"
+      },
+      "ph1loadp": {
+        "name": "Fas 1 Last"
+      },
+      "ph2loadp": {
+        "name": "Fas 2 Last"
+      },
+      "ph3loadp": {
+        "name": "Fas 3 Last"
+      },
+      "pv1v": {
+        "name": "PV1-spänning"
+      },
+      "pv2v": {
+        "name": "PV2-spänning"
+      },
+      "pv1i": {
+        "name": "PV1-ström"
+      },
+      "pv2i": {
+        "name": "PV2-ström"
+      },
+      "pv1p": {
+        "name": "PV1-effekt"
+      },
+      "pv2p": {
+        "name": "PV2-effekt"
+      },
+      "batv": {
+        "name": "Batterispänning"
+      },
+      "bati": {
+        "name": "Batteriström"
+      },
+      "vbus": {
+        "name": "Busspänning"
+      },
+      "f": {
+        "name": "Nätfrekvens"
+      },
+      "ace": {
+        "name": "AC-energi"
+      },
+      "devicestate": {
+        "name": "Enhetsstatus",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Larm",
+          "10": "Inte aktiverad"
+        }
+      },
+      "device_type": {
+        "name": "Enhetstyp",
+        "state": {
+          "hybrid_inverter": "Hybridväxelriktare",
+          "grid_connected_inverter": "Nätansluten växelriktare",
+          "collector": "Datalogger",
+          "micro_ess": "Micro ESS",
+          "unknown": "Okänd"
+        }
+      },
+      "ratedpower": {
+        "name": "Märkeffekt"
+      },
+      "ratedvoltage": {
+        "name": "Märkspänning"
+      },
+      "childnum": {
+        "name": "Anslutna enheter"
+      },
+      "ph1v": {
+        "name": "Fas 1 Spänning"
+      },
+      "ph1i": {
+        "name": "Fas 1 Ström"
+      },
+      "ph1p": {
+        "name": "Fas 1 Effekt"
+      },
+      "ph2v": {
+        "name": "Fas 2 Spänning"
+      },
+      "ph2i": {
+        "name": "Fas 2 Ström"
+      },
+      "ph2p": {
+        "name": "Fas 2 Effekt"
+      },
+      "ph3v": {
+        "name": "Fas 3 Spänning"
+      },
+      "ph3i": {
+        "name": "Fas 3 Ström"
+      },
+      "ph3p": {
+        "name": "Fas 3 Effekt"
+      }
+    }
+  }
+}
