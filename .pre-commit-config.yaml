@@ -15,7 +15,8 @@ repos:
     rev: v1.15.0
     hooks:
       - id: mypy
-        args: [--ignore-missing-imports, --explicit-package-bases]
+        args: [--config-file, mypy.ini]
+        pass_filenames: false
         additional_dependencies:
           - types-requests
           - types-setuptools

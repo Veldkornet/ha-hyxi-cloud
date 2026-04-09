@@ -59,8 +59,8 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 sys.modules["homeassistant.util"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
-import custom_components.hyxi_cloud.const as const_mod  # noqa: E402
-import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
+import hyxi_cloud.const as const_mod  # noqa: E402
+import hyxi_cloud.sensor as sensor_mod  # noqa: E402
 
 # Wire up real const.py functions
 sensor_mod.normalize_device_type = const_mod.normalize_device_type

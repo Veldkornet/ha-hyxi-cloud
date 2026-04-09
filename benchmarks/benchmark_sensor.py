@@ -48,7 +48,7 @@ mock_ha.RestoreEntity = RestoreEntity
 import timeit  # pylint: disable=wrong-import-position
 
 # Component imports must happen AFTER Home Assistant is mocked
-from custom_components.hyxi_cloud.sensor import (
+from hyxi_cloud.sensor import (
     HyxiSensor,  # pylint: disable=wrong-import-position
 )
 

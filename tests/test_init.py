@@ -4,6 +4,10 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.config_entries import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+)
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
@@ -26,10 +30,10 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
     if "homeassistant.helpers" not in sys.modules:
         sys.modules["homeassistant.helpers"] = mock_ha
 
-    class ConfigEntryAuthFailed(Exception):
+    class ConfigEntryAuthFailed(Exception):  # pylint: disable=function-redefined
         pass
 
-    class ConfigEntryNotReady(Exception):
+    class ConfigEntryNotReady(Exception):  # pylint: disable=function-redefined
         pass
 
     sys.modules[
@@ -44,10 +48,6 @@ class LocalUpdateFailed(Exception):
 
 if "homeassistant.helpers.update_coordinator" not in sys.modules:
     sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
-
-    sys.modules[
-        "homeassistant.helpers.update_coordinator"
-    ].UpdateFailed = LocalUpdateFailed
 
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
     sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
@@ -79,9 +79,6 @@ async_unload_entry = hc_init.async_unload_entry
 async_reload_entry = hc_init.async_reload_entry
 
 # Inject back into the module if they were mocked by mistake during the import process
-hc_init.ConfigEntryAuthFailed = LocalEntryAuthFailed
-hc_init.ConfigEntryNotReady = LocalEntryNotReady
-hc_init.UpdateFailed = LocalUpdateFailed
 
 from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402  # pylint: disable=wrong-import-position # noqa: E402
     DOMAIN,

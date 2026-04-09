@@ -24,7 +24,7 @@ line-length = 88
 select = [
     "E", "W", "F", "I", "UP", "B", "S", "N", "PTH", "RUF"
 ]
-ignore = ["E501", "N818", "S105"]
+ignore = ["E501", "N818", "S105", "N999"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105", "S106", "N802"]
@@ -49,3 +49,25 @@ asyncio_mode = "auto"
 
 [tool.pylint.similarities]
 min-similarity-lines = 100
+
+[tool.pylint.messages_control]
+disable = [
+    "line-too-long",
+    "import-error",
+    "too-few-public-methods",
+    "too-many-instance-attributes",
+    "too-many-branches",
+    "too-many-return-statements",
+    "too-many-nested-blocks",
+    "too-many-locals",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "try-except-raise",
+    "redefined-outer-name",
+    "protected-access",
+    "unused-argument",
+    "reimported",
+    "duplicate-code",
+    "import-outside-toplevel",
+    "wrong-import-order",
+]

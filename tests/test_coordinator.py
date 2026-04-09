@@ -56,10 +56,10 @@ sys.modules["hyxi_cloud_api"] = mock_api
 
 mock_const = MagicMock()
 mock_const.DOMAIN = "hyxi_cloud"
-sys.modules["custom_components.hyxi_cloud.const"] = mock_const
+sys.modules["hyxi_cloud.const"] = mock_const
 
 
-import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position # noqa: E402
+import hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position # noqa: E402
 
 importlib.reload(hc_coord)
 
@@ -160,11 +160,11 @@ async def test_async_sync_device_metadata_no_change():
     mock_dev_reg = MagicMock()
     with (
         patch(
-            "custom_components.hyxi_cloud.coordinator.dr.async_get",
+            "hyxi_cloud.coordinator.dr.async_get",
             return_value=mock_dev_reg,
         ),
         patch(
-            "custom_components.hyxi_cloud.coordinator.get_software_version",
+            "hyxi_cloud.coordinator.get_software_version",
             return_value="1.2.3",
         ),
     ):
@@ -192,11 +192,11 @@ async def test_async_sync_device_metadata_with_change():
     mock_dev_reg = MagicMock()
     with (
         patch(
-            "custom_components.hyxi_cloud.coordinator.dr.async_get",
+            "hyxi_cloud.coordinator.dr.async_get",
             return_value=mock_dev_reg,
         ),
         patch(
-            "custom_components.hyxi_cloud.coordinator.get_software_version",
+            "hyxi_cloud.coordinator.get_software_version",
             return_value="1.2.3",
         ),
     ):
@@ -225,7 +225,7 @@ async def test_async_sync_device_metadata_device_not_found():
 
     mock_dev_reg = MagicMock()
     with patch(
-        "custom_components.hyxi_cloud.coordinator.dr.async_get",
+        "hyxi_cloud.coordinator.dr.async_get",
         return_value=mock_dev_reg,
     ):
         mock_dev_reg.async_get_device.return_value = None
