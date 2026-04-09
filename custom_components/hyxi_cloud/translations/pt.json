@@ -1,10 +1,9 @@
 {
-  "title": "HYXI Cloud",
   "config": {
     "step": {
       "user": {
         "title": "Conectar ao HYXI Cloud",
-        "description": "Insira suas **credenciais de API de desenvolvedor (AK/SK)**. Você pode gerá-las na [Plataforma de Desenvolvedores HYXIPOWER]({link}).\n\n**Atenção:** É necessária uma conta de desenvolvedor separada. Se o e-mail do desenvolvedor for diferente do e-mail do aplicativo, você deve primeiro **Compartilhar sua Planta** no app para o e-mail do desenvolvedor.",
+        "description": "Introduza as suas **credenciais de API de desenvolvedor (AK/SK)**. Pode gerá-las na [Plataforma de Desenvolvedores HYXIPOWER]({link}).\n\n**Atenção:** É necessária uma conta de desenvolvedor separada. Se o e-mail do desenvolvedor for diferente do e-mail do aplicativo, deve primeiro **Partilhar a sua Planta** no app para o e-mail do desenvolvedor.",
         "data": {
           "access_key": "Chave de Acesso (AK)",
           "secret_key": "Chave Secreta (SK)"
@@ -12,7 +11,7 @@
       },
       "reauth_confirm": {
         "title": "Reautenticar HYXI Cloud",
-        "description": "Sua Chave de Acesso ou Chave Secreta não é mais válida. Insira suas novas credenciais para retomar o monitoramento solar. Você pode encontrá-las na [Plataforma de Desenvolvedores HYXIPOWER]({link}).",
+        "description": "A sua Chave de Acesso ou Chave Secreta não é mais válida. Introduza as suas novas credenciais para retomar o monitoramento solar. Pode encontrá-las na [Plataforma de Desenvolvedores HYXIPOWER]({link}).",
         "data": {
           "access_key": "Chave de Acesso (AK)",
           "secret_key": "Chave Secreta (SK)"
@@ -167,7 +166,7 @@
         "name": "Tensão CA"
       },
       "vpv": {
-        "name": "Tensão PV"
+        "name": "Tensão FV"
       },
       "etoday": {
         "name": "Geração do Dia"
@@ -182,22 +181,22 @@
         "name": "Consumo Fase 3"
       },
       "pv1v": {
-        "name": "Tensão PV1"
+        "name": "Tensão FV1"
       },
       "pv2v": {
-        "name": "Tensão PV2"
+        "name": "Tensão FV2"
       },
       "pv1i": {
-        "name": "Corrente PV1"
+        "name": "Corrente FV1"
       },
       "pv2i": {
-        "name": "Corrente PV2"
+        "name": "Corrente FV2"
       },
       "pv1p": {
-        "name": "Potência PV1"
+        "name": "Potência FV1"
       },
       "pv2p": {
-        "name": "Potência PV2"
+        "name": "Potência FV2"
       },
       "batv": {
         "name": "Tensão da Bateria (Inversor)"
