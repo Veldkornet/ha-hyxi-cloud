@@ -190,15 +190,22 @@ def test_anti_spike_prevention(base_sensor):
 
 
 def test_null_data_handling(base_sensor):
-    """Ensure the sensor returns None instead of crashing on empty API data."""
+    """Ensure the sensor returns None instead of crashing on empty or null-equivalent API data."""
     sensor, coordinator = base_sensor
-    coordinator.data["SN123"]["metrics"]["totalE"] = None
-    sensor._handle_coordinator_update()
-    assert sensor.native_value is None
 
-    coordinator.data["SN123"]["metrics"]["totalE"] = ""
-    sensor._handle_coordinator_update()
-    assert sensor.native_value is None
+    # Standard None/Empty
+    for val in [None, ""]:
+        coordinator.data["SN123"]["metrics"]["totalE"] = val
+        sensor._handle_coordinator_update()
+        assert sensor.native_value is None
+
+    # Null-equivalent strings handled by the fix
+    for val in ["null", "none", "na", "--", "  null  ", "None"]:
+        coordinator.data["SN123"]["metrics"]["totalE"] = val
+        sensor._handle_coordinator_update()
+        assert sensor.native_value is None, (
+            f"Failed to handle null-equivalent string: {val}"
+        )
 
 
 def test_timestamp_scaling(base_sensor):
@@ -850,3 +857,50 @@ def test_process_numeric_value_anti_spike(base_sensor):
     result = sensor._process_numeric_value(200.11)
 
     assert result == 100.0
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_null_string_filtering():
+    """Verify that metrics with 'null' or 'NA' strings are filtered out during registration."""
+    from custom_components.hyxi_cloud.const import DOMAIN
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {}
+
+    coordinator = MagicMock()
+    # We provide one valid metric and several 'null' equivalent ones
+    coordinator.data = {
+        "INV123": {
+            "device_type_code": "HYBRID_INVERTER",
+            "metrics": {
+                "totalE": "123.4",  # Valid
+                "batSoc": "null",  # Should be filtered
+                "pbat": "NA",  # Should be filtered
+                "batV": "--",  # Should be filtered
+                "batI": "none",  # Should be filtered
+            },
+        }
+    }
+    hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+    registered_entities = []
+
+    def mock_async_add_entities(entities):
+        registered_entities.extend(entities)
+
+    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
+
+    registered_keys = [
+        getattr(entity.entity_description, "key", None)
+        for entity in registered_entities
+        if hasattr(entity, "entity_description")
+    ]
+
+    # Verify 'totalE' is there but 'batSoc', 'pbat', etc., are NOT
+    assert "totalE" in registered_keys
+    assert "batSoc" not in registered_keys
+    assert "pbat" not in registered_keys
+    assert "batV" not in registered_keys
+    assert "batI" not in registered_keys
