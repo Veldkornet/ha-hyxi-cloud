@@ -1,5 +1,4 @@
 {
-  "title": "HYXI Cloud",
   "config": {
     "step": {
       "user": {
@@ -167,7 +166,7 @@
         "name": "Tensão CA"
       },
       "vpv": {
-        "name": "Tensão PV"
+        "name": "Tensão FV"
       },
       "etoday": {
         "name": "Geração do Dia"
@@ -182,22 +181,22 @@
         "name": "Consumo Fase 3"
       },
       "pv1v": {
-        "name": "Tensão PV1"
+        "name": "Tensão FV1"
       },
       "pv2v": {
-        "name": "Tensão PV2"
+        "name": "Tensão FV2"
       },
       "pv1i": {
-        "name": "Corrente PV1"
+        "name": "Corrente FV1"
       },
       "pv2i": {
-        "name": "Corrente PV2"
+        "name": "Corrente FV2"
       },
       "pv1p": {
-        "name": "Potência PV1"
+        "name": "Potência FV1"
       },
       "pv2p": {
-        "name": "Potência PV2"
+        "name": "Potência FV2"
       },
       "batv": {
         "name": "Tensão da Bateria (Inversor)"
