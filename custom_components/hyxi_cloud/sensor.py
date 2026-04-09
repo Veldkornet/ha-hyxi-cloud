@@ -541,8 +541,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         # Process dynamically available valid metrics keys
         keys_to_add.update(
-            key for key, v in metrics.items() 
-            if v is not None and str(v).strip().lower() not in ("", "null", "none", "na", "--")
+            key
+            for key, v in metrics.items()
+            if v is not None
+            and str(v).strip().lower() not in ("", "null", "none", "na", "--")
         )
 
         # O(1) removals instead of repeated conditionals
@@ -640,7 +642,13 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
     def _process_numeric_value(self, value):
         """Common numeric processing for sensors."""
-        if value is None or str(value).strip().lower() in ("", "null", "none", "na", "--"):
+        if value is None or str(value).strip().lower() in (
+            "",
+            "null",
+            "none",
+            "na",
+            "--",
+        ):
             return None
 
         if self.entity_description.native_unit_of_measurement is None:
@@ -765,7 +773,13 @@ class HyxiSensor(HyxiBaseSensor):
         return normalize_device_type(get_raw_device_code(dev_data))
 
     def _parse_int_sensor(self, dev_data, value):
-        if value is None or str(value).strip().lower() in ("", "null", "none", "na", "--"):
+        if value is None or str(value).strip().lower() in (
+            "",
+            "null",
+            "none",
+            "na",
+            "--",
+        ):
             return None
         try:
             return int(round(float(value), 0))
@@ -776,7 +790,13 @@ class HyxiSensor(HyxiBaseSensor):
             return None
 
     def _parse_collect_time(self, dev_data, value):
-        if value is None or str(value).strip().lower() in ("", "null", "none", "na", "--"):
+        if value is None or str(value).strip().lower() in (
+            "",
+            "null",
+            "none",
+            "na",
+            "--",
+        ):
             return None
         try:
             val_int = int(value)
@@ -792,7 +812,13 @@ class HyxiSensor(HyxiBaseSensor):
             return None
 
     def _parse_last_seen(self, dev_data, value):
-        if value is None or str(value).strip().lower() in ("", "null", "none", "na", "--"):
+        if value is None or str(value).strip().lower() in (
+            "",
+            "null",
+            "none",
+            "na",
+            "--",
+        ):
             return None
         return dt_util.parse_datetime(str(value))
 
@@ -803,7 +829,13 @@ class HyxiSensor(HyxiBaseSensor):
         return value
 
     def _parse_default(self, dev_data, value):
-        if value is None or str(value).strip().lower() in ("", "null", "none", "na", "--"):
+        if value is None or str(value).strip().lower() in (
+            "",
+            "null",
+            "none",
+            "na",
+            "--",
+        ):
             return None
         return self._process_numeric_value(value)
 
