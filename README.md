@@ -15,7 +15,6 @@
 [![Gitleaks](https://img.shields.io/badge/protected%20by-gitleaks-blue?style=flat-square)](https://github.com/gitleaks/gitleaks-action)
 [![Security: Harden-Runner](https://img.shields.io/badge/Security-Harden--Runner-green?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/actions)
 [![Dependabot](https://img.shields.io/badge/Dependabot-enabled-blue?style=flat-square&logo=dependabot)](https://github.com/Veldkornet/ha-hyxi-cloud/network/updates)
-[![gitleaks badge](https://img.shields.io/badge/protected%20by-gitleaks-blue)](https://github.com/gitleaks/gitleaks)
 [![OpenSSF Baseline](https://www.bestpractices.dev/projects/12051/baseline)](https://www.bestpractices.dev/projects/12051)
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
@@ -27,8 +26,8 @@
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
-- **🛡️ Reliable Quality Assurance:** Built with **100% automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
-- **🧼 Clean UI:** Precision-tuned data with multi-language support (English, French, German, Dutch).
+- **🛡️ Reliable Quality Assurance:** Built with **99%+ automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
+- **🧼 Clean UI:** Precision-tuned data with support for **19+ languages** (English, German, French, Dutch, Portuguese, Spanish, Italian, and more).
 
 ## 📥 Installation
 
@@ -54,8 +53,8 @@
 
 | Device Type | Status | Key Entities Provided |
 | :--- | :--- | :--- |
-| **Hybrid & All-in-One** | ✅ Tested | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, **Capacity (kWh)**, **Max Power**, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency, **Phase(1/2/3) Volts/Amps/Power**, **Bus Voltage** <br> **System:** Internal Temp, Running State, Fault Codes |
-| **Data Collector** | ✅ Tested | **Diagnostics:** Signal Intensity (RSSI/%), Heartbeat, Heartbeat Interval, Last Seen, **WiFi Version**, **Comm Mode** |
+| **Hybrid & All-in-One** | ✅ Tested | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, **Capacity (kWh)**, **Max Chg/Disch Power**, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency, **Phase(1/2/3) Volts/Amps/Power**, **Bus Voltage** <br> **System:** Internal Temp, Running State, Fault Codes |
+| **Data Collector** | ✅ Tested | **Diagnostics:** Signal Intensity (RSSI/%), Heartbeat, Heartbeat Interval, Last Seen, **WiFi Version**, **Comm Mode**, **App Version** |
 | **String Inverter** | ⚠️ Untested | **PV:** Power, String Volts/Amps <br> **AC:** Output Power, Daily/Total Yield, Bus Voltage, Temperature |
 | **Micro Inverter** | ⚠️ Untested | **Module:** DC Input Power, AC Voltage, Frequency, Daily Energy, Internal Temp |
 | **Smart Meter** | ⚠️ Untested | **Grid:** Active/Reactive Power, Voltage, Export Energy, Import Energy |
@@ -75,11 +74,9 @@ This integration includes a specialized diagnostic system to help you distinguis
 
 | Sensor | Purpose | Behavior |
 | :--- | :--- | :--- |
-| **Cloud Status** | Binary connectivity sensor. | Turns `Off` if the API is unreachable or authentication fails. |
-| **Connection Quality** | API Stability tracking. | Reports **Stable**, **Degraded** (with retry count), or **Offline**. |
-| **Data Freshness** | Sync latency tracking. | Reports **Just now**, **Fresh**, or **Stale** based on cloud feedback. |
+| **Cloud Status** | Binary connectivity sensor. | Indicates Cloud connectivity. Includes **Connection Quality** and **Data Freshness** as attributes. |
 | **Device Alarm** | Hardware fault tracking. | Binary sensor that turns `On` if the hardware reports active alarms. |
-| **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfuly processed a cloud update. |
+| **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
 
 ## ⚙️ Setup & Configuration
 
