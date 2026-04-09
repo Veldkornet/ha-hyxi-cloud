@@ -8,6 +8,7 @@ from homeassistant.config_entries import (
     ConfigEntryAuthFailed,
     ConfigEntryNotReady,
 )
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
@@ -65,13 +66,9 @@ sys.modules["hyxi_cloud_api"] = mock_api
 import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position # noqa: E402
 
 
-# Redefine for local use to ensure consistency with mocked environment
-class LocalEntryAuthFailed(Exception):
-    """Local fallback for auth failure."""
-
-
-class LocalEntryNotReady(Exception):
-    """Local fallback for entry not ready."""
+# Redefine for local use to ensure consistency with legacy nomenclature if needed
+LocalEntryAuthFailed = ConfigEntryAuthFailed
+LocalEntryNotReady = ConfigEntryNotReady
 
 
 async_setup_entry = hc_init.async_setup_entry
@@ -241,13 +238,13 @@ async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
-            side_effect=LocalEntryAuthFailed
+            side_effect=ConfigEntryAuthFailed
         )
 
         with patch(
             "custom_components.hyxi_cloud.__init__._LOGGER.error"
         ) as mock_logger:
-            with pytest.raises(LocalEntryAuthFailed):
+            with pytest.raises(ConfigEntryAuthFailed):
                 await async_setup_entry(mock_hass, mock_entry)
 
             mock_logger.assert_called_with("Authentication failed during setup")
@@ -265,13 +262,13 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
-            side_effect=LocalUpdateFailed("Timeout")
+            side_effect=UpdateFailed("Timeout")
         )
 
         with patch(
             "custom_components.hyxi_cloud.__init__._LOGGER.warning"
         ) as mock_logger:
-            with pytest.raises(LocalEntryNotReady) as exc:
+            with pytest.raises(ConfigEntryNotReady) as exc:
                 await async_setup_entry(mock_hass, mock_entry)
 
             assert "Connection error: Timeout" in str(exc.value)
