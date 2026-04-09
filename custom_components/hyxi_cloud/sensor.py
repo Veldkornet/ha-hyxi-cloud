@@ -116,6 +116,48 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
     ),
+    SensorEntityDescription(
+        key="pv3v",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-panel",
+    ),
+    SensorEntityDescription(
+        key="pv4v",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-panel",
+    ),
+    SensorEntityDescription(
+        key="pv3i",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:current-dc",
+    ),
+    SensorEntityDescription(
+        key="pv4i",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:current-dc",
+    ),
+    SensorEntityDescription(
+        key="pv3p",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-power",
+    ),
+    SensorEntityDescription(
+        key="pv4p",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:solar-power",
+    ),
     # Battery Electricals
     SensorEntityDescription(
         key="batV",
@@ -434,6 +476,14 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
+        key="temp",
+        translation_key="inverter_temperature",
+        native_unit_of_measurement="°C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:thermometer",
+    ),
+    SensorEntityDescription(
         key="packNum",
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:layers-triple",
@@ -506,6 +556,14 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="eToday",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:solar-power-variant",
+    ),
+    SensorEntityDescription(
+        key="efpv",
+        translation_key="efpv",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
@@ -890,6 +948,13 @@ class HyxiSensor(HyxiBaseSensor):
         metrics = dev_data.get("metrics") or {}
         key = self.entity_description.key
         value = metrics.get(key)
+
+        # 🚀 Fallback Logic for Micro Inverters (acE -> efpv)
+        # If acE is not provided or zero, attempt fallback to efpv for Micro Inverters.
+        if key == "acE" and (value is None or str(value) == "0.0"):
+            raw_code = get_raw_device_code(dev_data)
+            if normalize_device_type(raw_code) == "grid_connected_inverter":
+                value = metrics.get("efpv")
 
         self._attr_native_value = self._parser_func(dev_data, value)
 
