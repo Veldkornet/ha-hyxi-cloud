@@ -172,6 +172,12 @@
       "etoday": {
         "name": "Energy Today"
       },
+      "efpv": {
+        "name": "Yield Today (PV)"
+      },
+      "inverter_temperature": {
+        "name": "Inverter Temperature"
+      },
       "ph1loadp": {
         "name": "Phase 1 Load"
       },
@@ -198,6 +204,24 @@
       },
       "pv2p": {
         "name": "PV2 Power"
+      },
+      "pv3v": {
+        "name": "PV3 Voltage"
+      },
+      "pv4v": {
+        "name": "PV4 Voltage"
+      },
+      "pv3i": {
+        "name": "PV3 Current"
+      },
+      "pv4i": {
+        "name": "PV4 Current"
+      },
+      "pv3p": {
+        "name": "PV3 Power"
+      },
+      "pv4p": {
+        "name": "PV4 Power"
       },
       "batv": {
         "name": "Battery Voltage"

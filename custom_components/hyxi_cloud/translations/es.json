@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Energía de hoy"
       },
+      "efpv": {
+        "name": "Rendimiento de hoy (FV)"
+      },
+      "inverter_temperature": {
+        "name": "Temperatura del inversor"
+      },
       "ph1loadp": {
         "name": "Carga Fase 1"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "Potencia PV2"
+      },
+      "pv3v": {
+        "name": "Voltaje PV3"
+      },
+      "pv4v": {
+        "name": "Voltaje PV4"
+      },
+      "pv3i": {
+        "name": "Corriente PV3"
+      },
+      "pv4i": {
+        "name": "Corriente PV4"
+      },
+      "pv3p": {
+        "name": "Potencia PV3"
+      },
+      "pv4p": {
+        "name": "Potencia PV4"
       },
       "batv": {
         "name": "Voltaje de batería"

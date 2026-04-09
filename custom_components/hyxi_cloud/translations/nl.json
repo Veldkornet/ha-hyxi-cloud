@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Energie Vandaag"
       },
+      "efpv": {
+        "name": "PV-opbrengst Vandaag"
+      },
+      "inverter_temperature": {
+        "name": "Omvormertemperatuur"
+      },
       "ph1loadp": {
         "name": "Fase 1 Belasting"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2 Vermogen"
+      },
+      "pv3v": {
+        "name": "PV3 Spanning"
+      },
+      "pv4v": {
+        "name": "PV4 Spanning"
+      },
+      "pv3i": {
+        "name": "PV3 Stroom"
+      },
+      "pv4i": {
+        "name": "PV4 Stroom"
+      },
+      "pv3p": {
+        "name": "PV3 Vermogen"
+      },
+      "pv4p": {
+        "name": "PV4 Vermogen"
       },
       "batv": {
         "name": "Batterijspanning"

@@ -171,6 +171,12 @@
       "etoday": {
         "name": "本日の発電量"
       },
+      "efpv": {
+        "name": "本日のPV発電量"
+      },
+      "inverter_temperature": {
+        "name": "インバーター温度"
+      },
       "ph1loadp": {
         "name": "第1相負荷"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2電力"
+      },
+      "pv3v": {
+        "name": "PV3電圧"
+      },
+      "pv4v": {
+        "name": "PV4電圧"
+      },
+      "pv3i": {
+        "name": "PV3電流"
+      },
+      "pv4i": {
+        "name": "PV4電流"
+      },
+      "pv3p": {
+        "name": "PV3電力"
+      },
+      "pv4p": {
+        "name": "PV4電力"
       },
       "batv": {
         "name": "バッテリー電圧"

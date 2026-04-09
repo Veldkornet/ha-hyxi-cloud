@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Mai energia"
       },
+      "efpv": {
+        "name": "Mai PV-hozam"
+      },
+      "inverter_temperature": {
+        "name": "Inverter-hőmérséklet"
+      },
       "ph1loadp": {
         "name": "1. fázis terhelés"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2 teljesítmény"
+      },
+      "pv3v": {
+        "name": "PV3 feszültség"
+      },
+      "pv4v": {
+        "name": "PV4 feszültség"
+      },
+      "pv3i": {
+        "name": "PV3 áramerősség"
+      },
+      "pv4i": {
+        "name": "PV4 áramerősség"
+      },
+      "pv3p": {
+        "name": "PV3 teljesítmény"
+      },
+      "pv4p": {
+        "name": "PV4 teljesítmény"
       },
       "batv": {
         "name": "Akkumulátor feszültség"

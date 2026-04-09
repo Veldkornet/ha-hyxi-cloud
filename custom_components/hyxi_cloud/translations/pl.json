@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Energia dzisiaj"
       },
+      "efpv": {
+        "name": "Uzysk PV dzisiaj"
+      },
+      "inverter_temperature": {
+        "name": "Temperatura falownika"
+      },
       "ph1loadp": {
         "name": "Obciążenie fazy 1"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "Moc PV2"
+      },
+      "pv3v": {
+        "name": "Napięcie PV3"
+      },
+      "pv4v": {
+        "name": "Napięcie PV4"
+      },
+      "pv3i": {
+        "name": "Prąd PV3"
+      },
+      "pv4i": {
+        "name": "Prąd PV4"
+      },
+      "pv3p": {
+        "name": "Moc PV3"
+      },
+      "pv4p": {
+        "name": "Moc PV4"
       },
       "batv": {
         "name": "Napięcie akumulatora"

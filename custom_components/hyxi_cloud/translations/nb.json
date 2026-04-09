@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Energi i dag"
       },
+      "efpv": {
+        "name": "PV-utbytte i dag"
+      },
+      "inverter_temperature": {
+        "name": "Vekselsrettertemperatur"
+      },
       "ph1loadp": {
         "name": "Fase 1 Last"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2-effekt"
+      },
+      "pv3v": {
+        "name": "PV3-spenning"
+      },
+      "pv4v": {
+        "name": "PV4-spenning"
+      },
+      "pv3i": {
+        "name": "PV3-strøm"
+      },
+      "pv4i": {
+        "name": "PV4-strøm"
+      },
+      "pv3p": {
+        "name": "PV3-effekt"
+      },
+      "pv4p": {
+        "name": "PV4-effekt"
       },
       "batv": {
         "name": "Batterispenning"

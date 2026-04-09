@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Énergie du jour"
       },
+      "efpv": {
+        "name": "Rendement du jour (PV)"
+      },
+      "inverter_temperature": {
+        "name": "Température de l'onduleur"
+      },
       "ph1loadp": {
         "name": "Charge phase 1"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "Puissance PV2"
+      },
+      "pv3v": {
+        "name": "Tension PV3"
+      },
+      "pv4v": {
+        "name": "Tension PV4"
+      },
+      "pv3i": {
+        "name": "Courant PV3"
+      },
+      "pv4i": {
+        "name": "Courant PV4"
+      },
+      "pv3p": {
+        "name": "Puissance PV3"
+      },
+      "pv4p": {
+        "name": "Puissance PV4"
       },
       "batv": {
         "name": "Tension de la batterie"

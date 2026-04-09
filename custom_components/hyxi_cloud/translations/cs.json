@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Energie dnes"
       },
+      "efpv": {
+        "name": "Výnos dnes (PV)"
+      },
+      "inverter_temperature": {
+        "name": "Teplota měniče"
+      },
       "ph1loadp": {
         "name": "Zátěž fáze 1"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "Výkon PV2"
+      },
+      "pv3v": {
+        "name": "Napětí PV3"
+      },
+      "pv4v": {
+        "name": "Napětí PV4"
+      },
+      "pv3i": {
+        "name": "Proud PV3"
+      },
+      "pv4i": {
+        "name": "Proud PV4"
+      },
+      "pv3p": {
+        "name": "Výkon PV3"
+      },
+      "pv4p": {
+        "name": "Výkon PV4"
       },
       "batv": {
         "name": "Napětí baterie"
