@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Výnos dnes (PV)"
       },
-      "inverter_temperature": {
-        "name": "Teplota měniče"
-      },
       "ph1loadp": {
         "name": "Zátěž fáze 1"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Výkon fáze 3"
+      },
+      "internal_temperature": {
+        "name": "Vnitřní teplota"
       }
     }
   }

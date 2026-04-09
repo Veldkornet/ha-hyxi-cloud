@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Rendement du jour (PV)"
       },
-      "inverter_temperature": {
-        "name": "Température de l'onduleur"
-      },
       "ph1loadp": {
         "name": "Charge phase 1"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Phase 3 Puissance"
+      },
+      "internal_temperature": {
+        "name": "Température interne"
       }
     }
   }

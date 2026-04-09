@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Mai PV-hozam"
       },
-      "inverter_temperature": {
-        "name": "Inverter-hőmérséklet"
-      },
       "ph1loadp": {
         "name": "1. fázis terhelés"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "3. fázis teljesítmény"
+      },
+      "internal_temperature": {
+        "name": "Belső hőmérséklet"
       }
     }
   }

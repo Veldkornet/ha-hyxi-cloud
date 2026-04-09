@@ -477,7 +477,7 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="temp",
-        translation_key="inverter_temperature",
+        translation_key="internal_temperature",
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,

@@ -174,9 +174,6 @@
       "efpv": {
         "name": "PV-tuotto tänään"
       },
-      "inverter_temperature": {
-        "name": "Invertterilämpötila"
-      },
       "ph1loadp": {
         "name": "Vaihe 1 kuorma"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Vaihe 3 teho"
+      },
+      "internal_temperature": {
+        "name": "Sisäinen lämpötila"
       }
     }
   }

@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Uzysk PV dzisiaj"
       },
-      "inverter_temperature": {
-        "name": "Temperatura falownika"
-      },
       "ph1loadp": {
         "name": "Obciążenie fazy 1"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Moc fazy 3"
+      },
+      "internal_temperature": {
+        "name": "Temperatura wewnętrzna"
       }
     }
   }

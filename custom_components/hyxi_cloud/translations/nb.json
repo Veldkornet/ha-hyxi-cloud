@@ -174,9 +174,6 @@
       "efpv": {
         "name": "PV-utbytte i dag"
       },
-      "inverter_temperature": {
-        "name": "Vekselsrettertemperatur"
-      },
       "ph1loadp": {
         "name": "Fase 1 Last"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Fase 3 Effekt"
+      },
+      "internal_temperature": {
+        "name": "Intern temperatur"
       }
     }
   }

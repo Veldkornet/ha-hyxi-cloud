@@ -174,9 +174,6 @@
       "efpv": {
         "name": "PV-utbyte idag"
       },
-      "inverter_temperature": {
-        "name": "Invertertemperatur"
-      },
       "ph1loadp": {
         "name": "Fas 1 Last"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Fas 3 Effekt"
+      },
+      "internal_temperature": {
+        "name": "Intern temperatur"
       }
     }
   }

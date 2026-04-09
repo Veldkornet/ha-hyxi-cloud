@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Bugünkü PV Verimi"
       },
-      "inverter_temperature": {
-        "name": "Evirici Sıcaklığı"
-      },
       "ph1loadp": {
         "name": "Faz 1 Yükü"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Faz 3 Gücü"
+      },
+      "internal_temperature": {
+        "name": "İç Sıcaklık"
       }
     }
   }
