@@ -1,9 +1,7 @@
 """Tests for the initial setup of the HYXI Cloud integration."""
 
 import sys
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -85,10 +83,8 @@ hc_init.ConfigEntryAuthFailed = LocalEntryAuthFailed
 hc_init.ConfigEntryNotReady = LocalEntryNotReady
 hc_init.UpdateFailed = LocalUpdateFailed
 
-from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
+from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402  # pylint: disable=wrong-import-position # noqa: E402
     DOMAIN,
-)
-from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
     PLATFORMS,
 )
 
@@ -103,8 +99,7 @@ def mock_hass():
 
 @pytest.fixture
 def mock_entry():
-    from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY
-    from custom_components.hyxi_cloud.const import CONF_SECRET_KEY
+    from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY
 
     entry = MagicMock()
     entry.data = {

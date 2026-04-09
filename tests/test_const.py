@@ -1,9 +1,11 @@
 """Tests for the hyxi_cloud const module."""
 
-from custom_components.hyxi_cloud.const import get_raw_device_code
-from custom_components.hyxi_cloud.const import get_software_version
-from custom_components.hyxi_cloud.const import mask_sn
-from custom_components.hyxi_cloud.const import normalize_device_type
+from custom_components.hyxi_cloud.const import (
+    get_raw_device_code,
+    get_software_version,
+    mask_sn,
+    normalize_device_type,
+)
 
 
 def test_mask_sn():

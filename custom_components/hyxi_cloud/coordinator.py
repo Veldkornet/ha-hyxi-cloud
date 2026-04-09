@@ -8,15 +8,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import HyxiApiClient
 
-from .const import CONF_BACK_DISCOVERY
-from .const import DOMAIN
-from .const import get_software_version
-from .const import mask_sn
+from .const import CONF_BACK_DISCOVERY, DOMAIN, get_software_version, mask_sn
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -3,9 +3,7 @@
 # pylint: disable=redefined-outer-name,import-outside-toplevel,unused-import,wrong-import-order,wrong-import-position
 import importlib
 import sys
-from datetime import UTC
-from datetime import datetime
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -194,8 +192,7 @@ def test_connectivity_sensor_freshness_labels(
 
 def test_hyxi_alarm_sensor_missing_metric(mock_coordinator):
     """Test what happens to extra_state_attributes when metrics does not contain deviceState."""
-    from unittest.mock import PropertyMock
-    from unittest.mock import patch
+    from unittest.mock import PropertyMock, patch
 
     if not hasattr(bs_mod, "HyxiAlarmSensor"):
         pytest.skip("HyxiAlarmSensor not available in this test environment")

@@ -1,7 +1,9 @@
 """Binary sensor platform for HYXI Cloud."""
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
@@ -9,8 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
-from .const import MANUFACTURER
+from .const import DOMAIN, MANUFACTURER
 
 ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
