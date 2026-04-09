@@ -42,17 +42,17 @@ def mock_ha_environment():
         def __init_subclass__(cls, **kwargs):
             pass
 
-    mock_ce.ConfigFlow = RealConfigFlow
-    mock_ce.OptionsFlow = RealOptionsFlow
-    mock_ce.ConfigEntry = MagicMock()
-    mock_ce.exceptions = MagicMock()
+    mock_ce.ConfigFlow = RealConfigFlow  # type: ignore[attr-defined]
+    mock_ce.OptionsFlow = RealOptionsFlow  # type: ignore[attr-defined]
+    mock_ce.ConfigEntry = MagicMock()  # type: ignore[attr-defined]
+    mock_ce.exceptions = MagicMock()  # type: ignore[attr-defined]
 
     class IntentionalTermination(Exception):
         pass
 
-    mock_ce.exceptions.IntentionalTermination = IntentionalTermination
+    mock_ce.exceptions.IntentionalTermination = IntentionalTermination  # type: ignore[attr-defined]
     sys.modules["homeassistant.config_entries"] = mock_ce
-    mock_ha.config_entries = mock_ce
+    mock_ha.config_entries = mock_ce  # type: ignore[attr-defined]
 
     sys.modules["homeassistant.helpers"] = mock_ha
     sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha

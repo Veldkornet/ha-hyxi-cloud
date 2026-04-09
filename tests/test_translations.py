@@ -9,7 +9,7 @@ import pytest
 
 def get_translation_keys():
     """Extract used translation keys from the codebase."""
-    keys = {
+    keys: dict[str, set[str]] = {
         "sensor": set(),
         "binary_sensor": set(),
     }
@@ -37,7 +37,9 @@ def get_translation_keys():
             keys["sensor"].add(k.lower())
 
     # 2. Binary Sensors from binary_sensor.py
-    binary_path = Path(__file__).parent / "../custom_components/hyxi_cloud/binary_sensor.py"
+    binary_path = (
+        Path(__file__).parent / "../custom_components/hyxi_cloud/binary_sensor.py"
+    )
     with binary_path.open(encoding="utf-8") as f:
         content = f.read()
         # Find _attr_translation_key = "something"
@@ -50,13 +52,19 @@ def get_translation_keys():
 
 def get_all_languages():
     """Get list of translation files."""
-    translations_dir = Path(__file__).parent / "../custom_components/hyxi_cloud/translations"
+    translations_dir = (
+        Path(__file__).parent / "../custom_components/hyxi_cloud/translations"
+    )
     return [f.name for f in translations_dir.iterdir() if f.suffix == ".json"]
 
 
 def load_translation(lang_file):
     """Load a translation JSON file."""
-    path = Path(__file__).parent / "../custom_components/hyxi_cloud/translations" / lang_file
+    path = (
+        Path(__file__).parent
+        / "../custom_components/hyxi_cloud/translations"
+        / lang_file
+    )
     with path.open(encoding="utf-8") as f:
         return json.load(f)
 

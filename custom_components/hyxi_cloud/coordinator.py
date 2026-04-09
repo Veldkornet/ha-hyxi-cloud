@@ -1,7 +1,8 @@
 """DataUpdateCoordinator for HYXI Cloud."""
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
+from typing import TypedDict
 
 from aiohttp import ClientError
 from homeassistant.config_entries import ConfigEntry
@@ -15,6 +16,15 @@ from hyxi_cloud_api import HyxiApiClient
 from .const import CONF_BACK_DISCOVERY, DOMAIN, get_software_version, mask_sn
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class HyxiMetadata(TypedDict):
+    """Type definition for HYXI Metadata."""
+
+    last_attempts: int
+    last_success: datetime | None
+    last_error: str | None
+    api_status: str
 
 
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
@@ -41,7 +51,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.entry = entry
 
         # 🚀 Store metadata on the object, not in the data dictionary!
-        self.hyxi_metadata = {
+        self.hyxi_metadata: HyxiMetadata = {
             "last_attempts": 0,
             "last_success": None,
             "last_error": None,

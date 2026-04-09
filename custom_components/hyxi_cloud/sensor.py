@@ -614,7 +614,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
     def _check_anti_dip(self, num_value: float) -> float | None:
         """Check for and prevent invalid value drops."""
-        if num_value >= self._last_valid_value:
+        if self._last_valid_value is None or num_value >= self._last_valid_value:
             return None
 
         # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
@@ -637,6 +637,8 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
     def _check_anti_spike(self, num_value: float) -> float | None:
         """Check for and prevent impossible value jumps."""
+        if self._last_valid_value is None:
+            return None
         if (num_value - self._last_valid_value) > 100.0:
             self._log_glitch_once(
                 num_value,
@@ -678,8 +680,6 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                     spike_result = self._check_anti_spike(num_value)
                     if spike_result is not None:
                         return spike_result
-
-            self._last_logged_glitch = None
             self._last_valid_value = num_value
             return num_value
         except (
@@ -778,6 +778,32 @@ class HyxiSensor(HyxiBaseSensor):
 
         return info
 
+    @property
+    def native_value(self):
+        """Return the native value of the sensor."""
+        # Use our safe parser to ensure we handle NA/null/-- effectively
+        val = super().native_value
+
+        # Ensure operands are not None to avoid Mypy operator errors
+        if self.entity_description.key == "gen_p" and val is not None:
+            ac_l = self._get_metric_float("acl")
+            if ac_l is not None and val >= ac_l:
+                val = val - ac_l
+            val = val * 2.0
+        elif self.entity_description.key == "ac_p" and val is not None:
+            ac_l = self._get_metric_float("acl")
+            if ac_l is not None:
+                val = val - ac_l
+            val = val * 0.96
+        elif (
+            self.entity_description.key == "grid_p"
+            and val is not None
+            and (ac_l := self._get_metric_float("acl")) is not None
+        ):
+            val = val - ac_l
+
+        return val
+
     def _parse_device_type(self, dev_data, value):
         return normalize_device_type(get_raw_device_code(dev_data))
 
@@ -810,7 +836,7 @@ class HyxiSensor(HyxiBaseSensor):
         try:
             val_int = int(value)
             if val_int > 9999999999:
-                val_int = val_int / 1000
+                val_int = val_int // 1000
             return datetime.fromtimestamp(val_int, tz=UTC)
         except (
             ValueError,
@@ -847,6 +873,16 @@ class HyxiSensor(HyxiBaseSensor):
         ):
             return None
         return self._process_numeric_value(value)
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        from typing import cast
+
+        from .coordinator import HyxiDataUpdateCoordinator
+
+        coordinator = cast(HyxiDataUpdateCoordinator, self.coordinator)
+        return coordinator.hyxi_metadata
 
     def _update_native_value(self):
         """Update the cached native value."""

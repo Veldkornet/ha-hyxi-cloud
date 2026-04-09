@@ -4,6 +4,8 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
 # Define AUTHORITATIVE local exceptions first to avoid MagicMock TypeErrors in pytest.raises
 class ConfigEntryAuthFailed(Exception):
     """Authoritative local class for auth failure."""
@@ -15,6 +17,7 @@ class ConfigEntryNotReady(Exception):
 
 class UpdateFailed(Exception):
     """Authoritative local class for update failed."""
+
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
@@ -43,31 +46,23 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
 
     sys.modules[
         "homeassistant.exceptions"
-    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
-    sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady
-    sys.modules["homeassistant.exceptions"].UpdateFailed = UpdateFailed
+    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed  # type: ignore[attr-defined]
+    sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady  # type: ignore[attr-defined]
+    sys.modules["homeassistant.exceptions"].UpdateFailed = UpdateFailed  # type: ignore[attr-defined]
 
     # Also inject into the specific locations expected by the component
     if "homeassistant.config_entries" not in sys.modules:
         sys.modules["homeassistant.config_entries"] = MagicMock()
     sys.modules[
         "homeassistant.config_entries"
-    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
+    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed  # type: ignore[attr-defined]
     sys.modules[
         "homeassistant.config_entries"
-    ].ConfigEntryNotReady = ConfigEntryNotReady
+    ].ConfigEntryNotReady = ConfigEntryNotReady  # type: ignore[attr-defined]
 
     if "homeassistant.helpers.update_coordinator" not in sys.modules:
         sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
-    sys.modules[
-        "homeassistant.helpers.update_coordinator"
-    ].UpdateFailed = UpdateFailed
-
-
-class LocalUpdateFailed(Exception):
-    """Local fallback for update failed."""
-
-
+    sys.modules["homeassistant.helpers.update_coordinator"].UpdateFailed = UpdateFailed  # type: ignore[attr-defined]
 
 
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
@@ -75,7 +70,7 @@ if "homeassistant.helpers.aiohttp_client" not in sys.modules:
 
 if "aiohttp" not in sys.modules:
     sys.modules["aiohttp"] = MagicMock()
-    sys.modules["aiohttp"].ClientError = type("ClientError", (Exception,), {})
+    sys.modules["aiohttp"].ClientError = type("ClientError", (Exception,), {})  # type: ignore[attr-defined]
 
 mock_api = MagicMock()
 mock_api.__name__ = "hyxi_cloud_api"
