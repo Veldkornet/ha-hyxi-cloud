@@ -4,11 +4,17 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.config_entries import (
-    ConfigEntryAuthFailed,
-    ConfigEntryNotReady,
-)
-from homeassistant.helpers.update_coordinator import UpdateFailed
+# Define AUTHORITATIVE local exceptions first to avoid MagicMock TypeErrors in pytest.raises
+class ConfigEntryAuthFailed(Exception):
+    """Authoritative local class for auth failure."""
+
+
+class ConfigEntryNotReady(Exception):
+    """Authoritative local class for entry not ready."""
+
+
+class UpdateFailed(Exception):
+    """Authoritative local class for update failed."""
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
@@ -16,8 +22,10 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 if "homeassistant.exceptions" not in sys.modules or not hasattr(
     sys.modules["homeassistant.exceptions"], "ConfigEntryAuthFailed"
 ):
+    # Harden the mock to behave like a module
     mock_ha = MagicMock()
     mock_ha.__path__ = []
+    mock_ha.__spec__ = MagicMock()
     if "homeassistant" not in sys.modules:
         sys.modules["homeassistant"] = mock_ha
     if "homeassistant.components" not in sys.modules:
@@ -30,25 +38,37 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
         sys.modules["homeassistant.exceptions"] = mock_ha
     if "homeassistant.helpers" not in sys.modules:
         sys.modules["homeassistant.helpers"] = mock_ha
-
-    class ConfigEntryAuthFailed(Exception):  # pylint: disable=function-redefined
-        pass
-
-    class ConfigEntryNotReady(Exception):  # pylint: disable=function-redefined
-        pass
+    if "homeassistant.util" not in sys.modules:
+        sys.modules["homeassistant.util"] = mock_ha
 
     sys.modules[
         "homeassistant.exceptions"
     ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
     sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady
+    sys.modules["homeassistant.exceptions"].UpdateFailed = UpdateFailed
+
+    # Also inject into the specific locations expected by the component
+    if "homeassistant.config_entries" not in sys.modules:
+        sys.modules["homeassistant.config_entries"] = MagicMock()
+    sys.modules[
+        "homeassistant.config_entries"
+    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
+    sys.modules[
+        "homeassistant.config_entries"
+    ].ConfigEntryNotReady = ConfigEntryNotReady
+
+    if "homeassistant.helpers.update_coordinator" not in sys.modules:
+        sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+    sys.modules[
+        "homeassistant.helpers.update_coordinator"
+    ].UpdateFailed = UpdateFailed
 
 
 class LocalUpdateFailed(Exception):
     """Local fallback for update failed."""
 
 
-if "homeassistant.helpers.update_coordinator" not in sys.modules:
-    sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
+
 
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
     sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
@@ -62,13 +82,19 @@ mock_api.__name__ = "hyxi_cloud_api"
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
 
-# Now we can safely import our component code
 import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position # noqa: E402
 
+# DIRECT NAMESPACE INJECTION: Force the component to use our authoritative classes
+# This is the only way to guarantee class identity consistency in a mocked environment.
+hc_init.ConfigEntryAuthFailed = ConfigEntryAuthFailed
+hc_init.ConfigEntryNotReady = ConfigEntryNotReady
+hc_init.UpdateFailed = UpdateFailed
 
-# Redefine for local use to ensure consistency with legacy nomenclature if needed
+
+# Redefine for local use is now redundant but kept for legacy nomenclature compatibility
 LocalEntryAuthFailed = ConfigEntryAuthFailed
 LocalEntryNotReady = ConfigEntryNotReady
+LocalUpdateFailed = UpdateFailed
 
 
 async_setup_entry = hc_init.async_setup_entry
