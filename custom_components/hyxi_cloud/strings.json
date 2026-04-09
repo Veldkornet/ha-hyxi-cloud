@@ -175,8 +175,8 @@
       "efpv": {
         "name": "Yield Today (PV)"
       },
-      "inverter_temperature": {
-        "name": "Inverter Temperature"
+      "internal_temperature": {
+        "name": "Internal Temperature"
       },
       "ph1loadp": {
         "name": "Phase 1 Load"

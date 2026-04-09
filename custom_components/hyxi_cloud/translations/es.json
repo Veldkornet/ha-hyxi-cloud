@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Rendimiento de hoy (FV)"
       },
-      "inverter_temperature": {
-        "name": "Temperatura del inversor"
-      },
       "ph1loadp": {
         "name": "Carga Fase 1"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Potencia Fase 3"
+      },
+      "internal_temperature": {
+        "name": "Temperatura interna"
       }
     }
   }

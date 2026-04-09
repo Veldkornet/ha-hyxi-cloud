@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Rendimento do Dia (FV)"
       },
-      "inverter_temperature": {
-        "name": "Temperatura do Inversor"
-      },
       "ph1loadp": {
         "name": "Consumo Fase 1"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Potência Fase 3"
+      },
+      "internal_temperature": {
+        "name": "Temperatura Interna"
       }
     }
   }

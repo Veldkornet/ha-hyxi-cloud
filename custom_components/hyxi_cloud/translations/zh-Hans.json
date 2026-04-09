@@ -174,9 +174,6 @@
       "efpv": {
         "name": "今日PV发电量"
       },
-      "inverter_temperature": {
-        "name": "逆变器温度"
-      },
       "ph1loadp": {
         "name": "第一相负载"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "第三相功率"
+      },
+      "internal_temperature": {
+        "name": "内部温度"
       }
     }
   }

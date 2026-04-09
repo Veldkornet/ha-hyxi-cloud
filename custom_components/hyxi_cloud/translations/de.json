@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Tagesertrag (PV)"
       },
-      "inverter_temperature": {
-        "name": "Wechselrichtertemperatur"
-      },
       "ph1loadp": {
         "name": "Phase 1 Verbrauch"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Phase 3 Leistung"
+      },
+      "internal_temperature": {
+        "name": "Innentemperatur"
       }
     }
   }

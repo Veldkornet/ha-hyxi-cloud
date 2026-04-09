@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Opbrengs Vandag (PV)"
       },
-      "inverter_temperature": {
-        "name": "Inverter-temperatuur"
-      },
       "ph1loadp": {
         "name": "Fase 1 Las"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Fase 3 Krag"
+      },
+      "internal_temperature": {
+        "name": "Interne Temperatuur"
       }
     }
   }

@@ -174,9 +174,6 @@
       "efpv": {
         "name": "Rendimento oggi (PV)"
       },
-      "inverter_temperature": {
-        "name": "Temperatura inverter"
-      },
       "ph1loadp": {
         "name": "Carico Fase 1"
       },
@@ -291,6 +288,9 @@
       },
       "ph3p": {
         "name": "Potenza Fase 3"
+      },
+      "internal_temperature": {
+        "name": "Temperatura interna"
       }
     }
   }
