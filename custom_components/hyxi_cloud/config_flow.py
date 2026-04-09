@@ -106,7 +106,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                 entry = self.reauth_entry
                 if entry is None:
                     raise ValueError("reauth_entry is not set")
-                return await self.async_update_reload_and_abort(entry, data=user_input)
+                return self.async_update_reload_and_abort(entry, data=user_input)
             errors["base"] = error
 
         return self.async_show_form(
