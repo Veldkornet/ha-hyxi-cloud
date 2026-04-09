@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Połącz z HYXI Cloud",
+        "description": "Wprowadź swoje **poświadczenia API programisty (AK/SK)**. Możesz je wygenerować na [Platformie programistycznej HYXIPOWER]({link}).\n\n**Uwaga:** Wymagane jest oddzielne konto programisty. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw **Udostępnić swój obiekt (Plant)** z aplikacji na e-mail programisty.",
+        "data": {
+          "access_key": "Klucz dostępu (AK)",
+          "secret_key": "Tajny klucz (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ponowne uwierzytelnianie HYXI Cloud",
+        "description": "Twój klucz dostępu lub tajny klucz jest już nieważny. Wprowadź nowe poświadczenia, aby wznowić monitorowanie instalacji solarnej. Możesz je znaleźć na [Platformie programistycznej HYXIPOWER]({link}).",
+        "data": {
+          "access_key": "Klucz dostępu (AK)",
+          "secret_key": "Tajny klucz (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nie udało się połączyć z serwerami HYXI",
+      "invalid_auth": "Nieprawidłowy klucz dostępu lub tajny klucz",
+      "unknown": "Wystąpił nieoczekiwany błąd"
+    },
+    "abort": {
+      "already_configured": "To konto HYXI jest już skonfigurowane.",
+      "reauth_successful": "Ponowne uwierzytelnianie zakończyło się pomyślnie"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konfiguracja systemu HYXI",
+        "description": "Dostosuj sposób komunikacji integracji z HYXI Cloud.\n\n---",
+        "data": {
+          "update_interval": "Interwał odpytywania (1-60 minut, domyślnie: 5)",
+          "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Status chmury"
+      },
+      "device_alarm": {
+        "name": "Aktywne problemy",
+        "state": {
+          "off": "Brak",
+          "on": "Problem"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Stan naładowania akumulatora"
+      },
+      "pbat": {
+        "name": "Moc akumulatora"
+      },
+      "ppv": {
+        "name": "Moc instalacji solarnej"
+      },
+      "duisoc": {
+        "name": "SOC akumulatora"
+      },
+      "cuvolt": {
+        "name": "Napięcie akumulatora"
+      },
+      "cucurr": {
+        "name": "Prąd akumulatora"
+      },
+      "cupower": {
+        "name": "Moc akumulatora (EMS)"
+      },
+      "cusoh": {
+        "name": "SOH akumulatora"
+      },
+      "cuavgcelltemp": {
+        "name": "Temp. zestawu akumulatorów"
+      },
+      "duichargetoday": {
+        "name": "Dzienne ładowanie"
+      },
+      "duiunchargetoday": {
+        "name": "Dzienne rozładowanie"
+      },
+      "home_load": {
+        "name": "Obciążenie domu"
+      },
+      "grid_import": {
+        "name": "Pobór z sieci"
+      },
+      "grid_export": {
+        "name": "Oddawanie do sieci"
+      },
+      "bat_charging": {
+        "name": "Ładowanie akumulatora"
+      },
+      "bat_discharging": {
+        "name": "Rozładowywanie akumulatora"
+      },
+      "totale": {
+        "name": "Całkowity uzysk energii"
+      },
+      "bat_charge_total": {
+        "name": "Całkowite naładowanie akumulatora"
+      },
+      "bat_discharge_total": {
+        "name": "Całkowite rozładowanie akumulatora"
+      },
+      "batsoh": {
+        "name": "Stan zdrowia akumulatora"
+      },
+      "tinv": {
+        "name": "Temperatura wewnętrzna"
+      },
+      "collecttime": {
+        "name": "Czas zebrania danych"
+      },
+      "last_seen": {
+        "name": "Ostatnia synchronizacja z chmurą"
+      },
+      "integration_last_updated": {
+        "name": "Ostatnia aktualizacja integracji"
+      },
+      "batcap": {
+        "name": "Pojemność akumulatora"
+      },
+      "packnum": {
+        "name": "Liczba zestawów akumulatorów"
+      },
+      "maxchargepower": {
+        "name": "Limit ładowania"
+      },
+      "maxdischargepower": {
+        "name": "Limit rozładowania"
+      },
+      "signalintensity": {
+        "name": "Siła sygnału Wi-Fi"
+      },
+      "signalval": {
+        "name": "Jakość sygnału Wi-Fi"
+      },
+      "wifiver": {
+        "name": "Oprogramowanie modułu Wi-Fi"
+      },
+      "app_sw": {
+        "name": "Oprogramowanie aplikacji"
+      },
+      "master_sw": {
+        "name": "Oprogramowanie sterujące (Master)"
+      },
+      "slave_sw": {
+        "name": "Oprogramowanie sterujące (Secondary)"
+      },
+      "commode": {
+        "name": "Tryb komunikacji"
+      },
+      "acp": {
+        "name": "Moc AC"
+      },
+      "vac": {
+        "name": "Napięcie AC"
+      },
+      "vpv": {
+        "name": "Napięcie PV"
+      },
+      "etoday": {
+        "name": "Energia dzisiaj"
+      },
+      "ph1loadp": {
+        "name": "Obciążenie fazy 1"
+      },
+      "ph2loadp": {
+        "name": "Obciążenie fazy 2"
+      },
+      "ph3loadp": {
+        "name": "Obciążenie fazy 3"
+      },
+      "pv1v": {
+        "name": "Napięcie PV1"
+      },
+      "pv2v": {
+        "name": "Napięcie PV2"
+      },
+      "pv1i": {
+        "name": "Prąd PV1"
+      },
+      "pv2i": {
+        "name": "Prąd PV2"
+      },
+      "pv1p": {
+        "name": "Moc PV1"
+      },
+      "pv2p": {
+        "name": "Moc PV2"
+      },
+      "batv": {
+        "name": "Napięcie akumulatora"
+      },
+      "bati": {
+        "name": "Prąd akumulatora"
+      },
+      "vbus": {
+        "name": "Napięcie szyny (Bus)"
+      },
+      "f": {
+        "name": "Częstotliwość sieci"
+      },
+      "ace": {
+        "name": "Energia AC"
+      },
+      "devicestate": {
+        "name": "Stan urządzenia",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Alarm",
+          "10": "Nienieaktywowany"
+        }
+      },
+      "device_type": {
+        "name": "Typ urządzenia",
+        "state": {
+          "hybrid_inverter": "Inwerter hybrydowy",
+          "grid_connected_inverter": "Inwerter sieciowy",
+          "collector": "Datalogger",
+          "micro_ess": "Micro ESS",
+          "unknown": "Nieznany"
+        }
+      },
+      "ratedpower": {
+        "name": "Moc znamionowa"
+      },
+      "ratedvoltage": {
+        "name": "Napięcie znamionowe"
+      },
+      "childnum": {
+        "name": "Połączone urządzenia"
+      },
+      "ph1v": {
+        "name": "Napięcie fazy 1"
+      },
+      "ph1i": {
+        "name": "Prąd fazy 1"
+      },
+      "ph1p": {
+        "name": "Moc fazy 1"
+      },
+      "ph2v": {
+        "name": "Napięcie fazy 2"
+      },
+      "ph2i": {
+        "name": "Prąd fazy 2"
+      },
+      "ph2p": {
+        "name": "Moc fazy 2"
+      },
+      "ph3v": {
+        "name": "Napięcie fazy 3"
+      },
+      "ph3i": {
+        "name": "Prąd fazy 3"
+      },
+      "ph3p": {
+        "name": "Moc fazy 3"
+      }
+    }
+  }
+}

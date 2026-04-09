@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "连接到 HYXI Cloud",
+        "description": "请输入您的 **开发者 API 凭据 (AK/SK)**。您可以在 [HYXIPOWER 开发者平台]({link}) 生成这些凭据。\n\n**注意：** 这需要一个单独的开发者账号。如果您的开发者邮箱与应用邮箱不同，您必须先通过应用将您的 **电站分享** 给开发者邮箱。",
+        "data": {
+          "access_key": "访问密钥 (AK)",
+          "secret_key": "加密密钥 (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "重新认证 HYXI Cloud",
+        "description": "您的访问密钥或加密密钥已过期。请输入新的凭据以恢复光伏监控。您可以在 [HYXIPOWER 开发者平台]({link}) 找到这些信息。",
+        "data": {
+          "access_key": "访问密钥 (AK)",
+          "secret_key": "加密密钥 (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "连接 HYXI 服务器失败",
+      "invalid_auth": "无效的访问密钥或加密密钥",
+      "unknown": "发生未知错误"
+    },
+    "abort": {
+      "already_configured": "该 HYXI 账号已配置。",
+      "reauth_successful": "重新认证成功"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXI 系统配置",
+        "description": "调整插件与 HYXI Cloud 的通信方式。\n\n---",
+        "data": {
+          "update_interval": "轮询间隔 (1-60 分钟, 默认: 5)",
+          "back_discovery": "启用通过报警发现设备 (高级)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "云端状态"
+      },
+      "device_alarm": {
+        "name": "当前故障",
+        "state": {
+          "off": "无",
+          "on": "有故障"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "电池电量百分比"
+      },
+      "pbat": {
+        "name": "电池功率"
+      },
+      "ppv": {
+        "name": "太阳能功率"
+      },
+      "duisoc": {
+        "name": "电池 SOC"
+      },
+      "cuvolt": {
+        "name": "电池电压"
+      },
+      "cucurr": {
+        "name": "电池电流"
+      },
+      "cupower": {
+        "name": "电池功率 (EMS)"
+      },
+      "cusoh": {
+        "name": "电池 SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "电池包温度"
+      },
+      "duichargetoday": {
+        "name": "当日充电量"
+      },
+      "duiunchargetoday": {
+        "name": "当日放电量"
+      },
+      "home_load": {
+        "name": "家庭负载"
+      },
+      "grid_import": {
+        "name": "电网购电"
+      },
+      "grid_export": {
+        "name": "电网馈电"
+      },
+      "bat_charging": {
+        "name": "电池充电中"
+      },
+      "bat_discharging": {
+        "name": "电池放电中"
+      },
+      "totale": {
+        "name": "总生成能量"
+      },
+      "bat_charge_total": {
+        "name": "总累计充电"
+      },
+      "bat_discharge_total": {
+        "name": "总累计放电"
+      },
+      "batsoh": {
+        "name": "电池健康度"
+      },
+      "tinv": {
+        "name": "内部温度"
+      },
+      "collecttime": {
+        "name": "数据采集时间"
+      },
+      "last_seen": {
+        "name": "最后同步时间"
+      },
+      "integration_last_updated": {
+        "name": "插件最后更新"
+      },
+      "batcap": {
+        "name": "电池容量"
+      },
+      "packnum": {
+        "name": "电池包数量"
+      },
+      "maxchargepower": {
+        "name": "最大充电限制"
+      },
+      "maxdischargepower": {
+        "name": "最大放电限制"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi 信号强度"
+      },
+      "signalval": {
+        "name": "Wi-Fi 信号质量"
+      },
+      "wifiver": {
+        "name": "Wi-Fi 模块软件"
+      },
+      "app_sw": {
+        "name": "应用软件版本"
+      },
+      "master_sw": {
+        "name": "主控制软件"
+      },
+      "slave_sw": {
+        "name": "从控制软件"
+      },
+      "commode": {
+        "name": "通信模式"
+      },
+      "acp": {
+        "name": "交流功率"
+      },
+      "vac": {
+        "name": "交流电压"
+      },
+      "vpv": {
+        "name": "PV 电压"
+      },
+      "etoday": {
+        "name": "今日能量"
+      },
+      "ph1loadp": {
+        "name": "第一相负载"
+      },
+      "ph2loadp": {
+        "name": "第二相负载"
+      },
+      "ph3loadp": {
+        "name": "第三相负载"
+      },
+      "pv1v": {
+        "name": "PV1 电压"
+      },
+      "pv2v": {
+        "name": "PV2 电压"
+      },
+      "pv1i": {
+        "name": "PV1 电流"
+      },
+      "pv2i": {
+        "name": "PV2 电流"
+      },
+      "pv1p": {
+        "name": "PV1 功率"
+      },
+      "pv2p": {
+        "name": "PV2 功率"
+      },
+      "batv": {
+        "name": "电池电压"
+      },
+      "bati": {
+        "name": "电池电流"
+      },
+      "vbus": {
+        "name": "母线电压"
+      },
+      "f": {
+        "name": "电网频率"
+      },
+      "ace": {
+        "name": "交流能量"
+      },
+      "devicestate": {
+        "name": "设备状态",
+        "state": {
+          "1": "在线",
+          "2": "离线",
+          "3": "报警",
+          "10": "未激活"
+        }
+      },
+      "device_type": {
+        "name": "设备类型",
+        "state": {
+          "hybrid_inverter": "混合动力逆变器",
+          "grid_connected_inverter": "并网逆变器",
+          "collector": "数据采集器",
+          "micro_ess": "微型储能",
+          "unknown": "未知"
+        }
+      },
+      "ratedpower": {
+        "name": "额定功率"
+      },
+      "ratedvoltage": {
+        "name": "额定电压"
+      },
+      "childnum": {
+        "name": "已连接设备"
+      },
+      "ph1v": {
+        "name": "第一相电压"
+      },
+      "ph1i": {
+        "name": "第一相电流"
+      },
+      "ph1p": {
+        "name": "第一相功率"
+      },
+      "ph2v": {
+        "name": "第二相电压"
+      },
+      "ph2i": {
+        "name": "第二相电流"
+      },
+      "ph2p": {
+        "name": "第二相功率"
+      },
+      "ph3v": {
+        "name": "第三相电压"
+      },
+      "ph3i": {
+        "name": "第三相电流"
+      },
+      "ph3p": {
+        "name": "第三相功率"
+      }
+    }
+  }
+}

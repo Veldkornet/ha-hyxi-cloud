@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Koble til HYXI Cloud",
+        "description": "Skriv inn din **Developer API-legitimasjon (AK/SK)**. Du kan generere disse på [HYXIPOWER Developer Platform]({link}).\n\n**Merk:** Dette krever en separat utviklerkonto. Hvis din e-post for utvikler er forskjellig fra app-e-posten din, må du først **Dele anlegget ditt** fra appen til e-posten for utvikler.",
+        "data": {
+          "access_key": "Tilgangsnøkkel (AK)",
+          "secret_key": "Hemmelig nøkkel (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Gjenautentiser HYXI Cloud",
+        "description": "Tilgangsnøkkelen eller den hemmelige nøkkelen din er ikke lenger gyldig. Vennligst skriv inn din nye legitimasjon for å gjenoppta solovervåking. Du finner disse på [HYXIPOWER Developer Platform]({link}).",
+        "data": {
+          "access_key": "Tilgangsnøkkel (AK)",
+          "secret_key": "Hemmelig nøkkel (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kunne ikke koble til HYXI-serverne",
+      "invalid_auth": "Ugyldig tilgangsnøkkel eller hemmelig nøkkel",
+      "unknown": "Uventet feil oppsto"
+    },
+    "abort": {
+      "already_configured": "Denne HYXI-kontoen er allerede konfigurert.",
+      "reauth_successful": "Gjenautentisering var vellykket"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXI Systemkonfigurasjon",
+        "description": "Juster hvordan integrasjonen din kommuniserer med HYXI Cloud.\n\n---",
+        "data": {
+          "update_interval": "Oppdateringsintervall (1-60 minutter, standard: 5)",
+          "back_discovery": "Aktiver oppdaging via alarmer (avansert)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Nettsky-status"
+      },
+      "device_alarm": {
+        "name": "Aktive problemer",
+        "state": {
+          "off": "Ingen",
+          "on": "Problem"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Batteriets ladetilstand"
+      },
+      "pbat": {
+        "name": "Batterieffekt"
+      },
+      "ppv": {
+        "name": "Soleffekt"
+      },
+      "duisoc": {
+        "name": "Batteri SOC"
+      },
+      "cuvolt": {
+        "name": "Batterispenning"
+      },
+      "cucurr": {
+        "name": "Batteristrøm"
+      },
+      "cupower": {
+        "name": "Batterieffekt (EMS)"
+      },
+      "cusoh": {
+        "name": "Batteri SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Batteripakke-temp"
+      },
+      "duichargetoday": {
+        "name": "Daglig lading"
+      },
+      "duiunchargetoday": {
+        "name": "Daglig utlading"
+      },
+      "home_load": {
+        "name": "Huslast"
+      },
+      "grid_import": {
+        "name": "Nett-import"
+      },
+      "grid_export": {
+        "name": "Nett-eksport"
+      },
+      "bat_charging": {
+        "name": "Batteri lader"
+      },
+      "bat_discharging": {
+        "name": "Batteri utlades"
+      },
+      "totale": {
+        "name": "Total energigevinst"
+      },
+      "bat_charge_total": {
+        "name": "Total batterilading"
+      },
+      "bat_discharge_total": {
+        "name": "Total batteriutlading"
+      },
+      "batsoh": {
+        "name": "Batterihelse"
+      },
+      "tinv": {
+        "name": "Intern temperatur"
+      },
+      "collecttime": {
+        "name": "Datainnsamlingstid"
+      },
+      "last_seen": {
+        "name": "Siste nettsky-synkronisering"
+      },
+      "integration_last_updated": {
+        "name": "Integrasjon sist oppdatert"
+      },
+      "batcap": {
+        "name": "Batterikapasitet"
+      },
+      "packnum": {
+        "name": "Antall batteripakker"
+      },
+      "maxchargepower": {
+        "name": "Maks lade-grense"
+      },
+      "maxdischargepower": {
+        "name": "Maks utladings-grense"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi signalstyrke"
+      },
+      "signalval": {
+        "name": "Wi-Fi signalkvalitet"
+      },
+      "wifiver": {
+        "name": "Wi-Fi-modul programvare"
+      },
+      "app_sw": {
+        "name": "Applikasjons-programvare"
+      },
+      "master_sw": {
+        "name": "Kontrollprogramvare (Master)"
+      },
+      "slave_sw": {
+        "name": "Kontrollprogramvare (Sekundær)"
+      },
+      "commode": {
+        "name": "Kommunikasjonsmodus"
+      },
+      "acp": {
+        "name": "AC-effekt"
+      },
+      "vac": {
+        "name": "AC-spenning"
+      },
+      "vpv": {
+        "name": "PV-spenning"
+      },
+      "etoday": {
+        "name": "Energi i dag"
+      },
+      "ph1loadp": {
+        "name": "Fase 1 Last"
+      },
+      "ph2loadp": {
+        "name": "Fase 2 Last"
+      },
+      "ph3loadp": {
+        "name": "Fase 3 Last"
+      },
+      "pv1v": {
+        "name": "PV1-spenning"
+      },
+      "pv2v": {
+        "name": "PV2-spenning"
+      },
+      "pv1i": {
+        "name": "PV1-strøm"
+      },
+      "pv2i": {
+        "name": "PV2-strøm"
+      },
+      "pv1p": {
+        "name": "PV1-effekt"
+      },
+      "pv2p": {
+        "name": "PV2-effekt"
+      },
+      "batv": {
+        "name": "Batterispenning"
+      },
+      "bati": {
+        "name": "Batteristrøm"
+      },
+      "vbus": {
+        "name": "Busspenning"
+      },
+      "f": {
+        "name": "Nettfrekvens"
+      },
+      "ace": {
+        "name": "AC-energi"
+      },
+      "devicestate": {
+        "name": "Enhetsstatus",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Alarm",
+          "10": "Ikke aktivert"
+        }
+      },
+      "device_type": {
+        "name": "Enhetstype",
+        "state": {
+          "hybrid_inverter": "Hybridvekselretter",
+          "grid_connected_inverter": "Nettilkoblet vekselretter",
+          "collector": "Datalogger",
+          "micro_ess": "Micro ESS",
+          "unknown": "Ukjent"
+        }
+      },
+      "ratedpower": {
+        "name": "Merkeeffekt"
+      },
+      "ratedvoltage": {
+        "name": "Merkespenning"
+      },
+      "childnum": {
+        "name": "Tilkoblede enheter"
+      },
+      "ph1v": {
+        "name": "Fase 1 Spenning"
+      },
+      "ph1i": {
+        "name": "Fase 1 Strøm"
+      },
+      "ph1p": {
+        "name": "Fase 1 Effekt"
+      },
+      "ph2v": {
+        "name": "Fase 2 Spenning"
+      },
+      "ph2i": {
+        "name": "Fase 2 Strøm"
+      },
+      "ph2p": {
+        "name": "Fase 2 Effekt"
+      },
+      "ph3v": {
+        "name": "Fase 3 Spenning"
+      },
+      "ph3i": {
+        "name": "Fase 3 Strøm"
+      },
+      "ph3p": {
+        "name": "Fase 3 Effekt"
+      }
+    }
+  }
+}

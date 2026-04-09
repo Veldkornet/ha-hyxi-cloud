@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Připojit k HYXI Cloud",
+        "description": "Zadejte své **vývojářské API údaje (AK/SK)**. Tyto údaje si můžete vygenerovat na [HYXIPOWER Developer Platform]({link}).\n\n**Poznámka:** Vyžaduje to samostatný vývojářský účet. Pokud se váš vývojářský e-mail liší od e-mailu v aplikaci, musíte nejprve v aplikaci **nasdílet svou elektrárnu (Plant)** na vývojářský e-mail.",
+        "data": {
+          "access_key": "Přístupový klíč (AK)",
+          "secret_key": "Tajný klíč (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Znovu ověřit HYXI Cloud",
+        "description": "Váš přístupový klíč nebo tajný klíč již není platný. Zadejte prosím své nové údaje, abyste mohli pokračovat ve sledování solární elektrárny. Tyto údaje naleznete na [HYXIPOWER Developer Platform]({link}).",
+        "data": {
+          "access_key": "Přístupový klíč (AK)",
+          "secret_key": "Tajný klíč (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nepodařilo se připojit k serverům HYXI",
+      "invalid_auth": "Neplatný přístupový klíč nebo tajný klíč",
+      "unknown": "Došlo k neočekávané chybě"
+    },
+    "abort": {
+      "already_configured": "Tento HYXI účet je již nakonfigurován.",
+      "reauth_successful": "Opětovné ověření bylo úspěšné"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konfigurace systému HYXI",
+        "description": "Upravte způsob, jakým vaše integrace komunikuje s HYXI Cloud.\n\n---",
+        "data": {
+          "update_interval": "Interval dotazování (1-60 minut, výchozí: 5)",
+          "back_discovery": "Povolit vyhledávání prostřednictvím alarmů (pro pokročilé)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Stav cloudu"
+      },
+      "device_alarm": {
+        "name": "Aktivní problémy",
+        "state": {
+          "off": "Žádné",
+          "on": "Problém"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Stav nabití baterie"
+      },
+      "pbat": {
+        "name": "Výkon baterie"
+      },
+      "ppv": {
+        "name": "Solární výkon"
+      },
+      "duisoc": {
+        "name": "SOC baterie"
+      },
+      "cuvolt": {
+        "name": "Napětí baterie"
+      },
+      "cucurr": {
+        "name": "Proud baterie"
+      },
+      "cupower": {
+        "name": "Výkon baterie (EMS)"
+      },
+      "cusoh": {
+        "name": "SOH baterie"
+      },
+      "cuavgcelltemp": {
+        "name": "Teplota bateriového bloku"
+      },
+      "duichargetoday": {
+        "name": "Dnešní nabití"
+      },
+      "duiunchargetoday": {
+        "name": "Dnešní vybití"
+      },
+      "home_load": {
+        "name": "Domácí zátěž"
+      },
+      "grid_import": {
+        "name": "Odběr ze sítě"
+      },
+      "grid_export": {
+        "name": "Dodávka do sítě"
+      },
+      "bat_charging": {
+        "name": "Nabíjení baterie"
+      },
+      "bat_discharging": {
+        "name": "Vybíjení baterie"
+      },
+      "totale": {
+        "name": "Celkový energetický výnos"
+      },
+      "bat_charge_total": {
+        "name": "Celkové nabití baterie"
+      },
+      "bat_discharge_total": {
+        "name": "Celkové vybití baterie"
+      },
+      "batsoh": {
+        "name": "Stav zdraví baterie"
+      },
+      "tinv": {
+        "name": "Vnitřní teplota"
+      },
+      "collecttime": {
+        "name": "Čas sběru dat"
+      },
+      "last_seen": {
+        "name": "Poslední synchronizace s cloudem"
+      },
+      "integration_last_updated": {
+        "name": "Poslední aktualizace integrace"
+      },
+      "batcap": {
+        "name": "Kapacita baterie"
+      },
+      "packnum": {
+        "name": "Počet bateriových bloků"
+      },
+      "maxchargepower": {
+        "name": "Max. limit nabíjení"
+      },
+      "maxdischargepower": {
+        "name": "Max. limit vybíjení"
+      },
+      "signalintensity": {
+        "name": "Síla signálu Wi-Fi"
+      },
+      "signalval": {
+        "name": "Kvalita signálu Wi-Fi"
+      },
+      "wifiver": {
+        "name": "Software Wi-Fi modulu"
+      },
+      "app_sw": {
+        "name": "Aplikační software"
+      },
+      "master_sw": {
+        "name": "Řídicí software (hlavní)"
+      },
+      "slave_sw": {
+        "name": "Řídicí software (vedlejší)"
+      },
+      "commode": {
+        "name": "Komunikační režim"
+      },
+      "acp": {
+        "name": "AC výkon"
+      },
+      "vac": {
+        "name": "AC napětí"
+      },
+      "vpv": {
+        "name": "PV napětí"
+      },
+      "etoday": {
+        "name": "Energie dnes"
+      },
+      "ph1loadp": {
+        "name": "Zátěž fáze 1"
+      },
+      "ph2loadp": {
+        "name": "Zátěž fáze 2"
+      },
+      "ph3loadp": {
+        "name": "Zátěž fáze 3"
+      },
+      "pv1v": {
+        "name": "Napětí PV1"
+      },
+      "pv2v": {
+        "name": "Napětí PV2"
+      },
+      "pv1i": {
+        "name": "Proud PV1"
+      },
+      "pv2i": {
+        "name": "Proud PV2"
+      },
+      "pv1p": {
+        "name": "Výkon PV1"
+      },
+      "pv2p": {
+        "name": "Výkon PV2"
+      },
+      "batv": {
+        "name": "Napětí baterie"
+      },
+      "bati": {
+        "name": "Proud baterie"
+      },
+      "vbus": {
+        "name": "Napětí sběrnice"
+      },
+      "f": {
+        "name": "Frekvence sítě"
+      },
+      "ace": {
+        "name": "AC energie"
+      },
+      "devicestate": {
+        "name": "Stav zařízení",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Alarm",
+          "10": "Neaktivováno"
+        }
+      },
+      "device_type": {
+        "name": "Typ zařízení",
+        "state": {
+          "hybrid_inverter": "Hybridní střídač",
+          "grid_connected_inverter": "Síťový střídač",
+          "collector": "Datalogger",
+          "micro_ess": "Micro ESS",
+          "unknown": "Neznámý"
+        }
+      },
+      "ratedpower": {
+        "name": "Jmenovitý výkon"
+      },
+      "ratedvoltage": {
+        "name": "Jmenovité napětí"
+      },
+      "childnum": {
+        "name": "Připojená zařízení"
+      },
+      "ph1v": {
+        "name": "Napětí fáze 1"
+      },
+      "ph1i": {
+        "name": "Proud fáze 1"
+      },
+      "ph1p": {
+        "name": "Výkon fáze 1"
+      },
+      "ph2v": {
+        "name": "Napětí fáze 2"
+      },
+      "ph2i": {
+        "name": "Proud fáze 2"
+      },
+      "ph2p": {
+        "name": "Výkon fáze 2"
+      },
+      "ph3v": {
+        "name": "Napětí fáze 3"
+      },
+      "ph3i": {
+        "name": "Proud fáze 3"
+      },
+      "ph3p": {
+        "name": "Výkon fáze 3"
+      }
+    }
+  }
+}

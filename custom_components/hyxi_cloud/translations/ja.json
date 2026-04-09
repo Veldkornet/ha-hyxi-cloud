@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HYXI Cloudに接続",
+        "description": "**開発者API資格情報 (AK/SK)**を入力してください。これらは[HYXIPOWER開発者プラットフォーム]({link})で作成できます。\n\n**注意:** 別途開発者アカウントが必要です。開発者用メールアドレスがアプリ用メールアドレスと異なる場合は、まずアプリから開発者用メールアドレスに**発電所を共有**する必要があります。",
+        "data": {
+          "access_key": "アクセスキー (AK)",
+          "secret_key": "シークレットキー (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "HYXI Cloudの再認証",
+        "description": "アクセスキーまたはシークレットキーが無効です。ソーラー監視を再開するには、新しい資格情報を入力してください。これらは[HYXIPOWER開発者プラットフォーム]({link})で見つけることができます。",
+        "data": {
+          "access_key": "アクセスキー (AK)",
+          "secret_key": "シークレットキー (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "HYXIサーバーへの接続に失敗しました",
+      "invalid_auth": "アクセスキーまたはシークレットキーが無効です",
+      "unknown": "予期しないエラーが発生しました"
+    },
+    "abort": {
+      "already_configured": "このHYXIアカウントは既に設定されています。",
+      "reauth_successful": "再認証に成功しました"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXIシステム設定",
+        "description": "統合がHYXI Cloudと通信する方法を調整します。\n\n---",
+        "data": {
+          "update_interval": "ポーリング間隔 (1-60分, デフォルト: 5)",
+          "back_discovery": "アラーム経由の検出を有効にする (高度)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "クラウド状態"
+      },
+      "device_alarm": {
+        "name": "現在のアラーム",
+        "state": {
+          "off": "なし",
+          "on": "異常あり"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "バッテリー充電状態 (SOC)"
+      },
+      "pbat": {
+        "name": "バッテリー電力"
+      },
+      "ppv": {
+        "name": "太陽光発電電力"
+      },
+      "duisoc": {
+        "name": "バッテリー SOC"
+      },
+      "cuvolt": {
+        "name": "バッテリー電圧"
+      },
+      "cucurr": {
+        "name": "バッテリー電流"
+      },
+      "cupower": {
+        "name": "バッテリー電力 (EMS)"
+      },
+      "cusoh": {
+        "name": "バッテリー SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "バッテリーパック温度"
+      },
+      "duichargetoday": {
+        "name": "本日の充電量"
+      },
+      "duiunchargetoday": {
+        "name": "本日の放電量"
+      },
+      "home_load": {
+        "name": "家庭内負荷"
+      },
+      "grid_import": {
+        "name": "買電電力"
+      },
+      "grid_export": {
+        "name": "売電電力"
+      },
+      "bat_charging": {
+        "name": "バッテリー充電中"
+      },
+      "bat_discharging": {
+        "name": "バッテリー放電中"
+      },
+      "totale": {
+        "name": "累計発電量"
+      },
+      "bat_charge_total": {
+        "name": "累計充電量"
+      },
+      "bat_discharge_total": {
+        "name": "累計放電量"
+      },
+      "batsoh": {
+        "name": "バッテリー健康状態 (SOH)"
+      },
+      "tinv": {
+        "name": "内部温度"
+      },
+      "collecttime": {
+        "name": "データ収集時刻"
+      },
+      "last_seen": {
+        "name": "最終クラウド同期"
+      },
+      "integration_last_updated": {
+        "name": "統合の最終更新"
+      },
+      "batcap": {
+        "name": "バッテリー容量"
+      },
+      "packnum": {
+        "name": "バッテリーパック数"
+      },
+      "maxchargepower": {
+        "name": "最大充電制限"
+      },
+      "maxdischargepower": {
+        "name": "最大放電制限"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi信号強度"
+      },
+      "signalval": {
+        "name": "Wi-Fi信号品質"
+      },
+      "wifiver": {
+        "name": "Wi-Fiモジュールソフトウェア"
+      },
+      "app_sw": {
+        "name": "アプリケーションソフトウェア"
+      },
+      "master_sw": {
+        "name": "制御ソフトウェア (メイン)"
+      },
+      "slave_sw": {
+        "name": "制御ソフトウェア (サブ)"
+      },
+      "commode": {
+        "name": "通信モード"
+      },
+      "acp": {
+        "name": "AC電力"
+      },
+      "vac": {
+        "name": "AC電圧"
+      },
+      "vpv": {
+        "name": "PV電圧"
+      },
+      "etoday": {
+        "name": "本日の発電量"
+      },
+      "ph1loadp": {
+        "name": "第1相負荷"
+      },
+      "ph2loadp": {
+        "name": "第2相負荷"
+      },
+      "ph3loadp": {
+        "name": "第3相負荷"
+      },
+      "pv1v": {
+        "name": "PV1電圧"
+      },
+      "pv2v": {
+        "name": "PV2電圧"
+      },
+      "pv1i": {
+        "name": "PV1電流"
+      },
+      "pv2i": {
+        "name": "PV2電流"
+      },
+      "pv1p": {
+        "name": "PV1電力"
+      },
+      "pv2p": {
+        "name": "PV2電力"
+      },
+      "batv": {
+        "name": "バッテリー電圧"
+      },
+      "bati": {
+        "name": "バッテリー電流"
+      },
+      "vbus": {
+        "name": "バス電圧"
+      },
+      "f": {
+        "name": "系統周波数"
+      },
+      "ace": {
+        "name": "ACエネルギー"
+      },
+      "devicestate": {
+        "name": "デバイス状態",
+        "state": {
+          "1": "オンライン",
+          "2": "オフライン",
+          "3": "アラーム",
+          "10": "未アクティブ"
+        }
+      },
+      "device_type": {
+        "name": "デバイスタイプ",
+        "state": {
+          "hybrid_inverter": "ハイブリッドインバーター",
+          "grid_connected_inverter": "系統連系インバーター",
+          "collector": "データロガー",
+          "micro_ess": "マイクロESS",
+          "unknown": "不明"
+        }
+      },
+      "ratedpower": {
+        "name": "定格電力"
+      },
+      "ratedvoltage": {
+        "name": "定格電圧"
+      },
+      "childnum": {
+        "name": "接続デバイス数"
+      },
+      "ph1v": {
+        "name": "第1相電圧"
+      },
+      "ph1i": {
+        "name": "第1相電流"
+      },
+      "ph1p": {
+        "name": "第1相電力"
+      },
+      "ph2v": {
+        "name": "第2相電圧"
+      },
+      "ph2i": {
+        "name": "第2相電流"
+      },
+      "ph2p": {
+        "name": "第2相電力"
+      },
+      "ph3v": {
+        "name": "第3相電圧"
+      },
+      "ph3i": {
+        "name": "第3相電流"
+      },
+      "ph3p": {
+        "name": "第3相電力"
+      }
+    }
+  }
+}

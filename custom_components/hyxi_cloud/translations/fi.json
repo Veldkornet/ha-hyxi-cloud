@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Yhdistä HYXI Cloudiin",
+        "description": "Kirjoita **kehittäjän API-tunnisteet (AK/SK)**. Voit luoda nämä [HYXIPOWER-kehittäjäalustalla]({link}).\n\n**Huomautus:** Tämä vaatii erillisen kehittäjätilin. Jos kehittäjän sähköpostiosoite eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin **jaettava laitoksesi (Plant)** sovelluksesta kehittäjän sähköpostiosoitteeseen.",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Tunnistaudu uudelleen HYXI Cloudiin",
+        "description": "Access Key -avain tai Secret Key -avain ei ole enää voimassa. Anna uudet tunnisteet jatkaaksesi aurinkosähkön seurantaa. Löydät nämä [HYXIPOWER-kehittäjäalustalta]({link}).",
+        "data": {
+          "access_key": "Access Key (AK)",
+          "secret_key": "Secret Key (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Yhteys HYXI-palvelimiin epäonnistui",
+      "invalid_auth": "Virheellinen Access Key tai Secret Key",
+      "unknown": "Tapahtui odottamaton virhe"
+    },
+    "abort": {
+      "already_configured": "Tämä HYXI-tili on jo määritetty.",
+      "reauth_successful": "Uudelleentunnistautuminen onnistui"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXI-järjestelmän kokoonpano",
+        "description": "Säädä, miten integraatiosi kommunikoi HYXI Cloudin kanssa.\n\n---",
+        "data": {
+          "update_interval": "Päivitysväli (1-60 minuuttia, oletus: 5)",
+          "back_discovery": "Ota löytäminen käyttöön hällytysten kautta (edistynyt)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Pilvipalvelun tila"
+      },
+      "device_alarm": {
+        "name": "Aktiiviset ongelmat",
+        "state": {
+          "off": "Ei mitään",
+          "on": "Ongelma"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Akun varaustila"
+      },
+      "pbat": {
+        "name": "Akun teho"
+      },
+      "ppv": {
+        "name": "Aurinkopaneelien teho"
+      },
+      "duisoc": {
+        "name": "Akun SOC"
+      },
+      "cuvolt": {
+        "name": "Akun jännite"
+      },
+      "cucurr": {
+        "name": "Akun virta"
+      },
+      "cupower": {
+        "name": "Akun teho (EMS)"
+      },
+      "cusoh": {
+        "name": "Akun SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Akkuyksikön lämpötila"
+      },
+      "duichargetoday": {
+        "name": "Päivittäinen lataus"
+      },
+      "duiunchargetoday": {
+        "name": "Päivittäinen purku"
+      },
+      "home_load": {
+        "name": "Kodin kuorma"
+      },
+      "grid_import": {
+        "name": "Verkon osto"
+      },
+      "grid_export": {
+        "name": "Verkon myynti"
+      },
+      "bat_charging": {
+        "name": "Akku latautuu"
+      },
+      "bat_discharging": {
+        "name": "Akku purkautuu"
+      },
+      "totale": {
+        "name": "Kokonaistuotto"
+      },
+      "bat_charge_total": {
+        "name": "Akun kokonaislataus"
+      },
+      "bat_discharge_total": {
+        "name": "Akun kokonaispurku"
+      },
+      "batsoh": {
+        "name": "Akun kunto"
+      },
+      "tinv": {
+        "name": "Sisäinen lämpötila"
+      },
+      "collecttime": {
+        "name": "Tiedonkeruuaika"
+      },
+      "last_seen": {
+        "name": "Viimeisin pilvisynkronointi"
+      },
+      "integration_last_updated": {
+        "name": "Integraatio päivitetty viimeksi"
+      },
+      "batcap": {
+        "name": "Akun kapasiteetti"
+      },
+      "packnum": {
+        "name": "Akkuyksiköiden määrä"
+      },
+      "maxchargepower": {
+        "name": "Maks. latausraja"
+      },
+      "maxdischargepower": {
+        "name": "Maks. purkuraja"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi-signaalin voimakkuus"
+      },
+      "signalval": {
+        "name": "Wi-Fi-signaalin laatu"
+      },
+      "wifiver": {
+        "name": "Wi-Fi-moduulin ohjelmisto"
+      },
+      "app_sw": {
+        "name": "Sovellusohjelmisto"
+      },
+      "master_sw": {
+        "name": "Ohjausohjelmisto (pää)"
+      },
+      "slave_sw": {
+        "name": "Ohjausohjelmisto (toissijainen)"
+      },
+      "commode": {
+        "name": "Viestintätapa"
+      },
+      "acp": {
+        "name": "AC-teho"
+      },
+      "vac": {
+        "name": "AC-jännite"
+      },
+      "vpv": {
+        "name": "PV-jännite"
+      },
+      "etoday": {
+        "name": "Sähköntuotto tänään"
+      },
+      "ph1loadp": {
+        "name": "Vaihe 1 kuorma"
+      },
+      "ph2loadp": {
+        "name": "Vaihe 2 kuorma"
+      },
+      "ph3loadp": {
+        "name": "Vaihe 3 kuorma"
+      },
+      "pv1v": {
+        "name": "PV1-jännite"
+      },
+      "pv2v": {
+        "name": "PV2-jännite"
+      },
+      "pv1i": {
+        "name": "PV1-virta"
+      },
+      "pv2i": {
+        "name": "PV2-virta"
+      },
+      "pv1p": {
+        "name": "PV1-teho"
+      },
+      "pv2p": {
+        "name": "PV2-teho"
+      },
+      "batv": {
+        "name": "Akun jännite"
+      },
+      "bati": {
+        "name": "Akun virta"
+      },
+      "vbus": {
+        "name": "Väyläjännite"
+      },
+      "f": {
+        "name": "Verkon taajuus"
+      },
+      "ace": {
+        "name": "AC-energia"
+      },
+      "devicestate": {
+        "name": "Laitteen tila",
+        "state": {
+          "1": "Linjalla",
+          "2": "Poissa linjalta",
+          "3": "Hälytys",
+          "10": "Ei aktivoitu"
+        }
+      },
+      "device_type": {
+        "name": "Laitetyyppi",
+        "state": {
+          "hybrid_inverter": "Hybridi-invertteri",
+          "grid_connected_inverter": "Verkkoon kytketty invertteri",
+          "collector": "Datalogger",
+          "micro_ess": "Micro ESS",
+          "unknown": "Tuntematon"
+        }
+      },
+      "ratedpower": {
+        "name": "Nimellisteho"
+      },
+      "ratedvoltage": {
+        "name": "Nimellisjännite"
+      },
+      "childnum": {
+        "name": "Yhdistetyt laitteet"
+      },
+      "ph1v": {
+        "name": "Vaihe 1 jännite"
+      },
+      "ph1i": {
+        "name": "Vaihe 1 virta"
+      },
+      "ph1p": {
+        "name": "Vaihe 1 teho"
+      },
+      "ph2v": {
+        "name": "Vaihe 2 jännite"
+      },
+      "ph2i": {
+        "name": "Vaihe 2 virta"
+      },
+      "ph2p": {
+        "name": "Vaihe 2 teho"
+      },
+      "ph3v": {
+        "name": "Vaihe 3 jännite"
+      },
+      "ph3i": {
+        "name": "Vaihe 3 virta"
+      },
+      "ph3p": {
+        "name": "Vaihe 3 teho"
+      }
+    }
+  }
+}
