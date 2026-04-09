@@ -45,11 +45,11 @@ mock_ha.CoordinatorEntity = FakeCoordinatorEntity
 mock_ha.RestoreEntity = RestoreEntity
 
 # Standard benchmark imports
-import timeit  # pylint: disable=wrong-import-position # noqa: E402
+import timeit  # pylint: disable=wrong-import-position
 
 # Component imports must happen AFTER Home Assistant is mocked
-from custom_components.hyxi_cloud.sensor import (
-    HyxiSensor,  # pylint: disable=wrong-import-position # noqa: E402
+from hyxi_cloud.sensor import (
+    HyxiSensor,  # pylint: disable=wrong-import-position
 )
 
 

@@ -1,12 +1,26 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.6 # Use the latest version
+    rev: v0.15.6
     hooks:
-      # Run the linter
       - id: ruff
         args: [ --fix ]
-      # Run the formatter
       - id: ruff-format
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.2
+    hooks:
+      - id: codespell
+        additional_dependencies:
+          - tomli
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      - id: mypy
+        args: [--config-file, mypy.ini]
+        pass_filenames: false
+        additional_dependencies:
+          - types-requests
+          - types-setuptools
+          - aiohttp
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
     hooks:
@@ -20,6 +34,9 @@ repos:
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
+      - id: check-json
+      - id: check-yaml
+      - id: check-added-large-files
   - repo: https://github.com/pylint-dev/pylint
     rev: v4.0.5
     hooks:

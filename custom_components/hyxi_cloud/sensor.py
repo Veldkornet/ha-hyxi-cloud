@@ -1,25 +1,29 @@
 """HYXI Cloud Sensor platform."""
 
 import logging
-from datetime import UTC
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Any, ClassVar
 
-from homeassistant.components.sensor import EntityCategory
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.components.sensor import SensorEntityDescription
-from homeassistant.components.sensor import SensorStateClass
+from homeassistant.components.sensor import (
+    EntityCategory,
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
 from homeassistant.core import callback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
-from .const import MANUFACTURER
-from .const import get_raw_device_code
-from .const import get_software_version
-from .const import mask_sn
-from .const import normalize_device_type
+from .const import (
+    DOMAIN,
+    MANUFACTURER,
+    get_raw_device_code,
+    get_software_version,
+    mask_sn,
+    normalize_device_type,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -135,6 +139,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    # Hardware Capabilities
     SensorEntityDescription(
         key="f",
         native_unit_of_measurement="Hz",
@@ -178,6 +183,7 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:wifi-cog",
     ),
+    # Maintenance Sensors
     SensorEntityDescription(
         key="app_sw",
         translation_key="app_sw",
@@ -215,6 +221,7 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-arrow-down",
     ),
+    # Phase Powers Detailed
     SensorEntityDescription(
         key="ph1v",
         native_unit_of_measurement="V",
@@ -257,6 +264,28 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
     ),
+    SensorEntityDescription(
+        key="ph3v",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:home-lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="ph3i",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:home-lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="ph3p",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:home-lightning-bolt",
+    ),
+    # ESS / Battery Management (ESS specific)
     SensorEntityDescription(
         key="duisoc",
         native_unit_of_measurement="%",
@@ -312,27 +341,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus",
     ),
-    SensorEntityDescription(
-        key="ph3v",
-        native_unit_of_measurement="V",
-        device_class=SensorDeviceClass.VOLTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
-    ),
-    SensorEntityDescription(
-        key="ph3i",
-        native_unit_of_measurement="A",
-        device_class=SensorDeviceClass.CURRENT,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
-    ),
-    SensorEntityDescription(
-        key="ph3p",
-        native_unit_of_measurement="W",
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
-    ),
+    # Hybrid Inverter Core Sensors
     SensorEntityDescription(
         key="batSoc",
         native_unit_of_measurement="%",
@@ -514,7 +523,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return
 
-    entities = []
+    entities: list[SensorEntity] = []
 
     # 1. Hardware Loop
     for sn, dev_data in coordinator.data.items():
@@ -605,7 +614,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
     def _check_anti_dip(self, num_value: float) -> float | None:
         """Check for and prevent invalid value drops."""
-        if num_value >= self._last_valid_value:
+        if self._last_valid_value is None or num_value >= self._last_valid_value:
             return None
 
         # A drop is ONLY a valid reset if the new value is practically zero (e.g., < 0.1)
@@ -628,6 +637,8 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
     def _check_anti_spike(self, num_value: float) -> float | None:
         """Check for and prevent impossible value jumps."""
+        if self._last_valid_value is None:
+            return None
         if (num_value - self._last_valid_value) > 100.0:
             self._log_glitch_once(
                 num_value,
@@ -669,8 +680,6 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                     spike_result = self._check_anti_spike(num_value)
                     if spike_result is not None:
                         return spike_result
-
-            self._last_logged_glitch = None
             self._last_valid_value = num_value
             return num_value
         except (
@@ -684,8 +693,7 @@ class HyxiSensor(HyxiBaseSensor):
     """Representation of a Physical HYXI Sensor."""
 
     _attr_has_entity_name = True
-
-    _PARSERS = {
+    _PARSERS: ClassVar[dict[str, str]] = {
         "device_type": "_parse_device_type",
         "app_sw": "_parse_app_sw",
         "swvermaster": "_parse_sw_ver",
@@ -694,12 +702,13 @@ class HyxiSensor(HyxiBaseSensor):
         "last_seen": "_parse_last_seen",
     }
 
-    def __init__(self, coordinator, sn, description):
+    def __init__(self, coordinator: Any, sn: str, description: Any) -> None:
+        """Initialize the sensor."""
         super().__init__(coordinator)
         self.entity_description = description
         self._sn = sn
 
-        # Determing actual SN (e.g. Battery SN for battery sensors)
+        # Determine actual SN (e.g. Battery SN for battery sensors)
         dev_data = coordinator.data.get(sn) or {}
         metrics = dev_data.get("metrics") or {}
         bat_sn = metrics.get("batSn")
@@ -746,7 +755,7 @@ class HyxiSensor(HyxiBaseSensor):
                 "via_device": (DOMAIN, self._sn),
             }
 
-        # Simplified dynamic versions for Registry
+        # Determine if we need to apply any state-mapping for specific types
         sw_version = dev_data.get("_sw_version_cached") or get_software_version(
             dev_data
         )
@@ -768,6 +777,32 @@ class HyxiSensor(HyxiBaseSensor):
             info["via_device"] = (DOMAIN, parent_sn)
 
         return info
+
+    @property
+    def native_value(self):
+        """Return the native value of the sensor."""
+        # Use our safe parser to ensure we handle NA/null/-- effectively
+        val = super().native_value
+
+        # Ensure operands are not None to avoid Mypy operator errors
+        if self.entity_description.key == "gen_p" and val is not None:
+            ac_l = self._get_metric_float("acl")
+            if ac_l is not None and val >= ac_l:
+                val = val - ac_l
+            val = val * 2.0
+        elif self.entity_description.key == "ac_p" and val is not None:
+            ac_l = self._get_metric_float("acl")
+            if ac_l is not None:
+                val = val - ac_l
+            val = val * 0.96
+        elif (
+            self.entity_description.key == "grid_p"
+            and val is not None
+            and (ac_l := self._get_metric_float("acl")) is not None
+        ):
+            val = val - ac_l
+
+        return val
 
     def _parse_device_type(self, dev_data, value):
         return normalize_device_type(get_raw_device_code(dev_data))
@@ -801,7 +836,7 @@ class HyxiSensor(HyxiBaseSensor):
         try:
             val_int = int(value)
             if val_int > 9999999999:
-                val_int = val_int / 1000
+                val_int = val_int // 1000
             return datetime.fromtimestamp(val_int, tz=UTC)
         except (
             ValueError,
@@ -838,6 +873,16 @@ class HyxiSensor(HyxiBaseSensor):
         ):
             return None
         return self._process_numeric_value(value)
+
+    @property
+    def extra_state_attributes(self):
+        """Return the state attributes."""
+        from typing import cast
+
+        from .coordinator import HyxiDataUpdateCoordinator
+
+        coordinator = cast(HyxiDataUpdateCoordinator, self.coordinator)
+        return coordinator.hyxi_metadata
 
     def _update_native_value(self):
         """Update the cached native value."""

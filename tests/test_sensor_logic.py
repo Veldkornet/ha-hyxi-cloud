@@ -4,9 +4,7 @@
 import importlib
 import sys
 from datetime import datetime
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -234,7 +232,7 @@ def test_collecttime_error_handling(base_sensor):
     sensor.entity_description.key = "collectTime"
     sensor._parser_func = sensor._parse_collect_time
 
-    # Test ValueError (unparseable string)
+    # Test ValueError (unparsable string)
     coordinator.data["SN123"]["metrics"]["collectTime"] = "invalid_timestamp"
     sensor._handle_coordinator_update()
     assert sensor.native_value is None
@@ -321,7 +319,7 @@ def test_batsoc_batsoh_casting(base_sensor):
 @pytest.mark.asyncio
 async def test_new_api_metrics_registration():
     """Verify that all new PV, Phase, Battery, and Status sensors instantiate correctly."""
-    from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+    from custom_components.hyxi_cloud.const import DOMAIN
 
     hass = MagicMock()
     entry = MagicMock()
@@ -618,8 +616,7 @@ def test_hyxi_base_sensor_early_exit_safety(base_sensor):
 @pytest.mark.asyncio
 async def test_hyxi_last_update_sensor_success():
     """Test the diagnostic 'Last Update' sensor success path."""
-    from datetime import UTC
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     fixed_dt = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
 
@@ -640,8 +637,7 @@ async def test_hyxi_last_update_sensor_success():
 
 def test_hyxi_sensor_last_seen(base_sensor):
     """Test the last_seen special case."""
-    from datetime import UTC
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     sensor, coordinator = base_sensor
     sensor.entity_description.key = "last_seen"

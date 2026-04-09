@@ -10,44 +10,39 @@ readme = "README.md"
 authors = [
     { name = "Veldkornet" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "aiohttp>=3.13.4",
-    "hyxi-cloud-api==1.0.10"
-]
-
-[project.optional-dependencies]
-test = [
-    "pytest>=8.0.0",
-    "pytest-asyncio",
-    "hypothesis>=6.100.0",
-    "pytest-cov>=5.0.0",
-    "ruff==0.15.9",
+    "hyxi-cloud-api==1.1.1"
 ]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 88
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort (keeps your imports organized)
-    "UP",  # pyupgrade (keeps code modern)
-    "B",   # flake8-bugbear (catches common bugs)
+    "E", "W", "F", "I", "UP", "B", "S", "N", "PTH", "RUF"
 ]
-ignore = [
-    "E501", # Ignore long lines (often necessary for URLs/Logs)
-    ]
+ignore = ["E501", "N818", "S105", "N999"]
 
-[tool.ruff.lint.isort]
-force-single-line = true
-combine-as-imports = true
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106", "N802"]
+"custom_components/hyxi_cloud/__init__.py" = ["N812"]
 
-[tool.ruff.format]
-skip-magic-trailing-comma = false
+[tool.mypy]
+python_version = "3.14"
+show_error_codes = true
+incremental = true
+ignore_missing_imports = true
+check_untyped_defs = true
+# Definitive search path and package lock
+mypy_path = "custom_components:."
+# Exclude development environments to avoid duplicate module discovery
+exclude = ["dev_env/"]
+# Namespace handling
+namespace_packages = false
+explicit_package_bases = false
 
 [tool.setuptools.packages.find]
 include = ["custom_components*"]
@@ -56,25 +51,28 @@ include = ["custom_components*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+
+[tool.pylint.similarities]
+min-similarity-lines = 100
 
 [tool.pylint.messages_control]
 disable = [
-    "line-too-long",  # Turns off C0301 so Ruff can do its job in peace
-    "import-error",               # E0401: Ignores missing HA/pytest imports
-    "too-few-public-methods",     # R0903: Standard for HA entities/mocks
-    "too-many-instance-attributes",# R0902: Standard for HA entities
-    "too-many-branches",          # R0912: Expected in complex native_value logic
-    "too-many-return-statements", # R0911: Expected in native_value logic
-    "too-many-nested-blocks",     # R1702: Expected with our anti-dip logic
-    "too-many-locals",            # R0914: Expected in async_setup_entry
-    "missing-class-docstring",    # C0115: Optional for test mocks
-    "missing-function-docstring", # C0116: Optional for standard HA overrides
-    "try-except-raise",           # W0706: Expected in intentional pass-throughs
-    "redefined-outer-name",       # W0621: Standard for pytest fixtures
-    "import-outside-toplevel",    # C0415: Standard for HA test module reload
-    "protected-access",     # W0212: Necessary for testing internal state
-    "reimported",                 # W0404: Expected with importlib.reload hacks
-    "duplicate-code",             # R0801: Common setup across test files
-    "unused-argument",            # W0613: Standard for unused test fixtures
+    "line-too-long",
+    "import-error",
+    "too-few-public-methods",
+    "too-many-instance-attributes",
+    "too-many-branches",
+    "too-many-return-statements",
+    "too-many-nested-blocks",
+    "too-many-locals",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "try-except-raise",
+    "redefined-outer-name",
+    "protected-access",
+    "unused-argument",
+    "reimported",
+    "duplicate-code",
+    "import-outside-toplevel",
+    "wrong-import-order",
 ]

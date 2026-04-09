@@ -1,0 +1,3 @@
+[codespell]
+skip = .venv,*.pyc,*.json,*.js,*.css,*.map,*.svg,*.png,*.jpg,*.jpeg,*.gif,*.ico,*.woff,*.woff2,*.ttf,*.eot,*.otf,*.zip,*.tar.gz,*.tar,*.gz,*.7z,*.rar
+ignore-words-list = hass,unparseable

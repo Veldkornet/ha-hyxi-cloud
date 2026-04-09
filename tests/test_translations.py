@@ -1,24 +1,22 @@
 """Tests for HYXI Cloud translations."""
 
 import json
-import os
 import re
+from pathlib import Path
 
 import pytest
 
 
 def get_translation_keys():
     """Extract used translation keys from the codebase."""
-    keys = {
+    keys: dict[str, set[str]] = {
         "sensor": set(),
         "binary_sensor": set(),
     }
 
     # 1. Sensors from sensor.py
-    sensor_path = os.path.join(
-        os.path.dirname(__file__), "../custom_components/hyxi_cloud/sensor.py"
-    )
-    with open(sensor_path, encoding="utf-8") as f:
+    sensor_path = Path(__file__).parent / "../custom_components/hyxi_cloud/sensor.py"
+    with sensor_path.open(encoding="utf-8") as f:
         content = f.read()
 
         # Regex to find SensorEntityDescription blocks and extract key and translation_key
@@ -39,10 +37,10 @@ def get_translation_keys():
             keys["sensor"].add(k.lower())
 
     # 2. Binary Sensors from binary_sensor.py
-    binary_path = os.path.join(
-        os.path.dirname(__file__), "../custom_components/hyxi_cloud/binary_sensor.py"
+    binary_path = (
+        Path(__file__).parent / "../custom_components/hyxi_cloud/binary_sensor.py"
     )
-    with open(binary_path, encoding="utf-8") as f:
+    with binary_path.open(encoding="utf-8") as f:
         content = f.read()
         # Find _attr_translation_key = "something"
         binary_keys = re.findall(r'_attr_translation_key = "([^"]+)"', content)
@@ -54,20 +52,20 @@ def get_translation_keys():
 
 def get_all_languages():
     """Get list of translation files."""
-    translations_dir = os.path.join(
-        os.path.dirname(__file__), "../custom_components/hyxi_cloud/translations"
+    translations_dir = (
+        Path(__file__).parent / "../custom_components/hyxi_cloud/translations"
     )
-    return [f for f in os.listdir(translations_dir) if f.endswith(".json")]
+    return [f.name for f in translations_dir.iterdir() if f.suffix == ".json"]
 
 
 def load_translation(lang_file):
     """Load a translation JSON file."""
-    path = os.path.join(
-        os.path.dirname(__file__),
-        "../custom_components/hyxi_cloud/translations",
-        lang_file,
+    path = (
+        Path(__file__).parent
+        / "../custom_components/hyxi_cloud/translations"
+        / lang_file
     )
-    with open(path, encoding="utf-8") as f:
+    with path.open(encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -99,10 +97,8 @@ def test_strings_json_is_synchronized():
     """Verify that strings.json is synchronized with code and en.json."""
     code_keys = get_translation_keys()
 
-    path = os.path.join(
-        os.path.dirname(__file__), "../custom_components/hyxi_cloud/strings.json"
-    )
-    with open(path, encoding="utf-8") as f:
+    path = Path(__file__).parent / "../custom_components/hyxi_cloud/strings.json"
+    with path.open(encoding="utf-8") as f:
         strings_json = json.load(f)
 
     en_json = load_translation("en.json")

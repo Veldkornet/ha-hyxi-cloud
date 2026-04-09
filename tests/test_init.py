@@ -1,11 +1,23 @@
 """Tests for the initial setup of the HYXI Cloud integration."""
 
 import sys
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+
+# Define AUTHORITATIVE local exceptions first to avoid MagicMock TypeErrors in pytest.raises
+class ConfigEntryAuthFailed(Exception):
+    """Authoritative local class for auth failure."""
+
+
+class ConfigEntryNotReady(Exception):
+    """Authoritative local class for entry not ready."""
+
+
+class UpdateFailed(Exception):
+    """Authoritative local class for update failed."""
+
 
 # We MUST define the initial mocks for sys.modules if they aren't there because the test
 # might be run individually, meaning other tests haven't put them there yet.
@@ -13,8 +25,10 @@ import pytest
 if "homeassistant.exceptions" not in sys.modules or not hasattr(
     sys.modules["homeassistant.exceptions"], "ConfigEntryAuthFailed"
 ):
+    # Harden the mock to behave like a module
     mock_ha = MagicMock()
     mock_ha.__path__ = []
+    mock_ha.__spec__ = MagicMock()
     if "homeassistant" not in sys.modules:
         sys.modules["homeassistant"] = mock_ha
     if "homeassistant.components" not in sys.modules:
@@ -27,53 +41,55 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
         sys.modules["homeassistant.exceptions"] = mock_ha
     if "homeassistant.helpers" not in sys.modules:
         sys.modules["homeassistant.helpers"] = mock_ha
-
-    class ConfigEntryAuthFailed(Exception):
-        pass
-
-    class ConfigEntryNotReady(Exception):
-        pass
+    if "homeassistant.util" not in sys.modules:
+        sys.modules["homeassistant.util"] = mock_ha
 
     sys.modules[
         "homeassistant.exceptions"
-    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed
-    sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady
+    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed  # type: ignore[attr-defined]
+    sys.modules["homeassistant.exceptions"].ConfigEntryNotReady = ConfigEntryNotReady  # type: ignore[attr-defined]
+    sys.modules["homeassistant.exceptions"].UpdateFailed = UpdateFailed  # type: ignore[attr-defined]
 
-
-class LocalUpdateFailed(Exception):
-    """Local fallback for update failed."""
-
-
-if "homeassistant.helpers.update_coordinator" not in sys.modules:
-    sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
-
+    # Also inject into the specific locations expected by the component
+    if "homeassistant.config_entries" not in sys.modules:
+        sys.modules["homeassistant.config_entries"] = MagicMock()
     sys.modules[
-        "homeassistant.helpers.update_coordinator"
-    ].UpdateFailed = LocalUpdateFailed
+        "homeassistant.config_entries"
+    ].ConfigEntryAuthFailed = ConfigEntryAuthFailed  # type: ignore[attr-defined]
+    sys.modules[
+        "homeassistant.config_entries"
+    ].ConfigEntryNotReady = ConfigEntryNotReady  # type: ignore[attr-defined]
+
+    if "homeassistant.helpers.update_coordinator" not in sys.modules:
+        sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+    sys.modules["homeassistant.helpers.update_coordinator"].UpdateFailed = UpdateFailed  # type: ignore[attr-defined]
+
 
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
     sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 
 if "aiohttp" not in sys.modules:
     sys.modules["aiohttp"] = MagicMock()
-    sys.modules["aiohttp"].ClientError = type("ClientError", (Exception,), {})
+    sys.modules["aiohttp"].ClientError = type("ClientError", (Exception,), {})  # type: ignore[attr-defined]
 
 mock_api = MagicMock()
 mock_api.__name__ = "hyxi_cloud_api"
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
 
-# Now we can safely import our component code
 import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position # noqa: E402
 
+# DIRECT NAMESPACE INJECTION: Force the component to use our authoritative classes
+# This is the only way to guarantee class identity consistency in a mocked environment.
+hc_init.ConfigEntryAuthFailed = ConfigEntryAuthFailed
+hc_init.ConfigEntryNotReady = ConfigEntryNotReady
+hc_init.UpdateFailed = UpdateFailed
 
-# Redefine for local use to ensure consistency with mocked environment
-class LocalEntryAuthFailed(Exception):
-    """Local fallback for auth failure."""
 
-
-class LocalEntryNotReady(Exception):
-    """Local fallback for entry not ready."""
+# Redefine for local use is now redundant but kept for legacy nomenclature compatibility
+LocalEntryAuthFailed = ConfigEntryAuthFailed
+LocalEntryNotReady = ConfigEntryNotReady
+LocalUpdateFailed = UpdateFailed
 
 
 async_setup_entry = hc_init.async_setup_entry
@@ -81,14 +97,9 @@ async_unload_entry = hc_init.async_unload_entry
 async_reload_entry = hc_init.async_reload_entry
 
 # Inject back into the module if they were mocked by mistake during the import process
-hc_init.ConfigEntryAuthFailed = LocalEntryAuthFailed
-hc_init.ConfigEntryNotReady = LocalEntryNotReady
-hc_init.UpdateFailed = LocalUpdateFailed
 
-from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
+from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402  # pylint: disable=wrong-import-position # noqa: E402
     DOMAIN,
-)
-from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402
     PLATFORMS,
 )
 
@@ -103,8 +114,7 @@ def mock_hass():
 
 @pytest.fixture
 def mock_entry():
-    from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY
-    from custom_components.hyxi_cloud.const import CONF_SECRET_KEY
+    from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY
 
     entry = MagicMock()
     entry.data = {
@@ -249,13 +259,13 @@ async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
-            side_effect=LocalEntryAuthFailed
+            side_effect=ConfigEntryAuthFailed
         )
 
         with patch(
             "custom_components.hyxi_cloud.__init__._LOGGER.error"
         ) as mock_logger:
-            with pytest.raises(LocalEntryAuthFailed):
+            with pytest.raises(ConfigEntryAuthFailed):
                 await async_setup_entry(mock_hass, mock_entry)
 
             mock_logger.assert_called_with("Authentication failed during setup")
@@ -273,13 +283,13 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
-            side_effect=LocalUpdateFailed("Timeout")
+            side_effect=UpdateFailed("Timeout")
         )
 
         with patch(
             "custom_components.hyxi_cloud.__init__._LOGGER.warning"
         ) as mock_logger:
-            with pytest.raises(LocalEntryNotReady) as exc:
+            with pytest.raises(ConfigEntryNotReady) as exc:
                 await async_setup_entry(mock_hass, mock_entry)
 
             assert "Connection error: Timeout" in str(exc.value)

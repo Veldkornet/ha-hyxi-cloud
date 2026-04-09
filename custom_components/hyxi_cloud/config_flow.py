@@ -10,11 +10,13 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from hyxi_cloud_api import HyxiApiClient
 
-from .const import BASE_URL
-from .const import CONF_ACCESS_KEY
-from .const import CONF_BACK_DISCOVERY
-from .const import CONF_SECRET_KEY
-from .const import DOMAIN
+from .const import (
+    BASE_URL,
+    CONF_ACCESS_KEY,
+    CONF_BACK_DISCOVERY,
+    CONF_SECRET_KEY,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Handle a config flow for HYXI Cloud."""
 
     VERSION = 1
@@ -101,9 +103,10 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             error = await self._validate_input(user_input)
             if not error:
-                return self.async_update_reload_and_abort(
-                    self.reauth_entry, data=user_input
-                )
+                entry = self.reauth_entry
+                if entry is None:
+                    raise ValueError("reauth_entry is not set")
+                return self.async_update_reload_and_abort(entry, data=user_input)
             errors["base"] = error
 
         return self.async_show_form(
