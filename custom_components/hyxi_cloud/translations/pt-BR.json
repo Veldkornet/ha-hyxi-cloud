@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Conectar ao HYXI Cloud",
+        "description": "Insira suas **credenciais de API de desenvolvedor (AK/SK)**. Você pode gerá-las na [Plataforma de Desenvolvedores HYXIPOWER]({link}).\n\n**Atenção:** É necessária uma conta de desenvolvedor separada. Se o e-mail do desenvolvedor for diferente do e-mail do aplicativo, você deve primeiro **Compartilhar sua Planta** no app para o e-mail do desenvolvedor.",
+        "data": {
+          "access_key": "Chave de Acesso (AK)",
+          "secret_key": "Chave Secreta (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticar HYXI Cloud",
+        "description": "Sua Chave de Acesso ou Chave Secreta não é mais válida. Insira suas novas credenciais para retomar o monitoramento solar. Você pode encontrá-las na [Plataforma de Desenvolvedores HYXIPOWER]({link}).",
+        "data": {
+          "access_key": "Chave de Acesso (AK)",
+          "secret_key": "Chave Secreta (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Falha ao conectar aos servidores HYXI",
+      "invalid_auth": "Chave de Acesso ou Chave Secreta inválida",
+      "unknown": "Ocorreu um erro inesperado"
+    },
+    "abort": {
+      "already_configured": "Esta conta HYXI já está configurada.",
+      "reauth_successful": "Reautenticação realizada com sucesso"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configuração do Sistema HYXI",
+        "description": "Ajuste como a integração se comunica com o HYXI Cloud.\n\n---",
+        "data": {
+          "update_interval": "Intervalo de Atualização (1-60 minutos, padrão: 5)",
+          "back_discovery": "Habilitar descoberta via alarmes (Avançado)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Status da Nuvem"
+      },
+      "device_alarm": {
+        "name": "Problemas Ativos",
+        "state": {
+          "off": "Nenhum",
+          "on": "Ativo"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "SOC da Bateria (Inversor)"
+      },
+      "pbat": {
+        "name": "Potência da Bateria (Inversor)"
+      },
+      "ppv": {
+        "name": "Potência Solar"
+      },
+      "duisoc": {
+        "name": "SOC da Bateria (EMS)"
+      },
+      "cuvolt": {
+        "name": "Tensão da Bateria (EMS)"
+      },
+      "cucurr": {
+        "name": "Corrente da Bateria (EMS)"
+      },
+      "cupower": {
+        "name": "Potência da Bateria (EMS)"
+      },
+      "cusoh": {
+        "name": "SOH da Bateria (EMS)"
+      },
+      "cuavgcelltemp": {
+        "name": "Temperatura Média das Células"
+      },
+      "duichargetoday": {
+        "name": "Carga Diária"
+      },
+      "duiunchargetoday": {
+        "name": "Descarga Diária"
+      },
+      "home_load": {
+        "name": "Consumo Residencial"
+      },
+      "grid_import": {
+        "name": "Importação da Rede"
+      },
+      "grid_export": {
+        "name": "Exportação para a Rede"
+      },
+      "bat_charging": {
+        "name": "Carregando Bateria"
+      },
+      "bat_discharging": {
+        "name": "Descarregando Bateria"
+      },
+      "totale": {
+        "name": "Energia Total Gerada"
+      },
+      "bat_charge_total": {
+        "name": "Carga Total da Bateria"
+      },
+      "bat_discharge_total": {
+        "name": "Descarga Total da Bateria"
+      },
+      "batsoh": {
+        "name": "SOH da Bateria (Inversor)"
+      },
+      "tinv": {
+        "name": "Temperatura Interna"
+      },
+      "collecttime": {
+        "name": "Última Coleta de Dados"
+      },
+      "last_seen": {
+        "name": "Última Sincronização com a Nuvem"
+      },
+      "integration_last_updated": {
+        "name": "Última Atualização da Integração"
+      },
+      "batcap": {
+        "name": "Capacidade da Bateria"
+      },
+      "packnum": {
+        "name": "Quantidade de Packs de Bateria"
+      },
+      "maxchargepower": {
+        "name": "Potência Máxima de Carga"
+      },
+      "maxdischargepower": {
+        "name": "Potência Máxima de Descarga"
+      },
+      "signalintensity": {
+        "name": "Intensidade do Sinal Wi-Fi"
+      },
+      "signalval": {
+        "name": "Qualidade do Sinal Wi-Fi"
+      },
+      "wifiver": {
+        "name": "Firmware Wi-Fi"
+      },
+      "app_sw": {
+        "name": "Firmware do Aplicativo"
+      },
+      "master_sw": {
+        "name": "Firmware Principal"
+      },
+      "slave_sw": {
+        "name": "Firmware Secundário"
+      },
+      "commode": {
+        "name": "Modo de Comunicação"
+      },
+      "acp": {
+        "name": "Potência CA"
+      },
+      "vac": {
+        "name": "Tensão CA"
+      },
+      "vpv": {
+        "name": "Tensão FV"
+      },
+      "etoday": {
+        "name": "Geração do Dia"
+      },
+      "ph1loadp": {
+        "name": "Consumo Fase 1"
+      },
+      "ph2loadp": {
+        "name": "Consumo Fase 2"
+      },
+      "ph3loadp": {
+        "name": "Consumo Fase 3"
+      },
+      "pv1v": {
+        "name": "Tensão FV1"
+      },
+      "pv2v": {
+        "name": "Tensão FV2"
+      },
+      "pv1i": {
+        "name": "Corrente FV1"
+      },
+      "pv2i": {
+        "name": "Corrente FV2"
+      },
+      "pv1p": {
+        "name": "Potência FV1"
+      },
+      "pv2p": {
+        "name": "Potência FV2"
+      },
+      "batv": {
+        "name": "Tensão da Bateria (Inversor)"
+      },
+      "bati": {
+        "name": "Corrente da Bateria (Inversor)"
+      },
+      "vbus": {
+        "name": "Tensão do Barramento"
+      },
+      "f": {
+        "name": "Frequência da Rede"
+      },
+      "ace": {
+        "name": "Energia CA"
+      },
+      "devicestate": {
+        "name": "Estado do Dispositivo",
+        "state": {
+          "1": "Online",
+          "2": "Offline",
+          "3": "Alarme",
+          "10": "Não Ativado"
+        }
+      },
+      "device_type": {
+        "name": "Tipo de Dispositivo",
+        "state": {
+          "hybrid_inverter": "Inversor Híbrido",
+          "grid_connected_inverter": "Inversor Grid-Tie",
+          "collector": "Datalogger",
+          "micro_ess": "Micro ESS",
+          "unknown": "Desconhecido"
+        }
+      },
+      "ratedpower": {
+        "name": "Potência Nominal"
+      },
+      "ratedvoltage": {
+        "name": "Tensão Nominal"
+      },
+      "childnum": {
+        "name": "Dispositivos Conectados"
+      },
+      "ph1v": {
+        "name": "Tensão Fase 1"
+      },
+      "ph1i": {
+        "name": "Corrente Fase 1"
+      },
+      "ph1p": {
+        "name": "Potência Fase 1"
+      },
+      "ph2v": {
+        "name": "Tensão Fase 2"
+      },
+      "ph2i": {
+        "name": "Corrente Fase 2"
+      },
+      "ph2p": {
+        "name": "Potência Fase 2"
+      },
+      "ph3v": {
+        "name": "Tensão Fase 3"
+      },
+      "ph3i": {
+        "name": "Corrente Fase 3"
+      },
+      "ph3p": {
+        "name": "Potência Fase 3"
+      }
+    }
+  }
+}
