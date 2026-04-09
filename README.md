@@ -27,7 +27,7 @@
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
 - **🛡️ Reliable Quality Assurance:** Built with **99%+ automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
-- **🧼 Clean UI:** Precision-tuned data with support for **19+ languages** (English, German, French, Dutch, Portuguese, Spanish, Italian, and more).
+- **🧼 Clean UI:** Precision-tuned data with support for **20+ languages** (English, German, French, Dutch, Afrikaans, Portuguese, Spanish, Italian, and more).
 
 ## 📥 Installation
 

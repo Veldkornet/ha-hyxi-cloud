@@ -1,0 +1,273 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Verbind met HYXI Cloud",
+        "description": "Voer jou **Ontwikkelaar API-bewysbriewe (AK/SK)** in. Jy kan dit genereer by die [HYXIPOWER-ontwikkelaarsplatform]({link}).\n\n**Nota:** Dit vereis 'n aparte ontwikkelaarrekening. As jou ontwikkelaar-e-pos verskil van jou app-e-pos, moet jy eers jou **Aanleg Deel** (Share Plant) vanaf die app na die ontwikkelaar-e-pos.",
+        "data": {
+          "access_key": "Toegangsleutel (AK)",
+          "secret_key": "Geheime Sleutel (SK)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Hertoestemming vir HYXI Cloud",
+        "description": "Jou Toegangsleutel of Geheime Sleutel is nie meer geldig nie. Voer asseblief jou nuwe bewysbriewe in om sonkragmonitering te hervat. Jy kan dit vind by die [HYXIPOWER-ontwikkelaarsplatform]({link}).",
+        "data": {
+          "access_key": "Toegangsleutel (AK)",
+          "secret_key": "Geheime Sleutel (SK)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kon nie met HYXI-bedieners verbind nie",
+      "invalid_auth": "Ongeldige Toegangsleutel of Geheime Sleutel",
+      "unknown": "Onverwagte fout het voorgekom"
+    },
+    "abort": {
+      "already_configured": "Hierdie HYXI-rekening is reeds opgestel.",
+      "reauth_successful": "Hertoestemming was suksesvol"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HYXI-stelselkonfigurasie",
+        "description": "Pas aan hoe jou integrasie met die HYXI Cloud kommunikeer.\n\n---",
+        "data": {
+          "update_interval": "Opvragsinterval (1-60 minute, verstek: 5)",
+          "back_discovery": "Aktiveer ontdekking via alarms (Gevorderd)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Wolk-status"
+      },
+      "device_alarm": {
+        "name": "Aktiewe Probleme",
+        "state": {
+          "off": "Geen",
+          "on": "Probleem"
+        }
+      }
+    },
+    "sensor": {
+      "batsoc": {
+        "name": "Battery-vlak (SOC)"
+      },
+      "pbat": {
+        "name": "Battery-krag"
+      },
+      "ppv": {
+        "name": "Sonkrag"
+      },
+      "duisoc": {
+        "name": "Battery SOC"
+      },
+      "cuvolt": {
+        "name": "Battery-spanning"
+      },
+      "cucurr": {
+        "name": "Battery-stroom"
+      },
+      "cupower": {
+        "name": "Battery-krag (EMS)"
+      },
+      "cusoh": {
+        "name": "Battery SOH"
+      },
+      "cuavgcelltemp": {
+        "name": "Battery-pak Temp"
+      },
+      "duichargetoday": {
+        "name": "Daaglikse Herlaai"
+      },
+      "duiunchargetoday": {
+        "name": "Daaglikse Ontlaai"
+      },
+      "home_load": {
+        "name": "Huisverbruik"
+      },
+      "grid_import": {
+        "name": "Net-invoer"
+      },
+      "grid_export": {
+        "name": "Net-uitvoer"
+      },
+      "bat_charging": {
+        "name": "Battery Herlaai Tans"
+      },
+      "bat_discharging": {
+        "name": "Battery Ontlaai Tans"
+      },
+      "totale": {
+        "name": "Totale Energie-opbrengs"
+      },
+      "bat_charge_total": {
+        "name": "Totale Battery-herlaai"
+      },
+      "bat_discharge_total": {
+        "name": "Totale Battery-ontlaai"
+      },
+      "batsoh": {
+        "name": "Battery-gesondheid"
+      },
+      "tinv": {
+        "name": "Interne Temperatuur"
+      },
+      "collecttime": {
+        "name": "Data-insamelingstyd"
+      },
+      "last_seen": {
+        "name": "Laaste Wolksinkronisering"
+      },
+      "integration_last_updated": {
+        "name": "Integrasie Laas Opgedateer"
+      },
+      "batcap": {
+        "name": "Battery-kapasiteit"
+      },
+      "packnum": {
+        "name": "Aantal Battery-pakke"
+      },
+      "maxchargepower": {
+        "name": "Maks. Herlaailimiet"
+      },
+      "maxdischargepower": {
+        "name": "Maks. Ontlaailimiet"
+      },
+      "signalintensity": {
+        "name": "Wi-Fi Seinsterkte"
+      },
+      "signalval": {
+        "name": "Wi-Fi Seinkwaliteit"
+      },
+      "wifiver": {
+        "name": "Wi-Fi Module Sagteware"
+      },
+      "app_sw": {
+        "name": "Toepassing-sagteware"
+      },
+      "master_sw": {
+        "name": "Beheer-sagteware (Hoof)"
+      },
+      "slave_sw": {
+        "name": "Beheer-sagteware (Sekondêr)"
+      },
+      "commode": {
+        "name": "Kommunikasiemodus"
+      },
+      "acp": {
+        "name": "WS-krag"
+      },
+      "vac": {
+        "name": "WS-spanning"
+      },
+      "vpv": {
+        "name": "PV-spanning"
+      },
+      "etoday": {
+        "name": "Energie Vandag"
+      },
+      "ph1loadp": {
+        "name": "Fase 1 Las"
+      },
+      "ph2loadp": {
+        "name": "Fase 2 Las"
+      },
+      "ph3loadp": {
+        "name": "Fase 3 Las"
+      },
+      "pv1v": {
+        "name": "PV1 Spanning"
+      },
+      "pv2v": {
+        "name": "PV2 Spanning"
+      },
+      "pv1i": {
+        "name": "PV1 Stroom"
+      },
+      "pv2i": {
+        "name": "PV2 Stroom"
+      },
+      "pv1p": {
+        "name": "PV1 Krag"
+      },
+      "pv2p": {
+        "name": "PV2 Krag"
+      },
+      "batv": {
+        "name": "Battery-spanning"
+      },
+      "bati": {
+        "name": "Battery-stroom"
+      },
+      "vbus": {
+        "name": "Bus-spanning"
+      },
+      "f": {
+        "name": "Net-frekwensie"
+      },
+      "ace": {
+        "name": "WS-energie"
+      },
+      "devicestate": {
+        "name": "Toestel-status",
+        "state": {
+          "1": "Aanlyn",
+          "2": "Aflyn",
+          "3": "Alarm",
+          "10": "Nie Geaktiveer nie"
+        }
+      },
+      "device_type": {
+        "name": "Toesteltipe",
+        "state": {
+          "hybrid_inverter": "Hibriede Inverter",
+          "grid_connected_inverter": "Net-gekoppelde Inverter",
+          "collector": "Datameter",
+          "micro_ess": "Micro ESS",
+          "unknown": "Onbekend"
+        }
+      },
+      "ratedpower": {
+        "name": "Gegradeerde Krag"
+      },
+      "ratedvoltage": {
+        "name": "Gegradeerde Spanning"
+      },
+      "childnum": {
+        "name": "Gekoppelde Toestelle"
+      },
+      "ph1v": {
+        "name": "Fase 1 Spanning"
+      },
+      "ph1i": {
+        "name": "Fase 1 Stroom"
+      },
+      "ph1p": {
+        "name": "Fase 1 Krag"
+      },
+      "ph2v": {
+        "name": "Fase 2 Spanning"
+      },
+      "ph2i": {
+        "name": "Fase 2 Stroom"
+      },
+      "ph2p": {
+        "name": "Fase 2 Krag"
+      },
+      "ph3v": {
+        "name": "Fase 3 Spanning"
+      },
+      "ph3i": {
+        "name": "Fase 3 Stroom"
+      },
+      "ph3p": {
+        "name": "Fase 3 Krag"
+      }
+    }
+  }
+}
