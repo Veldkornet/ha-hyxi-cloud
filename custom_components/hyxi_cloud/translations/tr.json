@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Bugünkü Enerji"
       },
+      "efpv": {
+        "name": "Bugünkü PV Verimi"
+      },
+      "inverter_temperature": {
+        "name": "Evirici Sıcaklığı"
+      },
       "ph1loadp": {
         "name": "Faz 1 Yükü"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2 Gücü"
+      },
+      "pv3v": {
+        "name": "PV3 Voltajı"
+      },
+      "pv4v": {
+        "name": "PV4 Voltajı"
+      },
+      "pv3i": {
+        "name": "PV3 Akımı"
+      },
+      "pv4i": {
+        "name": "PV4 Akımı"
+      },
+      "pv3p": {
+        "name": "PV3 Gücü"
+      },
+      "pv4p": {
+        "name": "PV4 Gücü"
       },
       "batv": {
         "name": "Batarya Voltajı"

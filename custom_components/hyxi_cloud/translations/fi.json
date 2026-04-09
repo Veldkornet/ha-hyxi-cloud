@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Sähköntuotto tänään"
       },
+      "efpv": {
+        "name": "PV-tuotto tänään"
+      },
+      "inverter_temperature": {
+        "name": "Invertterilämpötila"
+      },
       "ph1loadp": {
         "name": "Vaihe 1 kuorma"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2-teho"
+      },
+      "pv3v": {
+        "name": "PV3-jännite"
+      },
+      "pv4v": {
+        "name": "PV4-jännite"
+      },
+      "pv3i": {
+        "name": "PV3-virta"
+      },
+      "pv4i": {
+        "name": "PV4-virta"
+      },
+      "pv3p": {
+        "name": "PV3-teho"
+      },
+      "pv4p": {
+        "name": "PV4-teho"
       },
       "batv": {
         "name": "Akun jännite"

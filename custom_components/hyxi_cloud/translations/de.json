@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Tagesertrag"
       },
+      "efpv": {
+        "name": "Tagesertrag (PV)"
+      },
+      "inverter_temperature": {
+        "name": "Wechselrichtertemperatur"
+      },
       "ph1loadp": {
         "name": "Phase 1 Verbrauch"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2 Leistung"
+      },
+      "pv3v": {
+        "name": "PV3 Spannung"
+      },
+      "pv4v": {
+        "name": "PV4 Spannung"
+      },
+      "pv3i": {
+        "name": "PV3 Strom"
+      },
+      "pv4i": {
+        "name": "PV4 Strom"
+      },
+      "pv3p": {
+        "name": "PV3 Leistung"
+      },
+      "pv4p": {
+        "name": "PV4 Leistung"
       },
       "batv": {
         "name": "Batteriespannung"

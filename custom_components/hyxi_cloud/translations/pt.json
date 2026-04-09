@@ -171,6 +171,12 @@
       "etoday": {
         "name": "Geração do Dia"
       },
+      "efpv": {
+        "name": "Rendimento do Dia (FV)"
+      },
+      "inverter_temperature": {
+        "name": "Temperatura do Inversor"
+      },
       "ph1loadp": {
         "name": "Consumo Fase 1"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "Potência FV2"
+      },
+      "pv3v": {
+        "name": "Tensão FV3"
+      },
+      "pv4v": {
+        "name": "Tensão FV4"
+      },
+      "pv3i": {
+        "name": "Corrente FV3"
+      },
+      "pv4i": {
+        "name": "Corrente FV4"
+      },
+      "pv3p": {
+        "name": "Potência FV3"
+      },
+      "pv4p": {
+        "name": "Potência FV4"
       },
       "batv": {
         "name": "Tensão da Bateria (Inversor)"

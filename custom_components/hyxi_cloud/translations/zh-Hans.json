@@ -171,6 +171,12 @@
       "etoday": {
         "name": "今日能量"
       },
+      "efpv": {
+        "name": "今日PV发电量"
+      },
+      "inverter_temperature": {
+        "name": "逆变器温度"
+      },
       "ph1loadp": {
         "name": "第一相负载"
       },
@@ -197,6 +203,24 @@
       },
       "pv2p": {
         "name": "PV2 功率"
+      },
+      "pv3v": {
+        "name": "PV3 电压"
+      },
+      "pv4v": {
+        "name": "PV4 电压"
+      },
+      "pv3i": {
+        "name": "PV3 电流"
+      },
+      "pv4i": {
+        "name": "PV4 电流"
+      },
+      "pv3p": {
+        "name": "PV3 功率"
+      },
+      "pv4p": {
+        "name": "PV4 功率"
       },
       "batv": {
         "name": "电池电压"
