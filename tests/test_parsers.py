@@ -1,12 +1,11 @@
 """Tests for Hyxi Cloud sensor parsers."""
 
 import sys
-from custom_components.hyxi_cloud.sensor import HyxiSensor
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
-
+from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 # 1. THE BULLETPROOF MOCK (similar to test_sensor_logic.py)
 class FakeBase:
