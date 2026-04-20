@@ -1,6 +1,7 @@
 """Tests for Hyxi Cloud sensor parsers."""
 
 import sys
+from custom_components.hyxi_cloud.sensor import HyxiSensor
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
@@ -61,8 +62,6 @@ sys.modules["aiohttp"] = MagicMock()
 mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
-
-from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 
 @pytest.fixture
