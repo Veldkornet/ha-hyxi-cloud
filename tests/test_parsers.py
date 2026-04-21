@@ -42,9 +42,9 @@ sys.modules["homeassistant.exceptions"] = mock_ha
 sys.modules["homeassistant.const"] = mock_ha
 
 # Mock sensor component
-mock_sensor = MagicMock()
-mock_sensor.SensorEntity = FakeSensorEntity
-sys.modules["homeassistant.components.sensor"] = mock_sensor
+mock_sensor_comp = MagicMock()
+mock_sensor_comp.SensorEntity = FakeSensorEntity
+sys.modules["homeassistant.components.sensor"] = mock_sensor_comp
 
 # Mock helpers
 mock_coordinator = MagicMock()
