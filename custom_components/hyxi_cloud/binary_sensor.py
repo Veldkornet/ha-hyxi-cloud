@@ -146,15 +146,20 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
 
     def _update_internal_state(self) -> None:
         """Process alarm states once per update."""
-        self._alarms = (self.coordinator.data.get(self.sn) or {}).get("alarms") or []
+        data = self.coordinator.data.get(self.sn) or {}
+        self._alarms = data.get("alarms") or []
 
         active_states = ACTIVE_ALARM_STATES
-        self._active_alarms_count = sum(
-            1
-            for a in self._alarms
-            if a.get("alarmState") in active_states
-            or a.get("alarmstate") in active_states
-        )
+        count = 0
+        for alarm in self._alarms:
+            # Optimize: check common keys and avoid redundant .get() if possible
+            state = alarm.get("alarmState")
+            if state is None:
+                state = alarm.get("alarmstate")
+
+            if state in active_states:
+                count += 1
+        self._active_alarms_count = count
 
     @property
     def is_on(self) -> bool:
