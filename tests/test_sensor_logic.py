@@ -305,15 +305,15 @@ def test_batsoc_batsoh_casting(base_sensor):
     sensor._handle_coordinator_update()
     assert sensor.native_value == 99
 
-    # Test invalid string gracefully handled
+    # Test invalid string gracefully handled (falls back to _process_numeric_value)
     coordinator.data["SN123"]["metrics"]["batSoh"] = "invalid"
     sensor._handle_coordinator_update()
-    assert sensor.native_value is None
+    assert sensor.native_value == "invalid"
 
-    # Test invalid type gracefully handled
+    # Test invalid type gracefully handled (falls back to _process_numeric_value)
     coordinator.data["SN123"]["metrics"]["batSoh"] = {"invalid": "dict"}
     sensor._handle_coordinator_update()
-    assert sensor.native_value is None
+    assert sensor.native_value == {"invalid": "dict"}
 
 
 @pytest.mark.asyncio
@@ -466,15 +466,15 @@ def test_sensor_int_conversion_error(base_sensor):
         sensor._handle_coordinator_update()
         assert sensor.native_value == 86
 
-        # Test invalid string
+        # Test invalid string (falls back to _process_numeric_value)
         coordinator.data["SN123"]["metrics"][key] = "invalid_string"
         sensor._handle_coordinator_update()
-        assert sensor.native_value is None
+        assert sensor.native_value == "invalid_string"
 
-        # Test non-numeric object
+        # Test non-numeric object (falls back to _process_numeric_value)
         coordinator.data["SN123"]["metrics"][key] = {"unexpected": "data"}
         sensor._handle_coordinator_update()
-        assert sensor.native_value is None
+        assert sensor.native_value == {"unexpected": "data"}
 
         # Test None value (handled by earlier check but good to verify)
         coordinator.data["SN123"]["metrics"][key] = None
@@ -496,15 +496,15 @@ def test_sensor_int_conversion_non_numeric_string(base_sensor):
     sensor.entity_description.key = "batSoc"
     sensor._parser_func = sensor._parse_int_sensor
 
-    # String that raises ValueError on float() conversion
+    # String that raises ValueError on float() conversion (falls back to _process_numeric_value)
     coordinator.data["SN123"]["metrics"]["batSoc"] = "non_numeric_string"
     sensor._handle_coordinator_update()
-    assert sensor.native_value is None
+    assert sensor.native_value == "non_numeric_string"
 
-    # Object that raises TypeError on float() conversion
+    # Object that raises TypeError on float() conversion (falls back to _process_numeric_value)
     coordinator.data["SN123"]["metrics"]["batSoc"] = {"unexpected": "object"}
     sensor._handle_coordinator_update()
-    assert sensor.native_value is None
+    assert sensor.native_value == {"unexpected": "object"}
 
 
 def test_float_conversion_error(base_sensor):
