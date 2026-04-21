@@ -96,12 +96,15 @@ def normalize_device_type(code: str | int | float) -> str:
     if "." in code_str:
         try:
             lookup_key = str(int(float(code_str)))
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             # If float conversion fails (e.g. string labels), just use original code_str
             pass
 
-    if lookup_key in DEVICE_TYPE_KEYS:
-        return DEVICE_TYPE_KEYS[lookup_key]
+    if (res := DEVICE_TYPE_KEYS.get(lookup_key)) is not None:
+        return res
 
     # 2. String mapping (if API returned a name instead of code)
     if "COLLECTOR" in code_str or "DMU" in code_str:
