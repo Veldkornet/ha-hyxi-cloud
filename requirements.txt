@@ -1,6 +1,6 @@
 # Integration Dependencies
 aiohttp>=3.13.4
-voluptuous>=0.13.1
+voluptuous>=0.16.0
 hyxi-cloud-api==1.1.5
 
 # Development/Linting tools
