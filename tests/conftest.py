@@ -54,6 +54,7 @@ ensure_mock("homeassistant.helpers")
 ensure_mock("homeassistant.helpers.aiohttp_client")
 ensure_mock("homeassistant.helpers.device_registry")
 ensure_mock("homeassistant.helpers.entity_platform")
+ensure_mock("homeassistant.helpers.restore_state")
 ensure_mock(
     "homeassistant.helpers.update_coordinator", {"UpdateFailed": MockUpdateFailed}
 )

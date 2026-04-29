@@ -876,7 +876,10 @@ class HyxiSensor(HyxiBaseSensor):
             return None
         try:
             return int(round(float(value), 0))
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return self._process_numeric_value(value)
 
     def _parse_collect_time(self, dev_data, value):
@@ -893,7 +896,12 @@ class HyxiSensor(HyxiBaseSensor):
             if val_int > 9999999999:
                 val_int = val_int // 1000
             return datetime.fromtimestamp(val_int, tz=UTC)
-        except ValueError, TypeError, OSError, OverflowError:
+        except (
+            ValueError,
+            TypeError,
+            OSError,
+            OverflowError,
+        ):
             return None
 
     def _parse_last_seen(self, dev_data, value):

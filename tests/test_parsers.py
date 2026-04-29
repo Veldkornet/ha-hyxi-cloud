@@ -6,9 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.hyxi_cloud.sensor import HyxiSensor
-
-
 # 1. THE BULLETPROOF MOCK (similar to test_sensor_logic.py)
 class FakeBase:
     pass
@@ -49,6 +46,7 @@ sys.modules["homeassistant.components.sensor"] = mock_sensor_comp
 # Mock helpers
 mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+
 mock_restore = MagicMock()
 mock_restore.RestoreEntity = FakeRestoreEntity
 
@@ -57,6 +55,7 @@ sys.modules["homeassistant.helpers.restore_state"] = mock_restore
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
+sys.modules["homeassistant.util.dt"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
 # Mock hyxi_cloud_api
@@ -64,6 +63,7 @@ mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
 
+from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 @pytest.fixture
 def mock_sensor():
@@ -152,3 +152,75 @@ def test_parse_collect_time_errors(mock_sensor):
     with patch("custom_components.hyxi_cloud.sensor.datetime") as mock_dt:
         mock_dt.fromtimestamp.side_effect = OverflowError()
         assert mock_sensor._parse_collect_time({}, 1234567890) is None
+
+
+def test_parse_device_type_valid(mock_sensor):
+    """Test _parse_device_type with valid keys and codes."""
+    # device_type_code
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "1"}, "any")
+        == "hybrid_inverter"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "2"}, "any")
+        == "grid_connected_inverter"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "3"}, "any") == "collector"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "15"}, "any") == "micro_ess"
+    )
+
+    # deviceType
+    assert (
+        mock_sensor._parse_device_type({"deviceType": "106"}, "any")
+        == "hybrid_inverter"
+    )
+
+    # devType
+    assert mock_sensor._parse_device_type({"devType": "607"}, "any") == "collector"
+
+    # deviceCode
+    assert (
+        mock_sensor._parse_device_type({"deviceCode": "HYBRID_INVERTER"}, "any")
+        == "hybrid_inverter"
+    )
+
+    # Check precedence (device_type_code > deviceType > devType > deviceCode)
+    assert (
+        mock_sensor._parse_device_type(
+            {
+                "device_type_code": "2",
+                "deviceType": "1",
+                "devType": "3",
+                "deviceCode": "15",
+            },
+            "any",
+        )
+        == "grid_connected_inverter"
+    )
+
+
+def test_parse_device_type_unknown(mock_sensor):
+    """Test _parse_device_type with unknown or missing data."""
+    # Invalid code
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "999"}, "any") == "unknown"
+    )
+
+    # Missing keys
+    assert mock_sensor._parse_device_type({"some_other_key": "1"}, "any") == "unknown"
+
+    # Empty dict
+    assert mock_sensor._parse_device_type({}, "any") == "unknown"
+
+    # Value is ignored
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "1"}, None)
+        == "hybrid_inverter"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "1"}, "hybrid_inverter")
+        == "hybrid_inverter"
+    )
