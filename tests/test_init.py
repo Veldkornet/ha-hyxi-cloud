@@ -178,7 +178,9 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         assert {(DOMAIN, "TEST_BAT_1")} in identifiers
 
         # Verify BAT_1 via_device
-        bat_call = [c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}][0]
+        bat_call = next(
+            c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
+        )
         assert bat_call.kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
 
         # Check platforms setup forwarded
