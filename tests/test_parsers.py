@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+
 # 1. THE BULLETPROOF MOCK (similar to test_sensor_logic.py)
 class FakeBase:
     pass
