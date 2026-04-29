@@ -64,45 +64,53 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     device_registry = dr.async_get(hass)
 
-    # Pre-register devices to fix 'via_device' order dependency (Two-pass)
-    # Pass 1: Ensure all base devices exist in the registry
+    # Pre-register devices to fix 'via_device' order dependency
+    # Single pass: categorize devices by dependency order to avoid redundant DB calls
+    bases: list[dict] = []
+    children: list[dict] = []
+    batteries: list[dict] = []
+
     for sn, dev_data in coordinator.data.items():
-        device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, sn)},
-            name=dev_data.get("device_name") or f"Device {sn}",
-            manufacturer=MANUFACTURER,
-            model=dev_data.get("model"),
-            sw_version=dev_data.get("sw_version"),
-            hw_version=dev_data.get("hw_version"),
-            serial_number=sn,
-        )
+        kwargs = {
+            "config_entry_id": entry.entry_id,
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "sw_version": dev_data.get("sw_version"),
+            "hw_version": dev_data.get("hw_version"),
+            "serial_number": sn,
+        }
 
-    # Pass 2: Establish relationships (Battery -> Inverter, Inverter -> Collector)
-    for sn, dev_data in coordinator.data.items():
-        metrics = dev_data.get("metrics", {})
+        metrics = dev_data.get("metrics")
+        if metrics:
+            if parent_sn := metrics.get("parentSn"):
+                kwargs["via_device"] = (DOMAIN, parent_sn)
+                children.append(kwargs)
+            else:
+                bases.append(kwargs)
 
-        # 1. Handle Battery relationship
-        bat_sn = metrics.get("batSn")
-        if bat_sn:
-            device_registry.async_get_or_create(
-                config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, bat_sn)},
-                name=f"Battery {bat_sn}",
-                manufacturer=MANUFACTURER,
-                model="Energy Storage System",
-                serial_number=bat_sn,
-                via_device=(DOMAIN, sn),
-            )
+            if bat_sn := metrics.get("batSn"):
+                batteries.append(
+                    {
+                        "config_entry_id": entry.entry_id,
+                        "identifiers": {(DOMAIN, bat_sn)},
+                        "name": f"Battery {bat_sn}",
+                        "manufacturer": MANUFACTURER,
+                        "model": "Energy Storage System",
+                        "serial_number": bat_sn,
+                        "via_device": (DOMAIN, sn),
+                    }
+                )
+        else:
+            bases.append(kwargs)
 
-        # 2. Handle Parent Collector relationship
-        parent_sn = metrics.get("parentSn")
-        if parent_sn:
-            device_registry.async_get_or_create(
-                config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, sn)},
-                via_device=(DOMAIN, parent_sn),
-            )
+    for kwargs in bases:
+        device_registry.async_get_or_create(**kwargs)
+    for kwargs in children:
+        device_registry.async_get_or_create(**kwargs)
+    for kwargs in batteries:
+        device_registry.async_get_or_create(**kwargs)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
