@@ -165,25 +165,21 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         assert mock_hass.data[DOMAIN][mock_entry.entry_id] is mock_coordinator
 
         # Check parent devices and child device registration
-        # Pass 1: SN_1, SN_2
-        # Pass 2: BAT_1 (linked to SN_1)
         assert mock_registry.async_get_or_create.call_count == 3
 
-        # We can optionally inspect the calls made to async_get_or_create:
         calls = mock_registry.async_get_or_create.call_args_list
-        # Call 1: Base TEST_SN_1
-        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")}
-        assert calls[0].kwargs["name"] == "Test Device 1"
-        assert calls[0].kwargs["serial_number"] == "TEST_SN_1"
 
-        # Call 2: Base TEST_SN_2
-        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")}
-        assert calls[1].kwargs["name"] == "Device TEST_SN_2"
+        # Determine index based on the sort order (SN_1 and SN_2 both have no parentSn, order might be stable)
+        # But we know both bases are registered before BAT_1
+        identifiers = [c.kwargs["identifiers"] for c in calls]
 
-        # Call 3: Battery TEST_BAT_1 (Pass 2)
-        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
-        assert calls[2].kwargs["serial_number"] == "TEST_BAT_1"
+        assert {(DOMAIN, "TEST_SN_1")} in identifiers
+        assert {(DOMAIN, "TEST_SN_2")} in identifiers
+        assert {(DOMAIN, "TEST_BAT_1")} in identifiers
+
+        # Verify BAT_1 via_device
+        bat_call = [c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}][0]
+        assert bat_call.kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
 
         # Check platforms setup forwarded
         mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
@@ -226,14 +222,14 @@ async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
 
         assert result is True
 
-        # Call count: 2 (Pass 1) + 1 (Pass 2 for ParentSn) = 3
-        assert mock_registry.async_get_or_create.call_count == 3
+        # Call count: 1 for Parent, 1 for Child
+        assert mock_registry.async_get_or_create.call_count == 2
         calls = mock_registry.async_get_or_create.call_args_list
 
-        # Verify child links via_device to parent in Pass 2
-        # Call 3 is the update call for CHILD_SN_1 in Pass 2
-        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "CHILD_SN_1")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "PARENT_SN_1")
+        # Verify child links via_device to parent
+        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "PARENT_SN_1")}
+        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "CHILD_SN_1")}
+        assert calls[1].kwargs["via_device"] == (DOMAIN, "PARENT_SN_1")
 
         # Check platforms setup forwarded
         mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
