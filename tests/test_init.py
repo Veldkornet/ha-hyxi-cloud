@@ -170,14 +170,15 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         # We can optionally inspect the calls made to async_get_or_create:
         calls = mock_registry.async_get_or_create.call_args_list
 
-        # SN_2 is a base device (no metrics/parents)
-        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")}
-        assert calls[0].kwargs["name"] == "Device TEST_SN_2"
+        # For TEST_SN_1, metrics evaluates to True since `{"batSn": "TEST_BAT_1"}`.
+        # But it does not have a parentSn, so it also gets added to `bases`.
+        # So bases contains TEST_SN_1 then TEST_SN_2
+        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")}
+        assert calls[0].kwargs["name"] == "Test Device 1"
+        assert calls[0].kwargs["serial_number"] == "TEST_SN_1"
 
-        # SN_1 is also a base device but it has a battery, battery is processed after bases
-        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")}
-        assert calls[1].kwargs["name"] == "Test Device 1"
-        assert calls[1].kwargs["serial_number"] == "TEST_SN_1"
+        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")}
+        assert calls[1].kwargs["name"] == "Device TEST_SN_2"
 
         # Battery TEST_BAT_1 is processed last
         assert calls[2].kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
