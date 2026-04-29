@@ -905,6 +905,7 @@ async def test_async_setup_entry_null_string_filtering():
 def test_get_metric_float_method():
     """Test the _get_metric_float method safely extracts floats from metrics."""
     from unittest.mock import MagicMock
+
     from custom_components.hyxi_cloud.sensor import HyxiSensor
 
     coordinator = MagicMock()
