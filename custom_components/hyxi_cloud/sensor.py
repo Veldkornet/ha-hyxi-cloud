@@ -876,7 +876,10 @@ class HyxiSensor(HyxiBaseSensor):
             return None
         try:
             return int(round(float(value), 0))
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return self._process_numeric_value(value)
 
     def _parse_collect_time(self, dev_data, value):

@@ -56,39 +56,45 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
         # 🚀 Native HA tracking for Coordinator success/failure!
         return self.coordinator.last_update_success
 
+    def _calculate_freshness(self, last_success) -> tuple[str, str | None]:
+        """Calculate data freshness label and return ISO string."""
+        if not last_success:
+            return "Unknown", None
+
+        # Handle both datetime objects and legacy ISO strings
+        if isinstance(last_success, str):
+            last_success = dt_util.parse_datetime(last_success)
+
+        if not last_success:
+            return "Unknown", None
+
+        last_success_str = last_success.isoformat()
+        diff = dt_util.utcnow() - last_success
+        minutes = int(diff.total_seconds() / 60)
+
+        if minutes < 1:
+            return "Current (Just now)", last_success_str
+        if minutes < 6:
+            return f"Fresh ({minutes}m ago)", last_success_str
+        return f"Stale ({minutes}m ago)", last_success_str
+
+    def _calculate_connection_quality(self, attempts: int) -> str:
+        """Calculate the connection quality status."""
+        if not self.is_on:
+            return "Offline"
+        if attempts > 1:
+            return f"Degraded ({attempts} retries)"
+        return "Stable"
+
     @property
     def extra_state_attributes(self):
         """Return diagnostic attributes including freshness metrics."""
         metadata = getattr(self.coordinator, "hyxi_metadata", {})
         attempts = metadata.get("last_attempts", 0)
-        last_success = metadata.get("last_success")  # already a datetime object
+        last_success = metadata.get("last_success")
 
-        # 🕰️ Calculate Freshness logic
-        freshness = "Unknown"
-        last_success_str = None
-        if last_success:
-            # Handle both datetime objects and legacy ISO strings
-            if isinstance(last_success, str):
-                last_success = dt_util.parse_datetime(last_success)
-            if last_success:
-                last_success_str = last_success.isoformat()
-                diff = dt_util.utcnow() - last_success
-                minutes = int(diff.total_seconds() / 60)
-
-                if minutes < 1:
-                    freshness = "Current (Just now)"
-                elif minutes < 6:
-                    freshness = f"Fresh ({minutes}m ago)"
-                else:
-                    freshness = f"Stale ({minutes}m ago)"
-
-        # 📶 Logic for Connection Quality status
-        if not self.is_on:
-            quality = "Offline"
-        elif attempts > 1:
-            quality = f"Degraded ({attempts} retries)"
-        else:
-            quality = "Stable"
+        freshness, last_success_str = self._calculate_freshness(last_success)
+        quality = self._calculate_connection_quality(attempts)
 
         return {
             "last_attempts": attempts,
