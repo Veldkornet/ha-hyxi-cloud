@@ -921,7 +921,7 @@ def test_get_metric_float_method():
         }
     }
 
-    sensor = HyxiSensor.__new__(HyxiSensor)
+    sensor = HyxiSensor.__new__(HyxiSensor)  # pylint: disable=no-value-for-parameter
     sensor.coordinator = coordinator
     sensor._sn = "sn_123"
 
