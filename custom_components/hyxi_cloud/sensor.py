@@ -862,6 +862,29 @@ class HyxiSensor(HyxiBaseSensor):
 
         return val
 
+    def _get_metric_float(self, key: str) -> float | None:
+        """Safely extract a metric value as a float."""
+        dev_data = self.coordinator.data.get(self._sn) or {}
+        metrics = dev_data.get("metrics") or {}
+        val = metrics.get(key)
+
+        if val is None or str(val).strip().lower() in (
+            "",
+            "null",
+            "none",
+            "na",
+            "--",
+        ):
+            return None
+
+        try:
+            return float(val)
+        except (
+            ValueError,
+            TypeError,
+        ):
+            return None
+
     def _parse_device_type(self, dev_data, value):
         return normalize_device_type(get_raw_device_code(dev_data))
 
@@ -876,7 +899,10 @@ class HyxiSensor(HyxiBaseSensor):
             return None
         try:
             return int(round(float(value), 0))
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return self._process_numeric_value(value)
 
     def _parse_collect_time(self, dev_data, value):
@@ -893,7 +919,12 @@ class HyxiSensor(HyxiBaseSensor):
             if val_int > 9999999999:
                 val_int = val_int // 1000
             return datetime.fromtimestamp(val_int, tz=UTC)
-        except ValueError, TypeError, OSError, OverflowError:
+        except (
+            ValueError,
+            TypeError,
+            OSError,
+            OverflowError,
+        ):
             return None
 
     def _parse_last_seen(self, dev_data, value):

@@ -900,3 +900,42 @@ async def test_async_setup_entry_null_string_filtering():
     assert "pbat" not in registered_keys
     assert "batV" not in registered_keys
     assert "batI" not in registered_keys
+
+
+def test_get_metric_float_method():
+    """Test the _get_metric_float method safely extracts floats from metrics."""
+    from unittest.mock import MagicMock
+    from custom_components.hyxi_cloud.sensor import HyxiSensor
+
+    # We create a dummy description
+    class MockDesc:
+        def __init__(self):
+            self.key = "test"
+            self.translation_key = "test"
+            self.native_unit_of_measurement = None
+
+    coordinator = MagicMock()
+    coordinator.data = {
+        "sn_123": {
+            "metrics": {
+                "valid": "5.5",
+                "int": "10",
+                "empty": "",
+                "null_str": "null",
+                "invalid": "abc",
+                "none": None,
+            }
+        }
+    }
+
+    sensor = HyxiSensor.__new__(HyxiSensor)
+    sensor.coordinator = coordinator
+    sensor._sn = "sn_123"
+
+    assert sensor._get_metric_float("valid") == 5.5
+    assert sensor._get_metric_float("int") == 10.0
+    assert sensor._get_metric_float("empty") is None
+    assert sensor._get_metric_float("null_str") is None
+    assert sensor._get_metric_float("invalid") is None
+    assert sensor._get_metric_float("none") is None
+    assert sensor._get_metric_float("missing") is None
