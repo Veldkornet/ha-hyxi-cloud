@@ -6,10 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.hyxi_cloud.sensor import HyxiSensor
 
-
-# 1. THE BULLETPROOF MOCK (similar to test_sensor_logic.py)
+# 1. THE BULLETPROOF MOCK
 class FakeBase:
     pass
 
@@ -17,6 +15,9 @@ class FakeBase:
 class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
+
+    def _handle_coordinator_update(self) -> None:
+        pass
 
 
 class FakeSensorEntity(FakeBase):
@@ -30,9 +31,9 @@ class FakeRestoreEntity(FakeBase):
         pass
 
 
-# Mock Home Assistant environment
 mock_ha = MagicMock()
-mock_ha.__path__ = []
+mock_ha.__name__ = "mock_ha"
+mock_ha.__path__ = []  # IMPORTANT for nested module resolution
 mock_ha.callback = lambda func: func
 sys.modules["homeassistant"] = mock_ha
 sys.modules["homeassistant.components"] = mock_ha
@@ -41,14 +42,18 @@ sys.modules["homeassistant.core"] = mock_ha
 sys.modules["homeassistant.exceptions"] = mock_ha
 sys.modules["homeassistant.const"] = mock_ha
 
-# Mock sensor component
+mock_api = MagicMock()
+mock_api.__name__ = "hyxi_cloud_api"
+mock_api.__version__ = "1.0.4"
+sys.modules["hyxi_cloud_api"] = mock_api
+
 mock_sensor_comp = MagicMock()
 mock_sensor_comp.SensorEntity = FakeSensorEntity
 sys.modules["homeassistant.components.sensor"] = mock_sensor_comp
 
-# Mock helpers
 mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+
 mock_restore = MagicMock()
 mock_restore.RestoreEntity = FakeRestoreEntity
 
@@ -59,10 +64,7 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
-# Mock hyxi_cloud_api
-mock_api = MagicMock()
-mock_api.__version__ = "1.0.4"
-sys.modules["hyxi_cloud_api"] = mock_api
+from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 
 @pytest.fixture
@@ -152,3 +154,23 @@ def test_parse_collect_time_errors(mock_sensor):
     with patch("custom_components.hyxi_cloud.sensor.datetime") as mock_dt:
         mock_dt.fromtimestamp.side_effect = OverflowError()
         assert mock_sensor._parse_collect_time({}, 1234567890) is None
+
+
+def test_parse_last_seen_valid(mock_sensor):
+    """Test _parse_last_seen with valid datetime strings."""
+    valid_dt_str = "2023-10-01T12:00:00Z"
+    expected_dt = datetime(2023, 10, 1, 12, 0, 0, tzinfo=UTC)
+
+    with patch(
+        "custom_components.hyxi_cloud.sensor.dt_util.parse_datetime",
+        return_value=expected_dt,
+    ) as mock_parse:
+        assert mock_sensor._parse_last_seen({}, valid_dt_str) == expected_dt
+        mock_parse.assert_called_once_with(valid_dt_str)
+
+
+def test_parse_last_seen_null_equivalents(mock_sensor):
+    """Test _parse_last_seen with various null-equivalent values."""
+    null_values = [None, "", "null", "none", "na", "--", "  NULL  ", "None"]
+    for val in null_values:
+        assert mock_sensor._parse_last_seen({}, val) is None, f"Failed for {val}"
