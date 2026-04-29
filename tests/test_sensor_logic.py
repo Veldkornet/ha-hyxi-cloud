@@ -907,13 +907,6 @@ def test_get_metric_float_method():
     from unittest.mock import MagicMock
     from custom_components.hyxi_cloud.sensor import HyxiSensor
 
-    # We create a dummy description
-    class MockDesc:
-        def __init__(self):
-            self.key = "test"
-            self.translation_key = "test"
-            self.native_unit_of_measurement = None
-
     coordinator = MagicMock()
     coordinator.data = {
         "sn_123": {

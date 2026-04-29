@@ -28,6 +28,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+# pylint: disable=too-many-lines
 # Constants for optimization
 INT_SENSOR_KEYS = {"batsoc", "batsoh", "signalval"}
 
