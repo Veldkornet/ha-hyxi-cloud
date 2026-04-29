@@ -63,11 +63,12 @@ mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
 
-from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 @pytest.fixture
 def mock_sensor():
     """Create a mock HyxiSensor instance for testing parsers."""
+    from custom_components.hyxi_cloud.sensor import HyxiSensor
+
     coordinator = MagicMock()
     description = MagicMock()
     description.key = "test_sensor"
