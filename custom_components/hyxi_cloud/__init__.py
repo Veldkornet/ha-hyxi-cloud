@@ -64,8 +64,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     device_registry = dr.async_get(hass)
 
-    # Pre-register devices to fix 'via_device' order dependency (Two-pass)
-    # Pass 1: Ensure all base devices exist in the registry
+    # Two-pass device registration to guarantee correct via_device ordering.
+    # Without Pass 1, a child registered before its parent would fail the
+    # via_device lookup and appear as an orphaned device in Home Assistant.
+    #
+    # Pass 1: Register every device as a standalone entry (no relationships).
+    #         This ensures all SNs are present in the registry before Pass 2
+    #         attempts to link them.
     for sn, dev_data in coordinator.data.items():
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
@@ -78,24 +83,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             serial_number=sn,
         )
 
-    # Pass 2: Establish relationships (Battery -> Inverter, Inverter -> Collector)
+    # Pass 2: Establish parent→child relationships now that all devices exist.
     for sn, dev_data in coordinator.data.items():
         metrics = dev_data.get("metrics", {})
 
-        # 1. Handle Battery relationship
+        # 1. Handle Battery relationship.
+        #    Guard: if bat_sn is already a first-class device in coordinator.data
+        #    it was registered in Pass 1 with full metadata — skip the sparse stub
+        #    and just link it via_device to avoid overwriting the full entry.
         bat_sn = metrics.get("batSn")
         if bat_sn:
-            device_registry.async_get_or_create(
-                config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, bat_sn)},
-                name=f"Battery {bat_sn}",
-                manufacturer=MANUFACTURER,
-                model="Energy Storage System",
-                serial_number=bat_sn,
-                via_device=(DOMAIN, sn),
-            )
+            if bat_sn in coordinator.data:
+                # Already registered with full metadata in Pass 1; just set the link.
+                device_registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers={(DOMAIN, bat_sn)},
+                    via_device=(DOMAIN, sn),
+                )
+            else:
+                # Battery is not a standalone device — create a minimal stub.
+                device_registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers={(DOMAIN, bat_sn)},
+                    name=f"Battery {bat_sn}",
+                    manufacturer=MANUFACTURER,
+                    model="Energy Storage System",
+                    serial_number=bat_sn,
+                    via_device=(DOMAIN, sn),
+                )
 
-        # 2. Handle Parent Collector relationship
+        # 2. Handle Parent Collector relationship.
         parent_sn = metrics.get("parentSn")
         if parent_sn:
             device_registry.async_get_or_create(

@@ -354,3 +354,72 @@ async def test_async_reload_entry(mock_hass, mock_entry):
         mock_hass.config_entries.async_reload.assert_called_once_with(
             mock_entry.entry_id
         )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entry):
+    """Test that bat_sn already in coordinator.data is linked, not re-stubbed.
+
+    When a battery is discovered as a standalone device (it appears in
+    coordinator.data with full metadata), Pass 2 must only set the via_device
+    link rather than creating a sparse 'Battery {sn}' stub that would
+    overwrite the richer entry registered in Pass 1.
+    """
+    with (
+        patch(
+            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+    ):
+        mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock()
+        mock_coordinator.data = {
+            # Inverter knows about its battery via metrics
+            "INVERTER_SN": {
+                "device_name": "Hybrid Inverter",
+                "model": "HYB-5K",
+                "sw_version": "v2",
+                "hw_version": "hw2",
+                "metrics": {"batSn": "BATTERY_SN"},
+            },
+            # Battery is also a first-class device in its own right
+            "BATTERY_SN": {
+                "device_name": "Battery Pack",
+                "model": "ESS-10",
+                "sw_version": "v1",
+                "hw_version": "hw1",
+                "metrics": {},
+            },
+        }
+
+        mock_registry = MagicMock()
+        mock_dr_get.return_value = mock_registry
+
+        result = await async_setup_entry(mock_hass, mock_entry)
+
+        assert result is True
+
+        calls = mock_registry.async_get_or_create.call_args_list
+
+        # Pass 1: 2 calls (INVERTER_SN, BATTERY_SN)
+        # Pass 2: 1 call — link BATTERY_SN via_device to INVERTER_SN (guard path)
+        assert mock_registry.async_get_or_create.call_count == 3
+
+        # Pass 1 — INVERTER_SN registered with full metadata
+        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "INVERTER_SN")}
+        assert calls[0].kwargs["name"] == "Hybrid Inverter"
+
+        # Pass 1 — BATTERY_SN registered with full metadata (not a stub)
+        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}
+        assert calls[1].kwargs["name"] == "Battery Pack"
+        assert calls[1].kwargs["model"] == "ESS-10"
+
+        # Pass 2 — guard path: link only, no name/model/serial overwrite
+        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}
+        assert calls[2].kwargs["via_device"] == (DOMAIN, "INVERTER_SN")
+        assert "name" not in calls[2].kwargs
+        assert "model" not in calls[2].kwargs
+        assert "serial_number" not in calls[2].kwargs
