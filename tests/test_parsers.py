@@ -177,3 +177,75 @@ def test_parse_last_seen_null_equivalents(mock_sensor):
     null_values = [None, "", "null", "none", "na", "--", "  NULL  ", "None"]
     for val in null_values:
         assert mock_sensor._parse_last_seen({}, val) is None, f"Failed for {val}"
+
+
+def test_parse_device_type_valid(mock_sensor):
+    """Test _parse_device_type with valid keys and codes."""
+    # device_type_code
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "1"}, "any")
+        == "hybrid_inverter"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "2"}, "any")
+        == "grid_connected_inverter"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "3"}, "any") == "collector"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "15"}, "any") == "micro_ess"
+    )
+
+    # deviceType
+    assert (
+        mock_sensor._parse_device_type({"deviceType": "106"}, "any")
+        == "hybrid_inverter"
+    )
+
+    # devType
+    assert mock_sensor._parse_device_type({"devType": "607"}, "any") == "collector"
+
+    # deviceCode
+    assert (
+        mock_sensor._parse_device_type({"deviceCode": "HYBRID_INVERTER"}, "any")
+        == "hybrid_inverter"
+    )
+
+    # Check precedence (device_type_code > deviceType > devType > deviceCode)
+    assert (
+        mock_sensor._parse_device_type(
+            {
+                "device_type_code": "2",
+                "deviceType": "1",
+                "devType": "3",
+                "deviceCode": "15",
+            },
+            "any",
+        )
+        == "grid_connected_inverter"
+    )
+
+
+def test_parse_device_type_unknown(mock_sensor):
+    """Test _parse_device_type with unknown or missing data."""
+    # Invalid code
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "999"}, "any") == "unknown"
+    )
+
+    # Missing keys
+    assert mock_sensor._parse_device_type({"some_other_key": "1"}, "any") == "unknown"
+
+    # Empty dict
+    assert mock_sensor._parse_device_type({}, "any") == "unknown"
+
+    # Value is ignored
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "1"}, None)
+        == "hybrid_inverter"
+    )
+    assert (
+        mock_sensor._parse_device_type({"device_type_code": "1"}, "hybrid_inverter")
+        == "hybrid_inverter"
+    )
