@@ -67,7 +67,7 @@ jobs:
           pipx run --spec "bandit[sarif]" bandit -r custom_components/hyxi_cloud/ -ll -f sarif -o bandit-results.sarif
 
       - name: Upload Bandit Results
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
         if: always() # Ensures results upload even if Bandit finds a 'Failed' security hole
         with:
           sarif_file: bandit-results.sarif
