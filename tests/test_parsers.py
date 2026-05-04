@@ -6,8 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.hyxi_cloud.sensor import HyxiSensor
-
 
 # 1. THE BULLETPROOF MOCK (similar to test_sensor_logic.py)
 class FakeBase:
@@ -63,6 +61,9 @@ sys.modules["aiohttp"] = MagicMock()
 mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
+
+
+from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 
 @pytest.fixture
@@ -152,3 +153,15 @@ def test_parse_collect_time_errors(mock_sensor):
     with patch("custom_components.hyxi_cloud.sensor.datetime") as mock_dt:
         mock_dt.fromtimestamp.side_effect = OverflowError()
         assert mock_sensor._parse_collect_time({}, 1234567890) is None
+
+
+def test_parse_app_sw(mock_sensor):
+    """Test _parse_app_sw returns sw_version."""
+    # Present
+    assert mock_sensor._parse_app_sw({"sw_version": "v1.0.0"}, "ignored") == "v1.0.0"
+
+    # Missing
+    assert mock_sensor._parse_app_sw({"other_key": "val"}, "ignored") is None
+
+    # Empty
+    assert mock_sensor._parse_app_sw({}, "ignored") is None
