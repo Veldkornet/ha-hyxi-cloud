@@ -64,37 +64,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     device_registry = dr.async_get(hass)
 
-    # Two-pass device registration to guarantee correct via_device ordering.
-    # Without Pass 1, a child registered before its parent would fail the
-    # via_device lookup and appear as an orphaned device in Home Assistant.
-    #
-    # Pass 1: Register every device as a standalone entry (no relationships).
-    #         This ensures all SNs are present in the registry before Pass 2
-    #         attempts to link them.
-    for sn, dev_data in coordinator.data.items():
-        device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, sn)},
-            name=dev_data.get("device_name") or f"Device {sn}",
-            manufacturer=MANUFACTURER,
-            model=dev_data.get("model"),
-            sw_version=dev_data.get("sw_version"),
-            hw_version=dev_data.get("hw_version"),
-            serial_number=sn,
-        )
+    # Single-pass device registration: sort devices to ensure parents (no parentSn)
+    # are registered before children (with parentSn) to guarantee correct via_device ordering.
+    sorted_items = sorted(
+        coordinator.data.items(),
+        key=lambda item: "parentSn" in item[1].get("metrics", {})
+    )
 
-    # Pass 2: Establish parent→child relationships now that all devices exist.
-    for sn, dev_data in coordinator.data.items():
+    for sn, dev_data in sorted_items:
         metrics = dev_data.get("metrics", {})
+        parent_sn = metrics.get("parentSn")
 
-        # 1. Handle Battery relationship.
-        #    Guard: if bat_sn is already a first-class device in coordinator.data
-        #    it was registered in Pass 1 with full metadata — skip the sparse stub
-        #    and just link it via_device to avoid overwriting the full entry.
+        kwargs = {
+            "config_entry_id": entry.entry_id,
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "sw_version": dev_data.get("sw_version"),
+            "hw_version": dev_data.get("hw_version"),
+            "serial_number": sn,
+        }
+
+        if parent_sn:
+            kwargs["via_device"] = (DOMAIN, parent_sn)
+
+        device_registry.async_get_or_create(**kwargs)
+
         bat_sn = metrics.get("batSn")
         if bat_sn:
             if bat_sn in coordinator.data:
-                # Already registered with full metadata in Pass 1; just set the link.
+                # Already registered or will be registered; just set the link.
                 device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
                     identifiers={(DOMAIN, bat_sn)},
@@ -111,15 +111,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     serial_number=bat_sn,
                     via_device=(DOMAIN, sn),
                 )
-
-        # 2. Handle Parent Collector relationship.
-        parent_sn = metrics.get("parentSn")
-        if parent_sn:
-            device_registry.async_get_or_create(
-                config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, sn)},
-                via_device=(DOMAIN, parent_sn),
-            )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

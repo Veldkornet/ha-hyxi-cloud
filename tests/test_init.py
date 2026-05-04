@@ -165,25 +165,23 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         assert mock_hass.data[DOMAIN][mock_entry.entry_id] is mock_coordinator
 
         # Check parent devices and child device registration
-        # Pass 1: SN_1, SN_2
-        # Pass 2: BAT_1 (linked to SN_1)
+        # Single Pass: SN_1, BAT_1 (linked to SN_1), SN_2
         assert mock_registry.async_get_or_create.call_count == 3
 
-        # We can optionally inspect the calls made to async_get_or_create:
         calls = mock_registry.async_get_or_create.call_args_list
-        # Call 1: Base TEST_SN_1
-        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")}
-        assert calls[0].kwargs["name"] == "Test Device 1"
-        assert calls[0].kwargs["serial_number"] == "TEST_SN_1"
 
-        # Call 2: Base TEST_SN_2
-        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")}
-        assert calls[1].kwargs["name"] == "Device TEST_SN_2"
+        # Find calls by identifiers to be robust against dict iteration order
+        call_sn1 = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")})
+        call_sn2 = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")})
+        call_bat1 = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")})
 
-        # Call 3: Battery TEST_BAT_1 (Pass 2)
-        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
-        assert calls[2].kwargs["serial_number"] == "TEST_BAT_1"
+        assert call_sn1.kwargs["name"] == "Test Device 1"
+        assert call_sn1.kwargs["serial_number"] == "TEST_SN_1"
+
+        assert call_sn2.kwargs["name"] == "Device TEST_SN_2"
+
+        assert call_bat1.kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
+        assert call_bat1.kwargs["serial_number"] == "TEST_BAT_1"
 
         # Check platforms setup forwarded
         mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
@@ -226,14 +224,14 @@ async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
 
         assert result is True
 
-        # Call count: 2 (Pass 1) + 1 (Pass 2 for ParentSn) = 3
-        assert mock_registry.async_get_or_create.call_count == 3
+        # Call count: 1 (PARENT_SN_1) + 1 (CHILD_SN_1) = 2
+        assert mock_registry.async_get_or_create.call_count == 2
         calls = mock_registry.async_get_or_create.call_args_list
 
-        # Verify child links via_device to parent in Pass 2
-        # Call 3 is the update call for CHILD_SN_1 in Pass 2
-        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "CHILD_SN_1")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "PARENT_SN_1")
+        # Verify parent is registered first, then child with via_device
+        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "PARENT_SN_1")}
+        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "CHILD_SN_1")}
+        assert calls[1].kwargs["via_device"] == (DOMAIN, "PARENT_SN_1")
 
         # Check platforms setup forwarded
         mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
@@ -404,22 +402,27 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
 
         calls = mock_registry.async_get_or_create.call_args_list
 
-        # Pass 1: 2 calls (INVERTER_SN, BATTERY_SN)
-        # Pass 2: 1 call — link BATTERY_SN via_device to INVERTER_SN (guard path)
+        # Both have no parentSn, so they are sorted by dict iteration order.
+        # INVERTER_SN gets registered (1)
+        # It has batSn=BATTERY_SN, so it links BATTERY_SN via_device (2)
+        # BATTERY_SN gets registered as standalone (3)
         assert mock_registry.async_get_or_create.call_count == 3
 
-        # Pass 1 — INVERTER_SN registered with full metadata
-        assert calls[0].kwargs["identifiers"] == {(DOMAIN, "INVERTER_SN")}
-        assert calls[0].kwargs["name"] == "Hybrid Inverter"
+        # Let's extract the calls to be independent of sorting order of parents
+        call_inverter = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "INVERTER_SN")})
 
-        # Pass 1 — BATTERY_SN registered with full metadata (not a stub)
-        assert calls[1].kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}
-        assert calls[1].kwargs["name"] == "Battery Pack"
-        assert calls[1].kwargs["model"] == "ESS-10"
+        # There are two calls for BATTERY_SN: one for the link, one for the standalone registration
+        bat_calls = [c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}]
+        assert len(bat_calls) == 2
 
-        # Pass 2 — guard path: link only, no name/model/serial overwrite
-        assert calls[2].kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "INVERTER_SN")
-        assert "name" not in calls[2].kwargs
-        assert "model" not in calls[2].kwargs
-        assert "serial_number" not in calls[2].kwargs
+        assert call_inverter.kwargs["name"] == "Hybrid Inverter"
+
+        # Find the standalone bat_call (it has name and model) and the link bat_call
+        standalone_bat_call = next(c for c in bat_calls if "name" in c.kwargs)
+        link_bat_call = next(c for c in bat_calls if "via_device" in c.kwargs)
+
+        assert standalone_bat_call.kwargs["name"] == "Battery Pack"
+        assert standalone_bat_call.kwargs["model"] == "ESS-10"
+
+        assert link_bat_call.kwargs["via_device"] == (DOMAIN, "INVERTER_SN")
+        assert "name" not in link_bat_call.kwargs
