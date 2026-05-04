@@ -108,6 +108,7 @@ except ImportError:
 sensor_mod.normalize_device_type = const_mod.normalize_device_type
 sensor_mod.get_raw_device_code = const_mod.get_raw_device_code
 sensor_mod.mask_sn = const_mod.mask_sn
+sensor_mod.NULL_VALUES = const_mod.NULL_VALUES
 
 
 @pytest.fixture
