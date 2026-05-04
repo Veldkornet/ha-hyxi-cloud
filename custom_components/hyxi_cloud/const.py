@@ -12,6 +12,8 @@ VERSION = "1.3.10"
 
 CONF_BACK_DISCOVERY = "back_discovery"
 
+NULL_VALUES = {"", "null", "none", "na", "--"}
+
 # Helper to map device codes to translation keys for HA sensor states
 DEVICE_TYPE_KEYS = {
     "1": "hybrid_inverter",
