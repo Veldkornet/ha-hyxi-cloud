@@ -171,9 +171,15 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         calls = mock_registry.async_get_or_create.call_args_list
 
         # Find calls by identifiers to be robust against dict iteration order
-        call_sn1 = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")})
-        call_sn2 = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")})
-        call_bat1 = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")})
+        call_sn1 = next(
+            c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_SN_1")}
+        )
+        call_sn2 = next(
+            c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_SN_2")}
+        )
+        call_bat1 = next(
+            c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
+        )
 
         assert call_sn1.kwargs["name"] == "Test Device 1"
         assert call_sn1.kwargs["serial_number"] == "TEST_SN_1"
@@ -409,10 +415,14 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
         assert mock_registry.async_get_or_create.call_count == 3
 
         # Let's extract the calls to be independent of sorting order of parents
-        call_inverter = next(c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "INVERTER_SN")})
+        call_inverter = next(
+            c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "INVERTER_SN")}
+        )
 
         # There are two calls for BATTERY_SN: one for the link, one for the standalone registration
-        bat_calls = [c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}]
+        bat_calls = [
+            c for c in calls if c.kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}
+        ]
         assert len(bat_calls) == 2
 
         assert call_inverter.kwargs["name"] == "Hybrid Inverter"

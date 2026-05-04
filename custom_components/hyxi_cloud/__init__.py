@@ -68,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # are registered before children (with parentSn) to guarantee correct via_device ordering.
     sorted_items = sorted(
         coordinator.data.items(),
-        key=lambda item: "parentSn" in item[1].get("metrics", {})
+        key=lambda item: "parentSn" in item[1].get("metrics", {}),
     )
 
     for sn, dev_data in sorted_items:
