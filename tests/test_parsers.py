@@ -253,3 +253,15 @@ def test_parse_device_type_unknown(mock_sensor):
         mock_sensor._parse_device_type({"device_type_code": "1"}, "hybrid_inverter")
         == "hybrid_inverter"
     )
+
+
+def test_parse_app_sw(mock_sensor):
+    """Test _parse_app_sw returns sw_version."""
+    # Present
+    assert mock_sensor._parse_app_sw({"sw_version": "v1.0.0"}, "ignored") == "v1.0.0"
+
+    # Missing
+    assert mock_sensor._parse_app_sw({"other_key": "val"}, "ignored") is None
+
+    # Empty
+    assert mock_sensor._parse_app_sw({}, "ignored") is None
