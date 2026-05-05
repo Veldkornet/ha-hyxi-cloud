@@ -176,6 +176,9 @@ async def test_async_sync_device_metadata_no_change():
 
         devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
         await coordinator._async_sync_device_metadata(devices)
+        mock_dev_reg.async_get_device.reset_mock()
+        await coordinator._async_sync_device_metadata(devices)
+        mock_dev_reg.async_get_device.assert_not_called()
 
         mock_dev_reg.async_update_device.assert_not_called()
 
@@ -208,6 +211,9 @@ async def test_async_sync_device_metadata_with_change():
 
         devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
         await coordinator._async_sync_device_metadata(devices)
+        mock_dev_reg.async_get_device.reset_mock()
+        await coordinator._async_sync_device_metadata(devices)
+        mock_dev_reg.async_get_device.assert_not_called()
 
         mock_dev_reg.async_update_device.assert_called_once_with(
             "device_id", sw_version="1.2.3", hw_version="V1"
@@ -232,5 +238,8 @@ async def test_async_sync_device_metadata_device_not_found():
 
         devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
         await coordinator._async_sync_device_metadata(devices)
+        mock_dev_reg.async_get_device.reset_mock()
+        await coordinator._async_sync_device_metadata(devices)
+        mock_dev_reg.async_get_device.assert_not_called()
 
         mock_dev_reg.async_update_device.assert_not_called()

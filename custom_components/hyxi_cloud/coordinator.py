@@ -57,6 +57,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             "last_error": None,
             "api_status": "Starting",
         }
+        self._device_versions: dict[str, tuple[str | None, str | None]] = {}
 
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
@@ -114,12 +115,19 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             # and cache it for the individual sensors to avoid re-calculation
             sw_version = get_software_version(dev_data)
             dev_data["_sw_version_cached"] = sw_version
+            hw_version = dev_data.get("hw_version")
+
+            # If versions haven't changed since last sync, skip registry lookup
+            cached_versions = self._device_versions.get(sn)
+            if cached_versions == (sw_version, hw_version):
+                continue
+
+            # Update cache before potentially skipping due to missing device
+            self._device_versions[sn] = (sw_version, hw_version)
 
             device = dev_reg.async_get_device(identifiers={(DOMAIN, sn)})
             if not device:
                 continue
-
-            hw_version = dev_data.get("hw_version")
 
             # Only update if changed
             if device.sw_version != sw_version or device.hw_version != hw_version:
