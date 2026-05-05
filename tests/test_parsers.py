@@ -72,11 +72,11 @@ from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 @pytest.fixture
 def mock_sensor():
+    """Create a mock HyxiSensor instance for testing parsers."""
     import custom_components.hyxi_cloud.const as const_mod
     import custom_components.hyxi_cloud.sensor as sensor_mod
 
     sensor_mod.NULL_VALUES = const_mod.NULL_VALUES
-    """Create a mock HyxiSensor instance for testing parsers."""
     coordinator = MagicMock()
     description = MagicMock()
     description.key = "test_sensor"
