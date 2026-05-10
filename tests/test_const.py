@@ -167,7 +167,9 @@ def test_detect_phase_type_metrics():
     # Three-phase: non-zero ph2v/ph3v
     assert detect_phase_type({"metrics": {"ph2v": 230.0}}) == "three_phase"
     assert detect_phase_type({"metrics": {"ph3v": 228.5}}) == "three_phase"
-    assert detect_phase_type({"metrics": {"ph2v": 230.0, "ph3v": 229.0}}) == "three_phase"
+    assert (
+        detect_phase_type({"metrics": {"ph2v": 230.0, "ph3v": 229.0}}) == "three_phase"
+    )
 
     # Zero values — not conclusive
     assert detect_phase_type({"metrics": {"ph2v": 0, "ph3v": 0}}) == "unknown"
