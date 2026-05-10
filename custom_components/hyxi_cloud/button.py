@@ -247,7 +247,7 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
         try:
             return int(float(state.state))
         except ValueError, TypeError:
-            pass
+            pass  # Ignore invalid state values
     _LOGGER.warning(
         "Power number entity %s not available, using 100W default", entity_id
     )
