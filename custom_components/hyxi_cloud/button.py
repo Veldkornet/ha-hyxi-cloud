@@ -77,7 +77,9 @@ async def async_setup_entry(
         # Single-phase: peak shaving buttons (controlId 1021)
         if phase == "single_phase":
             for option in ("close", "charge", "discharge", "stop", "hold"):
-                entities.append(HyxiPeakShavingButton(coordinator, sn, dev_data, option))
+                entities.append(
+                    HyxiPeakShavingButton(coordinator, sn, dev_data, option)
+                )
 
     if entities:
         async_add_entities(entities)
@@ -212,9 +214,7 @@ class HyxiPeakShavingButton(CoordinatorEntity, ButtonEntity):
         client = self.coordinator.client
         try:
             await client.set_peak_shaving(self._sn, self._option)
-            _LOGGER.info(
-                "Peak shaving '%s' command sent to %s", self._option, self._sn
-            )
+            _LOGGER.info("Peak shaving '%s' command sent to %s", self._option, self._sn)
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
             _LOGGER.error(
@@ -246,7 +246,9 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
     if state is not None and state.state not in ("unknown", "unavailable"):
         try:
             return int(float(state.state))
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             pass
-    _LOGGER.warning("Power number entity %s not available, using 100W default", entity_id)
+    _LOGGER.warning(
+        "Power number entity %s not available, using 100W default", entity_id
+    )
     return 100

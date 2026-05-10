@@ -109,7 +109,7 @@ class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
         if (last_state := await self.async_get_last_state()) is not None:
             try:
                 self._attr_native_value = int(float(last_state.state))
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
     async def async_set_native_value(self, value: float) -> None:
@@ -154,7 +154,7 @@ class HyxiMicroPowerLimit(CoordinatorEntity, NumberEntity, RestoreEntity):
         if (last_state := await self.async_get_last_state()) is not None:
             try:
                 self._attr_native_value = float(last_state.state)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
     async def async_set_native_value(self, value: float) -> None:
@@ -181,5 +181,5 @@ def _safe_int(val, default: int) -> int:
     try:
         result = int(float(val))
         return result if result > 0 else default
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return default
