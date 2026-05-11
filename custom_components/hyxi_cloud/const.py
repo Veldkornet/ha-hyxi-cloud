@@ -161,7 +161,10 @@ def detect_phase_type(dev_data: dict) -> str:
         try:
             if float(metrics.get(key, 0)) > 0:
                 return "three_phase"
-        except (ValueError, TypeError):
+        except (
+            ValueError,
+            TypeError,
+        ):
             continue
 
     return "unknown"
