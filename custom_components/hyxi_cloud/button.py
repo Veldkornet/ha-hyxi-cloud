@@ -8,7 +8,6 @@ persistent state to become stale or misleading.
 """
 
 import logging
-from typing import ClassVar
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
@@ -27,6 +26,21 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+MODE_ICONS: dict[str, str] = {
+    "idle": "mdi:sleep",
+    "charge": "mdi:battery-arrow-up",
+    "discharge": "mdi:battery-arrow-down",
+    "self_consume": "mdi:solar-power-variant-outline",
+}
+
+PEAK_SHAVING_ICONS: dict[str, str] = {
+    "close": "mdi:chart-bell-curve-cumulative",
+    "charge": "mdi:battery-arrow-up",
+    "discharge": "mdi:battery-arrow-down",
+    "stop": "mdi:stop-circle-outline",
+    "hold": "mdi:pause-circle-outline",
+}
 
 
 async def async_setup_entry(
@@ -127,13 +141,6 @@ class HyxiModeButton(CoordinatorEntity, ButtonEntity):
 
     _attr_has_entity_name = True
 
-    _ICONS: ClassVar[dict[str, str]] = {
-        "idle": "mdi:sleep",
-        "charge": "mdi:battery-arrow-up",
-        "discharge": "mdi:battery-arrow-down",
-        "self_consume": "mdi:solar-power-variant-outline",
-    }
-
     def __init__(self, coordinator, sn: str, dev_data: dict, mode: str) -> None:
         """Initialize the mode button."""
         super().__init__(coordinator)
@@ -141,7 +148,7 @@ class HyxiModeButton(CoordinatorEntity, ButtonEntity):
         self._mode = mode
         self._attr_unique_id = f"hyxi_{sn}_mode_{mode}"
         self._attr_translation_key = f"mode_{mode}"
-        self._attr_icon = self._ICONS.get(mode, "mdi:solar-power-variant-outline")
+        self._attr_icon = MODE_ICONS.get(mode, "mdi:solar-power-variant-outline")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": dev_data.get("device_name") or f"Device {sn}",
@@ -185,14 +192,6 @@ class HyxiPeakShavingButton(CoordinatorEntity, ButtonEntity):
 
     _attr_has_entity_name = True
 
-    _ICONS: ClassVar[dict[str, str]] = {
-        "close": "mdi:chart-bell-curve-cumulative",
-        "charge": "mdi:battery-arrow-up",
-        "discharge": "mdi:battery-arrow-down",
-        "stop": "mdi:stop-circle-outline",
-        "hold": "mdi:pause-circle-outline",
-    }
-
     def __init__(self, coordinator, sn: str, dev_data: dict, option: str) -> None:
         """Initialize the peak shaving button."""
         super().__init__(coordinator)
@@ -200,7 +199,9 @@ class HyxiPeakShavingButton(CoordinatorEntity, ButtonEntity):
         self._option = option
         self._attr_unique_id = f"hyxi_{sn}_peak_shaving_{option}"
         self._attr_translation_key = f"peak_shaving_{option}"
-        self._attr_icon = self._ICONS.get(option, "mdi:chart-bell-curve-cumulative")
+        self._attr_icon = PEAK_SHAVING_ICONS.get(
+            option, "mdi:chart-bell-curve-cumulative"
+        )
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": dev_data.get("device_name") or f"Device {sn}",
