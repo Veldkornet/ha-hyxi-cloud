@@ -14,7 +14,7 @@ from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
     DOMAIN,
-    MANUFACTURER,
+    build_device_info,
     detect_phase_type,
     get_raw_device_code,
     normalize_device_type,
@@ -90,13 +90,7 @@ class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
         metric_key = self._MAX_POWER_KEYS.get(direction, "")
         self._attr_native_max_value = int(_safe_int(metrics.get(metric_key), 10000))
         self._attr_native_value = 100
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = build_device_info(sn, dev_data)
 
     async def async_added_to_hass(self) -> None:
         """Restore last known value on startup."""
@@ -135,13 +129,7 @@ class HyxiMicroPowerLimit(CoordinatorEntity, NumberEntity, RestoreEntity):
         super().__init__(coordinator)
         self._sn = sn
         self._attr_unique_id = f"hyxi_{sn}_micro_power_limit"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = build_device_info(sn, dev_data)
 
     async def async_added_to_hass(self) -> None:
         """Restore last known value on startup."""

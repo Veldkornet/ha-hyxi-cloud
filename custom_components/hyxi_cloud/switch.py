@@ -11,7 +11,7 @@ from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
     DOMAIN,
-    MANUFACTURER,
+    build_device_info,
     detect_phase_type,
     get_raw_device_code,
     normalize_device_type,
@@ -71,13 +71,7 @@ class HyxiFrequencyControlSwitch(CoordinatorEntity, SwitchEntity):
         super().__init__(coordinator)
         self._sn = sn
         self._attr_unique_id = f"hyxi_{sn}_frequency_control"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = build_device_info(sn, dev_data)
 
     async def async_turn_on(self, **kwargs) -> None:
         """Enable frequency control."""
@@ -125,13 +119,7 @@ class HyxiMicroPowerSwitch(CoordinatorEntity, SwitchEntity):
         super().__init__(coordinator)
         self._sn = sn
         self._attr_unique_id = f"hyxi_{sn}_micro_power"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = build_device_info(sn, dev_data)
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on the microinverter."""

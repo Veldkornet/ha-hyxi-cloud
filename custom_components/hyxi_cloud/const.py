@@ -58,6 +58,32 @@ def get_raw_device_code(dev_data: dict) -> str:
     )
 
 
+def build_device_info(sn: str, dev_data: dict) -> dict:
+    """Build a standard device_info dictionary for a given device."""
+    info = {
+        "identifiers": {(DOMAIN, sn)},
+        "name": dev_data.get("device_name") or f"Device {sn}",
+        "manufacturer": MANUFACTURER,
+        "serial_number": sn,
+    }
+
+    if model := dev_data.get("model"):
+        info["model"] = model
+
+    sw_version = dev_data.get("_sw_version_cached") or get_software_version(dev_data)
+    if sw_version:
+        info["sw_version"] = sw_version
+
+    if hw_version := dev_data.get("hw_version"):
+        info["hw_version"] = hw_version
+
+    metrics = dev_data.get("metrics") or {}
+    if parent_sn := metrics.get("parentSn"):
+        info["via_device"] = (DOMAIN, parent_sn)
+
+    return info
+
+
 def get_software_version(dev_data: dict) -> str | None:
     """Extract and format the software version for a device."""
     sw_version = dev_data.get("sw_version")

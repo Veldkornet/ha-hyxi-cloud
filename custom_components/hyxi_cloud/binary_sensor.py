@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, MANUFACTURER
+from .const import DOMAIN, MANUFACTURER, build_device_info
 
 ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
@@ -129,20 +129,8 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         self._active_alarms_count = 0
 
         device_data = coordinator.data.get(sn) or {}
-        metrics = device_data.get("metrics", {})
-        parent_sn = metrics.get("parentSn")
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": device_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": device_data.get("model"),
-            "sw_version": device_data.get("sw_version"),
-            "hw_version": device_data.get("hw_version"),
-        }
-
-        if parent_sn:
-            self._attr_device_info["via_device"] = (DOMAIN, parent_sn)
+        self._attr_device_info = build_device_info(sn, device_data)
         self._update_internal_state()
 
     def _handle_coordinator_update(self) -> None:

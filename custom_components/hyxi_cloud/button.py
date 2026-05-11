@@ -20,7 +20,7 @@ from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
     DOMAIN,
-    MANUFACTURER,
+    build_device_info,
     detect_phase_type,
     get_raw_device_code,
     normalize_device_type,
@@ -97,13 +97,7 @@ class HyxiMicroRestartButton(CoordinatorEntity, ButtonEntity):
         super().__init__(coordinator)
         self._sn = sn
         self._attr_unique_id = f"hyxi_{sn}_micro_restart"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = build_device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Restart the microinverter."""
@@ -142,13 +136,7 @@ class HyxiModeButton(CoordinatorEntity, ButtonEntity):
         self._attr_unique_id = f"hyxi_{sn}_mode_{mode}"
         self._attr_translation_key = f"mode_{mode}"
         self._attr_icon = self._ICONS.get(mode, "mdi:solar-power-variant-outline")
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = build_device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Send the operating mode command to the inverter."""
@@ -201,13 +189,7 @@ class HyxiPeakShavingButton(CoordinatorEntity, ButtonEntity):
         self._attr_unique_id = f"hyxi_{sn}_peak_shaving_{option}"
         self._attr_translation_key = f"peak_shaving_{option}"
         self._attr_icon = self._ICONS.get(option, "mdi:chart-bell-curve-cumulative")
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = build_device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Send the peak shaving command to the inverter."""

@@ -20,8 +20,8 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     NULL_VALUES,
+    build_device_info,
     get_raw_device_code,
-    get_software_version,
     mask_sn,
     normalize_device_type,
 )
@@ -811,28 +811,7 @@ class HyxiSensor(HyxiBaseSensor):
                 "via_device": (DOMAIN, self._sn),
             }
 
-        # Determine if we need to apply any state-mapping for specific types
-        sw_version = dev_data.get("_sw_version_cached") or get_software_version(
-            dev_data
-        )
-        hw_version = dev_data.get("hw_version")
-
-        info = {
-            "identifiers": {(DOMAIN, self._sn)},
-            "name": dev_data.get("device_name") or f"Device {self._sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "sw_version": sw_version,
-            "hw_version": hw_version,
-            "serial_number": self._sn,
-        }
-
-        # Handle Parent Collector relationship
-        parent_sn = metrics.get("parentSn")
-        if parent_sn:
-            info["via_device"] = (DOMAIN, parent_sn)
-
-        return info
+        return build_device_info(self._sn, dev_data)
 
     @property
     def native_value(self):
