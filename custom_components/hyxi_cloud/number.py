@@ -1,7 +1,6 @@
 """Number platform for HYXI Cloud device control power settings."""
 
 import logging
-from typing import ClassVar
 
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
@@ -21,6 +20,11 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+_MAX_POWER_KEYS = {
+    "charge": "maxChargePower",
+    "discharge": "maxDischargePower",
+}
 
 
 async def async_setup_entry(
@@ -68,11 +72,6 @@ class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
     _attr_native_min_value = 1
     _attr_icon = "mdi:flash"
 
-    _MAX_POWER_KEYS: ClassVar[dict[str, str]] = {
-        "charge": "maxChargePower",
-        "discharge": "maxDischargePower",
-    }
-
     def __init__(
         self,
         coordinator,
@@ -87,7 +86,7 @@ class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
         self._attr_unique_id = f"hyxi_{sn}_{direction}_power"
         self._attr_translation_key = f"{direction}_power"
         metrics = dev_data.get("metrics") or {}
-        metric_key = self._MAX_POWER_KEYS.get(direction, "")
+        metric_key = _MAX_POWER_KEYS.get(direction, "")
         self._attr_native_max_value = int(_safe_int(metrics.get(metric_key), 10000))
         self._attr_native_value = 100
         self._attr_device_info = {
