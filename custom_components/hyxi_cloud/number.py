@@ -38,21 +38,16 @@ async def async_setup_entry(
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
 
-        if device_type not in ("hybrid_inverter", "all_in_one"):
-            continue
+        if device_type in ("hybrid_inverter", "all_in_one"):
+            phase = detect_phase_type(dev_data)
 
-        phase = detect_phase_type(dev_data)
-
-        # Power numbers pair with mode control (1062-1065) — three-phase only
-        # Peak shaving (single-phase) uses full inverter power, no wattage setting
-        if phase == "three_phase":
-            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
-            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
-
-    # Microinverter power limit (controlId 3012)
-    for sn, dev_data in coordinator.data.items():
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
-        if device_type == "micro_inverter":
+            # Power numbers pair with mode control (1062-1065) — three-phase only
+            # Peak shaving (single-phase) uses full inverter power, no wattage setting
+            if phase == "three_phase":
+                entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
+                entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
+        elif device_type == "micro_inverter":
+            # Microinverter power limit (controlId 3012)
             entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
 
     if entities:
