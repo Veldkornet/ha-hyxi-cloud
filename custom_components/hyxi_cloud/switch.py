@@ -35,19 +35,13 @@ async def async_setup_entry(
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
 
-        if device_type not in ("hybrid_inverter", "all_in_one"):
-            continue
-
-        phase = detect_phase_type(dev_data)
-
-        # Frequency control (controlId 1020) — single-phase devices only
-        if phase == "single_phase":
-            entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
-
-    # Microinverter power on/off (controlId 3011)
-    for sn, dev_data in coordinator.data.items():
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
-        if device_type == "micro_inverter":
+        if device_type in ("hybrid_inverter", "all_in_one"):
+            phase = detect_phase_type(dev_data)
+            # Frequency control (controlId 1020) — single-phase devices only
+            if phase == "single_phase":
+                entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
+        elif device_type == "micro_inverter":
+            # Microinverter power on/off (controlId 3011)
             entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
 
     if entities:
