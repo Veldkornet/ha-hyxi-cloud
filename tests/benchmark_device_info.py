@@ -65,9 +65,8 @@ import hyxi_cloud.sensor as sensor_mod  # noqa: E402
 # Wire up real const.py functions
 sensor_mod.normalize_device_type = const_mod.normalize_device_type
 sensor_mod.get_raw_device_code = const_mod.get_raw_device_code
-sensor_mod.get_software_version = const_mod.get_software_version
+sensor_mod.build_device_info = const_mod.build_device_info
 sensor_mod.mask_sn = const_mod.mask_sn
-sensor_mod.MANUFACTURER = const_mod.MANUFACTURER
 sensor_mod.DOMAIN = const_mod.DOMAIN
 
 
