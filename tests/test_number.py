@@ -115,7 +115,7 @@ def test_async_setup_entry():
     entry = MagicMock()
     entry.entry_id = "test_entry"
 
-    dev_data_3phase = {
+    dev_data_3phase: dict[str, str | dict[str, str]] = {
         "deviceCode": "HYBRID_INVERTER",
         "model": "HYXI-HT",
         "metrics": {
@@ -126,7 +126,7 @@ def test_async_setup_entry():
             "apPhaC": "100",
         },
     }
-    dev_data_1phase = {
+    dev_data_1phase: dict[str, str | dict[str, str]] = {
         "deviceCode": "HYBRID_INVERTER",
         "model": "HYXI-HS",
         "metrics": {
@@ -137,7 +137,7 @@ def test_async_setup_entry():
             "apPhaC": "0",
         },
     }
-    dev_data_micro = {
+    dev_data_micro: dict[str, str | dict[str, str]] = {
         "deviceCode": "MICRO_INVERTER",
         "model": "MICRO-1",
         "metrics": {},
@@ -185,7 +185,9 @@ def test_async_setup_entry():
 def test_hyxi_power_number_init():
     """Test initialization of HyxiPowerNumber."""
     coordinator = MagicMock()
-    dev_data = {"metrics": {"maxChargePower": "5000", "maxDischargePower": "6000"}}
+    dev_data: dict = {
+        "metrics": {"maxChargePower": "5000", "maxDischargePower": "6000"}
+    }
 
     entity = number_mod.HyxiPowerNumber(coordinator, "SN1", dev_data, "charge")
     assert entity._attr_unique_id == "hyxi_SN1_charge_power"
@@ -203,7 +205,7 @@ def test_hyxi_power_number_restore_state():
     import asyncio
 
     coordinator = MagicMock()
-    dev_data = {"metrics": {"maxChargePower": "5000"}}
+    dev_data: dict = {"metrics": {"maxChargePower": "5000"}}
     entity = number_mod.HyxiPowerNumber(coordinator, "SN1", dev_data, "charge")
 
     # Mock valid state
@@ -228,7 +230,7 @@ def test_hyxi_power_number_set_value():
     import asyncio
 
     coordinator = MagicMock()
-    dev_data = {"metrics": {"maxChargePower": "5000"}}
+    dev_data: dict = {"metrics": {"maxChargePower": "5000"}}
     entity = number_mod.HyxiPowerNumber(coordinator, "SN1", dev_data, "charge")
     entity.async_write_ha_state = MagicMock()
 
@@ -240,7 +242,7 @@ def test_hyxi_power_number_set_value():
 def test_hyxi_micro_power_limit_init():
     """Test initialization of HyxiMicroPowerLimit."""
     coordinator = MagicMock()
-    dev_data = {"device_name": "My Microinverter"}
+    dev_data: dict = {"device_name": "My Microinverter"}
 
     entity = number_mod.HyxiMicroPowerLimit(coordinator, "SN1", dev_data)
     assert entity._attr_unique_id == "hyxi_SN1_micro_power_limit"
@@ -252,7 +254,7 @@ def test_hyxi_micro_power_limit_restore_state():
     import asyncio
 
     coordinator = MagicMock()
-    dev_data = {}
+    dev_data: dict = {}
     entity = number_mod.HyxiMicroPowerLimit(coordinator, "SN1", dev_data)
 
     # Mock valid state
@@ -279,7 +281,7 @@ def test_hyxi_micro_power_limit_set_value():
     coordinator = MagicMock()
     client = AsyncMock()
     coordinator.client = client
-    dev_data = {}
+    dev_data: dict = {}
     entity = number_mod.HyxiMicroPowerLimit(coordinator, "SN1", dev_data)
     entity.async_write_ha_state = MagicMock()
 
@@ -297,7 +299,7 @@ def test_hyxi_micro_power_limit_set_value_error():
     client = AsyncMock()
     client.set_micro_power_limit.side_effect = MockControlError("API failed")
     coordinator.client = client
-    dev_data = {}
+    dev_data: dict = {}
     entity = number_mod.HyxiMicroPowerLimit(coordinator, "SN1", dev_data)
     entity.async_write_ha_state = MagicMock()
 
