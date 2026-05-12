@@ -109,7 +109,8 @@ def test_safe_int():
     assert number_mod._safe_int(-5, 10) == 10  # expects positive integers
 
 
-def test_async_setup_entry():
+@pytest.mark.asyncio
+async def test_async_setup_entry():
     """Test setting up number entities."""
     hass = MagicMock()
     entry = MagicMock()
@@ -155,9 +156,8 @@ def test_async_setup_entry():
 
     # The setup function itself is a coroutine, so we run it using a mock coroutine trick
     # In pure unittest we use asyncio, but here we can just create an async wrapper
-    import asyncio
-
-    asyncio.run(number_mod.async_setup_entry(hass, entry, async_add_entities))
+    # In pure unittest we use asyncio, but here we can just create an async wrapper
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
 
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
@@ -200,10 +200,9 @@ def test_hyxi_power_number_init():
     assert entity._attr_native_value == 100
 
 
-def test_hyxi_power_number_restore_state():
+@pytest.mark.asyncio
+async def test_hyxi_power_number_restore_state():
     """Test restoring state for HyxiPowerNumber."""
-    import asyncio
-
     coordinator = MagicMock()
     dev_data: dict = {"metrics": {"maxChargePower": "5000"}}
     entity = number_mod.HyxiPowerNumber(coordinator, "SN1", dev_data, "charge")
@@ -211,30 +210,33 @@ def test_hyxi_power_number_restore_state():
     # Mock valid state
     mock_state = MagicMock()
     mock_state.state = "150"
-    entity._mock_last_state = mock_state
+    from unittest.mock import AsyncMock
 
-    asyncio.run(entity.async_added_to_hass())
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
     assert entity._attr_native_value == 150
 
     # Mock invalid state
     mock_state.state = "invalid"
-    entity._mock_last_state = mock_state
+    from unittest.mock import AsyncMock
+
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
 
     # Should not crash, value remains 150
-    asyncio.run(entity.async_added_to_hass())
+    await entity.async_added_to_hass()
     assert entity._attr_native_value == 150
 
 
-def test_hyxi_power_number_set_value():
+@pytest.mark.asyncio
+async def test_hyxi_power_number_set_value():
     """Test setting value for HyxiPowerNumber."""
-    import asyncio
-
     coordinator = MagicMock()
     dev_data: dict = {"metrics": {"maxChargePower": "5000"}}
     entity = number_mod.HyxiPowerNumber(coordinator, "SN1", dev_data, "charge")
     entity.async_write_ha_state = MagicMock()
 
-    asyncio.run(entity.async_set_native_value(250.0))
+    await entity.async_set_native_value(250.0)
     assert entity._attr_native_value == 250
     entity.async_write_ha_state.assert_called_once()
 
@@ -249,10 +251,9 @@ def test_hyxi_micro_power_limit_init():
     assert entity._attr_native_value == 100.0
 
 
-def test_hyxi_micro_power_limit_restore_state():
+@pytest.mark.asyncio
+async def test_hyxi_micro_power_limit_restore_state():
     """Test restoring state for HyxiMicroPowerLimit."""
-    import asyncio
-
     coordinator = MagicMock()
     dev_data: dict = {}
     entity = number_mod.HyxiMicroPowerLimit(coordinator, "SN1", dev_data)
@@ -260,24 +261,27 @@ def test_hyxi_micro_power_limit_restore_state():
     # Mock valid state
     mock_state = MagicMock()
     mock_state.state = "80.5"
-    entity._mock_last_state = mock_state
+    from unittest.mock import AsyncMock
 
-    asyncio.run(entity.async_added_to_hass())
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
     assert entity._attr_native_value == 80.5
 
     # Mock invalid state
     mock_state.state = "invalid"
-    entity._mock_last_state = mock_state
+    from unittest.mock import AsyncMock
+
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
 
     # Should not crash, value remains 80.5
-    asyncio.run(entity.async_added_to_hass())
+    await entity.async_added_to_hass()
     assert entity._attr_native_value == 80.5
 
 
-def test_hyxi_micro_power_limit_set_value():
+@pytest.mark.asyncio
+async def test_hyxi_micro_power_limit_set_value():
     """Test setting value for HyxiMicroPowerLimit."""
-    import asyncio
-
     coordinator = MagicMock()
     client = AsyncMock()
     coordinator.client = client
@@ -285,16 +289,15 @@ def test_hyxi_micro_power_limit_set_value():
     entity = number_mod.HyxiMicroPowerLimit(coordinator, "SN1", dev_data)
     entity.async_write_ha_state = MagicMock()
 
-    asyncio.run(entity.async_set_native_value(75.0))
+    await entity.async_set_native_value(75.0)
     client.set_micro_power_limit.assert_called_once_with("SN1", 75)
     assert entity._attr_native_value == 75.0
     entity.async_write_ha_state.assert_called_once()
 
 
-def test_hyxi_micro_power_limit_set_value_error():
+@pytest.mark.asyncio
+async def test_hyxi_micro_power_limit_set_value_error():
     """Test setting value handles errors for HyxiMicroPowerLimit."""
-    import asyncio
-
     coordinator = MagicMock()
     client = AsyncMock()
     client.set_micro_power_limit.side_effect = MockControlError("API failed")
@@ -308,7 +311,7 @@ def test_hyxi_micro_power_limit_set_value_error():
             "custom_components.hyxi_cloud.number.HyxiApiClient.ControlError",
             MockControlError,
         ):
-            asyncio.run(entity.async_set_native_value(75.0))
+            await entity.async_set_native_value(75.0)
 
     # Value should not be updated and state should not be written
     assert entity._attr_native_value == 100.0
