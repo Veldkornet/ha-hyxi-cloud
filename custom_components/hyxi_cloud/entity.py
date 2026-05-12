@@ -4,6 +4,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 
+
 class HyxiEntity(CoordinatorEntity):
     """Base entity for HYXI Cloud."""
 
