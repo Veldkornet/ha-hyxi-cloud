@@ -6,16 +6,15 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
     DOMAIN,
-    MANUFACTURER,
     detect_phase_type,
     get_raw_device_code,
     normalize_device_type,
 )
+from .entity import HyxiEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,30 +53,21 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HyxiFrequencyControlSwitch(CoordinatorEntity, SwitchEntity):
+class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
     """Switch entity for Frequency Control enable/disable (controlId 1020).
 
     State is tracked internally after successful writes as the API does not
     return the current frequency control state in polling responses.
     """
 
-    _attr_has_entity_name = True
     _attr_translation_key = "frequency_control"
     _attr_icon = "mdi:sine-wave"
     _attr_is_on: bool | None = None
 
     def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
         """Initialize the frequency control switch."""
-        super().__init__(coordinator)
-        self._sn = sn
+        super().__init__(coordinator, sn, dev_data)
         self._attr_unique_id = f"hyxi_{sn}_frequency_control"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
 
     async def async_turn_on(self, **kwargs) -> None:
         """Enable frequency control."""
@@ -108,30 +98,21 @@ class HyxiFrequencyControlSwitch(CoordinatorEntity, SwitchEntity):
             raise
 
 
-class HyxiMicroPowerSwitch(CoordinatorEntity, SwitchEntity):
+class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
     """Switch entity for Microinverter power on/off (controlId 3011).
 
     State is tracked internally after successful writes as the API does not
     return the current power state in polling responses.
     """
 
-    _attr_has_entity_name = True
     _attr_translation_key = "micro_power"
     _attr_icon = "mdi:power"
     _attr_is_on: bool | None = None
 
     def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
         """Initialize the microinverter power switch."""
-        super().__init__(coordinator)
-        self._sn = sn
+        super().__init__(coordinator, sn, dev_data)
         self._attr_unique_id = f"hyxi_{sn}_micro_power"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on the microinverter."""
