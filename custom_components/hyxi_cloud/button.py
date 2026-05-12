@@ -12,7 +12,6 @@ import logging
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from hyxi_cloud_api import HyxiApiClient
@@ -234,6 +233,8 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
     entity_ids don't follow a predictable pattern.
     Falls back to 100W if the number entity has not been set yet.
     """
+    from homeassistant.helpers import entity_registry as er
+
     unique_id = f"hyxi_{sn}_{direction}_power"
     registry = er.async_get(hass)
     entity_id = registry.async_get_entity_id("number", DOMAIN, unique_id)
