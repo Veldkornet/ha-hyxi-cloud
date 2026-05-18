@@ -39,8 +39,10 @@ class MockControlError(Exception):
     pass
 
 
-sys.modules["hyxi_cloud_api"].HyxiApiClient = MagicMock()  # type: ignore[attr-defined]
-sys.modules["hyxi_cloud_api"].HyxiApiClient.ControlError = MockControlError  # type: ignore[attr-defined]
+import hyxi_cloud_api
+
+hyxi_cloud_api.HyxiApiClient = MagicMock()  # type: ignore[attr-defined]
+hyxi_cloud_api.HyxiApiClient.ControlError = MockControlError  # type: ignore[misc]
 
 # Now we can safely import our component code
 from custom_components.hyxi_cloud import switch as switch_mod
