@@ -52,7 +52,7 @@ def test_hyxi_entity_initialization_with_missing_data():
     """Test entity initialization with missing device data."""
     coordinator = MagicMock()
     sn = "654321"
-    dev_data = {}
+    dev_data: dict[str, str] = {}
 
     entity = HyxiEntity(coordinator, sn, dev_data)
 
