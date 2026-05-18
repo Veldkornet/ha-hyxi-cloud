@@ -8,10 +8,6 @@ import pytest
 
 
 # Let conftest.py handle most of the Home Assistant mocking securely
-import sys
-from unittest.mock import MagicMock
-
-
 # Local fakes to avoid metaclass conflicts
 class FakeBase:
     """Fake base class for testing."""
@@ -28,7 +24,7 @@ class FakeSwitchEntity(FakeBase):
     """Fake switch entity."""
 
 
-import tests.conftest as conftest
+from tests import conftest
 
 conftest.ensure_mock(
     "homeassistant.components.switch", {"SwitchEntity": FakeSwitchEntity}
@@ -43,8 +39,8 @@ class MockControlError(Exception):
     pass
 
 
-sys.modules["hyxi_cloud_api"].HyxiApiClient = MagicMock()
-sys.modules["hyxi_cloud_api"].HyxiApiClient.ControlError = MockControlError
+sys.modules["hyxi_cloud_api"].HyxiApiClient = MagicMock()  # type: ignore[attr-defined]
+sys.modules["hyxi_cloud_api"].HyxiApiClient.ControlError = MockControlError  # type: ignore[attr-defined]
 
 # Now we can safely import our component code
 from custom_components.hyxi_cloud import switch as switch_mod
