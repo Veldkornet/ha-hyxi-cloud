@@ -766,6 +766,10 @@ class HyxiSensor(HyxiBaseSensor):
 
         # Determine actual SN (e.g. Battery SN for battery sensors)
         dev_data = coordinator.data.get(sn) or {}
+
+        raw_code = get_raw_device_code(dev_data)
+        self._device_type = normalize_device_type(raw_code)
+
         metrics = dev_data.get("metrics") or {}
         bat_sn = metrics.get("batSn")
 
@@ -951,8 +955,7 @@ class HyxiSensor(HyxiBaseSensor):
         # 🚀 Fallback Logic for Micro Inverters (acE -> efpv)
         # If acE is not provided or zero, attempt fallback to efpv for Micro Inverters.
         if key == "acE" and (value is None or str(value) == "0.0"):
-            raw_code = get_raw_device_code(dev_data)
-            if normalize_device_type(raw_code) in (
+            if getattr(self, "_device_type", None) in (
                 "grid_connected_inverter",
                 "micro_inverter",
             ):
