@@ -182,7 +182,7 @@ def _safe_int(val, default: int) -> int:
         result = int(float(val))
         return result if result > 0 else default
     except (
-                ValueError,
-                TypeError,
-            ):
+        ValueError,
+        TypeError,
+    ):
         return default
