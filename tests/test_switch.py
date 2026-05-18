@@ -1,7 +1,6 @@
 """Tests for the switch platform."""
 
 # pylint: disable=missing-module-docstring, wrong-import-position, import-outside-toplevel
-import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
