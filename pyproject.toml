@@ -27,7 +27,7 @@ select = [
 ignore = ["E501", "N818", "S105", "N999"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "S105", "S106", "N802"]
+"tests/**/*.py" = ["S101", "S105", "S106", "N802", "E402"]
 "custom_components/hyxi_cloud/__init__.py" = ["N812"]
 
 [tool.mypy]

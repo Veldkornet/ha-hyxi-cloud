@@ -25,8 +25,8 @@ sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
 mock_ha.CoordinatorEntity = FakeCoordinatorEntity
 
 # 2. LOCAL IMPORTS (After patching sys.modules)
-from custom_components.hyxi_cloud.const import DOMAIN, MANUFACTURER  # noqa: E402
-from custom_components.hyxi_cloud.entity import HyxiEntity  # noqa: E402
+from custom_components.hyxi_cloud.const import DOMAIN, MANUFACTURER
+from custom_components.hyxi_cloud.entity import HyxiEntity
 
 
 def test_hyxi_entity_initialization_with_complete_data():

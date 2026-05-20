@@ -59,7 +59,7 @@ mock_const.DOMAIN = "hyxi_cloud"
 sys.modules["custom_components.hyxi_cloud.const"] = mock_const
 
 
-import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position # noqa: E402
+import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position
 
 importlib.reload(hc_coord)
 

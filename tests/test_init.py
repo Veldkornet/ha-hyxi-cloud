@@ -77,7 +77,7 @@ mock_api.__name__ = "hyxi_cloud_api"
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
 
-import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position # noqa: E402
+import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position
 
 # DIRECT NAMESPACE INJECTION: Force the component to use our authoritative classes
 # This is the only way to guarantee class identity consistency in a mocked environment.
@@ -98,7 +98,7 @@ async_reload_entry = hc_init.async_reload_entry
 
 # Inject back into the module if they were mocked by mistake during the import process
 
-from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # noqa: E402  # pylint: disable=wrong-import-position # noqa: E402
+from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # pylint: disable=wrong-import-position
     DOMAIN,
     PLATFORMS,
 )

@@ -48,7 +48,7 @@ sys.modules["homeassistant.util"] = mock_util
 mock_dt = MagicMock()
 mock_dt.__spec__ = None
 sys.modules["homeassistant.util.dt"] = mock_dt
-import homeassistant.util.dt as dt_util  # noqa: E402
+import homeassistant.util.dt as dt_util
 
 mock_dt = MagicMock()
 mock_dt.UTC = UTC
@@ -59,11 +59,11 @@ sys.modules["homeassistant.util.dt"] = mock_dt
 mock_ha.util.dt = mock_dt  # Ensure both paths work
 
 # Now import and reload the component to ensure it uses the mock
-import custom_components.hyxi_cloud.binary_sensor as bs_mod  # noqa: E402
+import custom_components.hyxi_cloud.binary_sensor as bs_mod
 
 importlib.reload(bs_mod)
 
-from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+from custom_components.hyxi_cloud.const import DOMAIN
 
 
 @pytest.fixture

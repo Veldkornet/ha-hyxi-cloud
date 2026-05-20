@@ -58,8 +58,8 @@ mock_api.HyxiApiClient.ControlError = ControlError
 sys.modules["hyxi_cloud_api"] = mock_api
 
 # Now import the modules to test
-import custom_components.hyxi_cloud.button as button_mod  # noqa: E402
-from custom_components.hyxi_cloud.const import DOMAIN  # noqa: E402
+import custom_components.hyxi_cloud.button as button_mod
+from custom_components.hyxi_cloud.const import DOMAIN
 
 
 @pytest.fixture

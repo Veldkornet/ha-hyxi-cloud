@@ -84,8 +84,8 @@ sys.modules["homeassistant.util"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
 # Standardize import style to resolve code scanning alert no. 50
-import custom_components.hyxi_cloud.const as const_mod  # noqa: E402
-import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
+import custom_components.hyxi_cloud.const as const_mod
+import custom_components.hyxi_cloud.sensor as sensor_mod
 
 try:
     importlib.reload(const_mod)

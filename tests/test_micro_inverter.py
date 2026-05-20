@@ -50,8 +50,8 @@ mock_restore.RestoreEntity = FakeRestoreEntity
 sys.modules["homeassistant.helpers.restore_state"] = mock_restore
 
 # Now import the modules
-import custom_components.hyxi_cloud.const as const_mod  # noqa: E402
-import custom_components.hyxi_cloud.sensor as sensor_mod  # noqa: E402
+import custom_components.hyxi_cloud.const as const_mod
+import custom_components.hyxi_cloud.sensor as sensor_mod
 
 # Wire up real const functions
 sensor_mod.normalize_device_type = const_mod.normalize_device_type

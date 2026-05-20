@@ -89,8 +89,8 @@ mock_api_module.__version__ = "1.0.4"
 ensure_mock("hyxi_cloud_api", mock_obj=mock_api_module)
 
 # Now import the modules
-import custom_components.hyxi_cloud.const as const_mod  # noqa: E402
-import custom_components.hyxi_cloud.number as number_mod  # noqa: E402
+import custom_components.hyxi_cloud.const as const_mod
+import custom_components.hyxi_cloud.number as number_mod
 
 # Wire up real const functions
 number_mod.normalize_device_type = const_mod.normalize_device_type

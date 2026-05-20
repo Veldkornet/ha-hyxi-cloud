@@ -66,7 +66,6 @@ sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
 sys.modules["homeassistant.util"] = mock_ha
 sys.modules["aiohttp"] = MagicMock()
 
-# ruff: noqa: E402
 from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 

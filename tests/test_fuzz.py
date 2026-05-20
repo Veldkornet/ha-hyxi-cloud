@@ -64,7 +64,7 @@ sys.modules["homeassistant.util"] = mock_ha
 
 # Now it's safe to import the sensor
 # pylint: disable-next=wrong-import-position
-from custom_components.hyxi_cloud.sensor import HyxiSensor  # noqa: E402
+from custom_components.hyxi_cloud.sensor import HyxiSensor
 
 # ==========================================
 # 2. THE FUZZ TEST
