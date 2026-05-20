@@ -926,6 +926,8 @@ def test_get_metric_float_method():
     sensor = HyxiSensor.__new__(HyxiSensor)  # pylint: disable=no-value-for-parameter
     sensor.coordinator = coordinator
     sensor._sn = "sn_123"
+    sensor._dev_data = coordinator.data.get("sn_123") or {}
+    sensor._metrics = sensor._dev_data.get("metrics") or {}
 
     assert sensor._get_metric_float("valid") == 5.5
     assert sensor._get_metric_float("int") == 10.0

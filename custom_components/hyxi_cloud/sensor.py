@@ -764,14 +764,15 @@ class HyxiSensor(HyxiBaseSensor):
         self.entity_description = description
         self._sn = sn
 
-        # Determine actual SN (e.g. Battery SN for battery sensors)
-        dev_data = coordinator.data.get(sn) or {}
+        # Cache dev_data and metrics to avoid repeated lookups
+        self._dev_data = coordinator.data.get(sn) or {}
+        self._metrics = self._dev_data.get("metrics") or {}
 
-        raw_code = get_raw_device_code(dev_data)
+        raw_code = get_raw_device_code(self._dev_data)
         self._device_type = normalize_device_type(raw_code)
 
-        metrics = dev_data.get("metrics") or {}
-        bat_sn = metrics.get("batSn")
+        # Determine actual SN (e.g. Battery SN for battery sensors)
+        bat_sn = self._metrics.get("batSn")
 
         if description.key in BATTERY_SENSORS and bat_sn:
             self._actual_sn = bat_sn
@@ -795,14 +796,16 @@ class HyxiSensor(HyxiBaseSensor):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        self._dev_data = self.coordinator.data.get(self._sn) or {}
+        self._metrics = self._dev_data.get("metrics") or {}
         self._update_native_value()
         super()._handle_coordinator_update()
 
     @property
     def device_info(self):
         """Return dynamic device information to ensure versions update in UI."""
-        dev_data = self.coordinator.data.get(self._sn) or {}
-        metrics = dev_data.get("metrics") or {}
+        dev_data = self._dev_data
+        metrics = self._metrics
         bat_sn = metrics.get("batSn")
 
         if self.entity_description.key in BATTERY_SENSORS and bat_sn:
@@ -866,9 +869,7 @@ class HyxiSensor(HyxiBaseSensor):
 
     def _get_metric_float(self, key: str) -> float | None:
         """Safely extract a metric value as a float."""
-        dev_data = self.coordinator.data.get(self._sn) or {}
-        metrics = dev_data.get("metrics") or {}
-        val = metrics.get(key)
+        val = self._metrics.get(key)
 
         if val is None or (isinstance(val, str) and val.strip().lower() in NULL_VALUES):
             return None
@@ -947,8 +948,8 @@ class HyxiSensor(HyxiBaseSensor):
 
     def _update_native_value(self):
         """Update the cached native value."""
-        dev_data = self.coordinator.data.get(self._sn) or {}
-        metrics = dev_data.get("metrics") or {}
+        dev_data = self._dev_data
+        metrics = self._metrics
         key = self.entity_description.key
         value = metrics.get(key)
 
