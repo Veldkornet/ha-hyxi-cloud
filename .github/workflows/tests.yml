@@ -45,5 +45,8 @@ jobs:
           pip install git+https://github.com/Veldkornet/hyxi-cloud-api.git
           pip install -r requirements_test.txt
 
-      - name: Run Pytest
-        run: pytest tests/ -v -p no:warnings
+      - name: Run Unit Tests
+        run: pytest tests/ --ignore=tests/integration -v -p no:warnings
+
+      - name: Run Integration Tests
+        run: HYXI_INTEGRATION_TEST="1" pytest tests/integration -v -p no:warnings
