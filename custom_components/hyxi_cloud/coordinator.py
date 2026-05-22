@@ -13,7 +13,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import HyxiApiClient
 
-from .const import CONF_BACK_DISCOVERY, DOMAIN, get_software_version, mask_sn
+from .const import (
+    CONF_BACK_DISCOVERY,
+    DOMAIN,
+    get_raw_device_code,
+    get_software_version,
+    mask_sn,
+    normalize_device_type,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,6 +90,19 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
             # ✅ Success! Update metadata attributes.
             devices = result["data"]
+
+            # Raise UpdateFailed if all non-collector devices return empty telemetry metrics.
+            non_collectors = [
+                dev_data
+                for dev_data in devices.values()
+                if normalize_device_type(get_raw_device_code(dev_data)) != "collector"
+            ]
+            if non_collectors and all(
+                not (set(dev_data.get("metrics") or {}) - {"last_seen"})
+                for dev_data in non_collectors
+            ):
+                raise UpdateFailed("HYXI telemetry data is currently unavailable.")
+
             self.hyxi_metadata["last_attempts"] = result.get("attempts", 1)
             self.hyxi_metadata["last_success"] = dt_util.utcnow()
             self.hyxi_metadata["api_status"] = "Online"
