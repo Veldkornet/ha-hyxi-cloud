@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Tartás"
+      },
+      "clear_alarms": {
+        "name": "Aktív riasztások törlése"
       }
     }
   }

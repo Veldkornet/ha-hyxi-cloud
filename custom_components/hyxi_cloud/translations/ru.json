@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Удержание"
+      },
+      "clear_alarms": {
+        "name": "Очистить активные аварии"
       }
     }
   }

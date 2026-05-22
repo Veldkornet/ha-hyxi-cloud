@@ -158,8 +158,11 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         self._active_alarms_count = sum(
             1
             for a in self._alarms
-            if a.get("alarmState") in active_states
-            or a.get("alarmstate") in active_states
+            if (
+                a.get("alarmState") in active_states
+                or a.get("alarmstate") in active_states
+            )
+            and not (a.get("endTime") or a.get("endtime"))
         )
 
     @property

@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Pidä"
+      },
+      "clear_alarms": {
+        "name": "Tyhjennä aktiiviset hälytykset"
       }
     }
   }
