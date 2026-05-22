@@ -143,7 +143,11 @@ class HyxiClearAlarmsButton(CoordinatorEntity, ButtonEntity):
                     try:
                         active_ids.append(int(alarm_id))
                     except ValueError, TypeError:
-                        pass
+                        _LOGGER.debug(
+                            "Skipping alarm with non-integer id %r for device %s",
+                            alarm_id,
+                            self._sn,
+                        )
 
         if not active_ids:
             _LOGGER.info("No active alarms to clear for device %s", self._sn)
@@ -309,7 +313,11 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
         try:
             return int(float(state.state))
         except ValueError, TypeError:
-            pass  # Ignore invalid state values
+            _LOGGER.debug(
+                "Power entity %s has non-numeric state %r, using 100W default",
+                entity_id,
+                state.state,
+            )
     _LOGGER.warning(
         "Power number entity %s not available, using 100W default", entity_id
     )
