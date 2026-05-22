@@ -8,7 +8,7 @@ CONF_SECRET_KEY = "secret_key"
 BASE_URL = "https://open.hyxicloud.com"
 
 MANUFACTURER = "HYXI Power"
-VERSION = "1.3.10"
+VERSION = "1.4.1"
 
 CONF_BACK_DISCOVERY = "back_discovery"
 
@@ -30,6 +30,11 @@ DEVICE_TYPE_KEYS = {
     "DMU": "collector",
     "COLLECTOR": "collector",
     "ALL_IN_ONE": "all_in_one",
+    "OPTIMIZER": "optimizer",
+    "METER": "meter",
+    "ENERGY_STORAGE_BATTERY": "battery",
+    "AC_BATTERY": "ac_battery",
+    "MICRO_STORAGE_ALL_IN_ONE": "micro_ess",
 }
 
 

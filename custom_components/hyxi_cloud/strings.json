@@ -256,6 +256,10 @@
           "micro_ess": "Micro ESS",
           "all_in_one": "All-in-One",
           "micro_inverter": "Microinverter",
+          "optimizer": "Optimizer",
+          "meter": "Meter",
+          "battery": "Battery",
+          "ac_battery": "AC Battery",
           "unknown": "Unknown"
         }
       },

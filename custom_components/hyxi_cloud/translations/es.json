@@ -251,7 +251,11 @@
           "collector": "Datalogger",
           "micro_ess": "Micro ESS",
           "unknown": "Desconocido",
-          "micro_inverter": "Microinversor"
+          "micro_inverter": "Microinversor",
+          "optimizer": "Optimizador",
+          "meter": "Medidor",
+          "battery": "Batería",
+          "ac_battery": "Batería de CA"
         }
       },
       "ratedpower": {

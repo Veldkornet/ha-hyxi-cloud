@@ -46,6 +46,11 @@ def test_normalize_device_type():
     assert normalize_device_type("EMS") == "micro_ess"
     assert normalize_device_type("COLLECTOR") == "collector"
     assert normalize_device_type("MICRO_INVERTER") == "micro_inverter"
+    assert normalize_device_type("OPTIMIZER") == "optimizer"
+    assert normalize_device_type("METER") == "meter"
+    assert normalize_device_type("ENERGY_STORAGE_BATTERY") == "battery"
+    assert normalize_device_type("AC_BATTERY") == "ac_battery"
+    assert normalize_device_type("MICRO_STORAGE_ALL_IN_ONE") == "micro_ess"
 
     # 6. Substring match (if API returned a name instead of code)
     assert normalize_device_type("SOME_COLLECTOR") == "collector"

@@ -251,7 +251,11 @@
           "collector": "Datameter",
           "micro_ess": "Micro ESS",
           "unknown": "Onbekend",
-          "micro_inverter": "Mikro-omsetter"
+          "micro_inverter": "Mikro-omsetter",
+          "optimizer": "Optimiseerder",
+          "meter": "Meter",
+          "battery": "Battery",
+          "ac_battery": "AC-battery"
         }
       },
       "ratedpower": {

@@ -47,6 +47,7 @@ INT_SENSOR_KEYS = {
 BATTERY_SENSORS = {
     "batSoc",
     "pbat",
+    "batP",
     "batSoh",
     "bat_charge_total",
     "bat_discharge_total",
@@ -422,6 +423,14 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="pbat",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:flash",
+    ),
+    SensorEntityDescription(
+        key="batP",
+        translation_key="pbat",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,

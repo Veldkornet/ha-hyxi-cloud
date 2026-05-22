@@ -251,7 +251,11 @@
           "collector": "Datalogger",
           "micro_ess": "Micro ESS",
           "unknown": "Neznámý",
-          "micro_inverter": "Mikroinvertor"
+          "micro_inverter": "Mikroinvertor",
+          "optimizer": "Optimalizátor",
+          "meter": "Elektroměr",
+          "battery": "Baterie",
+          "ac_battery": "AC baterie"
         }
       },
       "ratedpower": {

@@ -251,7 +251,11 @@
           "collector": "Veri Toplayıcı",
           "micro_ess": "Mikro ESS",
           "unknown": "Bilinmiyor",
-          "micro_inverter": "Mikro İnvertör"
+          "micro_inverter": "Mikro İnvertör",
+          "optimizer": "Optimizör",
+          "meter": "Sayaç",
+          "battery": "Batarya",
+          "ac_battery": "AC Batarya"
         }
       },
       "ratedpower": {

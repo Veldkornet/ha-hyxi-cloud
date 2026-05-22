@@ -984,6 +984,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
                 "batDisCharge": "12.3",  # float (battery)
                 "totalEchg": "1500.5",  # float (battery)
                 "totalEdchg": "1200.2",  # float (battery)
+                "batP": "150.7",  # float (battery)
                 "ratedFrequency": "50",  # integer (from queryDeviceInfo)
                 "batSn": "BAT_REAL_123",
             },
@@ -1037,6 +1038,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
         "batDisCharge",
         "totalEchg",
         "totalEdchg",
+        "batP",
         "ratedFrequency",
     ]
 
@@ -1055,6 +1057,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
     assert registered_by_key["pvNum"].native_value == 4
     assert registered_by_key["acSideTemper"].native_value == 45.2
     assert registered_by_key["dcSideTemper"].native_value == 50.1
+    assert registered_by_key["batP"].native_value == 150.7
 
     # Verify battery SN routing
     battery_keys = [
@@ -1068,6 +1071,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
         "batDisCharge",
         "totalEchg",
         "totalEdchg",
+        "batP",
     ]
     for key in battery_keys:
         sensor_entity = registered_by_key[key]

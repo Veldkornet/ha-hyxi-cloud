@@ -251,7 +251,11 @@
           "collector": "データロガー",
           "micro_ess": "マイクロESS",
           "unknown": "不明",
-          "micro_inverter": "マイクロインバーター"
+          "micro_inverter": "マイクロインバーター",
+          "optimizer": "オプティマイザ",
+          "meter": "電力量計",
+          "battery": "バッテリー",
+          "ac_battery": "ACバッテリー"
         }
       },
       "ratedpower": {

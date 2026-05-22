@@ -251,7 +251,11 @@
           "collector": "Datalogger",
           "micro_ess": "Micro ESS",
           "unknown": "Ukjent",
-          "micro_inverter": "Mikroinverter"
+          "micro_inverter": "Mikroinverter",
+          "optimizer": "Optimerer",
+          "meter": "Måler",
+          "battery": "Batteri",
+          "ac_battery": "AC-batteri"
         }
       },
       "ratedpower": {

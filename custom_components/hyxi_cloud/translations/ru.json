@@ -251,7 +251,11 @@
           "collector": "Datalogger",
           "micro_ess": "Micro ESS",
           "unknown": "Неизвестно",
-          "micro_inverter": "Микроинвертор"
+          "micro_inverter": "Микроинвертор",
+          "optimizer": "Оптимизатор",
+          "meter": "Счетчик",
+          "battery": "Батарея",
+          "ac_battery": "Батарея переменного тока"
         }
       },
       "ratedpower": {

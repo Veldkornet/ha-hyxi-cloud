@@ -251,7 +251,11 @@
           "collector": "数据采集器",
           "micro_ess": "微型储能",
           "unknown": "未知",
-          "micro_inverter": "微型逆变器"
+          "micro_inverter": "微型逆变器",
+          "optimizer": "优化器",
+          "meter": "电表",
+          "battery": "电池",
+          "ac_battery": "交流电池"
         }
       },
       "ratedpower": {

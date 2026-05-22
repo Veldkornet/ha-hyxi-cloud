@@ -251,7 +251,11 @@
           "collector": "Collecteur de données",
           "micro_ess": "Système de stockage d'énergie micro (Micro ESS)",
           "unknown": "Inconnu",
-          "micro_inverter": "Micro-onduleur"
+          "micro_inverter": "Micro-onduleur",
+          "optimizer": "Optimiseur",
+          "meter": "Compteur",
+          "battery": "Batterie",
+          "ac_battery": "Batterie CA"
         }
       },
       "ratedpower": {

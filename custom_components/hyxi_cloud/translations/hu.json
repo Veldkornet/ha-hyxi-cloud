@@ -251,7 +251,11 @@
           "collector": "Adatgyűjtő",
           "micro_ess": "Micro ESS",
           "unknown": "Ismeretlen",
-          "micro_inverter": "Mikroinverter"
+          "micro_inverter": "Mikroinverter",
+          "optimizer": "Optimalizáló",
+          "meter": "Mérő",
+          "battery": "Akkumulátor",
+          "ac_battery": "AC akkumulátor"
         }
       },
       "ratedpower": {

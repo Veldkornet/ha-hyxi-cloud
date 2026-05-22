@@ -251,7 +251,11 @@
           "collector": "Datalogger",
           "micro_ess": "Micro-Energiespeichersystem (Micro ESS)",
           "unknown": "Unbekannt",
-          "micro_inverter": "Mikrowechselrichter"
+          "micro_inverter": "Mikrowechselrichter",
+          "optimizer": "Optimierer",
+          "meter": "Zähler",
+          "battery": "Batterie",
+          "ac_battery": "AC-Batterie"
         }
       },
       "ratedpower": {

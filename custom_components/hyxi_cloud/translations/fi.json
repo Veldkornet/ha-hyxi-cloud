@@ -251,7 +251,11 @@
           "collector": "Datalogger",
           "micro_ess": "Micro ESS",
           "unknown": "Tuntematon",
-          "micro_inverter": "Mikroinvertteri"
+          "micro_inverter": "Mikroinvertteri",
+          "optimizer": "Optimoija",
+          "meter": "Mittari",
+          "battery": "Akku",
+          "ac_battery": "AC-akku"
         }
       },
       "ratedpower": {

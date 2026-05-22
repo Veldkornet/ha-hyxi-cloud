@@ -251,7 +251,11 @@
           "collector": "Datalogger",
           "micro_ess": "Micro-energieopslagsysteem (Micro ESS)",
           "unknown": "Onbekend",
-          "micro_inverter": "Micro-omvormer"
+          "micro_inverter": "Micro-omvormer",
+          "optimizer": "Optimalisator",
+          "meter": "Meter",
+          "battery": "Batterij",
+          "ac_battery": "AC-batterij"
         }
       },
       "ratedpower": {
