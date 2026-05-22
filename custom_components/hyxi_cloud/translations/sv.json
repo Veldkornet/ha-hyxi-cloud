@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Håll"
+      },
+      "clear_alarms": {
+        "name": "Rensa aktiva larm"
       }
     }
   }

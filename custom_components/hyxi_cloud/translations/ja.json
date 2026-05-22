@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "保持"
+      },
+      "clear_alarms": {
+        "name": "アクティブなアラームをクリア"
       }
     }
   }

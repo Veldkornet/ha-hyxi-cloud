@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Držet"
+      },
+      "clear_alarms": {
+        "name": "Vymazat aktivní alarmy"
       }
     }
   }

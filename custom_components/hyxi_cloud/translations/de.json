@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Halten"
+      },
+      "clear_alarms": {
+        "name": "Aktive Alarme löschen"
       }
     }
   }

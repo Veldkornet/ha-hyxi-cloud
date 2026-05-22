@@ -17,6 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from hyxi_cloud_api import HyxiApiClient
 
+from .binary_sensor import ACTIVE_ALARM_STATES
 from .const import (
     DOMAIN,
     MANUFACTURER,
@@ -56,6 +57,9 @@ async def async_setup_entry(
     entities: list[ButtonEntity] = []
 
     for sn, dev_data in coordinator.data.items():
+        # Clear Active Alarms button is available for every device SN
+        entities.append(HyxiClearAlarmsButton(coordinator, sn, dev_data))
+
         device_type = normalize_device_type(get_raw_device_code(dev_data))
 
         # Microinverter: Restart button (controlId 3013)
@@ -97,6 +101,63 @@ async def async_setup_entry(
 
     if entities:
         async_add_entities(entities)
+
+
+class HyxiClearAlarmsButton(CoordinatorEntity, ButtonEntity):
+    """Button to clear active alarms for a device."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "clear_alarms"
+    _attr_icon = "mdi:bell-check-outline"
+
+    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+        """Initialize the clear alarms button."""
+        super().__init__(coordinator)
+        self._sn = sn
+        self._attr_unique_id = f"hyxi_{sn}_clear_alarms"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": sn,
+        }
+
+    async def async_press(self) -> None:
+        """Press the button to clear active alarms."""
+        client = self.coordinator.client
+        alarms = (self.coordinator.data.get(self._sn) or {}).get("alarms") or []
+
+        active_ids = []
+        for alarm in alarms:
+            alarm_state = alarm.get("alarmState")
+            if alarm_state is None:
+                alarm_state = alarm.get("alarmstate")
+            if alarm_state in ACTIVE_ALARM_STATES:
+                if alarm.get("endTime") or alarm.get("endtime"):
+                    continue
+                alarm_id = (
+                    alarm.get("id") or alarm.get("alarmId") or alarm.get("alarmid")
+                )
+                if alarm_id is not None:
+                    try:
+                        active_ids.append(int(alarm_id))
+                    except ValueError, TypeError:
+                        pass
+
+        if not active_ids:
+            _LOGGER.info("No active alarms to clear for device %s", self._sn)
+            return
+
+        try:
+            await client.alter_alarm(active_ids)
+            _LOGGER.info("Cleared active alarms %s for device %s", active_ids, self._sn)
+            await self.coordinator.async_request_refresh()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.error(
+                "Failed to clear active alarms for device %s: %s", self._sn, err
+            )
+            raise
 
 
 class HyxiMicroRestartButton(CoordinatorEntity, ButtonEntity):

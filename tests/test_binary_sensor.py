@@ -144,12 +144,14 @@ def test_device_alarm_sensor(mock_coordinator, mock_entry):
     mock_coordinator.data["SN123"]["alarms"] = [
         {"alarmState": "1"},
         {"alarmState": 0},
+        {"alarmState": 2, "endTime": 1779374715000},  # resolved alarm, should not count
+        {"alarmState": 1, "endtime": 0},  # active alarm (endtime=0)
     ]
 
     sensor = bs_mod.HyxiDeviceAlarmSensor(mock_coordinator, mock_entry, "SN123")
 
     assert sensor.is_on is True
-    assert sensor.extra_state_attributes["active_alarms_count"] == 2
+    assert sensor.extra_state_attributes["active_alarms_count"] == 3
 
     # Test update via coordinator handle
     mock_coordinator.data["SN123"]["alarms"] = []

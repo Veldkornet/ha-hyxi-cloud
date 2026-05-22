@@ -74,6 +74,7 @@ def mock_coordinator_fixture():
     coord.client.set_mode_discharge = AsyncMock()
     coord.client.set_mode_self_consume = AsyncMock()
     coord.client.set_peak_shaving = AsyncMock()
+    coord.client.alter_alarm = AsyncMock()
     coord.async_request_refresh = AsyncMock()
     return coord
 
@@ -113,9 +114,15 @@ async def test_async_setup_entry_micro_inverter(
 
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
-    assert len(entities) == 1
-    assert isinstance(entities[0], button_mod.HyxiMicroRestartButton)
-    assert entities[0]._sn == "SN_MICRO"
+    assert len(entities) == 2
+    assert any(isinstance(e, button_mod.HyxiClearAlarmsButton) for e in entities)
+    assert any(isinstance(e, button_mod.HyxiMicroRestartButton) for e in entities)
+    assert (
+        next(
+            e for e in entities if isinstance(e, button_mod.HyxiMicroRestartButton)
+        )._sn
+        == "SN_MICRO"
+    )
 
 
 @pytest.mark.asyncio
@@ -149,10 +156,11 @@ async def test_async_setup_entry_three_phase(
 
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
-    assert len(entities) == 4
-    for entity in entities:
-        assert isinstance(entity, button_mod.HyxiModeButton)
-    modes = [e._mode for e in entities]
+    assert len(entities) == 5
+    assert any(isinstance(e, button_mod.HyxiClearAlarmsButton) for e in entities)
+    mode_entities = [e for e in entities if isinstance(e, button_mod.HyxiModeButton)]
+    assert len(mode_entities) == 4
+    modes = [e._mode for e in mode_entities]
     assert sorted(modes) == ["charge", "discharge", "idle", "self_consume"]
 
 
@@ -187,10 +195,13 @@ async def test_async_setup_entry_single_phase(
 
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
-    assert len(entities) == 5
-    for entity in entities:
-        assert isinstance(entity, button_mod.HyxiPeakShavingButton)
-    options = [e._option for e in entities]
+    assert len(entities) == 6
+    assert any(isinstance(e, button_mod.HyxiClearAlarmsButton) for e in entities)
+    shaving_entities = [
+        e for e in entities if isinstance(e, button_mod.HyxiPeakShavingButton)
+    ]
+    assert len(shaving_entities) == 5
+    options = [e._option for e in shaving_entities]
     assert sorted(options) == ["charge", "close", "discharge", "hold", "stop"]
 
 
@@ -223,7 +234,11 @@ async def test_async_setup_entry_unknown_phase(
     ):
         await button_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
 
-    async_add_entities.assert_not_called()
+    # For unknown phase, the mode buttons are skipped, but the clear alarms button is still added
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+    assert len(entities) == 1
+    assert isinstance(entities[0], button_mod.HyxiClearAlarmsButton)
 
 
 @pytest.mark.asyncio
@@ -395,3 +410,78 @@ def test_get_power_value_invalid_state():
         # Test None state (entity missing from state machine)
         hass.states.get.return_value = None
         assert button_mod._get_power_value(hass, "SN123", "charge") == 100
+
+
+@pytest.mark.asyncio
+async def test_clear_alarms_button_press(mock_coordinator_fixture):
+    """Test pressing the clear alarms button with active alarms."""
+    # Mock some alarms in data
+    mock_coordinator_fixture.data = {
+        "SN123": {
+            "alarms": [
+                {"id": 44733168, "alarmState": 2, "alarmName": "Grid failure"},
+                {"alarmId": 44733169, "alarmstate": 1, "alarmName": "Battery failure"},
+                {
+                    "id": 44733170,
+                    "alarmState": 3,
+                    "alarmName": "Recovered/Acknowledged",
+                },  # not active
+                {"id": 44733171, "alarmState": "0", "alarmName": "Active String"},
+                {
+                    "id": 44733172,
+                    "alarmState": 2,
+                    "alarmName": "Grid failure resolved",
+                    "endTime": 1779374715000,
+                },  # resolved (has endTime), should not be cleared
+            ]
+        }
+    }
+    btn = button_mod.HyxiClearAlarmsButton(mock_coordinator_fixture, "SN123", {})
+
+    await btn.async_press()
+
+    mock_coordinator_fixture.client.alter_alarm.assert_called_once_with(
+        [44733168, 44733169, 44733171]
+    )
+    mock_coordinator_fixture.async_request_refresh.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_clear_alarms_button_press_no_alarms(mock_coordinator_fixture):
+    """Test pressing clear alarms button with no active alarms."""
+    mock_coordinator_fixture.data = {
+        "SN123": {
+            "alarms": [
+                {
+                    "id": 44733170,
+                    "alarmState": 3,
+                    "alarmName": "Recovered/Acknowledged",
+                },
+            ]
+        }
+    }
+    btn = button_mod.HyxiClearAlarmsButton(mock_coordinator_fixture, "SN123", {})
+
+    await btn.async_press()
+
+    mock_coordinator_fixture.client.alter_alarm.assert_not_called()
+    mock_coordinator_fixture.async_request_refresh.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_clear_alarms_button_error(mock_coordinator_fixture):
+    """Test error handling in clear alarms button press."""
+    mock_coordinator_fixture.data = {
+        "SN123": {
+            "alarms": [
+                {"id": 44733168, "alarmState": 2, "alarmName": "Grid failure"},
+            ]
+        }
+    }
+    mock_coordinator_fixture.client.alter_alarm.side_effect = (
+        button_mod.HyxiApiClient.ControlError("API Failure")
+    )
+    btn = button_mod.HyxiClearAlarmsButton(mock_coordinator_fixture, "SN123", {})
+
+    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+        await btn.async_press()

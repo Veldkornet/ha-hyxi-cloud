@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Hou"
+      },
+      "clear_alarms": {
+        "name": "Maak aktiewe alarms skoon"
       }
     }
   }

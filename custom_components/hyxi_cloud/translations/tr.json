@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Tut"
+      },
+      "clear_alarms": {
+        "name": "Aktif alarmları temizle"
       }
     }
   }

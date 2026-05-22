@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Vasthouden"
+      },
+      "clear_alarms": {
+        "name": "Actieve alarmen wissen"
       }
     }
   }

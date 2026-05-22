@@ -456,6 +456,9 @@
       },
       "peak_shaving_hold": {
         "name": "Manter"
+      },
+      "clear_alarms": {
+        "name": "Limpar alarmes ativos"
       }
     }
   }
