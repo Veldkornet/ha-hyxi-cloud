@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Hibaállapot",
         "state": {
-          "0": "Normál",
-          "1": "Hiba"
+          "0": "Hiba",
+          "1": "Nincs hiba"
         }
       },
       "gridsts": {
         "name": "Hálózati állapot",
         "state": {
-          "0": "Normál",
-          "1": "Abnormális"
+          "0": "Hálózaton kívüli",
+          "1": "Hálózaton belüli"
         }
       },
       "devicegridconn": {

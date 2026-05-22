@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Hata Durumu",
         "state": {
-          "0": "Normal",
-          "1": "Hata"
+          "0": "Hata",
+          "1": "Hata yok"
         }
       },
       "gridsts": {
         "name": "Şebeke Durumu",
         "state": {
-          "0": "Normal",
-          "1": "Anormal"
+          "0": "Şebeke Dışı",
+          "1": "Şebeke İçi"
         }
       },
       "devicegridconn": {

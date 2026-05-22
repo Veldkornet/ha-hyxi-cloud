@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Stato guasto",
         "state": {
-          "0": "Normale",
-          "1": "Guasto"
+          "0": "Guasto",
+          "1": "Nessun guasto"
         }
       },
       "gridsts": {
         "name": "Stato rete",
         "state": {
-          "0": "Normale",
-          "1": "Anormale"
+          "0": "Fuori rete",
+          "1": "In rete"
         }
       },
       "devicegridconn": {

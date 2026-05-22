@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Foutstatus",
         "state": {
-          "0": "Normaal",
-          "1": "Fout"
+          "0": "Fout",
+          "1": "Geen Fout"
         }
       },
       "gridsts": {
         "name": "Netstatus",
         "state": {
-          "0": "Normaal",
-          "1": "Abnormaal"
+          "0": "Af-Net",
+          "1": "Op-Net"
         }
       },
       "devicegridconn": {

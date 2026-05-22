@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Statut de défaut",
         "state": {
-          "0": "Normal",
-          "1": "Défaut"
+          "0": "Défaut",
+          "1": "Sans défaut"
         }
       },
       "gridsts": {
         "name": "Statut du réseau",
         "state": {
-          "0": "Normal",
-          "1": "Anormal"
+          "0": "Hors réseau",
+          "1": "Sur réseau"
         }
       },
       "devicegridconn": {
