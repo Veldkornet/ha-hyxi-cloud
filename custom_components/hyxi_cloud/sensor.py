@@ -1195,7 +1195,14 @@ class HyxiSensor(HyxiBaseSensor):
             ):
                 value = metrics.get("efpv")
 
-        self._attr_native_value = self._parser_func(dev_data, value)
+        parsed_val = self._parser_func(dev_data, value)
+        if (
+            parsed_val is not None
+            and self.entity_description.device_class == SensorDeviceClass.ENUM
+        ):
+            self._attr_native_value = str(parsed_val)
+        else:
+            self._attr_native_value = parsed_val
 
 
 class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):

@@ -1044,11 +1044,11 @@ async def test_new_telemetry_keys_registration_and_parsing():
         assert key in registered_keys, f"{key} was not registered as a sensor"
 
     # Verify enum and integer casting of metrics
-    assert registered_by_key["invSts"].native_value == 2
-    assert registered_by_key["faultSts"].native_value == 1
-    assert registered_by_key["gridSts"].native_value == 0
-    assert registered_by_key["deviceGridConn"].native_value == 1
-    assert registered_by_key["deviceSwitchStatus"].native_value == 0
+    assert registered_by_key["invSts"].native_value == "2"
+    assert registered_by_key["faultSts"].native_value == "1"
+    assert registered_by_key["gridSts"].native_value == "0"
+    assert registered_by_key["deviceGridConn"].native_value == "1"
+    assert registered_by_key["deviceSwitchStatus"].native_value == "0"
     assert registered_by_key["ratedFrequency"].native_value == 50
 
     assert registered_by_key["pvPower"].native_value == 1200.5
