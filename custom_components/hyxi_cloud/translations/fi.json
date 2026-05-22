@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Vikatila",
         "state": {
-          "0": "Normaali",
-          "1": "Vika"
+          "0": "Vika",
+          "1": "Ei vikaa"
         }
       },
       "gridsts": {
         "name": "Verkon tila",
         "state": {
-          "0": "Normaali",
-          "1": "Epänormaali"
+          "0": "Off-Grid",
+          "1": "On-Grid"
         }
       },
       "devicegridconn": {

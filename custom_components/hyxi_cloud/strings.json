@@ -308,15 +308,15 @@
       "faultsts": {
         "name": "Fault Status",
         "state": {
-          "0": "Normal",
-          "1": "Fault"
+          "0": "Fault",
+          "1": "No Fault"
         }
       },
       "gridsts": {
         "name": "Grid Status",
         "state": {
-          "0": "Normal",
-          "1": "Abnormal"
+          "0": "Off-Grid",
+          "1": "On-Grid"
         }
       },
       "devicegridconn": {

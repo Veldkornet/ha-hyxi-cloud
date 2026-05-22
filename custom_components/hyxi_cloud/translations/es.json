@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Estado de fallo",
         "state": {
-          "0": "Normal",
-          "1": "Fallo"
+          "0": "Fallo",
+          "1": "Sin fallo"
         }
       },
       "gridsts": {
         "name": "Estado de la red",
         "state": {
-          "0": "Normal",
-          "1": "Anormal"
+          "0": "Fuera de red",
+          "1": "En red"
         }
       },
       "devicegridconn": {

@@ -306,15 +306,15 @@
       "faultsts": {
         "name": "Stav poruchy",
         "state": {
-          "0": "Normální",
-          "1": "Porucha"
+          "0": "Porucha",
+          "1": "Bez poruchy"
         }
       },
       "gridsts": {
         "name": "Stav sítě",
         "state": {
-          "0": "Normální",
-          "1": "Abnormální"
+          "0": "Mimo síť",
+          "1": "Na síti"
         }
       },
       "devicegridconn": {
