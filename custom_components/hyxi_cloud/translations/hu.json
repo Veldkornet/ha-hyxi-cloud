@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Belső hőmérséklet"
+      },
+      "invsts": {
+        "name": "Inverter állapota",
+        "state": {
+          "0": "Készenlét",
+          "1": "Normál",
+          "2": "Riasztás",
+          "3": "Hiba",
+          "4": "Leállítás"
+        }
+      },
+      "faultsts": {
+        "name": "Hibaállapot",
+        "state": {
+          "0": "Normál",
+          "1": "Hiba"
+        }
+      },
+      "gridsts": {
+        "name": "Hálózati állapot",
+        "state": {
+          "0": "Normál",
+          "1": "Abnormális"
+        }
+      },
+      "devicegridconn": {
+        "name": "Hálózati csatlakozási állapot",
+        "state": {
+          "0": "Hálózaton kívüli",
+          "1": "Hálózaton belüli"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Kapcsoló állapota",
+        "state": {
+          "0": "Leállítás",
+          "1": "Bekapcsolás"
+        }
+      },
+      "pvpower": {
+        "name": "PV teljesítmény"
+      },
+      "pvnum": {
+        "name": "PV darabszám"
+      },
+      "acsidetemper": {
+        "name": "AC oldali hőmérséklet"
+      },
+      "dcsidetemper": {
+        "name": "DC oldali hőmérséklet"
+      },
+      "gridf": {
+        "name": "Hálózati frekvencia"
+      },
+      "gridp": {
+        "name": "Hálózati teljesítmény"
+      },
+      "gridq": {
+        "name": "Hálózati reaktív teljesítmény"
+      },
+      "gridpfd": {
+        "name": "Hálózati teljesítménytényező"
+      },
+      "gridap": {
+        "name": "Hálózati látszólagos teljesítmény"
+      },
+      "offgridf": {
+        "name": "Hálózaton kívüli frekvencia"
+      },
+      "offgridp": {
+        "name": "Hálózaton kívüli teljesítmény"
+      },
+      "offgridq": {
+        "name": "Hálózaton kívüli reaktív teljesítmény"
+      },
+      "offgridpfd": {
+        "name": "Hálózaton kívüli teljesítménytényező"
+      },
+      "offgridap": {
+        "name": "Hálózaton kívüli látszólagos teljesítmény"
+      },
+      "batvch": {
+        "name": "Max. cellafeszültség"
+      },
+      "batvcl": {
+        "name": "Min. cellafeszültség"
+      },
+      "battch": {
+        "name": "Max. cellahőmérséklet"
+      },
+      "battcl": {
+        "name": "Min. cellahőmérséklet"
+      },
+      "baticm": {
+        "name": "Max. töltőáram"
+      },
+      "batidm": {
+        "name": "Max. kisütési áram"
+      },
+      "batcharge": {
+        "name": "Napi töltési energia"
+      },
+      "batdischarge": {
+        "name": "Napi kisütési energia"
+      },
+      "totalechg": {
+        "name": "Teljes töltési energia"
+      },
+      "totaledchg": {
+        "name": "Teljes kisütési energia"
       }
     },
     "number": {

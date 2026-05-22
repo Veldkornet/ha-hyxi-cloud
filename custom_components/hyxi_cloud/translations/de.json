@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Innentemperatur"
+      },
+      "invsts": {
+        "name": "Wechselrichter-Status",
+        "state": {
+          "0": "Standby",
+          "1": "Normal",
+          "2": "Alarm",
+          "3": "Fehler",
+          "4": "Abschaltung"
+        }
+      },
+      "faultsts": {
+        "name": "Fehlerstatus",
+        "state": {
+          "0": "Normal",
+          "1": "Fehler"
+        }
+      },
+      "gridsts": {
+        "name": "Netzstatus",
+        "state": {
+          "0": "Normal",
+          "1": "Abnormal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Netzanschluss-Status",
+        "state": {
+          "0": "Off-Grid",
+          "1": "On-Grid"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Schalterstatus",
+        "state": {
+          "0": "Herunterfahren",
+          "1": "Einschalten"
+        }
+      },
+      "pvpower": {
+        "name": "PV-Gesamtleistung"
+      },
+      "pvnum": {
+        "name": "PV-Anzahl"
+      },
+      "acsidetemper": {
+        "name": "AC-Seitentemperatur"
+      },
+      "dcsidetemper": {
+        "name": "DC-Seitentemperatur"
+      },
+      "gridf": {
+        "name": "Netzfrequenz"
+      },
+      "gridp": {
+        "name": "Netzleistung"
+      },
+      "gridq": {
+        "name": "Netz-Blindleistung"
+      },
+      "gridpfd": {
+        "name": "Netz-Leistungsfaktor"
+      },
+      "gridap": {
+        "name": "Netz-Scheinleistung"
+      },
+      "offgridf": {
+        "name": "Off-Grid-Frequenz"
+      },
+      "offgridp": {
+        "name": "Off-Grid-Leistung"
+      },
+      "offgridq": {
+        "name": "Off-Grid-Blindleistung"
+      },
+      "offgridpfd": {
+        "name": "Off-Grid-Leistungsfaktor"
+      },
+      "offgridap": {
+        "name": "Off-Grid-Scheinleistung"
+      },
+      "batvch": {
+        "name": "Max. Zellenspannung"
+      },
+      "batvcl": {
+        "name": "Min. Zellenspannung"
+      },
+      "battch": {
+        "name": "Max. Zelltemperatur"
+      },
+      "battcl": {
+        "name": "Min. Zelltemperatur"
+      },
+      "baticm": {
+        "name": "Max. Ladestrom"
+      },
+      "batidm": {
+        "name": "Max. Entladestrom"
+      },
+      "batcharge": {
+        "name": "Tägliche Ladeenergie"
+      },
+      "batdischarge": {
+        "name": "Tägliche Entladeenergie"
+      },
+      "totalechg": {
+        "name": "Gesamte Ladeenergie"
+      },
+      "totaledchg": {
+        "name": "Gesamte Entladeenergie"
       }
     },
     "number": {

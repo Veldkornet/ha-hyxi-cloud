@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Intern temperatur"
+      },
+      "invsts": {
+        "name": "Inverterstatus",
+        "state": {
+          "0": "Standby",
+          "1": "Normal",
+          "2": "Alarm",
+          "3": "Fejl",
+          "4": "Nedlukning"
+        }
+      },
+      "faultsts": {
+        "name": "Fejlstatus",
+        "state": {
+          "0": "Normal",
+          "1": "Fejl"
+        }
+      },
+      "gridsts": {
+        "name": "Netstatus",
+        "state": {
+          "0": "Normal",
+          "1": "Abnormal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Nettilslutningsstatus",
+        "state": {
+          "0": "Off-Grid",
+          "1": "On-Grid"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Afbryderstatus",
+        "state": {
+          "0": "Luk ned",
+          "1": "Tændt"
+        }
+      },
+      "pvpower": {
+        "name": "Total PV-effekt"
+      },
+      "pvnum": {
+        "name": "PV-antal"
+      },
+      "acsidetemper": {
+        "name": "AC-sidetemperatur"
+      },
+      "dcsidetemper": {
+        "name": "DC-sidetemperatur"
+      },
+      "gridf": {
+        "name": "Netfrekvens"
+      },
+      "gridp": {
+        "name": "Neteffekt"
+      },
+      "gridq": {
+        "name": "Net reaktiv effekt"
+      },
+      "gridpfd": {
+        "name": "Net effektfaktor"
+      },
+      "gridap": {
+        "name": "Net tilsyneladende effekt"
+      },
+      "offgridf": {
+        "name": "Off-grid-frekvens"
+      },
+      "offgridp": {
+        "name": "Off-grid-effekt"
+      },
+      "offgridq": {
+        "name": "Off-grid reaktiv effekt"
+      },
+      "offgridpfd": {
+        "name": "Off-grid effektfaktor"
+      },
+      "offgridap": {
+        "name": "Off-grid tilsyneladende effekt"
+      },
+      "batvch": {
+        "name": "Maks cellespænding"
+      },
+      "batvcl": {
+        "name": "Min cellespænding"
+      },
+      "battch": {
+        "name": "Maks celletemperatur"
+      },
+      "battcl": {
+        "name": "Min celletemperatur"
+      },
+      "baticm": {
+        "name": "Maks ladestrøm"
+      },
+      "batidm": {
+        "name": "Maks afladningsstrøm"
+      },
+      "batcharge": {
+        "name": "Daglig opladningsenergi"
+      },
+      "batdischarge": {
+        "name": "Daglig afladningsenergi"
+      },
+      "totalechg": {
+        "name": "Total opladningsenergi"
+      },
+      "totaledchg": {
+        "name": "Total afladningsenergi"
       }
     },
     "number": {

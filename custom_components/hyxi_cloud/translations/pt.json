@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Temperatura Interna"
+      },
+      "invsts": {
+        "name": "Estado do inversor",
+        "state": {
+          "0": "Espera",
+          "1": "Normal",
+          "2": "Alarme",
+          "3": "Falha",
+          "4": "Desligamento"
+        }
+      },
+      "faultsts": {
+        "name": "Estado de falha",
+        "state": {
+          "0": "Normal",
+          "1": "Falha"
+        }
+      },
+      "gridsts": {
+        "name": "Estado da rede",
+        "state": {
+          "0": "Normal",
+          "1": "Anormal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Estado de ligação à rede",
+        "state": {
+          "0": "Fora da rede",
+          "1": "Na rede"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Estado do interruptor",
+        "state": {
+          "0": "Desligado",
+          "1": "Ligado"
+        }
+      },
+      "pvpower": {
+        "name": "Potência PV total"
+      },
+      "pvnum": {
+        "name": "Quantidade de PV"
+      },
+      "acsidetemper": {
+        "name": "Temperatura do lado AC"
+      },
+      "dcsidetemper": {
+        "name": "Temperatura do lado DC"
+      },
+      "gridf": {
+        "name": "Frequência da rede"
+      },
+      "gridp": {
+        "name": "Potência da rede"
+      },
+      "gridq": {
+        "name": "Potência reativa da rede"
+      },
+      "gridpfd": {
+        "name": "Fator de potência da rede"
+      },
+      "gridap": {
+        "name": "Potência aparente da rede"
+      },
+      "offgridf": {
+        "name": "Frequência fora da rede"
+      },
+      "offgridp": {
+        "name": "Potência fora da rede"
+      },
+      "offgridq": {
+        "name": "Potência reativa fora da rede"
+      },
+      "offgridpfd": {
+        "name": "Fator de potência fora da rede"
+      },
+      "offgridap": {
+        "name": "Potência aparente fora da rede"
+      },
+      "batvch": {
+        "name": "Tensão máxima da célula"
+      },
+      "batvcl": {
+        "name": "Tensão mínima da célula"
+      },
+      "battch": {
+        "name": "Temperatura máxima da célula"
+      },
+      "battcl": {
+        "name": "Temperatura mínima da célula"
+      },
+      "baticm": {
+        "name": "Corrente máxima de carga"
+      },
+      "batidm": {
+        "name": "Corrente máxima de descarga"
+      },
+      "batcharge": {
+        "name": "Energia diária de carga"
+      },
+      "batdischarge": {
+        "name": "Energia diária de descarga"
+      },
+      "totalechg": {
+        "name": "Energia total de carga"
+      },
+      "totaledchg": {
+        "name": "Energia total de descarga"
       }
     },
     "number": {

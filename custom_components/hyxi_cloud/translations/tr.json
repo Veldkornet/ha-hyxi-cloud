@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "İç Sıcaklık"
+      },
+      "invsts": {
+        "name": "İnverter Durumu",
+        "state": {
+          "0": "Bekleme",
+          "1": "Normal",
+          "2": "Alarm",
+          "3": "Hata",
+          "4": "Kapatma"
+        }
+      },
+      "faultsts": {
+        "name": "Hata Durumu",
+        "state": {
+          "0": "Normal",
+          "1": "Hata"
+        }
+      },
+      "gridsts": {
+        "name": "Şebeke Durumu",
+        "state": {
+          "0": "Normal",
+          "1": "Anormal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Şebeke Bağlantı Durumu",
+        "state": {
+          "0": "Şebeke Dışı",
+          "1": "Şebeke İçi"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Anahtar Durumu",
+        "state": {
+          "0": "Kapatma",
+          "1": "Açma"
+        }
+      },
+      "pvpower": {
+        "name": "Toplam PV Gücü"
+      },
+      "pvnum": {
+        "name": "PV Miktarı"
+      },
+      "acsidetemper": {
+        "name": "AC Tarafı Sıcaklığı"
+      },
+      "dcsidetemper": {
+        "name": "DC Tarafı Sıcaklığı"
+      },
+      "gridf": {
+        "name": "Şebeke Frekansı"
+      },
+      "gridp": {
+        "name": "Şebeke Gücü"
+      },
+      "gridq": {
+        "name": "Şebeke Reaktif Gücü"
+      },
+      "gridpfd": {
+        "name": "Şebeke Güç Faktörü"
+      },
+      "gridap": {
+        "name": "Şebeke Görünür Gücü"
+      },
+      "offgridf": {
+        "name": "Şebeke Dışı Frekans"
+      },
+      "offgridp": {
+        "name": "Şebeke Dışı Güç"
+      },
+      "offgridq": {
+        "name": "Şebeke Dışı Reaktif Güç"
+      },
+      "offgridpfd": {
+        "name": "Şebeke Dışı Güç Faktörü"
+      },
+      "offgridap": {
+        "name": "Şebeke Dışı Görünür Güç"
+      },
+      "batvch": {
+        "name": "Maks Hücre Voltajı"
+      },
+      "batvcl": {
+        "name": "Min Hücre Voltajı"
+      },
+      "battch": {
+        "name": "Maks Hücre Sıcaklığı"
+      },
+      "battcl": {
+        "name": "Min Hücre Sıcaklığı"
+      },
+      "baticm": {
+        "name": "Maks Şarj Akımı"
+      },
+      "batidm": {
+        "name": "Maks Deşarj Akımı"
+      },
+      "batcharge": {
+        "name": "Günlük Şarj Enerjisi"
+      },
+      "batdischarge": {
+        "name": "Günlük Deşarj Enerjisi"
+      },
+      "totalechg": {
+        "name": "Toplam Şarj Enerjisi"
+      },
+      "totaledchg": {
+        "name": "Toplam Deşarj Enerjisi"
       }
     },
     "number": {

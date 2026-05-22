@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Intern temperatur"
+      },
+      "invsts": {
+        "name": "Växelriktarstatus",
+        "state": {
+          "0": "Standby",
+          "1": "Normal",
+          "2": "Larm",
+          "3": "Fel",
+          "4": "Stäng av"
+        }
+      },
+      "faultsts": {
+        "name": "Felstatus",
+        "state": {
+          "0": "Normal",
+          "1": "Fel"
+        }
+      },
+      "gridsts": {
+        "name": "Nätstatus",
+        "state": {
+          "0": "Normal",
+          "1": "Abnormal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Nätanslutningsstatus",
+        "state": {
+          "0": "Off-Grid",
+          "1": "On-Grid"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Brytarstatus",
+        "state": {
+          "0": "Stängd av",
+          "1": "Ström på"
+        }
+      },
+      "pvpower": {
+        "name": "Total PV-effekt"
+      },
+      "pvnum": {
+        "name": "PV-antal"
+      },
+      "acsidetemper": {
+        "name": "AC-sidotemperatur"
+      },
+      "dcsidetemper": {
+        "name": "DC-sidotemperatur"
+      },
+      "gridf": {
+        "name": "Nätfrekvens"
+      },
+      "gridp": {
+        "name": "Näteffekt"
+      },
+      "gridq": {
+        "name": "Nät reaktiv effekt"
+      },
+      "gridpfd": {
+        "name": "Nät effektfaktor"
+      },
+      "gridap": {
+        "name": "Nät skenbar effekt"
+      },
+      "offgridf": {
+        "name": "Off-grid-frekvens"
+      },
+      "offgridp": {
+        "name": "Off-grid-effekt"
+      },
+      "offgridq": {
+        "name": "Off-grid reaktiv effekt"
+      },
+      "offgridpfd": {
+        "name": "Off-grid effektfaktor"
+      },
+      "offgridap": {
+        "name": "Off-grid skenbar effekt"
+      },
+      "batvch": {
+        "name": "Max cellspänning"
+      },
+      "batvcl": {
+        "name": "Min cellspänning"
+      },
+      "battch": {
+        "name": "Max celltemperatur"
+      },
+      "battcl": {
+        "name": "Min celltemperatur"
+      },
+      "baticm": {
+        "name": "Max laddström"
+      },
+      "batidm": {
+        "name": "Max urladdningsström"
+      },
+      "batcharge": {
+        "name": "Daglig laddningsenergi"
+      },
+      "batdischarge": {
+        "name": "Daglig urladdningsenergi"
+      },
+      "totalechg": {
+        "name": "Total laddningsenergi"
+      },
+      "totaledchg": {
+        "name": "Total urladdningsenergi"
       }
     },
     "number": {

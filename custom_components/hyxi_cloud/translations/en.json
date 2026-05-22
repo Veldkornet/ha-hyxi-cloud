@@ -293,6 +293,116 @@
       },
       "internal_temperature": {
         "name": "Internal Temperature"
+      },
+      "invsts": {
+        "name": "Inverter Status",
+        "state": {
+          "0": "Standby",
+          "1": "Normal",
+          "2": "Alarm",
+          "3": "Fault",
+          "4": "Shutdown"
+        }
+      },
+      "faultsts": {
+        "name": "Fault Status",
+        "state": {
+          "0": "Normal",
+          "1": "Fault"
+        }
+      },
+      "gridsts": {
+        "name": "Grid Status",
+        "state": {
+          "0": "Normal",
+          "1": "Abnormal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Grid Connection Status",
+        "state": {
+          "0": "Off Grid",
+          "1": "On Grid"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Switch Status",
+        "state": {
+          "0": "Shutdown",
+          "1": "Power On"
+        }
+      },
+      "pvpower": {
+        "name": "PV Power"
+      },
+      "pvnum": {
+        "name": "PV Quantity"
+      },
+      "acsidetemper": {
+        "name": "AC Side Temperature"
+      },
+      "dcsidetemper": {
+        "name": "DC Side Temperature"
+      },
+      "gridf": {
+        "name": "On-grid Frequency"
+      },
+      "gridp": {
+        "name": "On-grid Power"
+      },
+      "gridq": {
+        "name": "On-grid Reactive Power"
+      },
+      "gridpfd": {
+        "name": "On-grid Power Factor"
+      },
+      "gridap": {
+        "name": "On-grid Apparent Power"
+      },
+      "offgridf": {
+        "name": "Off-grid Frequency"
+      },
+      "offgridp": {
+        "name": "Off-grid Power"
+      },
+      "offgridq": {
+        "name": "Off-grid Reactive Power"
+      },
+      "offgridpfd": {
+        "name": "Off-grid Power Factor"
+      },
+      "offgridap": {
+        "name": "Off-grid Apparent Power"
+      },
+      "batvch": {
+        "name": "Max Cell Voltage"
+      },
+      "batvcl": {
+        "name": "Min Cell Voltage"
+      },
+      "battch": {
+        "name": "Max Cell Temperature"
+      },
+      "battcl": {
+        "name": "Min Cell Temperature"
+      },
+      "baticm": {
+        "name": "Max Charging Current"
+      },
+      "batidm": {
+        "name": "Max Discharging Current"
+      },
+      "batcharge": {
+        "name": "Daily Charging Energy"
+      },
+      "batdischarge": {
+        "name": "Daily Discharging Energy"
+      },
+      "totalechg": {
+        "name": "Total Charging Energy"
+      },
+      "totaledchg": {
+        "name": "Total Discharging Energy"
       }
     },
     "number": {

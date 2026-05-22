@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Vnitřní teplota"
+      },
+      "invsts": {
+        "name": "Stav střídače",
+        "state": {
+          "0": "Pohotovost",
+          "1": "Normální",
+          "2": "Alarm",
+          "3": "Porucha",
+          "4": "Vypnutí"
+        }
+      },
+      "faultsts": {
+        "name": "Stav poruchy",
+        "state": {
+          "0": "Normální",
+          "1": "Porucha"
+        }
+      },
+      "gridsts": {
+        "name": "Stav sítě",
+        "state": {
+          "0": "Normální",
+          "1": "Abnormální"
+        }
+      },
+      "devicegridconn": {
+        "name": "Stav připojení k síti",
+        "state": {
+          "0": "Mimo síť",
+          "1": "Na síti"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Stav spínače",
+        "state": {
+          "0": "Vypnuto",
+          "1": "Zapnuto"
+        }
+      },
+      "pvpower": {
+        "name": "Celkový výkon PV"
+      },
+      "pvnum": {
+        "name": "Počet PV"
+      },
+      "acsidetemper": {
+        "name": "Teplota na straně AC"
+      },
+      "dcsidetemper": {
+        "name": "Teplota na straně DC"
+      },
+      "gridf": {
+        "name": "Frekvence sítě"
+      },
+      "gridp": {
+        "name": "Výkon sítě"
+      },
+      "gridq": {
+        "name": "Reaktivní výkon sítě"
+      },
+      "gridpfd": {
+        "name": "Účiník sítě"
+      },
+      "gridap": {
+        "name": "Zdánlivý výkon sítě"
+      },
+      "offgridf": {
+        "name": "Frekvence mimo síť"
+      },
+      "offgridp": {
+        "name": "Výkon mimo síť"
+      },
+      "offgridq": {
+        "name": "Reaktivní výkon mimo síť"
+      },
+      "offgridpfd": {
+        "name": "Účiník mimo síť"
+      },
+      "offgridap": {
+        "name": "Zdánlivý výkon mimo síť"
+      },
+      "batvch": {
+        "name": "Max. napětí článku"
+      },
+      "batvcl": {
+        "name": "Min. napětí článku"
+      },
+      "battch": {
+        "name": "Max. teplota článku"
+      },
+      "battcl": {
+        "name": "Min. teplota článku"
+      },
+      "baticm": {
+        "name": "Max. nabíjecí proud"
+      },
+      "batidm": {
+        "name": "Max. vybíjecí proud"
+      },
+      "batcharge": {
+        "name": "Denní energie nabíjení"
+      },
+      "batdischarge": {
+        "name": "Denní energie vybíjení"
+      },
+      "totalechg": {
+        "name": "Celková energie nabíjení"
+      },
+      "totaledchg": {
+        "name": "Celková energie vybíjení"
       }
     },
     "number": {

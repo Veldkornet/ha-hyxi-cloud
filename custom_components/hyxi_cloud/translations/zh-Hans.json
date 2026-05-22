@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "内部温度"
+      },
+      "invsts": {
+        "name": "逆变器状态",
+        "state": {
+          "0": "待机",
+          "1": "正常",
+          "2": "告警",
+          "3": "故障",
+          "4": "关机"
+        }
+      },
+      "faultsts": {
+        "name": "故障状态",
+        "state": {
+          "0": "正常",
+          "1": "故障"
+        }
+      },
+      "gridsts": {
+        "name": "电网状态",
+        "state": {
+          "0": "正常",
+          "1": "异常"
+        }
+      },
+      "devicegridconn": {
+        "name": "并网状态",
+        "state": {
+          "0": "离网",
+          "1": "并网"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "开关状态",
+        "state": {
+          "0": "关机",
+          "1": "开机"
+        }
+      },
+      "pvpower": {
+        "name": "光伏总功率"
+      },
+      "pvnum": {
+        "name": "光伏数量"
+      },
+      "acsidetemper": {
+        "name": "交流侧温度"
+      },
+      "dcsidetemper": {
+        "name": "直流侧温度"
+      },
+      "gridf": {
+        "name": "并网频率"
+      },
+      "gridp": {
+        "name": "并网功率"
+      },
+      "gridq": {
+        "name": "并网无功功率"
+      },
+      "gridpfd": {
+        "name": "并网功率因数"
+      },
+      "gridap": {
+        "name": "并网视在功率"
+      },
+      "offgridf": {
+        "name": "离网频率"
+      },
+      "offgridp": {
+        "name": "离网功率"
+      },
+      "offgridq": {
+        "name": "离网无功功率"
+      },
+      "offgridpfd": {
+        "name": "离网功率因数"
+      },
+      "offgridap": {
+        "name": "离网视在功率"
+      },
+      "batvch": {
+        "name": "最高单体电压"
+      },
+      "batvcl": {
+        "name": "最低单体电压"
+      },
+      "battch": {
+        "name": "最高单体温度"
+      },
+      "battcl": {
+        "name": "最低单体温度"
+      },
+      "baticm": {
+        "name": "最大充电电流"
+      },
+      "batidm": {
+        "name": "最大放电电流"
+      },
+      "batcharge": {
+        "name": "日充电量"
+      },
+      "batdischarge": {
+        "name": "日放电量"
+      },
+      "totalechg": {
+        "name": "总充电量"
+      },
+      "totaledchg": {
+        "name": "总放电量"
       }
     },
     "number": {

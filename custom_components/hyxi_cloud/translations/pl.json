@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Temperatura wewnętrzna"
+      },
+      "invsts": {
+        "name": "Status falownika",
+        "state": {
+          "0": "Czuwanie",
+          "1": "Normalny",
+          "2": "Alarm",
+          "3": "Błąd",
+          "4": "Wyłączenie"
+        }
+      },
+      "faultsts": {
+        "name": "Status błędu",
+        "state": {
+          "0": "Normalny",
+          "1": "Błąd"
+        }
+      },
+      "gridsts": {
+        "name": "Status sieci",
+        "state": {
+          "0": "Normalny",
+          "1": "Nieprawidłowy"
+        }
+      },
+      "devicegridconn": {
+        "name": "Status połączenia z siecią",
+        "state": {
+          "0": "Off-Grid",
+          "1": "On-Grid"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Status przełącznika",
+        "state": {
+          "0": "Wyłączony",
+          "1": "Włączony"
+        }
+      },
+      "pvpower": {
+        "name": "Całkowita moc PV"
+      },
+      "pvnum": {
+        "name": "Ilość PV"
+      },
+      "acsidetemper": {
+        "name": "Temperatura po stronie AC"
+      },
+      "dcsidetemper": {
+        "name": "Temperatura po stronie DC"
+      },
+      "gridf": {
+        "name": "Częstotliwość sieci"
+      },
+      "gridp": {
+        "name": "Moc sieci"
+      },
+      "gridq": {
+        "name": "Moc bierna sieci"
+      },
+      "gridpfd": {
+        "name": "Współczynnik mocy sieci"
+      },
+      "gridap": {
+        "name": "Moc pozorna sieci"
+      },
+      "offgridf": {
+        "name": "Częstotliwość off-grid"
+      },
+      "offgridp": {
+        "name": "Moc off-grid"
+      },
+      "offgridq": {
+        "name": "Moc bierna off-grid"
+      },
+      "offgridpfd": {
+        "name": "Współczynnik mocy off-grid"
+      },
+      "offgridap": {
+        "name": "Moc pozorna off-grid"
+      },
+      "batvch": {
+        "name": "Maks. napięcie ogniwa"
+      },
+      "batvcl": {
+        "name": "Min. napięcie ogniwa"
+      },
+      "battch": {
+        "name": "Maks. temperatura ogniwa"
+      },
+      "battcl": {
+        "name": "Min. temperatura ogniwa"
+      },
+      "baticm": {
+        "name": "Maks. prąd ładowania"
+      },
+      "batidm": {
+        "name": "Maks. prąd rozładowania"
+      },
+      "batcharge": {
+        "name": "Dzienna energia ładowania"
+      },
+      "batdischarge": {
+        "name": "Dzienna energia rozładowania"
+      },
+      "totalechg": {
+        "name": "Całkowita energia ładowania"
+      },
+      "totaledchg": {
+        "name": "Całkowita energia rozładowania"
       }
     },
     "number": {

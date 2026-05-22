@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "内部温度"
+      },
+      "invsts": {
+        "name": "インバータ状態",
+        "state": {
+          "0": "待機",
+          "1": "正常",
+          "2": "アラーム",
+          "3": "障害",
+          "4": "シャットダウン"
+        }
+      },
+      "faultsts": {
+        "name": "障害状態",
+        "state": {
+          "0": "正常",
+          "1": "障害"
+        }
+      },
+      "gridsts": {
+        "name": "グリッド状態",
+        "state": {
+          "0": "正常",
+          "1": "異常"
+        }
+      },
+      "devicegridconn": {
+        "name": "系統接続状態",
+        "state": {
+          "0": "自立運転",
+          "1": "系統連系"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "スイッチ状態",
+        "state": {
+          "0": "シャットダウン",
+          "1": "電源オン"
+        }
+      },
+      "pvpower": {
+        "name": "PV総電力"
+      },
+      "pvnum": {
+        "name": "PV数"
+      },
+      "acsidetemper": {
+        "name": "AC側温度"
+      },
+      "dcsidetemper": {
+        "name": "DC側温度"
+      },
+      "gridf": {
+        "name": "系統周波数"
+      },
+      "gridp": {
+        "name": "系統電力"
+      },
+      "gridq": {
+        "name": "系統無効電力"
+      },
+      "gridpfd": {
+        "name": "系統力率"
+      },
+      "gridap": {
+        "name": "系統皮相電力"
+      },
+      "offgridf": {
+        "name": "オフグリッド周波数"
+      },
+      "offgridp": {
+        "name": "オフグリッド電力"
+      },
+      "offgridq": {
+        "name": "オフグリッド無効電力"
+      },
+      "offgridpfd": {
+        "name": "オフグリッド力率"
+      },
+      "offgridap": {
+        "name": "オフグリッド皮相電力"
+      },
+      "batvch": {
+        "name": "最高セル電圧"
+      },
+      "batvcl": {
+        "name": "最低セル電圧"
+      },
+      "battch": {
+        "name": "最高セル温度"
+      },
+      "battcl": {
+        "name": "最低セル温度"
+      },
+      "baticm": {
+        "name": "最大充電電流"
+      },
+      "batidm": {
+        "name": "最大放電電流"
+      },
+      "batcharge": {
+        "name": "日次充電電力量"
+      },
+      "batdischarge": {
+        "name": "日次放電電力量"
+      },
+      "totalechg": {
+        "name": "総充電電力量"
+      },
+      "totaledchg": {
+        "name": "総放電電力量"
       }
     },
     "number": {

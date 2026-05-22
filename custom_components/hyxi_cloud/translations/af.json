@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Interne Temperatuur"
+      },
+      "invsts": {
+        "name": "Inuiterstatus",
+        "state": {
+          "0": "Gereedheid",
+          "1": "Normaal",
+          "2": "Alarm",
+          "3": "Fout",
+          "4": "Afskakel"
+        }
+      },
+      "faultsts": {
+        "name": "Foutstatus",
+        "state": {
+          "0": "Normaal",
+          "1": "Fout"
+        }
+      },
+      "gridsts": {
+        "name": "Netstatus",
+        "state": {
+          "0": "Normaal",
+          "1": "Abnormaal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Netverbindingstatus",
+        "state": {
+          "0": "Af-Net",
+          "1": "Op-Net"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Skakelaarstatus",
+        "state": {
+          "0": "Afskakel",
+          "1": "Aanskakel"
+        }
+      },
+      "pvpower": {
+        "name": "Totale PV-krag"
+      },
+      "pvnum": {
+        "name": "PV-hoeveelheid"
+      },
+      "acsidetemper": {
+        "name": "AC-kant temperatuur"
+      },
+      "dcsidetemper": {
+        "name": "DC-kant temperatuur"
+      },
+      "gridf": {
+        "name": "Netfrekwensie"
+      },
+      "gridp": {
+        "name": "Netkrag"
+      },
+      "gridq": {
+        "name": "Net reaktiewe krag"
+      },
+      "gridpfd": {
+        "name": "Net drywingsfaktor"
+      },
+      "gridap": {
+        "name": "Net skynbare krag"
+      },
+      "offgridf": {
+        "name": "Af-net frekwensie"
+      },
+      "offgridp": {
+        "name": "Af-net krag"
+      },
+      "offgridq": {
+        "name": "Af-net reaktiewe krag"
+      },
+      "offgridpfd": {
+        "name": "Af-net drywingsfaktor"
+      },
+      "offgridap": {
+        "name": "Af-net skynbare krag"
+      },
+      "batvch": {
+        "name": "Maks selspanning"
+      },
+      "batvcl": {
+        "name": "Min selspanning"
+      },
+      "battch": {
+        "name": "Maks seltemperatuur"
+      },
+      "battcl": {
+        "name": "Min seltemperatuur"
+      },
+      "baticm": {
+        "name": "Maks laaistroom"
+      },
+      "batidm": {
+        "name": "Maks ontlaaistroom"
+      },
+      "batcharge": {
+        "name": "Daaglikse laai-energie"
+      },
+      "batdischarge": {
+        "name": "Daaglikse ontlaai-energie"
+      },
+      "totalechg": {
+        "name": "Totale laai-energie"
+      },
+      "totaledchg": {
+        "name": "Totale ontlaai-energie"
       }
     },
     "number": {

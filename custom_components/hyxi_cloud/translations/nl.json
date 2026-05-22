@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Interne Temperatuur"
+      },
+      "invsts": {
+        "name": "Omvormer status",
+        "state": {
+          "0": "Stand-by",
+          "1": "Normaal",
+          "2": "Alarm",
+          "3": "Fout",
+          "4": "Uitschakeling"
+        }
+      },
+      "faultsts": {
+        "name": "Foutstatus",
+        "state": {
+          "0": "Normaal",
+          "1": "Fout"
+        }
+      },
+      "gridsts": {
+        "name": "Netstatus",
+        "state": {
+          "0": "Normaal",
+          "1": "Abnormaal"
+        }
+      },
+      "devicegridconn": {
+        "name": "Netverbindingstatus",
+        "state": {
+          "0": "Off-Grid",
+          "1": "On-Grid"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Schakelaarstatus",
+        "state": {
+          "0": "Uitschakelen",
+          "1": "Inschakelen"
+        }
+      },
+      "pvpower": {
+        "name": "Totaal PV-vermogen"
+      },
+      "pvnum": {
+        "name": "PV-aantal"
+      },
+      "acsidetemper": {
+        "name": "Temperatuur AC-zijde"
+      },
+      "dcsidetemper": {
+        "name": "Temperatuur DC-zijde"
+      },
+      "gridf": {
+        "name": "Netfrequentie"
+      },
+      "gridp": {
+        "name": "Netvermogen"
+      },
+      "gridq": {
+        "name": "Net blindvermogen"
+      },
+      "gridpfd": {
+        "name": "Net vermogensfactor"
+      },
+      "gridap": {
+        "name": "Net schijnbaar vermogen"
+      },
+      "offgridf": {
+        "name": "Off-grid frequentie"
+      },
+      "offgridp": {
+        "name": "Off-grid vermogen"
+      },
+      "offgridq": {
+        "name": "Off-grid blindvermogen"
+      },
+      "offgridpfd": {
+        "name": "Off-grid vermogensfactor"
+      },
+      "offgridap": {
+        "name": "Off-grid schijnbaar vermogen"
+      },
+      "batvch": {
+        "name": "Max celspanning"
+      },
+      "batvcl": {
+        "name": "Min celspanning"
+      },
+      "battch": {
+        "name": "Max celtemperatuur"
+      },
+      "battcl": {
+        "name": "Min celtemperatuur"
+      },
+      "baticm": {
+        "name": "Max laadstroom"
+      },
+      "batidm": {
+        "name": "Max ontlaadstroom"
+      },
+      "batcharge": {
+        "name": "Dagelijkse laadenergie"
+      },
+      "batdischarge": {
+        "name": "Dagelijkse ontlaadenergie"
+      },
+      "totalechg": {
+        "name": "Totale laadenergie"
+      },
+      "totaledchg": {
+        "name": "Totale ontlaadenergie"
       }
     },
     "number": {

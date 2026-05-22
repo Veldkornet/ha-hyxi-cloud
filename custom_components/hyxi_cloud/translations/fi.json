@@ -292,6 +292,116 @@
       },
       "internal_temperature": {
         "name": "Sisäinen lämpötila"
+      },
+      "invsts": {
+        "name": "Invertterin tila",
+        "state": {
+          "0": "Valmiustila",
+          "1": "Normaali",
+          "2": "Hälytys",
+          "3": "Vika",
+          "4": "Sammutus"
+        }
+      },
+      "faultsts": {
+        "name": "Vikatila",
+        "state": {
+          "0": "Normaali",
+          "1": "Vika"
+        }
+      },
+      "gridsts": {
+        "name": "Verkon tila",
+        "state": {
+          "0": "Normaali",
+          "1": "Epänormaali"
+        }
+      },
+      "devicegridconn": {
+        "name": "Verkkoliitännän tila",
+        "state": {
+          "0": "Off-Grid",
+          "1": "On-Grid"
+        }
+      },
+      "deviceswitchstatus": {
+        "name": "Kytkimen tila",
+        "state": {
+          "0": "Sammutus",
+          "1": "Virta päällä"
+        }
+      },
+      "pvpower": {
+        "name": "PV-kokonaisteho"
+      },
+      "pvnum": {
+        "name": "PV-määrä"
+      },
+      "acsidetemper": {
+        "name": "AC-puolen lämpötila"
+      },
+      "dcsidetemper": {
+        "name": "DC-puolen lämpötila"
+      },
+      "gridf": {
+        "name": "Verkkotaajuus"
+      },
+      "gridp": {
+        "name": "Verkkoteho"
+      },
+      "gridq": {
+        "name": "Verkon loisteho"
+      },
+      "gridpfd": {
+        "name": "Verkon tehokerroin"
+      },
+      "gridap": {
+        "name": "Verkon näennäisteho"
+      },
+      "offgridf": {
+        "name": "Off-grid-taajuus"
+      },
+      "offgridp": {
+        "name": "Off-grid-teho"
+      },
+      "offgridq": {
+        "name": "Off-grid-loisteho"
+      },
+      "offgridpfd": {
+        "name": "Off-grid-tehokerroin"
+      },
+      "offgridap": {
+        "name": "Off-grid-näennäisteho"
+      },
+      "batvch": {
+        "name": "Maks. kennojännite"
+      },
+      "batvcl": {
+        "name": "Min. kennojännite"
+      },
+      "battch": {
+        "name": "Maks. kennolämpötila"
+      },
+      "battcl": {
+        "name": "Min. kennolämpötila"
+      },
+      "baticm": {
+        "name": "Maks. latausvirta"
+      },
+      "batidm": {
+        "name": "Maks. purkuvirta"
+      },
+      "batcharge": {
+        "name": "Päivittäinen latausenergia"
+      },
+      "batdischarge": {
+        "name": "Päivittäinen purkuenergia"
+      },
+      "totalechg": {
+        "name": "Kokonaislatausenergia"
+      },
+      "totaledchg": {
+        "name": "Kokonaispurkuenergia"
       }
     },
     "number": {
