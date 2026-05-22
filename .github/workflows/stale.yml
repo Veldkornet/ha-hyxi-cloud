@@ -1,0 +1,33 @@
+name: "Close stale issues"
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Number of days of inactivity before an issue becomes stale
+          days-before-stale: 60
+          
+          # Number of days of inactivity before a stale issue is closed
+          days-before-close: 7
+          
+          # Message to post when marking an issue as stale
+          stale-issue-message: 'This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs. Thank you for your contributions!'
+          
+          # Message to post when closing a stale issue
+          close-issue-message: 'This issue has been automatically closed due to inactivity.'
+          
+          # Label to apply when an issue is stale
+          stale-issue-label: 'no-recent-activity'
+          
+          # Exempt issues with these labels from being marked stale
+          exempt-issue-labels: 'pinned,security,confirmed'
