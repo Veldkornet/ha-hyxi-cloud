@@ -56,6 +56,29 @@ sys.modules["hyxi_cloud_api"] = mock_api
 
 mock_const = MagicMock()
 mock_const.DOMAIN = "hyxi_cloud"
+
+
+def real_get_raw_device_code(dev_data):
+    return (
+        dev_data.get("device_type_code")
+        or dev_data.get("deviceType")
+        or dev_data.get("devType")
+        or dev_data.get("deviceCode")
+        or ""
+    )
+
+
+def real_normalize_device_type(code):
+    if not code:
+        return "unknown"
+    code_str = str(code).upper().strip()
+    if code_str in ("3", "COLLECTOR", "DMU", "607"):
+        return "collector"
+    return "hybrid_inverter"
+
+
+mock_const.get_raw_device_code = real_get_raw_device_code
+mock_const.normalize_device_type = real_normalize_device_type
 sys.modules["custom_components.hyxi_cloud.const"] = mock_const
 
 
@@ -128,12 +151,12 @@ async def test_async_update_data_none_result():
 
 @pytest.mark.asyncio
 async def test_async_update_data_success():
-    """Test successful data update."""
+    """Test successful data update with non-empty metrics."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
     mock_client.get_all_device_data = AsyncMock(
-        return_value={"data": {"SN123": {"metrics": {}}}, "attempts": 1}
+        return_value={"data": {"SN123": {"metrics": {"tinv": "45.0"}}}, "attempts": 1}
     )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -142,9 +165,56 @@ async def test_async_update_data_success():
 
     result = await coordinator._async_update_data()
 
-    # We only care about the metrics in this test; _sw_version_cached is added by optimization
-    assert result["SN123"]["metrics"] == {}
+    assert result["SN123"]["metrics"] == {"tinv": "45.0"}
     assert coordinator.hyxi_metadata["last_attempts"] == 1
+    assert coordinator.hyxi_metadata["last_success"] is not None
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_empty_telemetry():
+    """Test that empty telemetry raises UpdateFailed."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    # Device with empty metrics (only last_seen) should trigger UpdateFailed
+    mock_client.get_all_device_data = AsyncMock(
+        return_value={
+            "data": {"SN123": {"metrics": {"last_seen": "2026-05-22"}}},
+            "attempts": 1,
+        }
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    with pytest.raises(hc_coord.UpdateFailed) as excinfo:
+        await coordinator._async_update_data()
+
+    assert "HYXI telemetry data is currently unavailable." in str(excinfo.value)
+    assert coordinator.hyxi_metadata["api_status"] == "Error"
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_empty_telemetry_collector_only():
+    """Test that empty metrics for collectors only does not raise UpdateFailed."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    # Device type "3" (collector) with empty metrics should NOT trigger UpdateFailed
+    mock_client.get_all_device_data = AsyncMock(
+        return_value={
+            "data": {"SN123": {"device_type_code": "3", "metrics": {}}},
+            "attempts": 1,
+        }
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    result = await coordinator._async_update_data()
+    assert result["SN123"]["metrics"] == {}
     assert coordinator.hyxi_metadata["last_success"] is not None
 
 
