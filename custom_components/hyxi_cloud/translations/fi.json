@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Kokonaispurkuenergia"
+      },
+      "ratedfrequency": {
+        "name": "Nimellistaajuus"
       }
     },
     "number": {

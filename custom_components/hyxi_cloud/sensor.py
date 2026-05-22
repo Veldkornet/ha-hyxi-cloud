@@ -41,6 +41,7 @@ INT_SENSOR_KEYS = {
     "gridsts",
     "devicegridconn",
     "deviceswitchstatus",
+    "ratedfrequency",
 }
 
 BATTERY_SENSORS = {
@@ -240,6 +241,12 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:lightning-bolt",
+    ),
+    SensorEntityDescription(
+        key="ratedFrequency",
+        native_unit_of_measurement="Hz",
+        device_class=SensorDeviceClass.FREQUENCY,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     SensorEntityDescription(
         key="wifiVer",

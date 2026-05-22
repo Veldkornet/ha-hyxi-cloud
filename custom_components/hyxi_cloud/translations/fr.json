@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Énergie de décharge totale"
+      },
+      "ratedfrequency": {
+        "name": "Fréquence nominale"
       }
     },
     "number": {

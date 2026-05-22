@@ -984,6 +984,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
                 "batDisCharge": "12.3",  # float (battery)
                 "totalEchg": "1500.5",  # float (battery)
                 "totalEdchg": "1200.2",  # float (battery)
+                "ratedFrequency": "50",  # integer (from queryDeviceInfo)
                 "batSn": "BAT_REAL_123",
             },
         }
@@ -1005,7 +1006,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
             registered_keys.append(key)
             registered_by_key[key] = entity
 
-    # Check that all 29 keys are registered
+    # Check that all 29 keys + ratedFrequency are registered
     expected_new_keys = [
         "invSts",
         "faultSts",
@@ -1036,6 +1037,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
         "batDisCharge",
         "totalEchg",
         "totalEdchg",
+        "ratedFrequency",
     ]
 
     for key in expected_new_keys:
@@ -1047,6 +1049,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
     assert registered_by_key["gridSts"].native_value == 0
     assert registered_by_key["deviceGridConn"].native_value == 1
     assert registered_by_key["deviceSwitchStatus"].native_value == 0
+    assert registered_by_key["ratedFrequency"].native_value == 50
 
     assert registered_by_key["pvPower"].native_value == 1200.5
     assert registered_by_key["pvNum"].native_value == 4

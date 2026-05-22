@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Teljes kisütési energia"
+      },
+      "ratedfrequency": {
+        "name": "Névleges frekvencia"
       }
     },
     "number": {

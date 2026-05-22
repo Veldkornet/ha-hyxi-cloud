@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "総放電電力量"
+      },
+      "ratedfrequency": {
+        "name": "定格周波数"
       }
     },
     "number": {

@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Energía de descarga total"
+      },
+      "ratedfrequency": {
+        "name": "Frecuencia nominal"
       }
     },
     "number": {

@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Totale ontlaai-energie"
+      },
+      "ratedfrequency": {
+        "name": "Nominale frekwensie"
       }
     },
     "number": {

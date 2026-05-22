@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Total afladningsenergi"
+      },
+      "ratedfrequency": {
+        "name": "Nominel frekvens"
       }
     },
     "number": {

@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Toplam Deşarj Enerjisi"
+      },
+      "ratedfrequency": {
+        "name": "Nominal Frekans"
       }
     },
     "number": {

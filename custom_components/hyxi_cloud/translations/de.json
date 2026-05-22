@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Gesamte Entladeenergie"
+      },
+      "ratedfrequency": {
+        "name": "Nennfrequenz"
       }
     },
     "number": {

@@ -404,6 +404,9 @@
       },
       "totaledchg": {
         "name": "Total Discharging Energy"
+      },
+      "ratedfrequency": {
+        "name": "Rated Frequency"
       }
     },
     "number": {

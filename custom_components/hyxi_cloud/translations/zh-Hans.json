@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "总放电量"
+      },
+      "ratedfrequency": {
+        "name": "额定频率"
       }
     },
     "number": {

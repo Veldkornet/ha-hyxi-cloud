@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Общая энергия разряда"
+      },
+      "ratedfrequency": {
+        "name": "Номинальная частота"
       }
     },
     "number": {

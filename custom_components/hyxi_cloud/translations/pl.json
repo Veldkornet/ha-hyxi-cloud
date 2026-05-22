@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Całkowita energia rozładowania"
+      },
+      "ratedfrequency": {
+        "name": "Częstotliwość znamionowa"
       }
     },
     "number": {

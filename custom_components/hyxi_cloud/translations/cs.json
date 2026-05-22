@@ -402,6 +402,9 @@
       },
       "totaledchg": {
         "name": "Celková energie vybíjení"
+      },
+      "ratedfrequency": {
+        "name": "Jmenovitá frekvence"
       }
     },
     "number": {
