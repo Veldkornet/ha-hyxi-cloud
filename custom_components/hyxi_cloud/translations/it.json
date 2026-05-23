@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Potenza di carica"
+        "name": "Potenza di carica target"
       },
       "discharge_power": {
-        "name": "Potenza di scarica"
+        "name": "Potenza di scarica target"
       },
       "micro_power_limit": {
         "name": "Limite di potenza"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Riavvia"
+        "name": "Riavvia dispositivo"
       },
       "mode_idle": {
-        "name": "Inattivo"
+        "name": "Imposta modalità inattiva"
       },
       "mode_charge": {
-        "name": "Carica"
+        "name": "Imposta modalità di carica"
       },
       "mode_discharge": {
-        "name": "Scarica"
+        "name": "Imposta modalità di scarica"
       },
       "mode_self_consume": {
-        "name": "Autoconsumo"
+        "name": "Imposta modalità di autoconsumo"
       },
       "peak_shaving_close": {
-        "name": "Spento"
+        "name": "Disattiva rasatura dei picchi"
       },
       "peak_shaving_charge": {
-        "name": "Carica"
+        "name": "Forza carica per rasatura dei picchi"
       },
       "peak_shaving_discharge": {
-        "name": "Scarica"
+        "name": "Forza scarica per rasatura dei picchi"
       },
       "peak_shaving_stop": {
-        "name": "Stop"
+        "name": "Arresta rasatura dei picchi"
       },
       "peak_shaving_hold": {
-        "name": "Mantenimento"
+        "name": "Mantieni rasatura dei picchi"
       },
       "clear_alarms": {
         "name": "Cancella allarmi attivi"

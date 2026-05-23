@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Töltési teljesítmény"
+        "name": "Cél töltési teljesítmény"
       },
       "discharge_power": {
-        "name": "Kisütési teljesítmény"
+        "name": "Cél kisütési teljesítmény"
       },
       "micro_power_limit": {
         "name": "Teljesítménykorlát"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Újraindítás"
+        "name": "Eszköz újraindítása"
       },
       "mode_idle": {
-        "name": "Készenléti"
+        "name": "Készenléti mód beállítása"
       },
       "mode_charge": {
-        "name": "Töltés"
+        "name": "Töltési mód beállítása"
       },
       "mode_discharge": {
-        "name": "Kisütés"
+        "name": "Kisütési mód beállítása"
       },
       "mode_self_consume": {
-        "name": "Önfogyasztás"
+        "name": "Önfogyasztási mód beállítása"
       },
       "peak_shaving_close": {
-        "name": "Ki"
+        "name": "Csúcskisímítás kikapcsolása"
       },
       "peak_shaving_charge": {
-        "name": "Töltés"
+        "name": "Csúcskisímítási töltés kényszerítése"
       },
       "peak_shaving_discharge": {
-        "name": "Kisütés"
+        "name": "Csúcskisímítási kisütés kényszerítése"
       },
       "peak_shaving_stop": {
-        "name": "Leállítás"
+        "name": "Csúcskisímítás leállítása"
       },
       "peak_shaving_hold": {
-        "name": "Tartás"
+        "name": "Csúcskisímítás tartása"
       },
       "clear_alarms": {
         "name": "Aktív riasztások törlése"

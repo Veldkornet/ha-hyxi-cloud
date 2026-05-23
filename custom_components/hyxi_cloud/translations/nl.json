@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Laadvermogen"
+        "name": "Doellaadvermogen"
       },
       "discharge_power": {
-        "name": "Ontlaadvermogen"
+        "name": "Doelontlaadvermogen"
       },
       "micro_power_limit": {
         "name": "Vermogenslimiet"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Herstarten"
+        "name": "Apparaat herstarten"
       },
       "mode_idle": {
-        "name": "Inactief"
+        "name": "Stel inactieve modus in"
       },
       "mode_charge": {
-        "name": "Laden"
+        "name": "Stel laadmodus in"
       },
       "mode_discharge": {
-        "name": "Ontladen"
+        "name": "Stel ontlaadmodus in"
       },
       "mode_self_consume": {
-        "name": "Eigenverbruik"
+        "name": "Stel eigenverbruiksmodus in"
       },
       "peak_shaving_close": {
-        "name": "Uit"
+        "name": "Piekbesparing uitschakelen"
       },
       "peak_shaving_charge": {
-        "name": "Laden"
+        "name": "Geforceerd laden voor piekbesparing"
       },
       "peak_shaving_discharge": {
-        "name": "Ontladen"
+        "name": "Geforceerd ontladen voor piekbesparing"
       },
       "peak_shaving_stop": {
-        "name": "Stop"
+        "name": "Piekbesparing stoppen"
       },
       "peak_shaving_hold": {
-        "name": "Vasthouden"
+        "name": "Piekbesparing vasthouden"
       },
       "clear_alarms": {
         "name": "Actieve alarmen wissen"

@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Laddningseffekt"
+        "name": "Målladdningseffekt"
       },
       "discharge_power": {
-        "name": "Urladdningseffekt"
+        "name": "Målurladdningseffekt"
       },
       "micro_power_limit": {
         "name": "Effektgräns"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Omstart"
+        "name": "Starta om enhet"
       },
       "mode_idle": {
-        "name": "Inaktiv"
+        "name": "Ställ in inaktivt läge"
       },
       "mode_charge": {
-        "name": "Laddning"
+        "name": "Ställ in laddningsläge"
       },
       "mode_discharge": {
-        "name": "Urladdning"
+        "name": "Ställ in urladdningsläge"
       },
       "mode_self_consume": {
-        "name": "Egenförbrukning"
+        "name": "Ställ in egenförbrukningsläge"
       },
       "peak_shaving_close": {
-        "name": "Av"
+        "name": "Stäng av topplastreducering"
       },
       "peak_shaving_charge": {
-        "name": "Laddning"
+        "name": "Tvinga laddning för topplastreducering"
       },
       "peak_shaving_discharge": {
-        "name": "Urladdning"
+        "name": "Tvinga urladdning för topplastreducering"
       },
       "peak_shaving_stop": {
-        "name": "Stopp"
+        "name": "Stoppa topplastreducering"
       },
       "peak_shaving_hold": {
-        "name": "Håll"
+        "name": "Håll topplastreducering"
       },
       "clear_alarms": {
         "name": "Rensa aktiva larm"

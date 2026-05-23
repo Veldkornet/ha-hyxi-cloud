@@ -81,9 +81,9 @@ The HYXI API defines controls by **phase type** (Single Phase / Three-Phase). Th
 
 | Phase | Controls | controlId |
 | :--- | :--- | :--- |
-| **Three-Phase** | Operating Mode buttons (Idle / Charge / Discharge / Self-Consumption) | 1062–1065 |
-| **Three-Phase** | Charge / Discharge Power | — |
-| **Single Phase** | Peak Shaving buttons (Close / Charge / Discharge / Stop / Hold) | 1021 |
+| **Three-Phase** | Operating Mode buttons (Set Idle Mode / Set Charge Mode / Set Discharge Mode / Set Self-Consumption Mode) | 1062–1065 |
+| **Three-Phase** | Target Charge / Discharge Power | — |
+| **Single Phase** | Peak Shaving buttons (Turn Off / Force Charge / Force Discharge / Stop / Hold Peak Shaving) | 1021 |
 | **Single Phase** | Frequency Control (Enable / Disable) | 1020 |
 
 **Phase Detection** — determined in priority order:

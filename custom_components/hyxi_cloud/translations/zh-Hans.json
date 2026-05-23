@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "充电功率"
+        "name": "目标充电功率"
       },
       "discharge_power": {
-        "name": "放电功率"
+        "name": "目标放电功率"
       },
       "micro_power_limit": {
         "name": "功率限制"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "重启"
+        "name": "重启设备"
       },
       "mode_idle": {
-        "name": "待机"
+        "name": "设置待机模式"
       },
       "mode_charge": {
-        "name": "充电"
+        "name": "设置充电模式"
       },
       "mode_discharge": {
-        "name": "放电"
+        "name": "设置放电模式"
       },
       "mode_self_consume": {
-        "name": "自发自用"
+        "name": "设置自发自用模式"
       },
       "peak_shaving_close": {
-        "name": "关闭"
+        "name": "关闭削峰填谷"
       },
       "peak_shaving_charge": {
-        "name": "充电"
+        "name": "强制削峰填谷充电"
       },
       "peak_shaving_discharge": {
-        "name": "放电"
+        "name": "强制削峰填谷放电"
       },
       "peak_shaving_stop": {
-        "name": "停止"
+        "name": "停止削峰填谷"
       },
       "peak_shaving_hold": {
-        "name": "保持"
+        "name": "保持削峰填谷"
       },
       "clear_alarms": {
         "name": "清除活动告警"

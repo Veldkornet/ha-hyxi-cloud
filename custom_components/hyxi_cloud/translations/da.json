@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Opladningseffekt"
+        "name": "Målopladningseffekt"
       },
       "discharge_power": {
-        "name": "Afladningseffekt"
+        "name": "Målafladningseffekt"
       },
       "micro_power_limit": {
         "name": "Effektgrænse"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Genstart"
+        "name": "Genstart enhed"
       },
       "mode_idle": {
-        "name": "Inaktiv"
+        "name": "Indstil inaktiv tilstand"
       },
       "mode_charge": {
-        "name": "Opladning"
+        "name": "Indstil opladningstilstand"
       },
       "mode_discharge": {
-        "name": "Afladning"
+        "name": "Indstil afladningstilstand"
       },
       "mode_self_consume": {
-        "name": "Egetforbrug"
+        "name": "Indstil egetforbrugstilstand"
       },
       "peak_shaving_close": {
-        "name": "Fra"
+        "name": "Slå spidsbelastningsudjævning fra"
       },
       "peak_shaving_charge": {
-        "name": "Opladning"
+        "name": "Tving opladning til spidsbelastningsudjævning"
       },
       "peak_shaving_discharge": {
-        "name": "Afladning"
+        "name": "Tving afladning til spidsbelastningsudjævning"
       },
       "peak_shaving_stop": {
-        "name": "Stop"
+        "name": "Stop spidsbelastningsudjævning"
       },
       "peak_shaving_hold": {
-        "name": "Hold"
+        "name": "Hold spidsbelastningsudjævning"
       },
       "clear_alarms": {
         "name": "Ryd aktive alarmer"

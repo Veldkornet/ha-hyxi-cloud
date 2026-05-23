@@ -414,10 +414,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Charge Power"
+        "name": "Target Charge Power"
       },
       "discharge_power": {
-        "name": "Discharge Power"
+        "name": "Target Discharge Power"
       },
       "micro_power_limit": {
         "name": "Power Limit"
@@ -433,34 +433,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Restart"
+        "name": "Restart Device"
       },
       "mode_idle": {
-        "name": "Idle"
+        "name": "Set Idle Mode"
       },
       "mode_charge": {
-        "name": "Charge"
+        "name": "Set Charge Mode"
       },
       "mode_discharge": {
-        "name": "Discharge"
+        "name": "Set Discharge Mode"
       },
       "mode_self_consume": {
-        "name": "Self-Consumption"
+        "name": "Set Self-Consumption Mode"
       },
       "peak_shaving_close": {
-        "name": "Off"
+        "name": "Turn Off Peak Shaving"
       },
       "peak_shaving_charge": {
-        "name": "Charge"
+        "name": "Force Peak Shaving Charge"
       },
       "peak_shaving_discharge": {
-        "name": "Discharge"
+        "name": "Force Peak Shaving Discharge"
       },
       "peak_shaving_stop": {
-        "name": "Stop"
+        "name": "Stop Peak Shaving"
       },
       "peak_shaving_hold": {
-        "name": "Hold"
+        "name": "Hold Peak Shaving"
       },
       "clear_alarms": {
         "name": "Clear Active Alarms"

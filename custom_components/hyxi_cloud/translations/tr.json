@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Şarj Gücü"
+        "name": "Hedef Şarj Gücü"
       },
       "discharge_power": {
-        "name": "Deşarj Gücü"
+        "name": "Hedef Deşarj Gücü"
       },
       "micro_power_limit": {
         "name": "Güç Sınırı"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Yeniden Başlat"
+        "name": "Cihazı Yeniden Başlat"
       },
       "mode_idle": {
-        "name": "Bekleme"
+        "name": "Bekleme modunu ayarla"
       },
       "mode_charge": {
-        "name": "Şarj"
+        "name": "Şarj modunu ayarla"
       },
       "mode_discharge": {
-        "name": "Deşarj"
+        "name": "Deşarj modunu ayarla"
       },
       "mode_self_consume": {
-        "name": "Öz Tüketim"
+        "name": "Öz tüketim modunu ayarla"
       },
       "peak_shaving_close": {
-        "name": "Kapalı"
+        "name": "Pik Tıraşlamayı Kapat"
       },
       "peak_shaving_charge": {
-        "name": "Şarj"
+        "name": "Pik Tıraşlama Şarjını Zorla"
       },
       "peak_shaving_discharge": {
-        "name": "Deşarj"
+        "name": "Pik Tıraşlama Deşarjını Zorla"
       },
       "peak_shaving_stop": {
-        "name": "Durdur"
+        "name": "Pik Tıraşlamayı Durdur"
       },
       "peak_shaving_hold": {
-        "name": "Tut"
+        "name": "Pik Tıraşlamayı Tut"
       },
       "clear_alarms": {
         "name": "Aktif alarmları temizle"

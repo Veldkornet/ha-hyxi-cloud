@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Puissance de charge"
+        "name": "Puissance de charge cible"
       },
       "discharge_power": {
-        "name": "Puissance de décharge"
+        "name": "Puissance de décharge cible"
       },
       "micro_power_limit": {
         "name": "Limite de puissance"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Redémarrer"
+        "name": "Redémarrer l'appareil"
       },
       "mode_idle": {
-        "name": "Inactif"
+        "name": "Définir le mode inactif"
       },
       "mode_charge": {
-        "name": "Charge"
+        "name": "Définir le mode de charge"
       },
       "mode_discharge": {
-        "name": "Décharge"
+        "name": "Définir le mode de décharge"
       },
       "mode_self_consume": {
-        "name": "Autoconsommation"
+        "name": "Définir le mode d'autoconsommation"
       },
       "peak_shaving_close": {
-        "name": "Désactivé"
+        "name": "Désactiver l'écrêtement des pics"
       },
       "peak_shaving_charge": {
-        "name": "Charge"
+        "name": "Forcer la charge d'écrêtement des pics"
       },
       "peak_shaving_discharge": {
-        "name": "Décharge"
+        "name": "Forcer la décharge d'écrêtement des pics"
       },
       "peak_shaving_stop": {
-        "name": "Arrêt"
+        "name": "Arrêter l'écrêtement des pics"
       },
       "peak_shaving_hold": {
-        "name": "Maintien"
+        "name": "Maintenir l'écrêtement des pics"
       },
       "clear_alarms": {
         "name": "Effacer les alarmes actives"

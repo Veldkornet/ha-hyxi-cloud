@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Ladeleistung"
+        "name": "Ziel-Ladeleistung"
       },
       "discharge_power": {
-        "name": "Entladeleistung"
+        "name": "Ziel-Entladeleistung"
       },
       "micro_power_limit": {
         "name": "Leistungsbegrenzung"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Neustart"
+        "name": "Gerät neu starten"
       },
       "mode_idle": {
-        "name": "Leerlauf"
+        "name": "Leerlaufmodus festlegen"
       },
       "mode_charge": {
-        "name": "Laden"
+        "name": "Lademodus festlegen"
       },
       "mode_discharge": {
-        "name": "Entladen"
+        "name": "Entlademodus festlegen"
       },
       "mode_self_consume": {
-        "name": "Eigenverbrauch"
+        "name": "Eigenverbrauchsmodus festlegen"
       },
       "peak_shaving_close": {
-        "name": "Aus"
+        "name": "Spitzenlastkappung ausschalten"
       },
       "peak_shaving_charge": {
-        "name": "Laden"
+        "name": "Laden zur Spitzenlastkappung erzwingen"
       },
       "peak_shaving_discharge": {
-        "name": "Entladen"
+        "name": "Entladen zur Spitzenlastkappung erzwingen"
       },
       "peak_shaving_stop": {
-        "name": "Stopp"
+        "name": "Spitzenlastkappung stoppen"
       },
       "peak_shaving_hold": {
-        "name": "Halten"
+        "name": "Spitzenlastkappung halten"
       },
       "clear_alarms": {
         "name": "Aktive Alarme löschen"

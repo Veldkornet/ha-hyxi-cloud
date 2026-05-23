@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "充電電力"
+        "name": "目標充電電力"
       },
       "discharge_power": {
-        "name": "放電電力"
+        "name": "目標放電電力"
       },
       "micro_power_limit": {
         "name": "出力制限"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "再起動"
+        "name": "デバイスを再起動"
       },
       "mode_idle": {
-        "name": "アイドル"
+        "name": "アイドルモードを設定"
       },
       "mode_charge": {
-        "name": "充電"
+        "name": "充電モードを設定"
       },
       "mode_discharge": {
-        "name": "放電"
+        "name": "放電モードを設定"
       },
       "mode_self_consume": {
-        "name": "自家消費"
+        "name": "自家消費モードを設定"
       },
       "peak_shaving_close": {
-        "name": "オフ"
+        "name": "ピークカットをオフにする"
       },
       "peak_shaving_charge": {
-        "name": "充電"
+        "name": "ピークカット充電を強制"
       },
       "peak_shaving_discharge": {
-        "name": "放電"
+        "name": "ピークカット放電を強制"
       },
       "peak_shaving_stop": {
-        "name": "停止"
+        "name": "ピークカットを停止"
       },
       "peak_shaving_hold": {
-        "name": "保持"
+        "name": "ピークカットを維持"
       },
       "clear_alarms": {
         "name": "アクティブなアラームをクリア"

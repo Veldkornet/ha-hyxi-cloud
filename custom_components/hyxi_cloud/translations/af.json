@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Laaikrag"
+        "name": "Teiken laaikrag"
       },
       "discharge_power": {
-        "name": "Ontlaaikrag"
+        "name": "Teiken ontlaaikrag"
       },
       "micro_power_limit": {
         "name": "Kragbeperking"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Herbegin"
+        "name": "Herlaai toestel"
       },
       "mode_idle": {
-        "name": "Ledige"
+        "name": "Stel rustende modus in"
       },
       "mode_charge": {
-        "name": "Laai"
+        "name": "Stel laaimodus in"
       },
       "mode_discharge": {
-        "name": "Ontlaai"
+        "name": "Stel ontlaaimodus in"
       },
       "mode_self_consume": {
-        "name": "Selfverbruik"
+        "name": "Stel selfverbruikmodus in"
       },
       "peak_shaving_close": {
-        "name": "Af"
+        "name": "Skakel piekbesnoeiing af"
       },
       "peak_shaving_charge": {
-        "name": "Laai"
+        "name": "Forseer piekbesnoeiingslaai"
       },
       "peak_shaving_discharge": {
-        "name": "Ontlaai"
+        "name": "Forseer piekbesnoeiingsontlaai"
       },
       "peak_shaving_stop": {
-        "name": "Stop"
+        "name": "Stop piekbesnoeiing"
       },
       "peak_shaving_hold": {
-        "name": "Hou"
+        "name": "Hou piekbesnoeiing"
       },
       "clear_alarms": {
         "name": "Maak aktiewe alarms skoon"

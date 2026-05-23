@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Ladeeffekt"
+        "name": "Målladeeffekt"
       },
       "discharge_power": {
-        "name": "Utladingseffekt"
+        "name": "Målutladingseffekt"
       },
       "micro_power_limit": {
         "name": "Effektgrense"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Omstart"
+        "name": "Start enhet på nytt"
       },
       "mode_idle": {
-        "name": "Inaktiv"
+        "name": "Sett inaktiv modus"
       },
       "mode_charge": {
-        "name": "Lading"
+        "name": "Sett lademodus"
       },
       "mode_discharge": {
-        "name": "Utlading"
+        "name": "Sett utladingsmodus"
       },
       "mode_self_consume": {
-        "name": "Egetforbruk"
+        "name": "Sett egetforbruksmodus"
       },
       "peak_shaving_close": {
-        "name": "Av"
+        "name": "Slå av topplastreduksjon"
       },
       "peak_shaving_charge": {
-        "name": "Lading"
+        "name": "Tving lading for topplastreduksjon"
       },
       "peak_shaving_discharge": {
-        "name": "Utlading"
+        "name": "Tving utlading for topplastreduksjon"
       },
       "peak_shaving_stop": {
-        "name": "Stopp"
+        "name": "Stopp topplastreduksjon"
       },
       "peak_shaving_hold": {
-        "name": "Hold"
+        "name": "Hold topplastreduksjon"
       },
       "clear_alarms": {
         "name": "Nullstill aktive alarmer"

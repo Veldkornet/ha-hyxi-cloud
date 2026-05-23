@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Potencia de carga"
+        "name": "Potencia de carga objetivo"
       },
       "discharge_power": {
-        "name": "Potencia de descarga"
+        "name": "Potencia de descarga objetivo"
       },
       "micro_power_limit": {
         "name": "Límite de potencia"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Reiniciar"
+        "name": "Reiniciar dispositivo"
       },
       "mode_idle": {
-        "name": "Inactivo"
+        "name": "Establecer modo inactivo"
       },
       "mode_charge": {
-        "name": "Carga"
+        "name": "Establecer modo de carga"
       },
       "mode_discharge": {
-        "name": "Descarga"
+        "name": "Establecer modo de descarga"
       },
       "mode_self_consume": {
-        "name": "Autoconsumo"
+        "name": "Establecer modo de autoconsumo"
       },
       "peak_shaving_close": {
-        "name": "Apagado"
+        "name": "Desactivar control de picos de demanda"
       },
       "peak_shaving_charge": {
-        "name": "Carga"
+        "name": "Forzar carga de control de picos de demanda"
       },
       "peak_shaving_discharge": {
-        "name": "Descarga"
+        "name": "Forzar descarga de control de picos de demanda"
       },
       "peak_shaving_stop": {
-        "name": "Parar"
+        "name": "Detener control de picos de demanda"
       },
       "peak_shaving_hold": {
-        "name": "Mantener"
+        "name": "Mantener control de picos de demanda"
       },
       "clear_alarms": {
         "name": "Borrar alarmas activas"

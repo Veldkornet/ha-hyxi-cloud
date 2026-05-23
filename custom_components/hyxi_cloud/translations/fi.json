@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Latausteho"
+        "name": "Kohdelatausteho"
       },
       "discharge_power": {
-        "name": "Purkuteho"
+        "name": "Kohdepurkuteho"
       },
       "micro_power_limit": {
         "name": "Tehoraja"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Käynnistä uudelleen"
+        "name": "Käynnistä laite uudelleen"
       },
       "mode_idle": {
-        "name": "Valmiustila"
+        "name": "Aseta valmiustila"
       },
       "mode_charge": {
-        "name": "Lataus"
+        "name": "Aseta lataustila"
       },
       "mode_discharge": {
-        "name": "Purku"
+        "name": "Aseta purkutila"
       },
       "mode_self_consume": {
-        "name": "Omakulutus"
+        "name": "Aseta omakulutustila"
       },
       "peak_shaving_close": {
-        "name": "Pois"
+        "name": "Poista huipputehon leikkaus käytöstä"
       },
       "peak_shaving_charge": {
-        "name": "Lataus"
+        "name": "Pakota huipputehon leikkauksen lataus"
       },
       "peak_shaving_discharge": {
-        "name": "Purku"
+        "name": "Pakota huipputehon leikkauksen purku"
       },
       "peak_shaving_stop": {
-        "name": "Pysäytä"
+        "name": "Pysäytä huipputehon leikkaus"
       },
       "peak_shaving_hold": {
-        "name": "Pidä"
+        "name": "Pidä huipputehon leikkaus"
       },
       "clear_alarms": {
         "name": "Tyhjennä aktiiviset hälytykset"

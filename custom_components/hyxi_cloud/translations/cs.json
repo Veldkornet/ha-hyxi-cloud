@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Nabíjecí výkon"
+        "name": "Cílový nabíjecí výkon"
       },
       "discharge_power": {
-        "name": "Vybíjecí výkon"
+        "name": "Cílový vybíjecí výkon"
       },
       "micro_power_limit": {
         "name": "Limit výkonu"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Restart"
+        "name": "Restartovat zařízení"
       },
       "mode_idle": {
-        "name": "Nečinný"
+        "name": "Nastavit režim nečinnosti"
       },
       "mode_charge": {
-        "name": "Nabíjení"
+        "name": "Nastavit režim nabíjení"
       },
       "mode_discharge": {
-        "name": "Vybíjení"
+        "name": "Nastavit režim vybíjení"
       },
       "mode_self_consume": {
-        "name": "Vlastní spotřeba"
+        "name": "Nastavit režim vlastní spotřeby"
       },
       "peak_shaving_close": {
-        "name": "Vypnuto"
+        "name": "Vypnout omezování špiček"
       },
       "peak_shaving_charge": {
-        "name": "Nabíjení"
+        "name": "Vynutit nabíjení pro omezování špiček"
       },
       "peak_shaving_discharge": {
-        "name": "Vybíjení"
+        "name": "Vynutit vybíjení pro omezování špiček"
       },
       "peak_shaving_stop": {
-        "name": "Stop"
+        "name": "Zastavit omezování špiček"
       },
       "peak_shaving_hold": {
-        "name": "Držet"
+        "name": "Pozastavit omezování špiček"
       },
       "clear_alarms": {
         "name": "Vymazat aktivní alarmy"

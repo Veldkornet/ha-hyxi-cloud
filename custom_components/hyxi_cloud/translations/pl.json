@@ -413,10 +413,10 @@
     },
     "number": {
       "charge_power": {
-        "name": "Moc ładowania"
+        "name": "Docelowa moc ładowania"
       },
       "discharge_power": {
-        "name": "Moc rozładowania"
+        "name": "Docelowa moc rozładowania"
       },
       "micro_power_limit": {
         "name": "Limit mocy"
@@ -432,34 +432,34 @@
     },
     "button": {
       "micro_restart": {
-        "name": "Restart"
+        "name": "Uruchom ponownie urządzenie"
       },
       "mode_idle": {
-        "name": "Bezczynny"
+        "name": "Ustaw tryb bezczynności"
       },
       "mode_charge": {
-        "name": "Ładowanie"
+        "name": "Ustaw tryb ładowania"
       },
       "mode_discharge": {
-        "name": "Rozładowanie"
+        "name": "Ustaw tryb rozładowania"
       },
       "mode_self_consume": {
-        "name": "Autokonsumpcja"
+        "name": "Ustaw tryb autokonsumpcji"
       },
       "peak_shaving_close": {
-        "name": "Wyłączony"
+        "name": "Wyłącz redukcję szczytów"
       },
       "peak_shaving_charge": {
-        "name": "Ładowanie"
+        "name": "Wymuś ładowanie redukcji szczytów"
       },
       "peak_shaving_discharge": {
-        "name": "Rozładowanie"
+        "name": "Wymuś rozładowanie redukcji szczytów"
       },
       "peak_shaving_stop": {
-        "name": "Stop"
+        "name": "Zatrzymaj redukcję szczytów"
       },
       "peak_shaving_hold": {
-        "name": "Utrzymaj"
+        "name": "Wstrzymaj redukcję szczytów"
       },
       "clear_alarms": {
         "name": "Wyczyść aktywne alarmy"
