@@ -156,6 +156,70 @@ async def test_async_setup_entry_three_phase_hybrid(
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_single_phase_all_in_one(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """Test setup for single-phase all-in-one inverter."""
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {"SN_AIO_1": {"device_type_code": "ALL_IN_ONE"}}
+
+    async_add_entities = MagicMock()
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.switch.normalize_device_type",
+            return_value="all_in_one",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.get_raw_device_code",
+            return_value="ALL_IN_ONE",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.detect_phase_type",
+            return_value="single_phase",
+        ),
+    ):
+        await switch_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+    assert len(entities) == 1
+    assert isinstance(entities[0], switch_mod.HyxiFrequencyControlSwitch)
+    assert entities[0]._sn == "SN_AIO_1"
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_three_phase_all_in_one(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """Test setup for three-phase all-in-one inverter (skipped for frequency control)."""
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {"SN_AIO_3": {"device_type_code": "ALL_IN_ONE"}}
+
+    async_add_entities = MagicMock()
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.switch.normalize_device_type",
+            return_value="all_in_one",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.get_raw_device_code",
+            return_value="ALL_IN_ONE",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.detect_phase_type",
+            return_value="three_phase",
+        ),
+    ):
+        await switch_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    async_add_entities.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_micro_inverter(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -301,3 +365,23 @@ async def test_micro_power_switch_error(mock_coordinator_fixture):
 
     with pytest.raises(switch_mod.HyxiApiClient.ControlError):
         await switch.async_turn_off()
+
+
+def test_frequency_control_switch_properties(mock_coordinator_fixture):
+    """Test frequency control switch properties."""
+    switch = switch_mod.HyxiFrequencyControlSwitch(
+        mock_coordinator_fixture, "SN123", {}
+    )
+    assert switch._attr_unique_id == "hyxi_SN123_frequency_control"
+    assert switch._attr_translation_key == "frequency_control"
+    assert switch._attr_icon == "mdi:sine-wave"
+    assert switch._attr_is_on is None
+
+
+def test_micro_power_switch_properties(mock_coordinator_fixture):
+    """Test micro power switch properties."""
+    switch = switch_mod.HyxiMicroPowerSwitch(mock_coordinator_fixture, "SN123", {})
+    assert switch._attr_unique_id == "hyxi_SN123_micro_power"
+    assert switch._attr_translation_key == "micro_power"
+    assert switch._attr_icon == "mdi:power"
+    assert switch._attr_is_on is None
