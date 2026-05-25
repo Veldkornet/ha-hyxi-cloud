@@ -12,12 +12,12 @@ from custom_components.hyxi_cloud.const import (
 def test_mask_sn():
     """Verify mask_sn correctly obscures serial numbers."""
     # 1. Normal SN (8+ chars)
-    assert mask_sn("12345678") == "XXXX5678"
-    assert mask_sn("SN123456789") == "XXXXXXX6789"
+    assert mask_sn("12345678") == "ef797c81"
+    assert mask_sn("SN123456789") == "c90391cf"
 
-    # 2. Short SN (< 8 chars)
-    assert mask_sn("1234567") == "****"
-    assert mask_sn("123") == "****"
+    # 2. Short SN (< 8 chars) are now hashed too to match API library
+    assert mask_sn("1234567") == "8bb0cf6e"
+    assert mask_sn("123") == "a665a459"
 
     # 3. Empty or None
     assert mask_sn("") == "****"

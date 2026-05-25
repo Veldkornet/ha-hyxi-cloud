@@ -8,7 +8,7 @@ CONF_SECRET_KEY = "secret_key"
 BASE_URL = "https://open.hyxicloud.com"
 
 MANUFACTURER = "HYXI Power"
-VERSION = "1.4.1"
+VERSION = "1.4.2"
 
 CONF_BACK_DISCOVERY = "back_discovery"
 
@@ -39,17 +39,16 @@ DEVICE_TYPE_KEYS = {
 
 
 def mask_sn(sn: str) -> str:
-    """Mask a serial number for logs, masking all but the last 4 chars with X.
+    """Mask a serial number/identifier securely using SHA-256 (first 8 chars) to match API library.
 
     Matches the _mask_id format used in the API library.
     """
-    if not sn:
+    import hashlib
+
+    if not sn or str(sn) == "None":
         return "****"
     sn_str = str(sn)
-    if len(sn_str) < 8:
-        return "****"
-    mask_len = len(sn_str) - 4
-    return f"{'X' * mask_len}{sn_str[-4:]}"
+    return hashlib.sha256(sn_str.encode("utf-8")).hexdigest()[:8]
 
 
 def get_raw_device_code(dev_data: dict) -> str:
