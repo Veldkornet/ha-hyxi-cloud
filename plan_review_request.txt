@@ -1,12 +1,32 @@
-1. Define a utility function `is_null_value(value: Any) -> bool` in `custom_components/hyxi_cloud/const.py`.
+The CI failure is caused by `mypy` complaining about `val` being passed to `float()` when its type is inferred as `Any | None`. In `_get_metric_float`:
 ```python
-def is_null_value(value: Any) -> bool:
-    """Check if a value is considered null or equivalent."""
-    return value is None or (isinstance(value, str) and value.strip().lower() in NULL_VALUES)
+    def _get_metric_float(self, key: str) -> float | None:
+        """Safely extract a metric value as a float."""
+        val = self._metrics.get(key)
+
+        if is_null_value(val):
+            return None
+
+        try:
+            return float(val)
 ```
-2. Import `is_null_value` in `custom_components/hyxi_cloud/sensor.py`.
-3. Replace all occurrences of `value is None or (isinstance(value, str) and value.strip().lower() in NULL_VALUES)` with `is_null_value(value)` in `custom_components/hyxi_cloud/sensor.py`.
-There's one occurrence of `if v is not None: if isinstance(v, str) and v.strip().lower() in NULL_VALUES:` on line 883-884, we will also replace it with `if not is_null_value(v):`
-4. Update `tests/test_parsers.py` and `tests/test_sensor_logic.py` to import and patch the new `is_null_value` function if needed (e.g. `sensor_mod.is_null_value = const_mod.is_null_value` instead of `NULL_VALUES = const_mod.NULL_VALUES`).
-5. Run tests, run `ruff format` and `ruff check`, ensure nothing is broken.
-6. Commit the changes and submit.
+Although `is_null_value(val)` returns `True` for `None`, mypy does not know that `is_null_value` acts as a TypeGuard narrowing `val` out of `None`. We can cast `val` to `float(val) # type: ignore` or assert `val is not None` before `return float(val)`. Another option is just checking `if val is None or is_null_value(val): return None`.
+
+Plan:
+1. In `custom_components/hyxi_cloud/sensor.py`, in `_get_metric_float`, change `return float(val)` to:
+```python
+        if val is None:
+            return None
+
+        try:
+            return float(val)
+```
+Actually, an even simpler fix is to add a type check or use `cast(Any, val)` or just `if val is None: return None` alongside `if is_null_value(val): return None`.
+Let's just change:
+```python
+        if val is None or is_null_value(val):
+            return None
+```
+2. Run mypy `mypy custom_components/hyxi_cloud/sensor.py`.
+3. Complete pre-commit.
+4. Submit.

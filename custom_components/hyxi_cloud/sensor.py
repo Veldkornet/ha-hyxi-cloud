@@ -1136,7 +1136,7 @@ class HyxiSensor(HyxiBaseSensor):
         """Safely extract a metric value as a float."""
         val = self._metrics.get(key)
 
-        if is_null_value(val):
+        if val is None or is_null_value(val):
             return None
 
         try:
