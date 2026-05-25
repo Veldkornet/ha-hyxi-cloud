@@ -834,11 +834,38 @@ async def async_setup_entry(hass, entry, async_add_entities):
         device_type = normalize_device_type(raw_code)
         metrics = dev_data.get("metrics") or {}
 
+        logged_metrics = {
+            k: (
+                mask_sn(str(v))
+                if k
+                in {
+                    "deviceSn",
+                    "parentSn",
+                    "batSn",
+                    "emsSn",
+                    "alias",
+                    "plantId",
+                    "gprsImei",
+                    "plantAddress",
+                    "plantName",
+                    "deviceName",
+                    "alarmName",
+                    "token",
+                    "access_token",
+                    "refresh_token",
+                    "password",
+                }
+                and v is not None
+                else v
+            )
+            for k, v in metrics.items()
+        }
+
         _LOGGER.debug(
-            "HYXI Processing Device %s (Normalized Type: %s). Metrics keys: %s",
+            "HYXI Processing Device %s (Normalized Type: %s). Metrics: %s",
             mask_sn(sn),
             device_type,
-            list(metrics.keys()),
+            logged_metrics,
         )
 
         is_collector_or_dmu = device_type == "collector"

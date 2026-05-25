@@ -135,16 +135,16 @@ def test_mask_sn():
     assert mask_sn("") == "****"
 
     # Short string handling
-    assert mask_sn("1234567") == "****"
+    assert mask_sn("1234567") == "8bb0cf6e"
 
     # Exact length of 8
-    assert mask_sn("12345678") == "XXXX5678"
+    assert mask_sn("12345678") == "ef797c81"
 
     # Longer string
-    assert mask_sn("1234567890") == "XXXXXX7890"
+    assert mask_sn("1234567890") == "c775e7b7"
 
     # Integer values
-    assert mask_sn(12345678) == "XXXX5678"
+    assert mask_sn(12345678) == "ef797c81"
 
 
 def test_anti_dip_recovery(base_sensor):
