@@ -1225,7 +1225,7 @@ class HyxiSensor(HyxiBaseSensor):
         # 🚀 Fallback Logic for Micro Inverters (acE -> efpv)
         # If acE is not provided or zero, attempt fallback to efpv for Micro Inverters.
         if key == "acE" and (value is None or str(value) == "0.0"):
-            if getattr(self, "_device_type", None) in (
+            if self._device_type in (
                 "grid_connected_inverter",
                 "micro_inverter",
             ):
