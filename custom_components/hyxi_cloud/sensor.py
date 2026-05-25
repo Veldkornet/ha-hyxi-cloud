@@ -878,12 +878,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         keys_to_add.add("device_type")
 
         # Process dynamically available valid metrics keys
-        keys_to_add.update(
-            key
-            for key, v in metrics.items()
-            if v is not None
-            and (not isinstance(v, str) or v.strip().lower() not in NULL_VALUES)
-        )
+        for key, v in metrics.items():
+            if v is not None:
+                if type(v) is str and v.strip().lower() in NULL_VALUES:
+                    continue
+                keys_to_add.add(key)
 
         # O(1) removals instead of repeated conditionals
         if is_collector_or_dmu:
