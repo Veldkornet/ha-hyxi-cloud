@@ -12,6 +12,7 @@ from .const import (
     DOMAIN,
     detect_phase_type,
     get_raw_device_code,
+    mask_sn,
     normalize_device_type,
 )
 from .entity import HyxiEntity
@@ -74,7 +75,7 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
             _LOGGER.error(
-                "Failed to enable frequency control for %s: %s", self._sn, err
+                "Failed to enable frequency control for %s: %s", mask_sn(self._sn), err
             )
             raise
 
@@ -88,7 +89,7 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
             _LOGGER.error(
-                "Failed to disable frequency control for %s: %s", self._sn, err
+                "Failed to disable frequency control for %s: %s", mask_sn(self._sn), err
             )
             raise
 
@@ -118,7 +119,9 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error("Failed to power on microinverter %s: %s", self._sn, err)
+            _LOGGER.error(
+                "Failed to power on microinverter %s: %s", mask_sn(self._sn), err
+            )
             raise
 
     async def async_turn_off(self, **kwargs) -> None:
@@ -130,5 +133,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error("Failed to power off microinverter %s: %s", self._sn, err)
+            _LOGGER.error(
+                "Failed to power off microinverter %s: %s", mask_sn(self._sn), err
+            )
             raise
