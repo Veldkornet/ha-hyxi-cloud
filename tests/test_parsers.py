@@ -75,7 +75,7 @@ def mock_sensor():
     import custom_components.hyxi_cloud.const as const_mod
     import custom_components.hyxi_cloud.sensor as sensor_mod
 
-    sensor_mod.NULL_VALUES = const_mod.NULL_VALUES
+    sensor_mod.is_null_value = const_mod.is_null_value
     coordinator = MagicMock()
     description = MagicMock()
     description.key = "test_sensor"

@@ -19,9 +19,9 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN,
     MANUFACTURER,
-    NULL_VALUES,
     get_raw_device_code,
     get_software_version,
+    is_null_value,
     mask_sn,
     normalize_device_type,
 )
@@ -880,9 +880,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         # Process dynamically available valid metrics keys
         for key, v in metrics.items():
-            if v is not None:
-                if isinstance(v, str) and v.strip().lower() in NULL_VALUES:
-                    continue
+            if not is_null_value(v):
                 keys_to_add.add(key)
 
         # O(1) removals instead of repeated conditionals
@@ -982,9 +980,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
     def _process_numeric_value(self, value):
         """Common numeric processing for sensors."""
-        if value is None or (
-            isinstance(value, str) and value.strip().lower() in NULL_VALUES
-        ):
+        if is_null_value(value):
             return None
 
         if self.entity_description.native_unit_of_measurement is None:
@@ -1140,7 +1136,7 @@ class HyxiSensor(HyxiBaseSensor):
         """Safely extract a metric value as a float."""
         val = self._metrics.get(key)
 
-        if val is None or (isinstance(val, str) and val.strip().lower() in NULL_VALUES):
+        if is_null_value(val):
             return None
 
         try:
@@ -1155,9 +1151,7 @@ class HyxiSensor(HyxiBaseSensor):
         return normalize_device_type(get_raw_device_code(dev_data))
 
     def _parse_int_sensor(self, dev_data, value):
-        if value is None or (
-            isinstance(value, str) and value.strip().lower() in NULL_VALUES
-        ):
+        if is_null_value(value):
             return None
         try:
             return int(round(float(value), 0))
@@ -1168,9 +1162,7 @@ class HyxiSensor(HyxiBaseSensor):
             return self._process_numeric_value(value)
 
     def _parse_collect_time(self, dev_data, value):
-        if value is None or (
-            isinstance(value, str) and value.strip().lower() in NULL_VALUES
-        ):
+        if is_null_value(value):
             return None
         try:
             val_int = int(value)
@@ -1186,9 +1178,7 @@ class HyxiSensor(HyxiBaseSensor):
             return None
 
     def _parse_last_seen(self, dev_data, value):
-        if value is None or (
-            isinstance(value, str) and value.strip().lower() in NULL_VALUES
-        ):
+        if is_null_value(value):
             return None
         return dt_util.parse_datetime(str(value))
 
@@ -1199,9 +1189,7 @@ class HyxiSensor(HyxiBaseSensor):
         return value
 
     def _parse_default(self, dev_data, value):
-        if value is None or (
-            isinstance(value, str) and value.strip().lower() in NULL_VALUES
-        ):
+        if is_null_value(value):
             return None
         return self._process_numeric_value(value)
 
