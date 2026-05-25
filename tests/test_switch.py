@@ -307,7 +307,9 @@ async def test_frequency_control_switch_error(mock_coordinator_fixture):
             await switch.async_turn_on()
 
         mock_logger.assert_called_once_with(
-            "Failed to enable frequency control for %s: %s", "SN123", err
+            "Failed to enable frequency control for %s: %s",
+            switch_mod.mask_sn("SN123"),
+            err,
         )
 
     switch.async_write_ha_state.assert_not_called()
@@ -319,7 +321,9 @@ async def test_frequency_control_switch_error(mock_coordinator_fixture):
             await switch.async_turn_off()
 
         mock_logger.assert_called_once_with(
-            "Failed to disable frequency control for %s: %s", "SN123", err
+            "Failed to disable frequency control for %s: %s",
+            switch_mod.mask_sn("SN123"),
+            err,
         )
 
 
@@ -360,15 +364,13 @@ async def test_micro_power_switch_error(mock_coordinator_fixture, caplog):
     err = switch_mod.HyxiApiClient.ControlError("Network error")
     mock_coordinator_fixture.client.set_micro_power_on.side_effect = err
 
-    with patch("custom_components.hyxi_cloud.switch._LOGGER.error") as mock_logger:
-        with pytest.raises(switch_mod.HyxiApiClient.ControlError):
-            await switch.async_turn_on()
+    with pytest.raises(switch_mod.HyxiApiClient.ControlError):
+        await switch.async_turn_on()
 
-        mock_logger.assert_called_once_with(
-            "Failed to power on microinverter %s: %s", "SN123", err
-        )
-
-    assert "Failed to power on microinverter SN123: Network error" in caplog.text
+    assert (
+        f"Failed to power on microinverter {switch_mod.mask_sn('SN123')}: Network error"
+        in caplog.text
+    )
 
     switch.async_write_ha_state.assert_not_called()
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
@@ -378,15 +380,13 @@ async def test_micro_power_switch_error(mock_coordinator_fixture, caplog):
 
     mock_coordinator_fixture.client.set_micro_power_off.side_effect = err
 
-    with patch("custom_components.hyxi_cloud.switch._LOGGER.error") as mock_logger:
-        with pytest.raises(switch_mod.HyxiApiClient.ControlError):
-            await switch.async_turn_off()
+    with pytest.raises(switch_mod.HyxiApiClient.ControlError):
+        await switch.async_turn_off()
 
-        mock_logger.assert_called_once_with(
-            "Failed to power off microinverter %s: %s", "SN123", err
-        )
-
-    assert "Failed to power off microinverter SN123: Network error" in caplog.text
+    assert (
+        f"Failed to power off microinverter {switch_mod.mask_sn('SN123')}: Network error"
+        in caplog.text
+    )
 
 
 def test_frequency_control_switch_properties(mock_coordinator_fixture):

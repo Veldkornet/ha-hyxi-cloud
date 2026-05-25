@@ -54,33 +54,6 @@ mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
 sys.modules["hyxi_cloud_api"] = mock_api
 
-mock_const = MagicMock()
-mock_const.DOMAIN = "hyxi_cloud"
-
-
-def real_get_raw_device_code(dev_data):
-    return (
-        dev_data.get("device_type_code")
-        or dev_data.get("deviceType")
-        or dev_data.get("devType")
-        or dev_data.get("deviceCode")
-        or ""
-    )
-
-
-def real_normalize_device_type(code):
-    if not code:
-        return "unknown"
-    code_str = str(code).upper().strip()
-    if code_str in ("3", "COLLECTOR", "DMU", "607"):
-        return "collector"
-    return "hybrid_inverter"
-
-
-mock_const.get_raw_device_code = real_get_raw_device_code
-mock_const.normalize_device_type = real_normalize_device_type
-sys.modules["custom_components.hyxi_cloud.const"] = mock_const
-
 
 import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position
 
