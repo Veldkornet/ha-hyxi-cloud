@@ -4,9 +4,6 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-if TYPE_CHECKING:
-    from .coordinator import HyxiDataUpdateCoordinator
-
 from homeassistant.components.sensor import (
     EntityCategory,
     SensorDeviceClass,
@@ -28,6 +25,9 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+
+if TYPE_CHECKING:
+    from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
