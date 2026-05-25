@@ -16,6 +16,7 @@ from .const import (
     MANUFACTURER,
     detect_phase_type,
     get_raw_device_code,
+    mask_sn,
     normalize_device_type,
 )
 
@@ -162,7 +163,7 @@ class HyxiMicroPowerLimit(CoordinatorEntity, NumberEntity, RestoreEntity):
             _LOGGER.error(
                 "Failed to set power limit to %d%% for %s: %s",
                 int(value),
-                self._sn,
+                mask_sn(self._sn),
                 err,
             )
             raise
