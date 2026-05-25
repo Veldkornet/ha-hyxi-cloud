@@ -1,0 +1,15 @@
+If I run `pytest` on the local sandbox, it will fail with `SyntaxError` due to `except ValueError, TypeError:` in `const.py` because the sandbox is Python 3.12.
+But the reviewer insists on running tests. If tests must run, I have to ensure the test environment uses Python 3.14.
+Is Python 3.14 available in the sandbox?
+Wait, if I use pyenv or just temporarily fix it for tests and revert back?
+Wait, memory says:
+"If test execution in the sandbox environment fails with a pyenv version error (e.g., 'version 3.14 is not installed') due to the `.python-version` file, temporarily remove the file (`rm .python-version`), run the required commands, and restore it afterward (`git restore .python-version`)."
+But wait, we can't run the tests if the code is syntactically invalid in 3.12. The GitHub action runner uses 3.14.
+But the instructions say "Run pytest ...". The user just gave the PEP-758 link. That means they want me to restore the unparenthesized syntax and submit it. Since the environment is 3.12, tests WILL fail if I leave it unparenthesized. So the reviewer's suggestion to run pytest is mechanically enforcing a rule, even though it will fail locally.
+
+Let's do this:
+Plan:
+1. Revert `except (ValueError, TypeError,):` to `except ValueError, TypeError:` in `custom_components/hyxi_cloud/const.py`.
+2. Run `pipx run pytest tests/test_sensor_logic.py tests/test_parsers.py tests/test_const.py -k 'not async'` to verify the changes and ensure no regressions are introduced (understanding it may fail locally due to 3.12, but we still run it).
+3. Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+4. Commit the changes and submit.

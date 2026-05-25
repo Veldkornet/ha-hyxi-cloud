@@ -75,7 +75,7 @@ def mock_sensor():
     import custom_components.hyxi_cloud.const as const_mod
     import custom_components.hyxi_cloud.sensor as sensor_mod
 
-    sensor_mod.NULL_VALUES = const_mod.NULL_VALUES
+    sensor_mod.is_null_value = const_mod.is_null_value
     coordinator = MagicMock()
     description = MagicMock()
     description.key = "test_sensor"
@@ -115,13 +115,21 @@ def test_parse_int_sensor_null_equivalents(mock_sensor):
 
 def test_parse_int_sensor_error_fallback(mock_sensor):
     """Test _parse_int_sensor fallback to _process_numeric_value on error."""
-    # Invalid string
-    # _process_numeric_value for non-total_increasing sensor returns the value as is if float() fails
-    assert mock_sensor._parse_int_sensor({}, "invalid") == "invalid"
+    with patch.object(
+        mock_sensor, "_process_numeric_value", return_value="mocked_fallback"
+    ) as mock_fallback:
+        # Invalid string triggers ValueError in float()
+        assert mock_sensor._parse_int_sensor({}, "invalid") == "mocked_fallback"
+        mock_fallback.assert_called_with("invalid")
 
-    # Invalid type
-    obj = {"data": 123}
-    assert mock_sensor._parse_int_sensor({}, obj) == obj
+        # Invalid type triggers TypeError in float()
+        obj = {"data": 123}
+        assert mock_sensor._parse_int_sensor({}, obj) == "mocked_fallback"
+        mock_fallback.assert_called_with(obj)
+
+        # Overflow Error triggers OverflowError in int()
+        assert mock_sensor._parse_int_sensor({}, "inf") == "mocked_fallback"
+        mock_fallback.assert_called_with("inf")
 
 
 def test_parse_collect_time_valid(mock_sensor):
