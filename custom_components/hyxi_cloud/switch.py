@@ -113,7 +113,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
         """Turn on the microinverter."""
         client = self.coordinator.client
         try:
-            await client.set_micro_power_on(self._sn)
+            await client.set_micro_power(self._sn, power_on=True)
             self._attr_is_on = True
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
@@ -125,7 +125,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
         """Turn off the microinverter."""
         client = self.coordinator.client
         try:
-            await client.set_micro_power_off(self._sn)
+            await client.set_micro_power(self._sn, power_on=False)
             self._attr_is_on = False
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()

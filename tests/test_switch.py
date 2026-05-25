@@ -56,8 +56,7 @@ def mock_coordinator_fixture():
     coordinator.data = {}
     coordinator.client = MagicMock()
     coordinator.client.set_frequency_control = AsyncMock()
-    coordinator.client.set_micro_power_on = AsyncMock()
-    coordinator.client.set_micro_power_off = AsyncMock()
+    coordinator.client.set_micro_power = AsyncMock()
     # Ensure async methods are awaitable
     coordinator.async_request_refresh = AsyncMock()
     return coordinator
@@ -258,7 +257,9 @@ async def test_micro_power_switch_turn_on(mock_coordinator_fixture):
 
     await switch.async_turn_on()
 
-    mock_coordinator_fixture.client.set_micro_power_on.assert_called_once_with("SN123")
+    mock_coordinator_fixture.client.set_micro_power.assert_called_once_with(
+        "SN123", power_on=True
+    )
     assert switch._attr_is_on is True
     switch.async_write_ha_state.assert_called_once()
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
@@ -272,7 +273,9 @@ async def test_micro_power_switch_turn_off(mock_coordinator_fixture):
 
     await switch.async_turn_off()
 
-    mock_coordinator_fixture.client.set_micro_power_off.assert_called_once_with("SN123")
+    mock_coordinator_fixture.client.set_micro_power.assert_called_once_with(
+        "SN123", power_on=False
+    )
     assert switch._attr_is_on is False
     switch.async_write_ha_state.assert_called_once()
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
@@ -284,7 +287,7 @@ async def test_micro_power_switch_error(mock_coordinator_fixture):
     switch = switch_mod.HyxiMicroPowerSwitch(mock_coordinator_fixture, "SN123", {})
     switch.async_write_ha_state = MagicMock()
 
-    mock_coordinator_fixture.client.set_micro_power_on.side_effect = (
+    mock_coordinator_fixture.client.set_micro_power.side_effect = (
         switch_mod.HyxiApiClient.ControlError("Network error")
     )
 
@@ -294,10 +297,6 @@ async def test_micro_power_switch_error(mock_coordinator_fixture):
     switch.async_write_ha_state.assert_not_called()
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
     assert switch._attr_is_on is None
-
-    mock_coordinator_fixture.client.set_micro_power_off.side_effect = (
-        switch_mod.HyxiApiClient.ControlError("Network error")
-    )
 
     with pytest.raises(switch_mod.HyxiApiClient.ControlError):
         await switch.async_turn_off()
