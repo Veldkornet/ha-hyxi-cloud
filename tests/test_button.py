@@ -343,15 +343,20 @@ async def test_peak_shaving_button_press(mock_coordinator_fixture):
 @pytest.mark.asyncio
 async def test_peak_shaving_button_error(mock_coordinator_fixture):
     """Test error handling in peak shaving button press."""
-    mock_coordinator_fixture.client.set_peak_shaving.side_effect = (
-        button_mod.HyxiApiClient.ControlError("Fail")
-    )
+    error = button_mod.HyxiApiClient.ControlError("Fail")
+    mock_coordinator_fixture.client.set_peak_shaving.side_effect = error
     btn = button_mod.HyxiPeakShavingButton(
         mock_coordinator_fixture, "SN123", {}, "hold"
     )
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with patch.object(button_mod, "_LOGGER") as mock_logger:
         await btn.async_press()
+        mock_logger.error.assert_called_once_with(
+            "Failed to send peak shaving '%s' to %s: %s",
+            "hold",
+            "S***3",
+            error,
+        )
 
 
 def test_get_power_value_valid_state():
