@@ -350,11 +350,12 @@ async def test_peak_shaving_button_error(mock_coordinator_fixture):
     )
 
     with patch.object(button_mod, "_LOGGER") as mock_logger:
-        await btn.async_press()
+        with pytest.raises(button_mod.HyxiApiClient.ControlError):
+            await btn.async_press()
         mock_logger.error.assert_called_once_with(
             "Failed to send peak shaving '%s' to %s: %s",
             "hold",
-            "S***3",
+            button_mod.mask_sn("SN123"),
             error,
         )
 
