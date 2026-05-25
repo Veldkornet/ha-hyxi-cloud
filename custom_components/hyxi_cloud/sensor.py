@@ -2,7 +2,10 @@
 
 import logging
 from datetime import UTC, datetime
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
+
+if TYPE_CHECKING:
+    from .coordinator import HyxiDataUpdateCoordinator
 
 from homeassistant.components.sensor import (
     EntityCategory,
@@ -1208,11 +1211,7 @@ class HyxiSensor(HyxiBaseSensor):
     @property
     def extra_state_attributes(self):
         """Return the state attributes."""
-        from typing import cast
-
-        from .coordinator import HyxiDataUpdateCoordinator
-
-        coordinator = cast(HyxiDataUpdateCoordinator, self.coordinator)
+        coordinator = cast("HyxiDataUpdateCoordinator", self.coordinator)
         return coordinator.hyxi_metadata
 
     def _update_native_value(self):
