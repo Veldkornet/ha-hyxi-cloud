@@ -343,7 +343,7 @@ async def test_micro_power_switch_turn_off(mock_coordinator_fixture):
 
 
 @pytest.mark.asyncio
-async def test_micro_power_switch_error(mock_coordinator_fixture):
+async def test_micro_power_switch_error(mock_coordinator_fixture, caplog):
     """Test error handling for micro power switch."""
     switch = switch_mod.HyxiMicroPowerSwitch(mock_coordinator_fixture, "SN123", {})
     switch.async_write_ha_state = MagicMock()
@@ -355,9 +355,13 @@ async def test_micro_power_switch_error(mock_coordinator_fixture):
     with pytest.raises(switch_mod.HyxiApiClient.ControlError):
         await switch.async_turn_on()
 
+    assert "Failed to power on microinverter SN123: Network error" in caplog.text
+
     switch.async_write_ha_state.assert_not_called()
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
     assert switch._attr_is_on is None
+
+    caplog.clear()
 
     mock_coordinator_fixture.client.set_micro_power_off.side_effect = (
         switch_mod.HyxiApiClient.ControlError("Network error")
@@ -365,6 +369,8 @@ async def test_micro_power_switch_error(mock_coordinator_fixture):
 
     with pytest.raises(switch_mod.HyxiApiClient.ControlError):
         await switch.async_turn_off()
+
+    assert "Failed to power off microinverter SN123: Network error" in caplog.text
 
 
 def test_frequency_control_switch_properties(mock_coordinator_fixture):
