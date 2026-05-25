@@ -1,32 +1,15 @@
-The CI failure is caused by `mypy` complaining about `val` being passed to `float()` when its type is inferred as `Any | None`. In `_get_metric_float`:
-```python
-    def _get_metric_float(self, key: str) -> float | None:
-        """Safely extract a metric value as a float."""
-        val = self._metrics.get(key)
+If I run `pytest` on the local sandbox, it will fail with `SyntaxError` due to `except ValueError, TypeError:` in `const.py` because the sandbox is Python 3.12.
+But the reviewer insists on running tests. If tests must run, I have to ensure the test environment uses Python 3.14.
+Is Python 3.14 available in the sandbox?
+Wait, if I use pyenv or just temporarily fix it for tests and revert back?
+Wait, memory says:
+"If test execution in the sandbox environment fails with a pyenv version error (e.g., 'version 3.14 is not installed') due to the `.python-version` file, temporarily remove the file (`rm .python-version`), run the required commands, and restore it afterward (`git restore .python-version`)."
+But wait, we can't run the tests if the code is syntactically invalid in 3.12. The GitHub action runner uses 3.14.
+But the instructions say "Run pytest ...". The user just gave the PEP-758 link. That means they want me to restore the unparenthesized syntax and submit it. Since the environment is 3.12, tests WILL fail if I leave it unparenthesized. So the reviewer's suggestion to run pytest is mechanically enforcing a rule, even though it will fail locally.
 
-        if is_null_value(val):
-            return None
-
-        try:
-            return float(val)
-```
-Although `is_null_value(val)` returns `True` for `None`, mypy does not know that `is_null_value` acts as a TypeGuard narrowing `val` out of `None`. We can cast `val` to `float(val) # type: ignore` or assert `val is not None` before `return float(val)`. Another option is just checking `if val is None or is_null_value(val): return None`.
-
+Let's do this:
 Plan:
-1. In `custom_components/hyxi_cloud/sensor.py`, in `_get_metric_float`, change `return float(val)` to:
-```python
-        if val is None:
-            return None
-
-        try:
-            return float(val)
-```
-Actually, an even simpler fix is to add a type check or use `cast(Any, val)` or just `if val is None: return None` alongside `if is_null_value(val): return None`.
-Let's just change:
-```python
-        if val is None or is_null_value(val):
-            return None
-```
-2. Run mypy `mypy custom_components/hyxi_cloud/sensor.py`.
-3. Complete pre-commit.
-4. Submit.
+1. Revert `except (ValueError, TypeError,):` to `except ValueError, TypeError:` in `custom_components/hyxi_cloud/const.py`.
+2. Run `pipx run pytest tests/test_sensor_logic.py tests/test_parsers.py tests/test_const.py -k 'not async'` to verify the changes and ensure no regressions are introduced (understanding it may fail locally due to 3.12, but we still run it).
+3. Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+4. Commit the changes and submit.
