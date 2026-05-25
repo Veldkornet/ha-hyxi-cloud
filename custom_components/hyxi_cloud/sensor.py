@@ -880,7 +880,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         # Process dynamically available valid metrics keys
         for key, v in metrics.items():
             if v is not None:
-                if type(v) is str and v.strip().lower() in NULL_VALUES:
+                if isinstance(v, str) and v.strip().lower() in NULL_VALUES:
                     continue
                 keys_to_add.add(key)
 
