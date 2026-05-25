@@ -51,6 +51,7 @@ include = ["custom_components*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "--ignore=tests/integration"
 
 [tool.pylint.similarities]
 min-similarity-lines = 100
