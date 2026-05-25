@@ -84,3 +84,22 @@ def test_hyxi_entity_initialization_with_falsy_name():
         "model": "Basic",
         "serial_number": sn,
     }
+
+
+def test_hyxi_entity_initialization_with_none_name():
+    """Test entity initialization with None device name."""
+    coordinator = MagicMock()
+    sn = "888888"
+    dev_data = {"device_name": None, "model": None}
+
+    entity = HyxiEntity(coordinator, sn, dev_data)
+
+    assert entity._sn == sn
+    assert getattr(entity, "_attr_has_entity_name", None) is True
+    assert entity._attr_device_info == {
+        "identifiers": {(DOMAIN, sn)},
+        "name": f"Device {sn}",
+        "manufacturer": MANUFACTURER,
+        "model": None,
+        "serial_number": sn,
+    }
