@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Kon nie met HYXI-bedieners verbind nie",
       "invalid_auth": "Ongeldige Toegangsleutel of Geheime Sleutel",
-      "unknown": "Onverwagte fout het voorgekom"
+      "unknown": "Onverwagte fout het voorgekom",
+      "no_devices": "Geen aanlegte of toestelle gevind nie. As u ontwikkelaars-e-posadres verskil van u toepassing-e-posadres, moet u eers u aanleg vanaf die toepassing met die ontwikkelaars-e-posadres deel."
     },
     "abort": {
       "already_configured": "Hierdie HYXI-rekening is reeds opgestel.",

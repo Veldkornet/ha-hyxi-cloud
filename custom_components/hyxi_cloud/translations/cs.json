@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Nepodařilo se připojit k serverům HYXI",
       "invalid_auth": "Neplatný přístupový klíč nebo tajný klíč",
-      "unknown": "Došlo k neočekávané chybě"
+      "unknown": "Došlo k neočekávané chybě",
+      "no_devices": "Nebyly nalezeny žádné elektrárny ani zařízení. Pokud se váš vývojářský e-mail liší od e-mailu aplikace, musíte nejprve sdílet svou elektrárnu z aplikace na vývojářský e-mail."
     },
     "abort": {
       "already_configured": "Tento HYXI účet je již nakonfigurován.",

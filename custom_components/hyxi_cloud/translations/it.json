@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Connessione ai server HYXI non riuscita",
       "invalid_auth": "Chiave di accesso o chiave segreta non valida",
-      "unknown": "Si è verificato un errore imprevisto"
+      "unknown": "Si è verificato un errore imprevisto",
+      "no_devices": "Nessun impianto o dispositivo trovato. Se l'e-mail dello sviluppatore differisce da quella dell'app, devi prima condividere il tuo impianto dall'app all'e-mail dello sviluppatore."
     },
     "abort": {
       "already_configured": "Questo account HYXI è già configurato.",

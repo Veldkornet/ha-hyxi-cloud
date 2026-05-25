@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Échec de la connexion aux serveurs HYXI",
       "invalid_auth": "Clé d'accès ou clé secrète invalide",
-      "unknown": "Une erreur inattendue est survenue"
+      "unknown": "Une erreur inattendue est survenue",
+      "no_devices": "Aucune centrale ni aucun appareil trouvé. Si votre adresse e-mail de développeur diffère de celle de votre application, vous devez d'abord partager votre centrale depuis l'application avec l'adresse e-mail de développeur."
     },
     "abort": {
       "already_configured": "Ce compte HYXI est déjà configuré.",

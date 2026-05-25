@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Kunne ikke forbinde til HYXI-servere",
       "invalid_auth": "Ugyldig adgangsnøgle eller hemmelig nøgle",
-      "unknown": "Uventet fejl opstod"
+      "unknown": "Uventet fejl opstod",
+      "no_devices": "Ingen anlæg eller enheder fundet. Hvis din udvikler-e-mail er forskellig fra din app-e-mail, skal du først dele dit anlæg fra appen til udvikler-e-mailen."
     },
     "abort": {
       "already_configured": "Denne HYXI-konto er allerede konfigureret.",

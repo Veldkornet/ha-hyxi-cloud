@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Nie udało się połączyć z serwerami HYXI",
       "invalid_auth": "Nieprawidłowy klucz dostępu lub tajny klucz",
-      "unknown": "Wystąpił nieoczekiwany błąd"
+      "unknown": "Wystąpił nieoczekiwany błąd",
+      "no_devices": "Nie znaleziono żadnych instalacji ani urządzeń. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw udostępnić swoją instalację z aplikacji na e-mail programisty."
     },
     "abort": {
       "already_configured": "To konto HYXI jest już skonfigurowane.",

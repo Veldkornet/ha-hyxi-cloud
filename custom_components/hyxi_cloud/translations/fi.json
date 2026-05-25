@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Yhteys HYXI-palvelimiin epäonnistui",
       "invalid_auth": "Virheellinen Access Key tai Secret Key",
-      "unknown": "Tapahtui odottamaton virhe"
+      "unknown": "Tapahtui odottamaton virhe",
+      "no_devices": "Laitoksia tai laitteita ei löytynyt. Jos kehittäjän sähköpostiosoitteesi eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin jaettava laitoksesi sovelluksesta kehittäjän sähköpostiosoitteeseen."
     },
     "abort": {
       "already_configured": "Tämä HYXI-tili on jo määritetty.",

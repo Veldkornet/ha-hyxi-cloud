@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "HYXI sunucularına bağlanılamadı",
       "invalid_auth": "Geçersiz Erişim Anahtarı veya Gizli Anahtar",
-      "unknown": "Beklenmedik bir hata oluştu"
+      "unknown": "Beklenmedik bir hata oluştu",
+      "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız."
     },
     "abort": {
       "already_configured": "Bu HYXI hesabı zaten yapılandırılmış.",

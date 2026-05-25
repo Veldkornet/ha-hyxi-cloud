@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Verbindung zu den HYXI-Servern fehlgeschlagen",
       "invalid_auth": "Ungültiger Access Key oder Secret Key",
-      "unknown": "Ein unerwarteter Fehler ist aufgetreten"
+      "unknown": "Ein unerwarteter Fehler ist aufgetreten",
+      "no_devices": "Keine Anlagen oder Geräte gefunden. Wenn sich Ihre Entwickler-E-Mail von Ihrer App-E-Mail unterscheidet, müssen Sie zuerst Ihre Anlage aus der App für die Entwickler-E-Mail freigeben."
     },
     "abort": {
       "already_configured": "Dieses HYXI-Konto ist bereits konfiguriert.",

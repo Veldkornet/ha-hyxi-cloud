@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Kan geen verbinding maken met de HYXI servers",
       "invalid_auth": "Ongeldige Access Key of Secret Key",
-      "unknown": "Er is een onverwachte fout opgetreden"
+      "unknown": "Er is een onverwachte fout opgetreden",
+      "no_devices": "Geen installaties of apparaten gevonden. Als je ontwikkelaars-e-mailadres verschilt van je app-e-mailadres, moet je eerst je installatie vanuit de app delen met het ontwikkelaars-e-mailadres."
     },
     "abort": {
       "already_configured": "Dit HYXI account is al geconfigureerd.",

@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Nem sikerült csatlakozni a HYXI szerverekhez",
       "invalid_auth": "Érvénytelen hozzáférési kulcs vagy titkos kulcs",
-      "unknown": "Váratlan hiba történt"
+      "unknown": "Váratlan hiba történt",
+      "no_devices": "Nem található erőmű vagy eszköz. Ha a fejlesztői e-mail-címe eltér az alkalmazás e-mail-címétől, először meg kell osztania az erőművét az alkalmazásból a fejlesztői e-mail-címmel."
     },
     "abort": {
       "already_configured": "Ez a HYXI fiók már be van konfigurálva.",

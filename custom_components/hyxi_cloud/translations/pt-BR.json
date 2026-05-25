@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Falha ao conectar aos servidores HYXI",
       "invalid_auth": "Chave de Acesso ou Chave Secreta inválida",
-      "unknown": "Ocorreu um erro inesperado"
+      "unknown": "Ocorreu um erro inesperado",
+      "no_devices": "Nenhuma planta ou dispositivo encontrado. Se o seu e-mail de desenvolvedor for diferente do e-mail do aplicativo, você deve primeiro compartilhar sua Planta do aplicativo para o e-mail de desenvolvedor."
     },
     "abort": {
       "already_configured": "Esta conta HYXI já está configurada.",

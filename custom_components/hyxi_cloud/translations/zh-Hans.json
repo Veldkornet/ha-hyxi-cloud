@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "连接 HYXI 服务器失败",
       "invalid_auth": "无效的访问密钥或加密密钥",
-      "unknown": "发生未知错误"
+      "unknown": "发生未知错误",
+      "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。"
     },
     "abort": {
       "already_configured": "该 HYXI 账号已配置。",

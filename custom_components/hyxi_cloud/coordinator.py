@@ -91,6 +91,13 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             # ✅ Success! Update metadata attributes.
             devices = result["data"]
 
+            if not devices:
+                _LOGGER.warning(
+                    "HYXI Cloud returned success, but no plants or devices were found. "
+                    "If your developer email differs from your app email, you must share your Plant "
+                    "from the app to the developer email first."
+                )
+
             # Raise UpdateFailed if all non-collector devices return empty telemetry metrics.
             non_collectors = [
                 dev_data

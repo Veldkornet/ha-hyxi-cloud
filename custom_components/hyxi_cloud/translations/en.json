@@ -21,7 +21,8 @@
     "error": {
       "cannot_connect": "Failed to connect to HYXI servers",
       "invalid_auth": "Invalid Access Key or Secret Key",
-      "unknown": "Unexpected error occurred"
+      "unknown": "Unexpected error occurred",
+      "no_devices": "No plants or devices found. If your developer email differs from your app email, you must share your Plant from the app to the developer email first."
     },
     "abort": {
       "already_configured": "This HYXI account is already configured.",

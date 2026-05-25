@@ -96,6 +96,9 @@ def mock_ha_environment():
 def mock_hyxi_client():
     client_mock = AsyncMock()
     client_mock._refresh_token = AsyncMock()
+    client_mock.get_all_device_data = AsyncMock(
+        return_value={"data": {"SOME_SN": {}}, "attempts": 1}
+    )
     return client_mock
 
 
@@ -172,6 +175,34 @@ async def test_validate_input_unknown_error(
 
     with pytest.raises(Exception, match="Unknown Error"):
         await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
+@patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
+async def test_validate_input_no_devices(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
+    mock_api_client_class.return_value = mock_hyxi_client
+    mock_hyxi_client._refresh_token.return_value = True
+    mock_hyxi_client.get_all_device_data.return_value = {"data": {}, "attempts": 1}
+
+    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    assert result == "no_devices"
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
+@patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
+async def test_validate_input_get_all_device_data_none(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
+    mock_api_client_class.return_value = mock_hyxi_client
+    mock_hyxi_client._refresh_token.return_value = True
+    mock_hyxi_client.get_all_device_data.return_value = None
+
+    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    assert result == "cannot_connect"
 
 
 @pytest.mark.asyncio

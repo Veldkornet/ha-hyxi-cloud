@@ -31,6 +31,10 @@ async def test_config_flow_success(hass: HomeAssistant):
     ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client._refresh_token.return_value = True
+        mock_client.get_all_device_data.return_value = {
+            "data": {"SOME_SN": {}},
+            "attempts": 1,
+        }
         mock_client_class.return_value = mock_client
 
         result2 = await hass.config_entries.flow.async_configure(
@@ -139,3 +143,31 @@ async def test_setup_entry_and_sensors(hass: HomeAssistant):
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
         assert entry.state == ConfigEntryState.NOT_LOADED
+
+
+@pytest.mark.asyncio
+async def test_config_flow_no_devices(hass: HomeAssistant):
+    """Test config flow failure when no plants or devices are found."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+
+    with patch(
+        "custom_components.hyxi_cloud.config_flow.HyxiApiClient"
+    ) as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client._refresh_token.return_value = True
+        mock_client.get_all_device_data.return_value = {"data": {}, "attempts": 1}
+        mock_client_class.return_value = mock_client
+
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_ACCESS_KEY: "test_access_key",
+                CONF_SECRET_KEY: "test_secret_key",
+            },
+        )
+        await hass.async_block_till_done()
+
+        assert result2["type"] == data_entry_flow.FlowResultType.FORM
+        assert result2["errors"] == {"base": "no_devices"}
