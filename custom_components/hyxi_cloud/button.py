@@ -23,6 +23,7 @@ from .const import (
     MANUFACTURER,
     detect_phase_type,
     get_raw_device_code,
+    mask_sn,
     normalize_device_type,
 )
 
@@ -76,7 +77,7 @@ async def async_setup_entry(
             _LOGGER.debug(
                 "Cannot determine phase type for %s (model=%s) — "
                 "skipping control entities",
-                sn,
+                mask_sn(sn),
                 dev_data.get("model"),
             )
             continue
@@ -146,20 +147,24 @@ class HyxiClearAlarmsButton(CoordinatorEntity, ButtonEntity):
                         _LOGGER.debug(
                             "Skipping alarm with non-integer id %r for device %s",
                             alarm_id,
-                            self._sn,
+                            mask_sn(self._sn),
                         )
 
         if not active_ids:
-            _LOGGER.info("No active alarms to clear for device %s", self._sn)
+            _LOGGER.info("No active alarms to clear for device %s", mask_sn(self._sn))
             return
 
         try:
             await client.alter_alarm(active_ids)
-            _LOGGER.info("Cleared active alarms %s for device %s", active_ids, self._sn)
+            _LOGGER.info(
+                "Cleared active alarms %s for device %s", active_ids, mask_sn(self._sn)
+            )
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
             _LOGGER.error(
-                "Failed to clear active alarms for device %s: %s", self._sn, err
+                "Failed to clear active alarms for device %s: %s",
+                mask_sn(self._sn),
+                err,
             )
             raise
 
@@ -189,10 +194,12 @@ class HyxiMicroRestartButton(CoordinatorEntity, ButtonEntity):
         client = self.coordinator.client
         try:
             await client.restart_device(self._sn)
-            _LOGGER.info("Restart command sent to microinverter %s", self._sn)
+            _LOGGER.info("Restart command sent to microinverter %s", mask_sn(self._sn))
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error("Failed to restart microinverter %s: %s", self._sn, err)
+            _LOGGER.error(
+                "Failed to restart microinverter %s: %s", mask_sn(self._sn), err
+            )
             raise
 
 
@@ -230,19 +237,21 @@ class HyxiModeButton(CoordinatorEntity, ButtonEntity):
                 await client.set_mode_idle(self._sn)
             elif self._mode == "charge":
                 watts = _get_power_value(self.hass, self._sn, "charge")
-                _LOGGER.debug("Setting %s to CHARGE at %dW", self._sn, watts)
+                _LOGGER.debug("Setting %s to CHARGE at %dW", mask_sn(self._sn), watts)
                 await client.set_mode_charge(self._sn, watts)
             elif self._mode == "discharge":
                 watts = _get_power_value(self.hass, self._sn, "discharge")
-                _LOGGER.debug("Setting %s to DISCHARGE at %dW", self._sn, watts)
+                _LOGGER.debug(
+                    "Setting %s to DISCHARGE at %dW", mask_sn(self._sn), watts
+                )
                 await client.set_mode_discharge(self._sn, watts)
             elif self._mode == "self_consume":
                 await client.set_mode_self_consume(self._sn)
-            _LOGGER.info("Mode '%s' command sent to %s", self._mode, self._sn)
+            _LOGGER.info("Mode '%s' command sent to %s", self._mode, mask_sn(self._sn))
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
             _LOGGER.error(
-                "Failed to set mode '%s' for %s: %s", self._mode, self._sn, err
+                "Failed to set mode '%s' for %s: %s", self._mode, mask_sn(self._sn), err
             )
             raise
 
@@ -280,13 +289,15 @@ class HyxiPeakShavingButton(CoordinatorEntity, ButtonEntity):
         client = self.coordinator.client
         try:
             await client.set_peak_shaving(self._sn, self._option)
-            _LOGGER.info("Peak shaving '%s' command sent to %s", self._option, self._sn)
+            _LOGGER.info(
+                "Peak shaving '%s' command sent to %s", self._option, mask_sn(self._sn)
+            )
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
             _LOGGER.error(
                 "Failed to send peak shaving '%s' to %s: %s",
                 self._option,
-                self._sn,
+                mask_sn(self._sn),
                 err,
             )
             raise
@@ -303,9 +314,11 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
     registry = er.async_get(hass)
     entity_id = registry.async_get_entity_id("number", DOMAIN, unique_id)
     if entity_id is None:
+        # unique_id contains unmasked sn, so we should mask it here for logs or just avoid logging unmasked unique_id
+        masked_unique_id = f"hyxi_{mask_sn(sn)}_{direction}_power"
         _LOGGER.warning(
             "Power number entity (unique_id=%s) not found in registry, using 100W default",
-            unique_id,
+            masked_unique_id,
         )
         return 100
     state = hass.states.get(entity_id)

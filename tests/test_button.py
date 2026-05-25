@@ -46,6 +46,10 @@ mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
 sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 
+mock_bs = MagicMock()
+mock_bs.BinarySensorEntity = FakeBase
+sys.modules["homeassistant.components.binary_sensor"] = mock_bs
+
 mock_api = MagicMock()
 mock_api.__version__ = "1.0.4"
 
