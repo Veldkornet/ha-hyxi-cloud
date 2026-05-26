@@ -36,7 +36,8 @@
         "description": "Entegrasyonunuzun HYXI Cloud ile nasıl iletişim kuracağını ayarlayın.\n\n---",
         "data": {
           "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
-          "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)"
+          "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)",
+          "enable_battery_control": "Pil kontrolünü ve korumasını etkinleştir"
         }
       }
     }

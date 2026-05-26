@@ -84,7 +84,10 @@ async def async_setup_entry(
             continue
 
         # Three-phase: operating mode buttons (controlIds 1062-1065)
-        if phase == "three_phase":
+        if (
+            entry.options.get("enable_battery_control", False)
+            and phase == "three_phase"
+        ):
             entities.extend(
                 [
                     HyxiModeButton(coordinator, sn, dev_data, "idle"),
@@ -95,7 +98,10 @@ async def async_setup_entry(
             )
 
         # Single-phase: peak shaving buttons (controlId 1021)
-        if phase == "single_phase":
+        if (
+            entry.options.get("enable_battery_control", False)
+            and phase == "single_phase"
+        ):
             for option in ("close", "charge", "discharge", "stop", "hold"):
                 entities.append(
                     HyxiPeakShavingButton(coordinator, sn, dev_data, option)

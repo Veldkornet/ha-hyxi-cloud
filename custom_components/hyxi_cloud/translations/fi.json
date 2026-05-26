@@ -36,7 +36,8 @@
         "description": "Säädä, miten integraatiosi kommunikoi HYXI Cloudin kanssa.\n\n---",
         "data": {
           "update_interval": "Päivitysväli (1-60 minuuttia, oletus: 5)",
-          "back_discovery": "Ota löytäminen käyttöön hällytysten kautta (edistynyt)"
+          "back_discovery": "Ota löytäminen käyttöön hällytysten kautta (edistynyt)",
+          "enable_battery_control": "Ota akun ohjaus ja suojaus käyttöön"
         }
       }
     }

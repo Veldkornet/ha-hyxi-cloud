@@ -112,10 +112,11 @@ def test_safe_int():
 
 @pytest.mark.asyncio
 async def test_async_setup_entry():
-    """Test setting up number entities."""
+    """Test setting up number entities with battery protection enabled."""
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "test_entry"
+    entry.options = {"enable_battery_control": True}
 
     dev_data_3phase: dict[str, str | dict[str, str]] = {
         "deviceCode": "HYBRID_INVERTER",
@@ -190,6 +191,73 @@ async def test_async_setup_entry():
         e for e in entities if isinstance(e, number_mod.HyxiProtectionNumber)
     ]
     assert len(protection_entities) == 8  # 4 per phase x 2 devices
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_no_protection():
+    """Test setting up number entities with battery protection disabled."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {"enable_battery_control": False}
+
+    dev_data_3phase: dict[str, str | dict[str, str]] = {
+        "deviceCode": "HYBRID_INVERTER",
+        "model": "HYXI-HT",
+        "metrics": {
+            "phaseType": "3",
+            "acPhase": "3",
+            "apPhaA": "100",
+            "apPhaB": "100",
+            "apPhaC": "100",
+        },
+    }
+    dev_data_1phase: dict[str, str | dict[str, str]] = {
+        "deviceCode": "HYBRID_INVERTER",
+        "model": "HYXI-HS",
+        "metrics": {
+            "phaseType": "1",
+            "acPhase": "1",
+            "apPhaA": "100",
+            "apPhaB": "0",
+            "apPhaC": "0",
+        },
+    }
+    dev_data_micro: dict[str, str | dict[str, str]] = {
+        "deviceCode": "MICRO_INVERTER",
+        "model": "MICRO-1",
+        "metrics": {},
+    }
+
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN1": dev_data_3phase,
+        "SN2": dev_data_1phase,
+        "SN3": dev_data_micro,
+    }
+
+    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    async_add_entities = MagicMock()
+
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+
+    # Expect:
+    #   SN1 (three-phase): 0 power + 0 protection = 0
+    #   SN2 (single-phase): 0 protection = 0
+    #   SN3 (micro): 1 micro power limit
+    #   Total = 1
+    assert len(entities) == 1
+    assert any(
+        isinstance(e, number_mod.HyxiMicroPowerLimit) and e._sn == "SN3"
+        for e in entities
+    )
+    protection_entities = [
+        e for e in entities if isinstance(e, number_mod.HyxiProtectionNumber)
+    ]
+    assert len(protection_entities) == 0
 
 
 def test_hyxi_power_number_init():
@@ -326,3 +394,34 @@ async def test_hyxi_micro_power_limit_set_value_error():
     # Value should not be updated and state should not be written
     assert entity._attr_native_value == 100.0
     entity.async_write_ha_state.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_hyxi_protection_number_set_value():
+    """Test setting value for HyxiProtectionNumber triggers controller evaluation."""
+    coordinator = MagicMock()
+    dev_data: dict = {}
+    definition = {
+        "key": "soc_min",
+        "unit": "%",
+        "min": 5,
+        "max": 50,
+        "default": 20,
+        "icon": "mdi:battery-20",
+    }
+    entity = number_mod.HyxiProtectionNumber(coordinator, "SN1", dev_data, definition)
+    entity.async_write_ha_state = MagicMock()
+
+    # Set up mock controller
+    mock_controller = MagicMock()
+    mock_controller.async_evaluate = AsyncMock()
+    coordinator.protection_controllers = {"SN1": mock_controller}
+
+    entity.hass = MagicMock()
+    entity.hass.async_create_task = MagicMock()
+
+    await entity.async_set_native_value(25.0)
+
+    assert entity._attr_native_value == 25
+    entity.async_write_ha_state.assert_called_once()
+    entity.hass.async_create_task.assert_called_once()

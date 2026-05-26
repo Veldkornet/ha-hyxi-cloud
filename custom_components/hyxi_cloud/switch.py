@@ -39,7 +39,10 @@ async def async_setup_entry(
             phase = detect_phase_type(dev_data)
 
             # Frequency control (controlId 1020) — single-phase devices only
-            if phase == "single_phase":
+            if (
+                entry.options.get("enable_battery_control", False)
+                and phase == "single_phase"
+            ):
                 entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
         # Microinverter power on/off (controlId 3011)
         elif device_type == "micro_inverter":

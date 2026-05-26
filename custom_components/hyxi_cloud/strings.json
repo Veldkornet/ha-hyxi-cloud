@@ -37,7 +37,8 @@
         "description": "Adjust how your integration communicates with the HYXI Cloud.\n\n---",
         "data": {
           "update_interval": "Polling Interval (1-60 Minutes, Default: 5)",
-          "back_discovery": "Enable discovery via alarms (Advanced)"
+          "back_discovery": "Enable discovery via alarms (Advanced)",
+          "enable_battery_control": "Enable Battery Control & Protection"
         }
       }
     }

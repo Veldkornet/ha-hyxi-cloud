@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import TYPE_CHECKING
@@ -9,7 +10,7 @@ from typing import TYPE_CHECKING
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, detect_phase_type
+from .const import DOMAIN, detect_phase_type, mask_sn
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -41,6 +42,7 @@ class HyxiBatteryProtectionController:
         self._high_soc_hold = False
         self._last_mode_switch = 0.0
         self._unsub_listener: CALLBACK_TYPE | None = None
+        self._eval_task: asyncio.Task | None = None
 
     @property
     def last_sent_mode(self) -> str | None:
@@ -51,6 +53,20 @@ class HyxiBatteryProtectionController:
         """Start listening for coordinator updates."""
         if self._unsub_listener is not None:
             return
+
+        # Proactively restore the last sent mode from HASS state registry if it exists
+        entity_id = f"sensor.hyxi_{self._sn}_last_sent_mode"
+        if (state := self._hass.states.get(entity_id)) is not None:
+            mode = state.state
+            if mode not in ("unknown", "unavailable", ""):
+                self._last_sent_mode = mode
+                self._last_mode_switch = time.monotonic()
+                _LOGGER.debug(
+                    "Proactively restored battery protection mode %s from HASS state for %s",
+                    mode,
+                    mask_sn(self._sn),
+                )
+
         self._unsub_listener = self._coordinator.async_add_listener(
             self._handle_coordinator_update
         )
@@ -61,13 +77,16 @@ class HyxiBatteryProtectionController:
         if self._unsub_listener is not None:
             self._unsub_listener()
             self._unsub_listener = None
+        if self._eval_task is not None and not self._eval_task.done():
+            self._eval_task.cancel()
+            self._eval_task = None
 
     def note_manual_mode(self, mode: str) -> None:
         """Track a user-triggered mode command."""
         self._last_sent_mode = mode
 
-    async def async_restore_last_sent_mode(self, mode: str) -> None:
-        """Restore the last tracked mode and replay it after restart."""
+    def restore_last_sent_mode(self, mode: str) -> None:
+        """Restore the last tracked mode from restored state."""
         if mode not in {
             "idle",
             "charge",
@@ -79,11 +98,8 @@ class HyxiBatteryProtectionController:
         }:
             return
 
-        await self._send_control(mode)
-
         self._last_sent_mode = mode
         self._last_mode_switch = time.monotonic()
-        await self._coordinator.async_request_refresh()
 
     def should_block_manual_discharge(self) -> bool:
         """Return True when manual discharge should be blocked by SOC protection."""
@@ -116,7 +132,9 @@ class HyxiBatteryProtectionController:
     @callback
     def _handle_coordinator_update(self) -> None:
         """Evaluate protection rules after new coordinator data arrives."""
-        self._hass.async_create_task(self.async_evaluate())
+        if self._eval_task is not None and not self._eval_task.done():
+            self._eval_task.cancel()
+        self._eval_task = self._hass.async_create_task(self.async_evaluate())
 
     async def async_evaluate(self) -> None:
         """Evaluate the current SOC and enforce protection limits."""

@@ -36,7 +36,8 @@
         "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\n---",
         "data": {
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
-          "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)"
+          "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)",
+          "enable_battery_control": "Akkumulátor-vezérlés és -védelem engedélyezése"
         }
       }
     }

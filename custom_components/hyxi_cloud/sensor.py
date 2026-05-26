@@ -898,14 +898,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
     # 3. Battery protection telemetry
-    for sn, dev_data in coordinator.data.items():
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
-        if device_type not in ("hybrid_inverter", "all_in_one"):
-            continue
-        phase = detect_phase_type(dev_data)
-        if phase not in ("three_phase", "single_phase"):
-            continue
-        entities.append(HyxiLastSentModeSensor(coordinator, sn))
+    if entry.options.get("enable_battery_control", False):
+        for sn, dev_data in coordinator.data.items():
+            device_type = normalize_device_type(get_raw_device_code(dev_data))
+            if device_type not in ("hybrid_inverter", "all_in_one"):
+                continue
+            phase = detect_phase_type(dev_data)
+            if phase not in ("three_phase", "single_phase"):
+                continue
+            entities.append(HyxiLastSentModeSensor(coordinator, sn))
 
     # FINAL REGISTRATION
     if entities:
@@ -1275,7 +1276,7 @@ class HyxiLastSentModeSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
             return
 
         if controller := _get_protection_controller(self.coordinator, self._sn):
-            await controller.async_restore_last_sent_mode(mode)
+            controller.restore_last_sent_mode(mode)
 
     @property
     def device_info(self):
