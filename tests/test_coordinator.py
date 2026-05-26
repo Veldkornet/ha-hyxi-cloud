@@ -131,6 +131,9 @@ async def test_async_update_data_success():
     mock_client.get_all_device_data = AsyncMock(
         return_value={"data": {"SN123": {"metrics": {"tinv": "45.0"}}}, "attempts": 1}
     )
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(200, {"success": False})
+    )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -181,6 +184,9 @@ async def test_async_update_data_empty_telemetry_collector_only():
             "attempts": 1,
         }
     )
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(200, {"success": False})
+    )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -189,6 +195,222 @@ async def test_async_update_data_empty_telemetry_collector_only():
     result = await coordinator._async_update_data()
     assert result["SN123"]["metrics"] == {}
     assert coordinator.hyxi_metadata["last_success"] is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "generic_model",
+    [
+        "all-in-one machine",
+        "data communication stick",
+        "energy storage system",
+        "hybrid inverter",
+        "micro inverter",
+        "string inverter",
+    ],
+)
+async def test_async_update_generic_model_dict_response(generic_model):
+    """Test that each generic discovery model is replaced from queryDeviceInfo dict response."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(
+            200,
+            {"success": True, "data": {"model": "HYX-H9K-HTA"}},
+        )
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    devices = {"SN123": {"model": generic_model, "metrics": {}}}
+    await coordinator._async_update_generic_models(devices)
+
+    assert devices["SN123"]["model"] == "HYX-H9K-HTA"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "generic_model",
+    [
+        "All-In-One Machine",
+        "Data Communication Stick",
+        "Energy Storage System",
+        "Hybrid Inverter",
+        "Micro Inverter",
+        "String Inverter",
+    ],
+)
+async def test_async_update_generic_model_case_insensitive(generic_model):
+    """Test that generic model matching is case-insensitive."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(
+            200,
+            {"success": True, "data": {"model": "HYX-5K-HS"}},
+        )
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    devices = {"SN123": {"model": generic_model, "metrics": {}}}
+    await coordinator._async_update_generic_models(devices)
+
+    assert devices["SN123"]["model"] == "HYX-5K-HS"
+
+
+@pytest.mark.asyncio
+async def test_async_update_generic_model_list_response():
+    """Test that generic discovery models are replaced from queryDeviceInfo list response."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(
+            200,
+            {
+                "success": True,
+                "data": [
+                    {"dataKey": "model", "dataValue": "HYX-H9K-HTA"},
+                ],
+            },
+        )
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    devices = {"SN123": {"model": "Hybrid Inverter", "metrics": {}}}
+    await coordinator._async_update_generic_models(devices)
+
+    assert devices["SN123"]["model"] == "HYX-H9K-HTA"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "specific_model",
+    [
+        # Single-phase hybrid inverters (-HS)
+        "H3K-HS",
+        "H3K6-HS",
+        "H4K-HS",
+        "H4K6-HS",
+        "H5K-HS",
+        "H6K-HS",
+        "H8K-HS",
+        # Three-phase hybrid inverters (-HT)
+        "H5K-HT",
+        "H6K-HT",
+        "H8K-HT",
+        "H10K-HT",
+        "H12K-HT",
+        "H15K-HT",
+        "H20K-HT",
+        "H25K-HT",
+        # Large-scale hybrid inverters (-ET)
+        "H50K-ET",
+        "H75K-ET",
+        "H80K-ET",
+        "H99K9-ET",
+        "H100K-ET",
+        "H110K-ET",
+        "H125K-ET",
+        # All-in-One ESS (-HTA)
+        "H6K-HTA",
+        "H9K-HTA",
+        "H12K-HTA",
+        "H15K-HTA",
+        # Micro inverters (-S/-SW)
+        "M300-S",
+        "M300-SW",
+        "M400-S",
+        "M400-SW",
+        "M500-S",
+        "M500-SW",
+        "M600-S",
+        "M600-SW",
+        "M700-S",
+        "M700-SW",
+        "M800-S",
+        "M800-SW",
+        "M900-S",
+        "M900-SW",
+        "M1000-S",
+        "M1000-SW",
+        "M1600-S",
+        "M1600-SW",
+        "M1800-S",
+        "M1800-SW",
+        "M2000-S",
+        "M2000-SW",
+    ],
+)
+async def test_async_update_generic_model_skips_specific_model(specific_model):
+    """Test that devices with real HYXI model names are not queried."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client._request = AsyncMock()  # pylint: disable=protected-access
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    devices = {"SN123": {"model": specific_model, "metrics": {}}}
+    await coordinator._async_update_generic_models(devices)
+
+    mock_client._request.assert_not_called()
+    assert devices["SN123"]["model"] == specific_model
+
+
+@pytest.mark.asyncio
+async def test_async_update_generic_model_api_failure():
+    """Test that API failure is handled gracefully without changing model."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(200, {"success": False})
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    devices = {"SN123": {"model": "hybrid inverter", "metrics": {}}}
+    await coordinator._async_update_generic_models(devices)
+
+    assert devices["SN123"]["model"] == "hybrid inverter"
+
+
+@pytest.mark.asyncio
+async def test_async_update_generic_model_empty_model():
+    """Test that devices with empty model string are queried."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(
+            200,
+            {"success": True, "data": {"model": "HYX-5K-HS"}},
+        )
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    devices = {"SN123": {"model": "", "metrics": {}}}
+    await coordinator._async_update_generic_models(devices)
+
+    assert devices["SN123"]["model"] == "HYX-5K-HS"
 
 
 @pytest.mark.asyncio
@@ -212,6 +434,7 @@ async def test_async_sync_device_metadata_no_change():
         ),
     ):
         mock_device = MagicMock()
+        mock_device.model = None
         mock_device.sw_version = "1.2.3"
         mock_device.hw_version = "V1"
         mock_device.id = "device_id"
@@ -244,16 +467,26 @@ async def test_async_sync_device_metadata_with_change():
         ),
     ):
         mock_device = MagicMock()
+        mock_device.model = "Generic Model"
         mock_device.sw_version = "1.2.2"
         mock_device.hw_version = "V1"
         mock_device.id = "device_id"
         mock_dev_reg.async_get_device.return_value = mock_device
 
-        devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
+        devices = {
+            "SN123": {
+                "model": "HYX-H9K-HTA",
+                "sw_version": "1.2.3",
+                "hw_version": "V1",
+            }
+        }
         await coordinator._async_sync_device_metadata(devices)
 
         mock_dev_reg.async_update_device.assert_called_once_with(
-            "device_id", sw_version="1.2.3", hw_version="V1"
+            "device_id",
+            model="HYX-H9K-HTA",
+            sw_version="1.2.3",
+            hw_version="V1",
         )
 
 

@@ -23,6 +23,14 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_GENERIC_MODELS = {
+    "all-in-one machine",
+    "data communication stick",
+    "energy storage system",
+    "hybrid inverter",
+    "micro inverter",
+    "string inverter",
+}
 
 
 class HyxiMetadata(TypedDict):
@@ -110,6 +118,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             ):
                 raise UpdateFailed("HYXI telemetry data is currently unavailable.")
 
+            await self._async_update_generic_models(devices)
             self.hyxi_metadata["last_attempts"] = result.get("attempts", 1)
             self.hyxi_metadata["last_success"] = dt_util.utcnow()
             self.hyxi_metadata["api_status"] = "Online"
@@ -133,6 +142,44 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["api_status"] = "Error"
             raise UpdateFailed(f"Unexpected error: {err}") from err
 
+    async def _async_update_generic_models(self, devices: dict) -> None:
+        """Replace generic discovery labels with the detailed device model."""
+        for sn, dev_data in devices.items():
+            model = (dev_data.get("model") or "").strip()
+            if model and model.lower() not in _GENERIC_MODELS:
+                continue
+
+            try:
+                _, response = await self.client._request(  # pylint: disable=protected-access
+                    "GET",
+                    "/api/device/v1/queryDeviceInfo",
+                    params={"deviceSn": sn},
+                )
+            except (ClientError, TimeoutError) as err:  # pragma: no cover
+                _LOGGER.debug("Unable to update model for %s: %s", mask_sn(sn), err)
+                continue
+
+            if not response.get("success"):
+                continue
+
+            data = response.get("data")
+            if isinstance(data, dict):
+                detailed_model = data.get("model")
+            elif isinstance(data, list):
+                detailed_model = next(
+                    (
+                        item.get("dataValue")
+                        for item in data
+                        if item.get("dataKey") == "model"
+                    ),
+                    None,
+                )
+            else:
+                detailed_model = None
+
+            if detailed_model and detailed_model != model:
+                dev_data["model"] = detailed_model
+
     async def _async_sync_device_metadata(self, devices):
         """Sync software/hardware versions to the Device Registry."""
         dev_reg = dr.async_get(self.hass)
@@ -146,13 +193,21 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             if not device:
                 continue
 
+            model = dev_data.get("model")
             hw_version = dev_data.get("hw_version")
 
             # Only update if changed
-            if device.sw_version != sw_version or device.hw_version != hw_version:
+            if (
+                device.model != model
+                or device.sw_version != sw_version
+                or device.hw_version != hw_version
+            ):
                 _LOGGER.debug(
                     "Updating device registry for %s: %s", mask_sn(sn), sw_version
                 )
                 dev_reg.async_update_device(
-                    device.id, sw_version=sw_version, hw_version=hw_version
+                    device.id,
+                    model=model,
+                    sw_version=sw_version,
+                    hw_version=hw_version,
                 )
