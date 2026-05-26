@@ -101,7 +101,8 @@ async def async_setup_entry(
                         )
         elif device_type == "micro_inverter":
             # Microinverter power limit (controlId 3012)
-            entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
+            if entry.options.get("enable_battery_control", False):
+                entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
 
     if entities:
         async_add_entities(entities)

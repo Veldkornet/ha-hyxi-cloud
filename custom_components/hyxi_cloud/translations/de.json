@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
           "back_discovery": "Discovery über Alarme aktivieren (Erweitert)",
-          "enable_battery_control": "Batteriesteuerung und -schutz aktivieren"
+          "enable_battery_control": "Gerätesteuerung und -schutz aktivieren"
         }
       }
     }

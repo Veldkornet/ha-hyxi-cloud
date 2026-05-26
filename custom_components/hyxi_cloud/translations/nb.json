@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Oppdateringsintervall (1-60 minutter, standard: 5)",
           "back_discovery": "Aktiver oppdaging via alarmer (avansert)",
-          "enable_battery_control": "Aktiver batterikontroll og -beskyttelse"
+          "enable_battery_control": "Aktiver enhetskontroll og -beskyttelse"
         }
       }
     }
