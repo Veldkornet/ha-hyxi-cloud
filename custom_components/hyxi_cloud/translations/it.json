@@ -436,31 +436,31 @@
         "name": "Riavvia dispositivo"
       },
       "mode_idle": {
-        "name": "Imposta modalità inattiva"
+        "name": "Modalità: Inattivo"
       },
       "mode_charge": {
-        "name": "Imposta modalità di carica"
+        "name": "Modalità: Carica"
       },
       "mode_discharge": {
-        "name": "Imposta modalità di scarica"
+        "name": "Modalità: Scarica"
       },
       "mode_self_consume": {
-        "name": "Imposta modalità di autoconsumo"
+        "name": "Modalità: Autoconsumo"
       },
       "peak_shaving_close": {
-        "name": "Disattiva rasatura dei picchi"
+        "name": "Rasatura dei picchi: Disattiva"
       },
       "peak_shaving_charge": {
-        "name": "Forza carica per rasatura dei picchi"
+        "name": "Rasatura dei picchi: Forza carica"
       },
       "peak_shaving_discharge": {
-        "name": "Forza scarica per rasatura dei picchi"
+        "name": "Rasatura dei picchi: Forza scarica"
       },
       "peak_shaving_stop": {
-        "name": "Arresta rasatura dei picchi"
+        "name": "Rasatura dei picchi: Arresta"
       },
       "peak_shaving_hold": {
-        "name": "Mantieni rasatura dei picchi"
+        "name": "Rasatura dei picchi: Mantieni"
       },
       "clear_alarms": {
         "name": "Cancella allarmi attivi"

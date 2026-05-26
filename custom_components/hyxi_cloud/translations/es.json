@@ -436,31 +436,31 @@
         "name": "Reiniciar dispositivo"
       },
       "mode_idle": {
-        "name": "Establecer modo inactivo"
+        "name": "Modo: Inactivo"
       },
       "mode_charge": {
-        "name": "Establecer modo de carga"
+        "name": "Modo: Carga"
       },
       "mode_discharge": {
-        "name": "Establecer modo de descarga"
+        "name": "Modo: Descarga"
       },
       "mode_self_consume": {
-        "name": "Establecer modo de autoconsumo"
+        "name": "Modo: Autoconsumo"
       },
       "peak_shaving_close": {
-        "name": "Desactivar control de picos de demanda"
+        "name": "Control de picos de demanda: Desactivar"
       },
       "peak_shaving_charge": {
-        "name": "Forzar carga de control de picos de demanda"
+        "name": "Control de picos de demanda: Forzar carga"
       },
       "peak_shaving_discharge": {
-        "name": "Forzar descarga de control de picos de demanda"
+        "name": "Control de picos de demanda: Forzar descarga"
       },
       "peak_shaving_stop": {
-        "name": "Detener control de picos de demanda"
+        "name": "Control de picos de demanda: Detener"
       },
       "peak_shaving_hold": {
-        "name": "Mantener control de picos de demanda"
+        "name": "Control de picos de demanda: Mantener"
       },
       "clear_alarms": {
         "name": "Borrar alarmas activas"

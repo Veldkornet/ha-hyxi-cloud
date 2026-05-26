@@ -436,31 +436,31 @@
         "name": "Eszköz újraindítása"
       },
       "mode_idle": {
-        "name": "Készenléti mód beállítása"
+        "name": "Mód: Készenléti"
       },
       "mode_charge": {
-        "name": "Töltési mód beállítása"
+        "name": "Mód: Töltés"
       },
       "mode_discharge": {
-        "name": "Kisütési mód beállítása"
+        "name": "Mód: Kisütés"
       },
       "mode_self_consume": {
-        "name": "Önfogyasztási mód beállítása"
+        "name": "Mód: Önfogyasztás"
       },
       "peak_shaving_close": {
-        "name": "Csúcskisímítás kikapcsolása"
+        "name": "Csúcskisímítás: Kikapcsolás"
       },
       "peak_shaving_charge": {
-        "name": "Csúcskisímítási töltés kényszerítése"
+        "name": "Csúcskisímítás: Töltés kényszerítése"
       },
       "peak_shaving_discharge": {
-        "name": "Csúcskisímítási kisütés kényszerítése"
+        "name": "Csúcskisímítás: Kisütés kényszerítése"
       },
       "peak_shaving_stop": {
-        "name": "Csúcskisímítás leállítása"
+        "name": "Csúcskisímítás: Leállítás"
       },
       "peak_shaving_hold": {
-        "name": "Csúcskisímítás tartása"
+        "name": "Csúcskisímítás: Tartás"
       },
       "clear_alarms": {
         "name": "Aktív riasztások törlése"

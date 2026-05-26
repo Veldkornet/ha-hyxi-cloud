@@ -436,31 +436,31 @@
         "name": "Starta om enhet"
       },
       "mode_idle": {
-        "name": "Ställ in inaktivt läge"
+        "name": "Läge: Inaktivt"
       },
       "mode_charge": {
-        "name": "Ställ in laddningsläge"
+        "name": "Läge: Laddning"
       },
       "mode_discharge": {
-        "name": "Ställ in urladdningsläge"
+        "name": "Läge: Urladdning"
       },
       "mode_self_consume": {
-        "name": "Ställ in egenförbrukningsläge"
+        "name": "Läge: Egenförbrukning"
       },
       "peak_shaving_close": {
-        "name": "Stäng av topplastreducering"
+        "name": "Topplastreducering: Stäng av"
       },
       "peak_shaving_charge": {
-        "name": "Tvinga laddning för topplastreducering"
+        "name": "Topplastreducering: Tvinga laddning"
       },
       "peak_shaving_discharge": {
-        "name": "Tvinga urladdning för topplastreducering"
+        "name": "Topplastreducering: Tvinga urladdning"
       },
       "peak_shaving_stop": {
-        "name": "Stoppa topplastreducering"
+        "name": "Topplastreducering: Stoppa"
       },
       "peak_shaving_hold": {
-        "name": "Håll topplastreducering"
+        "name": "Topplastreducering: Håll"
       },
       "clear_alarms": {
         "name": "Rensa aktiva larm"

@@ -436,31 +436,31 @@
         "name": "Käynnistä laite uudelleen"
       },
       "mode_idle": {
-        "name": "Aseta valmiustila"
+        "name": "Tila: Valmiustila"
       },
       "mode_charge": {
-        "name": "Aseta lataustila"
+        "name": "Tila: Lataus"
       },
       "mode_discharge": {
-        "name": "Aseta purkutila"
+        "name": "Tila: Purku"
       },
       "mode_self_consume": {
-        "name": "Aseta omakulutustila"
+        "name": "Tila: Omakulutus"
       },
       "peak_shaving_close": {
-        "name": "Poista huipputehon leikkaus käytöstä"
+        "name": "Huipputehon leikkaus: Poista käytöstä"
       },
       "peak_shaving_charge": {
-        "name": "Pakota huipputehon leikkauksen lataus"
+        "name": "Huipputehon leikkaus: Pakota lataus"
       },
       "peak_shaving_discharge": {
-        "name": "Pakota huipputehon leikkauksen purku"
+        "name": "Huipputehon leikkaus: Pakota purku"
       },
       "peak_shaving_stop": {
-        "name": "Pysäytä huipputehon leikkaus"
+        "name": "Huipputehon leikkaus: Pysäytä"
       },
       "peak_shaving_hold": {
-        "name": "Pidä huipputehon leikkaus"
+        "name": "Huipputehon leikkaus: Pidä"
       },
       "clear_alarms": {
         "name": "Tyhjennä aktiiviset hälytykset"

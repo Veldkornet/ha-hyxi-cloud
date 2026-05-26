@@ -436,31 +436,31 @@
         "name": "Cihazı Yeniden Başlat"
       },
       "mode_idle": {
-        "name": "Bekleme modunu ayarla"
+        "name": "Mod: Bekleme"
       },
       "mode_charge": {
-        "name": "Şarj modunu ayarla"
+        "name": "Mod: Şarj"
       },
       "mode_discharge": {
-        "name": "Deşarj modunu ayarla"
+        "name": "Mod: Deşarj"
       },
       "mode_self_consume": {
-        "name": "Öz tüketim modunu ayarla"
+        "name": "Mod: Öz Tüketim"
       },
       "peak_shaving_close": {
-        "name": "Pik Tıraşlamayı Kapat"
+        "name": "Pik Tıraşlama: Kapat"
       },
       "peak_shaving_charge": {
-        "name": "Pik Tıraşlama Şarjını Zorla"
+        "name": "Pik Tıraşlama: Şarjı Zorla"
       },
       "peak_shaving_discharge": {
-        "name": "Pik Tıraşlama Deşarjını Zorla"
+        "name": "Pik Tıraşlama: Deşarjı Zorla"
       },
       "peak_shaving_stop": {
-        "name": "Pik Tıraşlamayı Durdur"
+        "name": "Pik Tıraşlama: Durdur"
       },
       "peak_shaving_hold": {
-        "name": "Pik Tıraşlamayı Tut"
+        "name": "Pik Tıraşlama: Tut"
       },
       "clear_alarms": {
         "name": "Aktif alarmları temizle"

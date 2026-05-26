@@ -436,31 +436,31 @@
         "name": "Uruchom ponownie urządzenie"
       },
       "mode_idle": {
-        "name": "Ustaw tryb bezczynności"
+        "name": "Tryb: Bezczynność"
       },
       "mode_charge": {
-        "name": "Ustaw tryb ładowania"
+        "name": "Tryb: Ładowanie"
       },
       "mode_discharge": {
-        "name": "Ustaw tryb rozładowania"
+        "name": "Tryb: Rozładowanie"
       },
       "mode_self_consume": {
-        "name": "Ustaw tryb autokonsumpcji"
+        "name": "Tryb: Autokonsumpcja"
       },
       "peak_shaving_close": {
-        "name": "Wyłącz redukcję szczytów"
+        "name": "Redukcja szczytów: Wyłącz"
       },
       "peak_shaving_charge": {
-        "name": "Wymuś ładowanie redukcji szczytów"
+        "name": "Redukcja szczytów: Wymuś ładowanie"
       },
       "peak_shaving_discharge": {
-        "name": "Wymuś rozładowanie redukcji szczytów"
+        "name": "Redukcja szczytów: Wymuś rozładowanie"
       },
       "peak_shaving_stop": {
-        "name": "Zatrzymaj redukcję szczytów"
+        "name": "Redukcja szczytów: Zatrzymaj"
       },
       "peak_shaving_hold": {
-        "name": "Wstrzymaj redukcję szczytów"
+        "name": "Redukcja szczytów: Wstrzymaj"
       },
       "clear_alarms": {
         "name": "Wyczyść aktywne alarmy"

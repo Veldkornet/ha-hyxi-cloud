@@ -436,31 +436,31 @@
         "name": "重启设备"
       },
       "mode_idle": {
-        "name": "设置待机模式"
+        "name": "模式：待机"
       },
       "mode_charge": {
-        "name": "设置充电模式"
+        "name": "模式：充电"
       },
       "mode_discharge": {
-        "name": "设置放电模式"
+        "name": "模式：放电"
       },
       "mode_self_consume": {
-        "name": "设置自发自用模式"
+        "name": "模式：自发自用"
       },
       "peak_shaving_close": {
-        "name": "关闭削峰填谷"
+        "name": "削峰填谷：关闭"
       },
       "peak_shaving_charge": {
-        "name": "强制削峰填谷充电"
+        "name": "削峰填谷：强制充电"
       },
       "peak_shaving_discharge": {
-        "name": "强制削峰填谷放电"
+        "name": "削峰填谷：强制放电"
       },
       "peak_shaving_stop": {
-        "name": "停止削峰填谷"
+        "name": "削峰填谷：停止"
       },
       "peak_shaving_hold": {
-        "name": "保持削峰填谷"
+        "name": "削峰填谷：保持"
       },
       "clear_alarms": {
         "name": "清除活动告警"

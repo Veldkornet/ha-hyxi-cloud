@@ -436,31 +436,31 @@
         "name": "Start enhet på nytt"
       },
       "mode_idle": {
-        "name": "Sett inaktiv modus"
+        "name": "Modus: Inaktiv"
       },
       "mode_charge": {
-        "name": "Sett lademodus"
+        "name": "Modus: Lading"
       },
       "mode_discharge": {
-        "name": "Sett utladingsmodus"
+        "name": "Modus: Utlading"
       },
       "mode_self_consume": {
-        "name": "Sett egetforbruksmodus"
+        "name": "Modus: Egetforbruk"
       },
       "peak_shaving_close": {
-        "name": "Slå av topplastreduksjon"
+        "name": "Topplastreduksjon: Slå av"
       },
       "peak_shaving_charge": {
-        "name": "Tving lading for topplastreduksjon"
+        "name": "Topplastreduksjon: Tving lading"
       },
       "peak_shaving_discharge": {
-        "name": "Tving utlading for topplastreduksjon"
+        "name": "Topplastreduksjon: Tving utlading"
       },
       "peak_shaving_stop": {
-        "name": "Stopp topplastreduksjon"
+        "name": "Topplastreduksjon: Stopp"
       },
       "peak_shaving_hold": {
-        "name": "Hold topplastreduksjon"
+        "name": "Topplastreduksjon: Hold"
       },
       "clear_alarms": {
         "name": "Nullstill aktive alarmer"

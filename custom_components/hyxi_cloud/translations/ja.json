@@ -436,31 +436,31 @@
         "name": "デバイスを再起動"
       },
       "mode_idle": {
-        "name": "アイドルモードを設定"
+        "name": "モード: アイドル"
       },
       "mode_charge": {
-        "name": "充電モードを設定"
+        "name": "モード: 充電"
       },
       "mode_discharge": {
-        "name": "放電モードを設定"
+        "name": "モード: 放電"
       },
       "mode_self_consume": {
-        "name": "自家消費モードを設定"
+        "name": "モード: 自家消費"
       },
       "peak_shaving_close": {
-        "name": "ピークカットをオフにする"
+        "name": "ピークカット: オフにする"
       },
       "peak_shaving_charge": {
-        "name": "ピークカット充電を強制"
+        "name": "ピークカット: 充電を強制"
       },
       "peak_shaving_discharge": {
-        "name": "ピークカット放電を強制"
+        "name": "ピークカット: 放電を強制"
       },
       "peak_shaving_stop": {
-        "name": "ピークカットを停止"
+        "name": "ピークカット: 停止"
       },
       "peak_shaving_hold": {
-        "name": "ピークカットを維持"
+        "name": "ピークカット: 維持"
       },
       "clear_alarms": {
         "name": "アクティブなアラームをクリア"
