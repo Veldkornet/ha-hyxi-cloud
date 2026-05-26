@@ -436,31 +436,31 @@
         "name": "Gerät neu starten"
       },
       "mode_idle": {
-        "name": "Leerlaufmodus festlegen"
+        "name": "Modus: Leerlauf"
       },
       "mode_charge": {
-        "name": "Lademodus festlegen"
+        "name": "Modus: Laden"
       },
       "mode_discharge": {
-        "name": "Entlademodus festlegen"
+        "name": "Modus: Entladen"
       },
       "mode_self_consume": {
-        "name": "Eigenverbrauchsmodus festlegen"
+        "name": "Modus: Eigenverbrauch"
       },
       "peak_shaving_close": {
-        "name": "Spitzenlastkappung ausschalten"
+        "name": "Spitzenlastkappung: Ausschalten"
       },
       "peak_shaving_charge": {
-        "name": "Laden zur Spitzenlastkappung erzwingen"
+        "name": "Spitzenlastkappung: Laden erzwingen"
       },
       "peak_shaving_discharge": {
-        "name": "Entladen zur Spitzenlastkappung erzwingen"
+        "name": "Spitzenlastkappung: Entladen erzwingen"
       },
       "peak_shaving_stop": {
-        "name": "Spitzenlastkappung stoppen"
+        "name": "Spitzenlastkappung: Stoppen"
       },
       "peak_shaving_hold": {
-        "name": "Spitzenlastkappung halten"
+        "name": "Spitzenlastkappung: Halten"
       },
       "clear_alarms": {
         "name": "Aktive Alarme löschen"

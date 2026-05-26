@@ -436,31 +436,31 @@
         "name": "Restartovat zařízení"
       },
       "mode_idle": {
-        "name": "Nastavit režim nečinnosti"
+        "name": "Režim: Nečinnost"
       },
       "mode_charge": {
-        "name": "Nastavit režim nabíjení"
+        "name": "Režim: Nabíjení"
       },
       "mode_discharge": {
-        "name": "Nastavit režim vybíjení"
+        "name": "Režim: Vybíjení"
       },
       "mode_self_consume": {
-        "name": "Nastavit režim vlastní spotřeby"
+        "name": "Režim: Vlastní spotřeba"
       },
       "peak_shaving_close": {
-        "name": "Vypnout omezování špiček"
+        "name": "Omezování špiček: Vypnout"
       },
       "peak_shaving_charge": {
-        "name": "Vynutit nabíjení pro omezování špiček"
+        "name": "Omezování špiček: Vynutit nabíjení"
       },
       "peak_shaving_discharge": {
-        "name": "Vynutit vybíjení pro omezování špiček"
+        "name": "Omezování špiček: Vynutit vybíjení"
       },
       "peak_shaving_stop": {
-        "name": "Zastavit omezování špiček"
+        "name": "Omezování špiček: Zastavit"
       },
       "peak_shaving_hold": {
-        "name": "Pozastavit omezování špiček"
+        "name": "Omezování špiček: Pozastavit"
       },
       "clear_alarms": {
         "name": "Vymazat aktivní alarmy"

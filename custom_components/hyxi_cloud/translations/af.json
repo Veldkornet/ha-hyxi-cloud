@@ -436,31 +436,31 @@
         "name": "Herlaai toestel"
       },
       "mode_idle": {
-        "name": "Stel rustende modus in"
+        "name": "Modus: Rustend"
       },
       "mode_charge": {
-        "name": "Stel laaimodus in"
+        "name": "Modus: Laai"
       },
       "mode_discharge": {
-        "name": "Stel ontlaaimodus in"
+        "name": "Modus: Ontlaai"
       },
       "mode_self_consume": {
-        "name": "Stel selfverbruikmodus in"
+        "name": "Modus: Selfverbruik"
       },
       "peak_shaving_close": {
-        "name": "Skakel piekbesnoeiing af"
+        "name": "Piekbesnoeiing: Skakel af"
       },
       "peak_shaving_charge": {
-        "name": "Forseer piekbesnoeiingslaai"
+        "name": "Piekbesnoeiing: Forseer laai"
       },
       "peak_shaving_discharge": {
-        "name": "Forseer piekbesnoeiingsontlaai"
+        "name": "Piekbesnoeiing: Forseer ontlaai"
       },
       "peak_shaving_stop": {
-        "name": "Stop piekbesnoeiing"
+        "name": "Piekbesnoeiing: Stop"
       },
       "peak_shaving_hold": {
-        "name": "Hou piekbesnoeiing"
+        "name": "Piekbesnoeiing: Hou"
       },
       "clear_alarms": {
         "name": "Maak aktiewe alarms skoon"

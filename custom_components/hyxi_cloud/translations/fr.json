@@ -436,31 +436,31 @@
         "name": "Redémarrer l'appareil"
       },
       "mode_idle": {
-        "name": "Définir le mode inactif"
+        "name": "Mode : Inactif"
       },
       "mode_charge": {
-        "name": "Définir le mode de charge"
+        "name": "Mode : Charge"
       },
       "mode_discharge": {
-        "name": "Définir le mode de décharge"
+        "name": "Mode : Décharge"
       },
       "mode_self_consume": {
-        "name": "Définir le mode d'autoconsommation"
+        "name": "Mode : Autoconsommation"
       },
       "peak_shaving_close": {
-        "name": "Désactiver l'écrêtement des pics"
+        "name": "Écrêtement des pics : Désactiver"
       },
       "peak_shaving_charge": {
-        "name": "Forcer la charge d'écrêtement des pics"
+        "name": "Écrêtement des pics : Forcer la charge"
       },
       "peak_shaving_discharge": {
-        "name": "Forcer la décharge d'écrêtement des pics"
+        "name": "Écrêtement des pics : Forcer la décharge"
       },
       "peak_shaving_stop": {
-        "name": "Arrêter l'écrêtement des pics"
+        "name": "Écrêtement des pics : Arrêter"
       },
       "peak_shaving_hold": {
-        "name": "Maintenir l'écrêtement des pics"
+        "name": "Écrêtement des pics : Maintenir"
       },
       "clear_alarms": {
         "name": "Effacer les alarmes actives"

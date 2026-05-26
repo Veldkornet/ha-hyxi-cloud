@@ -436,31 +436,31 @@
         "name": "Apparaat herstarten"
       },
       "mode_idle": {
-        "name": "Stel inactieve modus in"
+        "name": "Modus: Inactief"
       },
       "mode_charge": {
-        "name": "Stel laadmodus in"
+        "name": "Modus: Laden"
       },
       "mode_discharge": {
-        "name": "Stel ontlaadmodus in"
+        "name": "Modus: Ontladen"
       },
       "mode_self_consume": {
-        "name": "Stel eigenverbruiksmodus in"
+        "name": "Modus: Eigenverbruik"
       },
       "peak_shaving_close": {
-        "name": "Piekbesparing uitschakelen"
+        "name": "Piekbesparing: Uitschakelen"
       },
       "peak_shaving_charge": {
-        "name": "Geforceerd laden voor piekbesparing"
+        "name": "Piekbesparing: Geforceerd laden"
       },
       "peak_shaving_discharge": {
-        "name": "Geforceerd ontladen voor piekbesparing"
+        "name": "Piekbesparing: Geforceerd ontladen"
       },
       "peak_shaving_stop": {
-        "name": "Piekbesparing stoppen"
+        "name": "Piekbesparing: Stoppen"
       },
       "peak_shaving_hold": {
-        "name": "Piekbesparing vasthouden"
+        "name": "Piekbesparing: Vasthouden"
       },
       "clear_alarms": {
         "name": "Actieve alarmen wissen"

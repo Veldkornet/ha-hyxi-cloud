@@ -436,31 +436,31 @@
         "name": "Genstart enhed"
       },
       "mode_idle": {
-        "name": "Indstil inaktiv tilstand"
+        "name": "Tilstand: Inaktiv"
       },
       "mode_charge": {
-        "name": "Indstil opladningstilstand"
+        "name": "Tilstand: Opladning"
       },
       "mode_discharge": {
-        "name": "Indstil afladningstilstand"
+        "name": "Tilstand: Afladning"
       },
       "mode_self_consume": {
-        "name": "Indstil egetforbrugstilstand"
+        "name": "Tilstand: Egetforbrug"
       },
       "peak_shaving_close": {
-        "name": "Slå spidsbelastningsudjævning fra"
+        "name": "Spidsbelastningsudjævning: Slå fra"
       },
       "peak_shaving_charge": {
-        "name": "Tving opladning til spidsbelastningsudjævning"
+        "name": "Spidsbelastningsudjævning: Tving opladning"
       },
       "peak_shaving_discharge": {
-        "name": "Tving afladning til spidsbelastningsudjævning"
+        "name": "Spidsbelastningsudjævning: Tving afladning"
       },
       "peak_shaving_stop": {
-        "name": "Stop spidsbelastningsudjævning"
+        "name": "Spidsbelastningsudjævning: Stop"
       },
       "peak_shaving_hold": {
-        "name": "Hold spidsbelastningsudjævning"
+        "name": "Spidsbelastningsudjævning: Hold"
       },
       "clear_alarms": {
         "name": "Ryd aktive alarmer"

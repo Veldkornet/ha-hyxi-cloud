@@ -437,31 +437,31 @@
         "name": "Restart Device"
       },
       "mode_idle": {
-        "name": "Set Idle Mode"
+        "name": "Mode: Idle"
       },
       "mode_charge": {
-        "name": "Set Charge Mode"
+        "name": "Mode: Charge"
       },
       "mode_discharge": {
-        "name": "Set Discharge Mode"
+        "name": "Mode: Discharge"
       },
       "mode_self_consume": {
-        "name": "Set Self-Consumption Mode"
+        "name": "Mode: Self-Consumption"
       },
       "peak_shaving_close": {
-        "name": "Turn Off Peak Shaving"
+        "name": "Peak Shaving: Turn Off"
       },
       "peak_shaving_charge": {
-        "name": "Force Peak Shaving Charge"
+        "name": "Peak Shaving: Force Charge"
       },
       "peak_shaving_discharge": {
-        "name": "Force Peak Shaving Discharge"
+        "name": "Peak Shaving: Force Discharge"
       },
       "peak_shaving_stop": {
-        "name": "Stop Peak Shaving"
+        "name": "Peak Shaving: Stop"
       },
       "peak_shaving_hold": {
-        "name": "Hold Peak Shaving"
+        "name": "Peak Shaving: Hold"
       },
       "clear_alarms": {
         "name": "Clear Active Alarms"
