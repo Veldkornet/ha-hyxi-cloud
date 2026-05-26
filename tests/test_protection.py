@@ -1,7 +1,7 @@
 """Tests for minimal battery protection logic."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -159,28 +159,23 @@ async def test_high_soc_hysteresis_clears_below_resume():
 # --- Mode Restore ---
 
 
-@pytest.mark.asyncio
-async def test_restore_replays_last_idle_mode():
-    """Restoring an idle state should resend the idle command."""
+def test_restore_last_idle_mode():
+    """Restoring an idle state should set last_sent_mode without sending command."""
     controller = _build_controller(50)
 
-    await controller.async_restore_last_sent_mode("idle")
+    controller.restore_last_sent_mode("idle")
 
-    controller._coordinator.client.set_mode_idle.assert_awaited_once_with("SN123")
+    controller._coordinator.client.set_mode_idle.assert_not_called()
     assert controller.last_sent_mode == "idle"
 
 
-@pytest.mark.asyncio
-async def test_restore_replays_last_charge_mode_with_saved_power():
-    """Restoring charge should replay the charge command with stored power."""
+def test_restore_last_charge_mode():
+    """Restoring charge should set last_sent_mode without sending command."""
     controller = _build_controller(50)
-    controller._get_power_value = lambda direction: 750  # type: ignore[method-assign]
 
-    await controller.async_restore_last_sent_mode("charge")
+    controller.restore_last_sent_mode("charge")
 
-    controller._coordinator.client.set_mode_charge.assert_awaited_once_with(
-        "SN123", 750
-    )
+    controller._coordinator.client.set_mode_charge.assert_not_called()
     assert controller.last_sent_mode == "charge"
 
 
@@ -243,14 +238,27 @@ async def test_single_phase_high_soc_keeps_hold_allowed():
     controller._ensure_mode.assert_not_awaited()
 
 
-@pytest.mark.asyncio
-async def test_single_phase_restore_replays_hold_action():
-    """Single-phase restore should replay the last peak-shaving action."""
+def test_single_phase_restore_hold_action():
+    """Single-phase restore should set last_sent_mode without sending command."""
     controller = _build_controller(50, "H5K-HS")
 
-    await controller.async_restore_last_sent_mode("hold")
+    controller.restore_last_sent_mode("hold")
 
-    controller._coordinator.client.set_peak_shaving.assert_awaited_once_with(
-        "SN123", "hold"
-    )
+    controller._coordinator.client.set_peak_shaving.assert_not_called()
     assert controller.last_sent_mode == "hold"
+
+
+@pytest.mark.asyncio
+async def test_proactive_state_restore_on_start():
+    """Test that async_start proactively restores last_sent_mode from HASS state registry."""
+    controller = _build_controller(50)
+
+    mock_state = SimpleNamespace(state="charge")
+    controller._hass.states = SimpleNamespace(get=MagicMock(return_value=mock_state))
+
+    await controller.async_start()
+
+    controller._hass.states.get.assert_called_once_with(
+        "sensor.hyxi_SN123_last_sent_mode"
+    )
+    assert controller.last_sent_mode == "charge"

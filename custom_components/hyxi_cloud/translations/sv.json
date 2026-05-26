@@ -36,7 +36,8 @@
         "description": "Justera hur din integration kommunicerar med HYXI Cloud.\n\n---",
         "data": {
           "update_interval": "Uppdateringsintervall (1-60 minuter, standard: 5)",
-          "back_discovery": "Aktivera upptäckt via larm (Avancerat)"
+          "back_discovery": "Aktivera upptäckt via larm (Avancerat)",
+          "enable_battery_protection": "Aktivera batteriskydd"
         }
       }
     }

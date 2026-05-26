@@ -151,6 +151,13 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_BACK_DISCOVERY,
                     default=self._config_entry.options.get(CONF_BACK_DISCOVERY, False),
                 ): selector.BooleanSelector(),
+                # Toggle for Battery Protection
+                vol.Optional(
+                    "enable_battery_protection",
+                    default=self._config_entry.options.get(
+                        "enable_battery_protection", False
+                    ),
+                ): selector.BooleanSelector(),
             }
         )
 

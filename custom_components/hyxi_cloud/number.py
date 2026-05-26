@@ -89,7 +89,10 @@ async def async_setup_entry(
                 entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
 
             # SOC protection numbers for both three-phase and single-phase
-            if phase in ("three_phase", "single_phase"):
+            if entry.options.get("enable_battery_protection", False) and phase in (
+                "three_phase",
+                "single_phase",
+            ):
                 for definition in PROTECTION_NUMBER_DEFS:
                     entities.append(
                         HyxiProtectionNumber(coordinator, sn, dev_data, definition)
@@ -240,6 +243,7 @@ class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
     ) -> None:
         """Initialize the protection number."""
         super().__init__(coordinator)
+        self._sn = sn
         key = str(definition["key"])
         self._attr_unique_id = f"hyxi_{sn}_{key}"
         self._attr_translation_key = key
@@ -264,8 +268,9 @@ class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
                 self._attr_native_value = int(float(last_state.state))
             except ValueError, TypeError:
                 _LOGGER.debug(
-                    "Could not restore protection number %s from state %s",
-                    self.unique_id,
+                    "Could not restore protection number hyxi_%s_%s from state %s",
+                    mask_sn(self._sn),
+                    self._attr_translation_key,
                     last_state.state,
                 )
 
@@ -273,3 +278,9 @@ class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
         """Set the protection threshold value."""
         self._attr_native_value = int(value)
         self.async_write_ha_state()
+        if (
+            controller := getattr(self.coordinator, "protection_controllers", {}).get(
+                self._sn
+            )
+        ) is not None:
+            self.hass.async_create_task(controller.async_evaluate())

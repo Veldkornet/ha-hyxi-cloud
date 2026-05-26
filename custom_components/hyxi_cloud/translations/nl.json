@@ -36,7 +36,8 @@
         "description": "Pas aan hoe uw integratie communiceert met de HYXI Cloud.\n\n---",
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
-          "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)"
+          "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)",
+          "enable_battery_protection": "Batterijbescherming inschakelen"
         }
       }
     }

@@ -36,7 +36,8 @@
         "description": "統合がHYXI Cloudと通信する方法を調整します。\n\n---",
         "data": {
           "update_interval": "ポーリング間隔 (1-60分, デフォルト: 5)",
-          "back_discovery": "アラーム経由の検出を有効にする (高度)"
+          "back_discovery": "アラーム経由の検出を有効にする (高度)",
+          "enable_battery_protection": "バッテリー保護を有効にする"
         }
       }
     }

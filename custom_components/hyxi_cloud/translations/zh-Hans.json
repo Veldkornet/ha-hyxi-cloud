@@ -36,7 +36,8 @@
         "description": "调整插件与 HYXI Cloud 的通信方式。\n\n---",
         "data": {
           "update_interval": "轮询间隔 (1-60 分钟, 默认: 5)",
-          "back_discovery": "启用通过报警发现设备 (高级)"
+          "back_discovery": "启用通过报警发现设备 (高级)",
+          "enable_battery_protection": "启用电池保护"
         }
       }
     }

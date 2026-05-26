@@ -173,6 +173,10 @@ async def _async_setup_battery_protection(
     coordinator: HyxiDataUpdateCoordinator,
 ) -> None:
     """Start battery protection on supported battery control devices."""
+    if not coordinator.entry.options.get("enable_battery_protection", False):
+        _LOGGER.debug("Battery protection is disabled by user settings")
+        return
+
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if device_type not in ("hybrid_inverter", "all_in_one"):
