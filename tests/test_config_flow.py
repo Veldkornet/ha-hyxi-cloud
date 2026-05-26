@@ -400,7 +400,7 @@ async def test_options_flow_success(mock_ha_environment):
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
 
-    user_input = {"update_interval": 30, "enable_battery_protection": True}
+    user_input = {"update_interval": 30, "enable_battery_control": True}
     result = await options_flow.async_step_init(user_input=user_input)
 
     assert result["type"] == "create_entry"

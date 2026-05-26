@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Uppdateringsintervall (1-60 minuter, standard: 5)",
           "back_discovery": "Aktivera upptäckt via larm (Avancerat)",
-          "enable_battery_protection": "Aktivera batteriskydd"
+          "enable_battery_control": "Aktivera batterikontroll och -skydd"
         }
       }
     }

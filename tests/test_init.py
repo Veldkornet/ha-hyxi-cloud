@@ -442,14 +442,14 @@ async def test_async_setup_battery_protection_options(mock_hass, mock_entry):
     mock_coordinator.protection_controllers = {}
 
     # Case 1: Option is False (default)
-    mock_entry.options = {"enable_battery_protection": False}
+    mock_entry.options = {"enable_battery_control": False}
     mock_coordinator.entry = mock_entry
 
     await _async_setup_battery_protection(mock_hass, mock_coordinator)
     assert len(mock_coordinator.protection_controllers) == 0
 
     # Case 2: Option is True
-    mock_entry.options = {"enable_battery_protection": True}
+    mock_entry.options = {"enable_battery_control": True}
     with patch(
         "custom_components.hyxi_cloud.__init__.HyxiBatteryProtectionController"
     ) as mock_controller_class:

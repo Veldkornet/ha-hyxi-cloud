@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Intervallo di aggiornamento (1-60 Minuti, Predefinito: 5)",
           "back_discovery": "Abilita il rilevamento tramite allarmi (Avanzato)",
-          "enable_battery_protection": "Abilita protezione batteria"
+          "enable_battery_control": "Abilita controllo e protezione batteria"
         }
       }
     }

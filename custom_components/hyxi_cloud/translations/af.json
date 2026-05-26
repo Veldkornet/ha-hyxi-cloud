@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Opvragsinterval (1-60 minute, verstek: 5)",
           "back_discovery": "Aktiveer ontdekking via alarms (Gevorderd)",
-          "enable_battery_protection": "Aktiveer batterybeskerming"
+          "enable_battery_control": "Aktiveer batterybeheer en -beskerming"
         }
       }
     }

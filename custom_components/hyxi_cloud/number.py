@@ -82,21 +82,23 @@ async def async_setup_entry(
         if device_type in ("hybrid_inverter", "all_in_one"):
             phase = detect_phase_type(dev_data)
 
-            # Power numbers pair with mode control (1062-1065) — three-phase only
-            # Peak shaving (single-phase) uses full inverter power, no wattage setting
-            if phase == "three_phase":
-                entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
-                entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
-
-            # SOC protection numbers for both three-phase and single-phase
-            if entry.options.get("enable_battery_protection", False) and phase in (
-                "three_phase",
-                "single_phase",
-            ):
-                for definition in PROTECTION_NUMBER_DEFS:
+            if entry.options.get("enable_battery_control", False):
+                # Power numbers pair with mode control (1062-1065) — three-phase only
+                # Peak shaving (single-phase) uses full inverter power, no wattage setting
+                if phase == "three_phase":
                     entities.append(
-                        HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                        HyxiPowerNumber(coordinator, sn, dev_data, "charge")
                     )
+                    entities.append(
+                        HyxiPowerNumber(coordinator, sn, dev_data, "discharge")
+                    )
+
+                # SOC protection numbers for both three-phase and single-phase
+                if phase in ("three_phase", "single_phase"):
+                    for definition in PROTECTION_NUMBER_DEFS:
+                        entities.append(
+                            HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                        )
         elif device_type == "micro_inverter":
             # Microinverter power limit (controlId 3012)
             entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))

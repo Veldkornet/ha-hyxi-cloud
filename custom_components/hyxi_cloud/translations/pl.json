@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Interwał odpytywania (1-60 minut, domyślnie: 5)",
           "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)",
-          "enable_battery_protection": "Włącz ochronę baterii"
+          "enable_battery_control": "Włącz kontrolę i ochronę baterii"
         }
       }
     }

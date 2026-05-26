@@ -173,8 +173,8 @@ async def _async_setup_battery_protection(
     coordinator: HyxiDataUpdateCoordinator,
 ) -> None:
     """Start battery protection on supported battery control devices."""
-    if not coordinator.entry.options.get("enable_battery_protection", False):
-        _LOGGER.debug("Battery protection is disabled by user settings")
+    if not coordinator.entry.options.get("enable_battery_control", False):
+        _LOGGER.debug("Battery control and protection is disabled by user settings")
         return
 
     for sn, dev_data in coordinator.data.items():

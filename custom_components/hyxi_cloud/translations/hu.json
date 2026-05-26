@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
           "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)",
-          "enable_battery_protection": "Akkumulátorvédelem engedélyezése"
+          "enable_battery_control": "Akkumulátor-vezérlés és -védelem engedélyezése"
         }
       }
     }

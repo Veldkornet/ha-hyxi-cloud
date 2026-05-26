@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
           "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)",
-          "enable_battery_protection": "Batterijbescherming inschakelen"
+          "enable_battery_control": "Batterijcontrole en -bescherming inschakelen"
         }
       }
     }

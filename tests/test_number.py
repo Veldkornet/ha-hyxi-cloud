@@ -116,7 +116,7 @@ async def test_async_setup_entry():
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "test_entry"
-    entry.options = {"enable_battery_protection": True}
+    entry.options = {"enable_battery_control": True}
 
     dev_data_3phase: dict[str, str | dict[str, str]] = {
         "deviceCode": "HYBRID_INVERTER",
@@ -199,7 +199,7 @@ async def test_async_setup_entry_no_protection():
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "test_entry"
-    entry.options = {"enable_battery_protection": False}
+    entry.options = {"enable_battery_control": False}
 
     dev_data_3phase: dict[str, str | dict[str, str]] = {
         "deviceCode": "HYBRID_INVERTER",
@@ -245,23 +245,11 @@ async def test_async_setup_entry_no_protection():
     entities = async_add_entities.call_args[0][0]
 
     # Expect:
-    #   SN1 (three-phase): 2 power + 0 protection = 2
+    #   SN1 (three-phase): 0 power + 0 protection = 0
     #   SN2 (single-phase): 0 protection = 0
     #   SN3 (micro): 1 micro power limit
-    #   Total = 3
-    assert len(entities) == 3
-    assert any(
-        isinstance(e, number_mod.HyxiPowerNumber)
-        and e._direction == "charge"
-        and e._sn == "SN1"
-        for e in entities
-    )
-    assert any(
-        isinstance(e, number_mod.HyxiPowerNumber)
-        and e._direction == "discharge"
-        and e._sn == "SN1"
-        for e in entities
-    )
+    #   Total = 1
+    assert len(entities) == 1
     assert any(
         isinstance(e, number_mod.HyxiMicroPowerLimit) and e._sn == "SN3"
         for e in entities
