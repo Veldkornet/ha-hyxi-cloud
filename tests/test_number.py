@@ -241,23 +241,7 @@ async def test_async_setup_entry_no_protection():
 
     await number_mod.async_setup_entry(hass, entry, async_add_entities)
 
-    async_add_entities.assert_called_once()
-    entities = async_add_entities.call_args[0][0]
-
-    # Expect:
-    #   SN1 (three-phase): 0 power + 0 protection = 0
-    #   SN2 (single-phase): 0 protection = 0
-    #   SN3 (micro): 1 micro power limit
-    #   Total = 1
-    assert len(entities) == 1
-    assert any(
-        isinstance(e, number_mod.HyxiMicroPowerLimit) and e._sn == "SN3"
-        for e in entities
-    )
-    protection_entities = [
-        e for e in entities if isinstance(e, number_mod.HyxiProtectionNumber)
-    ]
-    assert len(protection_entities) == 0
+    async_add_entities.assert_not_called()
 
 
 def test_hyxi_power_number_init():

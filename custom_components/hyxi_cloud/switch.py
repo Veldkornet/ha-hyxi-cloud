@@ -46,7 +46,8 @@ async def async_setup_entry(
                 entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
         # Microinverter power on/off (controlId 3011)
         elif device_type == "micro_inverter":
-            entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
+            if entry.options.get("enable_battery_control", False):
+                entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
 
     if entities:
         async_add_entities(entities)

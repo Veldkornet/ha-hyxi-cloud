@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "ポーリング間隔 (1-60分, デフォルト: 5)",
           "back_discovery": "アラーム経由の検出を有効にする (高度)",
-          "enable_battery_control": "バッテリー制御と保护を有効にする"
+          "enable_battery_control": "デバイス制御と保護を有効にする"
         }
       }
     }

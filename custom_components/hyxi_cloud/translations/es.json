@@ -37,7 +37,7 @@
         "data": {
           "update_interval": "Intervalo de actualización (1-60 minutos, por defecto: 5)",
           "back_discovery": "Habilitar descubrimiento mediante alarmas (Avanzado)",
-          "enable_battery_control": "Activar control y protección de batería"
+          "enable_battery_control": "Activar control y protección del dispositivo"
         }
       }
     }
