@@ -42,8 +42,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install git+https://github.com/Veldkornet/hyxi-cloud-api.git@01dd3845da6a249045728efe8fedb36ae808ae02 # v1.2.4
           pip install -r requirements_test.txt
 
       - name: Run Unit Tests
