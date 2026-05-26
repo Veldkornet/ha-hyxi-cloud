@@ -136,7 +136,7 @@ Or alternatively, add the integration with the following:
 Click the **Configure** button on the HYXI integration card to access:
 * **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
 * **Enable Discovery via Alarms:** Proactively discover child devices reporting active alarms (Advanced).
-* **Enable Battery Control & Protection:** Opt-in to enable inverter mode buttons, charge/discharge power settings, and automatic battery protection thresholds. By default, this is disabled to prevent conflicts with external battery control systems (e.g. energy providers).
+* **Enable Device Control & Protection:** Opt-in to enable inverter mode buttons, charge/discharge power settings, automatic battery protection thresholds, and micro-inverter power limits or switches. By default, this is disabled to prevent conflicts with external control systems (e.g. energy providers or grid constraints).
 
 ## 🛡️ Quality Assurance
 
