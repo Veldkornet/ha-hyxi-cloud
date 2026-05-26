@@ -6,6 +6,7 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfPower
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -26,6 +27,41 @@ _MAX_POWER_KEYS = {
     "charge": "maxChargePower",
     "discharge": "maxDischargePower",
 }
+
+PROTECTION_NUMBER_DEFS: list[dict[str, str | int]] = [
+    {
+        "key": "soc_min",
+        "unit": "%",
+        "min": 5,
+        "max": 50,
+        "default": 20,
+        "icon": "mdi:battery-20",
+    },
+    {
+        "key": "soc_max",
+        "unit": "%",
+        "min": 50,
+        "max": 100,
+        "default": 90,
+        "icon": "mdi:battery-90",
+    },
+    {
+        "key": "soc_min_hysteresis_pct",
+        "unit": "%",
+        "min": 0,
+        "max": 10,
+        "default": 2,
+        "icon": "mdi:battery-sync",
+    },
+    {
+        "key": "soc_max_hysteresis_pct",
+        "unit": "%",
+        "min": 0,
+        "max": 10,
+        "default": 2,
+        "icon": "mdi:battery-sync-outline",
+    },
+]
 
 
 async def async_setup_entry(
@@ -51,6 +87,13 @@ async def async_setup_entry(
             if phase == "three_phase":
                 entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
                 entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
+
+            # SOC protection numbers for both three-phase and single-phase
+            if phase in ("three_phase", "single_phase"):
+                for definition in PROTECTION_NUMBER_DEFS:
+                    entities.append(
+                        HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                    )
         elif device_type == "micro_inverter":
             # Microinverter power limit (controlId 3012)
             entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
@@ -178,3 +221,55 @@ def _safe_int(val, default: int) -> int:
         return result if result > 0 else default
     except ValueError, TypeError:
         return default
+
+
+class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
+    """Locally stored number for battery protection thresholds."""
+
+    _attr_has_entity_name = True
+    _attr_mode = NumberMode.BOX
+    _attr_native_step = 1
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator,
+        sn: str,
+        dev_data: dict,
+        definition: dict[str, str | int],
+    ) -> None:
+        """Initialize the protection number."""
+        super().__init__(coordinator)
+        key = str(definition["key"])
+        self._attr_unique_id = f"hyxi_{sn}_{key}"
+        self._attr_translation_key = key
+        self._attr_native_unit_of_measurement = str(definition["unit"])
+        self._attr_native_min_value = int(definition["min"])
+        self._attr_native_max_value = int(definition["max"])
+        self._attr_native_value = int(definition["default"])
+        self._attr_icon = str(definition["icon"])
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": sn,
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last configured value."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is not None:
+            try:
+                self._attr_native_value = int(float(last_state.state))
+            except ValueError, TypeError:
+                _LOGGER.debug(
+                    "Could not restore protection number %s from state %s",
+                    self.unique_id,
+                    last_state.state,
+                )
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the protection threshold value."""
+        self._attr_native_value = int(value)
+        self.async_write_ha_state()

@@ -22,8 +22,12 @@ from .const import (
     MANUFACTURER,
     PLATFORMS,
     VERSION,
+    detect_phase_type,
+    get_raw_device_code,
+    normalize_device_type,
 )
 from .coordinator import HyxiDataUpdateCoordinator
+from .protection import HyxiBatteryProtectionController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -123,6 +127,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
     _remove_legacy_select_entities(hass, coordinator.data)
+    await _async_setup_battery_protection(hass, coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -133,6 +138,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    if coordinator is not None:
+        for controller in coordinator.protection_controllers.values():
+            await controller.async_stop()
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -157,3 +166,21 @@ def _remove_legacy_select_entities(hass: HomeAssistant, devices: dict) -> None:
             if entity_id is not None:
                 _LOGGER.debug("Removing legacy HYXI select entity %s", entity_id)
                 registry.async_remove(entity_id)
+
+
+async def _async_setup_battery_protection(
+    hass: HomeAssistant,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> None:
+    """Start battery protection on supported battery control devices."""
+    for sn, dev_data in coordinator.data.items():
+        device_type = normalize_device_type(get_raw_device_code(dev_data))
+        if device_type not in ("hybrid_inverter", "all_in_one"):
+            continue
+        phase = detect_phase_type(dev_data)
+        if phase not in ("three_phase", "single_phase"):
+            continue
+
+        controller = HyxiBatteryProtectionController(hass, coordinator, sn)
+        coordinator.protection_controllers[sn] = controller
+        await controller.async_start()

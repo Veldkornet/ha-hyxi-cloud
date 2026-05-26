@@ -80,6 +80,7 @@ def mock_coordinator_fixture():
     coord.client.set_peak_shaving = AsyncMock()
     coord.client.alter_alarm = AsyncMock()
     coord.async_request_refresh = AsyncMock()
+    coord.protection_controllers = {}
     return coord
 
 

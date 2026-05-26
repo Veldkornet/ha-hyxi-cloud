@@ -56,6 +56,7 @@ ensure_mock("homeassistant.components.binary_sensor")
 ensure_mock("homeassistant.config_entries")
 ensure_mock("homeassistant.core")
 ensure_mock("homeassistant.helpers")
+ensure_mock("homeassistant.helpers.entity")
 ensure_mock("homeassistant.helpers.aiohttp_client")
 ensure_mock("homeassistant.helpers.device_registry")
 ensure_mock("homeassistant.helpers.entity_platform")
@@ -162,8 +163,12 @@ async def test_async_setup_entry():
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
 
-    # Expect 2 for SN1 (charge/discharge) and 1 for SN3 (micro power limit), none for SN2
-    assert len(entities) == 3
+    # Expect:
+    #   SN1 (three-phase): 2 power + 4 protection = 6
+    #   SN2 (single-phase): 4 protection = 4
+    #   SN3 (micro): 1 micro power limit
+    #   Total = 11
+    assert len(entities) == 11
     assert any(
         isinstance(e, number_mod.HyxiPowerNumber)
         and e._direction == "charge"
@@ -180,6 +185,11 @@ async def test_async_setup_entry():
         isinstance(e, number_mod.HyxiMicroPowerLimit) and e._sn == "SN3"
         for e in entities
     )
+    # Verify protection numbers exist for both phases
+    protection_entities = [
+        e for e in entities if isinstance(e, number_mod.HyxiProtectionNumber)
+    ]
+    assert len(protection_entities) == 8  # 4 per phase x 2 devices
 
 
 def test_hyxi_power_number_init():

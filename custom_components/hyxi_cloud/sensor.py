@@ -19,6 +19,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN,
     MANUFACTURER,
+    detect_phase_type,
     get_raw_device_code,
     get_software_version,
     is_null_value,
@@ -896,6 +897,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
+    # 3. Battery protection telemetry
+    for sn, dev_data in coordinator.data.items():
+        device_type = normalize_device_type(get_raw_device_code(dev_data))
+        if device_type not in ("hybrid_inverter", "all_in_one"):
+            continue
+        phase = detect_phase_type(dev_data)
+        if phase not in ("three_phase", "single_phase"):
+            continue
+        entities.append(HyxiLastSentModeSensor(coordinator, sn))
+
     # FINAL REGISTRATION
     if entities:
         async_add_entities(entities)
@@ -1239,3 +1250,54 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         """Handle updated data from the coordinator."""
         self._update_native_value()
         super()._handle_coordinator_update()
+
+
+class HyxiLastSentModeSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
+    """Sensor exposing the last tracked mode command for a protected inverter."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "last_sent_mode"
+
+    def __init__(self, coordinator, sn: str) -> None:
+        """Initialize the last sent mode sensor."""
+        super().__init__(coordinator)
+        self._sn = sn
+        self._attr_unique_id = f"hyxi_{sn}_last_sent_mode"
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last tracked mode and replay it after restart."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is None:
+            return
+
+        mode = last_state.state
+        if mode in ("unknown", "unavailable", ""):
+            return
+
+        if controller := _get_protection_controller(self.coordinator, self._sn):
+            await controller.async_restore_last_sent_mode(mode)
+
+    @property
+    def device_info(self):
+        """Return the linked inverter device info."""
+        dev_data = self.coordinator.data.get(self._sn) or {}
+        return {
+            "identifiers": {(DOMAIN, self._sn)},
+            "name": dev_data.get("device_name") or f"Device {self._sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": self._sn,
+        }
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the last tracked mode command."""
+        controller = _get_protection_controller(self.coordinator, self._sn)
+        if controller is None:
+            return None
+        return controller.last_sent_mode
+
+
+def _get_protection_controller(coordinator, sn: str):
+    """Return the battery protection controller for a device."""
+    return getattr(coordinator, "protection_controllers", {}).get(sn)

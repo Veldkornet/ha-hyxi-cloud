@@ -412,6 +412,9 @@
       },
       "ratedfrequency": {
         "name": "Rated Frequency"
+      },
+      "last_sent_mode": {
+        "name": "Last Sent Mode"
       }
     },
     "number": {
@@ -423,6 +426,18 @@
       },
       "micro_power_limit": {
         "name": "Power Limit"
+      },
+      "soc_min": {
+        "name": "SOC Minimum"
+      },
+      "soc_max": {
+        "name": "SOC Maximum"
+      },
+      "soc_min_hysteresis_pct": {
+        "name": "SOC Min Hysteresis"
+      },
+      "soc_max_hysteresis_pct": {
+        "name": "SOC Max Hysteresis"
       }
     },
     "switch": {

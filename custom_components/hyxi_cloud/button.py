@@ -12,6 +12,7 @@ import logging
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -236,10 +237,12 @@ class HyxiModeButton(CoordinatorEntity, ButtonEntity):
             if self._mode == "idle":
                 await client.set_mode_idle(self._sn)
             elif self._mode == "charge":
+                _block_manual_charge_if_needed(self.coordinator, self._sn)
                 watts = _get_power_value(self.hass, self._sn, "charge")
                 _LOGGER.debug("Setting %s to CHARGE at %dW", mask_sn(self._sn), watts)
                 await client.set_mode_charge(self._sn, watts)
             elif self._mode == "discharge":
+                _block_manual_discharge_if_needed(self.coordinator, self._sn)
                 watts = _get_power_value(self.hass, self._sn, "discharge")
                 _LOGGER.debug(
                     "Setting %s to DISCHARGE at %dW", mask_sn(self._sn), watts
@@ -247,6 +250,7 @@ class HyxiModeButton(CoordinatorEntity, ButtonEntity):
                 await client.set_mode_discharge(self._sn, watts)
             elif self._mode == "self_consume":
                 await client.set_mode_self_consume(self._sn)
+            _note_manual_mode(self.coordinator, self._sn, self._mode)
             _LOGGER.info("Mode '%s' command sent to %s", self._mode, mask_sn(self._sn))
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
@@ -288,7 +292,11 @@ class HyxiPeakShavingButton(CoordinatorEntity, ButtonEntity):
         """Send the peak shaving command to the inverter."""
         client = self.coordinator.client
         try:
+            _block_manual_peak_shaving_if_needed(
+                self.coordinator, self._sn, self._option
+            )
             await client.set_peak_shaving(self._sn, self._option)
+            _note_manual_mode(self.coordinator, self._sn, self._option)
             _LOGGER.info(
                 "Peak shaving '%s' command sent to %s", self._option, mask_sn(self._sn)
             )
@@ -335,3 +343,50 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
         "Power number entity %s not available, using 100W default", entity_id
     )
     return 100
+
+
+def _note_manual_mode(coordinator, sn: str, mode: str) -> None:
+    """Track the last user-sent inverter mode for battery protection telemetry."""
+    if controller := _get_protection_controller(coordinator, sn):
+        controller.note_manual_mode(mode)
+
+
+def _block_manual_discharge_if_needed(coordinator, sn: str) -> None:
+    """Reject manual discharge when SOC protection says discharge is unsafe."""
+    if (
+        controller := _get_protection_controller(coordinator, sn)
+    ) is not None and controller.should_block_manual_discharge():
+        raise HomeAssistantError(
+            "Discharge blocked because battery SOC is at or below SOC Minimum"
+        )
+
+
+def _block_manual_charge_if_needed(coordinator, sn: str) -> None:
+    """Reject manual charge when SOC protection says charging is unsafe."""
+    if (
+        controller := _get_protection_controller(coordinator, sn)
+    ) is not None and controller.should_block_manual_charge():
+        raise HomeAssistantError(
+            "Charge blocked because battery SOC is at or above SOC Maximum"
+        )
+
+
+def _block_manual_peak_shaving_if_needed(coordinator, sn: str, option: str) -> None:
+    """Reject unsafe peak-shaving actions when SOC protection is active."""
+    controller = _get_protection_controller(coordinator, sn)
+    if controller is None:
+        return
+
+    if option == "discharge" and controller.should_block_manual_discharge():
+        raise HomeAssistantError(
+            "Peak shaving discharge blocked because battery SOC is at or below SOC Minimum"
+        )
+    if option == "charge" and controller.should_block_manual_charge():
+        raise HomeAssistantError(
+            "Peak shaving charge blocked because battery SOC is at or above SOC Maximum"
+        )
+
+
+def _get_protection_controller(coordinator, sn: str):
+    """Return the battery protection controller for a device."""
+    return getattr(coordinator, "protection_controllers", {}).get(sn)
