@@ -11,9 +11,10 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
-    BASE_URL,
+    BASE_URL_DEFAULT,
     CONF_ACCESS_KEY,
     CONF_BACK_DISCOVERY,
+    CONF_COUNTRY,
     CONF_SECRET_KEY,
     DOMAIN,
 )
@@ -27,6 +28,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_SECRET_KEY): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
+        vol.Required(CONF_COUNTRY, default="AU"): selector.CountrySelector(),
     }
 )
 
@@ -45,14 +47,31 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
     def __init__(self):
         """Initialize the flow."""
         self.reauth_entry = None
+        self._resolved_base_url: str = BASE_URL_DEFAULT
 
     async def _validate_input(self, data):
         """Validate the user input allows us to connect."""
         session = async_get_clientsession(self.hass)
+
+        # Resolve the regional base URL once during setup.
+        # Falls back to the default if the switch service is unreachable.
+        country_code = data.get(CONF_COUNTRY, "")
+        base_url = (
+            await HyxiApiClient.resolve_base_url(country_code, session)
+            if country_code
+            else None
+        ) or BASE_URL_DEFAULT
+        _LOGGER.debug(
+            "HYXI using base URL '%s' for country '%s'", base_url, country_code
+        )
+
+        # Store the resolved URL on the flow so async_step_user can persist it.
+        self._resolved_base_url = base_url
+
         client = HyxiApiClient(
             data[CONF_ACCESS_KEY],
             data[CONF_SECRET_KEY],
-            BASE_URL,
+            base_url,
             session,
         )
 
@@ -86,7 +105,13 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
             error = await self._validate_input(user_input)
             if not error:
-                return self.async_create_entry(title="HYXI Cloud", data=user_input)
+                return self.async_create_entry(
+                    title="HYXI Cloud",
+                    data={
+                        **user_input,
+                        "base_url": self._resolved_base_url,
+                    },
+                )
 
             errors["base"] = error
 
@@ -94,7 +119,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             step_id="user",
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
-            description_placeholders={"link": BASE_URL},
+            description_placeholders={"link": BASE_URL_DEFAULT},
         )
 
     async def async_step_reauth(self, entry_data):
@@ -121,7 +146,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             step_id="reauth_confirm",
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
-            description_placeholders={"link": BASE_URL},
+            description_placeholders={"link": BASE_URL_DEFAULT},
         )
 
 

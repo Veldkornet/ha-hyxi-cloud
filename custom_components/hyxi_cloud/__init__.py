@@ -15,7 +15,7 @@ from hyxi_cloud_api import HyxiApiClient
 from hyxi_cloud_api import __version__ as API_VERSION
 
 from .const import (
-    BASE_URL,
+    BASE_URL_DEFAULT,
     CONF_ACCESS_KEY,
     CONF_SECRET_KEY,
     DOMAIN,
@@ -47,8 +47,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("HYXI Integration could not find Access/Secret keys.")
         return False
 
+    # Use the base URL stored during config flow (regional node resolution).
+    # Fall back to the default for entries created before node discovery existed.
+    base_url = entry.data.get("base_url") or BASE_URL_DEFAULT
+    country_code = entry.data.get("country", "")
+
     session = async_get_clientsession(hass)
-    client = HyxiApiClient(access_key, secret_key, BASE_URL, session)
+    client = HyxiApiClient(access_key, secret_key, base_url, session)
+
+    # Enable automatic node re-resolution: if a 502/503 or transparent redirect
+    # is detected during any API call, the client will re-resolve the base URL
+    # and invoke this callback so the new URL is persisted to entry.data.
+    client.country_code = country_code
+
+    async def _persist_new_base_url(new_url: str) -> None:
+        """Persist a client-detected base URL change to the config entry."""
+        _LOGGER.info("HYXI: persisting updated base URL '%s' to config entry.", new_url)
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, "base_url": new_url}
+        )
+
+    client.on_base_url_changed = _persist_new_base_url
 
     coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
 

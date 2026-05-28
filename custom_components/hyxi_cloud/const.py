@@ -7,7 +7,10 @@ from homeassistant.const import Platform
 DOMAIN = "hyxi_cloud"
 CONF_ACCESS_KEY = "access_key"
 CONF_SECRET_KEY = "secret_key"
-BASE_URL = "https://open.hyxicloud.com"
+CONF_COUNTRY = "country"
+BASE_URL_DEFAULT = "https://open.hyxicloud.com"
+# Legacy alias kept for any imports that haven't migrated yet
+BASE_URL = BASE_URL_DEFAULT
 
 MANUFACTURER = "HYXI Power"
 VERSION = "1.5.0"
