@@ -10,10 +10,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
+from hyxi_cloud_api import VPP_ACTIVE_MODES
 
 from .const import DOMAIN, MANUFACTURER
 
 ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
+
+# VPP-capable device types (must match HyxiApiClient._VPP_CAPABLE_TYPES)
+_VPP_CAPABLE_TYPES = {"INVERTER", "HYBRID_INVERTER", "ALL_IN_ONE", "ESS"}
 
 
 async def async_setup_entry(
@@ -25,8 +29,14 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[BinarySensorEntity] = [HyxiConnectivitySensor(coordinator, entry)]
 
-    for device_sn in coordinator.data:
+    for device_sn, dev_data in coordinator.data.items():
         entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
+
+        dev_type = (dev_data.get("device_type_code") or "").upper()
+        if dev_type in _VPP_CAPABLE_TYPES:
+            entities.append(
+                HyxiVppControlSensor(coordinator, entry, device_sn, dev_data)
+            )
 
     async_add_entities(entities)
 
@@ -176,4 +186,53 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         return {
             "active_alarms_count": self._active_alarms_count,
             "raw_alarms_payload": self._alarms,
+        }
+
+
+class HyxiVppControlSensor(CoordinatorEntity, BinarySensorEntity):
+    """Binary sensor indicating whether a VPP program is actively controlling this device.
+
+    ON  = a VPP dispatch is in progress; manual controls are locked out.
+    OFF = device is under normal (manual / self-consumption) operation.
+
+    Use this entity in automations to detect VPP activity and suppress
+    any conflicting home automation rules.
+    """
+
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+    _attr_has_entity_name = True
+    _attr_translation_key = "vpp_active"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, entry, sn: str, dev_data: dict) -> None:
+        """Initialize the VPP control sensor."""
+        super().__init__(coordinator)
+        self.sn = sn
+        self._attr_unique_id = f"{entry.entry_id}_{sn}_vpp_active"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+        }
+
+    @property
+    def _metrics(self) -> dict:
+        return (self.coordinator.data.get(self.sn) or {}).get("metrics", {})
+
+    @property
+    def is_on(self) -> bool:
+        """Return True when an active VPP mode is in progress."""
+        return self._metrics.get("vppMode") in VPP_ACTIVE_MODES
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Expose VPP programme details for dashboard and debugging."""
+        m = self._metrics
+        return {
+            "vpp_mode": m.get("vppMode") or "",
+            "vpp_code": m.get("vppCode") or "",
+            "vpp_name": m.get("vppName") or "",
+            "vpp_manufacturer": m.get("vppManufacturer") or "",
+            "vpp_supplier_name": m.get("vppSupplierName") or "",
         }

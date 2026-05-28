@@ -53,6 +53,13 @@
           "off": "なし",
           "on": "異常あり"
         }
+      },
+      "vpp_active": {
+        "name": "VPP Control Active",
+        "state": {
+          "off": "Normal Operation",
+          "on": "VPP Dispatch Active"
+        }
       }
     },
     "sensor": {
