@@ -21,16 +21,20 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Schema for User Setup and Re-auth
-STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_ACCESS_KEY): str,
-        vol.Required(CONF_SECRET_KEY): selector.TextSelector(
-            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
-        ),
-        vol.Required(CONF_COUNTRY, default="AU"): selector.CountrySelector(),
-    }
-)
+
+def _build_user_schema(country_default: str) -> vol.Schema:
+    """Build the user/reauth schema with a pre-filled country default."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_ACCESS_KEY): str,
+            vol.Required(CONF_SECRET_KEY): selector.TextSelector(
+                selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+            ),
+            vol.Required(
+                CONF_COUNTRY, default=country_default
+            ): selector.CountrySelector(),
+        }
+    )
 
 
 class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
@@ -117,7 +121,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return self.async_show_form(
             step_id="user",
-            data_schema=STEP_USER_DATA_SCHEMA,
+            data_schema=_build_user_schema(self.hass.config.country or "AU"),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
         )
@@ -144,7 +148,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=STEP_USER_DATA_SCHEMA,
+            data_schema=_build_user_schema(self.hass.config.country or "AU"),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
         )

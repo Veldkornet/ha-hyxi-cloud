@@ -229,10 +229,13 @@ class HyxiVppControlSensor(CoordinatorEntity, BinarySensorEntity):
     def extra_state_attributes(self) -> dict:
         """Expose VPP programme details for dashboard and debugging."""
         m = self._metrics
+        mode = m.get("vppMode") or ""
+        supplier = m.get("vppSupplierName") or ""
+        manufacturer = m.get("vppManufacturer") or ""
         return {
-            "vpp_mode": m.get("vppMode") or "",
-            "vpp_code": m.get("vppCode") or "",
-            "vpp_name": m.get("vppName") or "",
-            "vpp_manufacturer": m.get("vppManufacturer") or "",
-            "vpp_supplier_name": m.get("vppSupplierName") or "",
+            "vpp_mode": mode or "None",
+            "vpp_code": m.get("vppCode") or "None",
+            "vpp_name": m.get("vppName") or "None",
+            "vpp_manufacturer": manufacturer or "Not enrolled",
+            "vpp_supplier_name": supplier or "Not enrolled",
         }
