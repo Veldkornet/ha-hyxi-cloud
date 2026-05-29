@@ -165,7 +165,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Start EM engine after platforms are loaded (entities need to exist first)
-    if getattr(coordinator, "engine", None) is not None:
+    if coordinator.engine is not None:
         await coordinator.engine.async_start()
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
@@ -177,7 +177,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator = hass.data[DOMAIN].get(entry.entry_id)
     if coordinator is not None:
-        if getattr(coordinator, "engine", None) is not None:
+        if coordinator.engine is not None:
             await coordinator.engine.async_stop()
         for controller in coordinator.protection_controllers.values():
             await controller.async_stop()

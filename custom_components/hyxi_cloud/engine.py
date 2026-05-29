@@ -19,10 +19,12 @@ from __future__ import annotations
 import logging
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from homeassistant.components import persistent_notification
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import (
@@ -110,6 +112,8 @@ class EnergyManagerEngine:
         self._last_mode_switch: float = 0
         self._last_decision: str = ""
         self._last_action: str = ""
+        self._in_decision: bool = False
+        self._last_fast_path_trigger: float = 0
         self._last_power_adjust: float = 0
         self._last_charge_exit: float = 0
         self._last_bottomout_exit: float = 0
@@ -130,7 +134,7 @@ class EnergyManagerEngine:
         self._unsub_listeners: list[CALLBACK_TYPE] = []
 
         # Sensor update callbacks
-        self._update_callbacks: list[callback] = []
+        self._update_callbacks: list[Callable[[], None]] = []
 
     # ── Properties for sensor entities ──────────────────────────────────
 
@@ -246,11 +250,11 @@ class EnergyManagerEngine:
         _LOGGER.info("Energy Manager stopped for %s", mask_sn(self._sn))
         self._notify_sensors()
 
-    def register_update_callback(self, cb: callback) -> None:
+    def register_update_callback(self, cb: Callable[[], None]) -> None:
         """Register a callback for sensor updates after each decision."""
         self._update_callbacks.append(cb)
 
-    def unregister_update_callback(self, cb: callback) -> None:
+    def unregister_update_callback(self, cb: Callable[[], None]) -> None:
         """Remove a sensor update callback."""
         if cb in self._update_callbacks:
             self._update_callbacks.remove(cb)
@@ -709,57 +713,66 @@ class EnergyManagerEngine:
           4b. Night preservation -> idle if SOC <= night target
           5. Solar optimization -> self_consume first, charge on sustained export
         """
-        # Read soc_min/soc_max from EXISTING protection number entities
-        solar = self._get_solar()
-        s = DecisionState(
-            soc=self._get_soc(),
-            solar=solar,
-            p1=self._get_p1(),
-            home_load=self._get_home_load(),
-            soc_min=self._get_protection_param("soc_min", 20),
-            soc_max=self._get_protection_param("soc_max", 90),
-            max_charge=self._get_param("max_charge_power"),
-            max_discharge=self._get_param("max_discharge_power"),
-            is_night=self._is_night(),
-            solar_producing=solar > 50,
-            night_soc_target=self._soc_needed_for_night(),
-        )
-
-        _LOGGER.debug(
-            "EM TICK: SOC=%.0f%% P1=%.0fW solar=%.0fW load=%.0fW "
-            "night=%s night_target=%.0f%%",
-            s.soc,
-            s.p1,
-            s.solar,
-            s.home_load,
-            s.is_night,
-            s.night_soc_target,
-        )
-
-        # PRIORITY 1 & 2: SOC safety limits
-        if await self._check_soc_limits(s):
+        if self._in_decision:
+            _LOGGER.debug(
+                "EM: Decision engine already executing, skipping concurrent run"
+            )
             return
+        self._in_decision = True
+        try:
+            # Read soc_min/soc_max from EXISTING protection number entities
+            solar = self._get_solar()
+            s = DecisionState(
+                soc=self._get_soc(),
+                solar=solar,
+                p1=self._get_p1(),
+                home_load=self._get_home_load(),
+                soc_min=self._get_protection_param("soc_min", 20),
+                soc_max=self._get_protection_param("soc_max", 90),
+                max_charge=self._get_param("max_charge_power"),
+                max_discharge=self._get_param("max_discharge_power"),
+                is_night=self._is_night(),
+                solar_producing=solar > 50,
+                night_soc_target=self._soc_needed_for_night(),
+            )
 
-        # PRIORITY 2b: Export limiting
-        if await self._check_export_limit(s):
-            return
+            _LOGGER.debug(
+                "EM TICK: SOC=%.0f%% P1=%.0fW solar=%.0fW load=%.0fW "
+                "night=%s night_target=%.0f%%",
+                s.soc,
+                s.p1,
+                s.solar,
+                s.home_load,
+                s.is_night,
+                s.night_soc_target,
+            )
 
-        # PRIORITY 3: Sustained high load
-        if await self._check_high_load(s):
-            return
+            # PRIORITY 1 & 2: SOC safety limits
+            if await self._check_soc_limits(s):
+                return
 
-        # PRIORITY 4 & 4b: Night mode
-        if await self._check_night(s):
-            return
+            # PRIORITY 2b: Export limiting
+            if await self._check_export_limit(s):
+                return
 
-        # PRIORITY 5: Solar optimization
-        if await self._check_solar(s):
-            return
+            # PRIORITY 3: Sustained high load
+            if await self._check_high_load(s):
+                return
 
-        # ── DEFAULT: self_consume as safe fallback ─────────────────────
-        self._set_decision("idle_default")
-        if self._current_mode in ("charge", "discharge"):
-            await self._set_mode("self_consume")
+            # PRIORITY 4 & 4b: Night mode
+            if await self._check_night(s):
+                return
+
+            # PRIORITY 5: Solar optimization
+            if await self._check_solar(s):
+                return
+
+            # ── DEFAULT: self_consume as safe fallback ─────────────────────
+            self._set_decision("idle_default")
+            if self._current_mode in ("charge", "discharge"):
+                await self._set_mode("self_consume")
+        finally:
+            self._in_decision = False
 
     async def _check_soc_limits(self, s: DecisionState) -> bool:
         """PRIORITY 1 & 2: SOC safety limits. Returns True if handled."""
@@ -1115,7 +1128,8 @@ class EnergyManagerEngine:
                     "EM: Coordinator data stale (%.0f min) — reloading integration",
                     stale_seconds / 60,
                 )
-                self._hass.components.persistent_notification.async_create(
+                persistent_notification.async_create(
+                    self._hass,
                     f"Energy Manager detected stale data ({stale_seconds / 60:.0f} min). "
                     "Auto-reloading integration to restore updates.",
                     title="HYXI Cloud: Stale Data",
@@ -1182,7 +1196,10 @@ class EnergyManagerEngine:
         home_load = self._get_home_load()
         threshold = self._get_param("high_load_threshold")
         if home_load > threshold:
-            self._hass.async_create_task(self._make_decision())
+            now = time.monotonic()
+            if now - self._last_fast_path_trigger >= 15:
+                self._last_fast_path_trigger = now
+                self._hass.async_create_task(self._make_decision())
 
     @callback
     def _on_soc_change(self, event) -> None:
@@ -1201,16 +1218,19 @@ class EnergyManagerEngine:
 
         soc_min = self._get_protection_param("soc_min", 20)
         if soc < soc_min:
-            self._hass.async_create_task(self._make_decision())
+            now = time.monotonic()
+            if now - self._last_fast_path_trigger >= 15:
+                self._last_fast_path_trigger = now
+                self._hass.async_create_task(self._make_decision())
 
     async def _update_night_estimate(self, now) -> None:
         """Hourly night consumption update — EMA from P1 readings at night."""
         if not self._enabled:
             return
 
-        from datetime import datetime as dt
+        from homeassistant.util import dt as dt_util
 
-        hour = dt.now().hour
+        hour = dt_util.now().hour
         if 21 <= hour or hour < 6:
             current_p1 = self._get_p1()
             if current_p1 > 0:

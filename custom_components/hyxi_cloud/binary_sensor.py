@@ -11,6 +11,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -45,7 +46,13 @@ async def async_setup_entry(
     # Energy Manager binary sensors (EM-only)
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
     if entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data:
-        em_device_info = {"identifiers": {(DOMAIN, f"{em_sn}_energy_manager")}}
+        em_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
+            name="Energy Manager",
+            manufacturer=MANUFACTURER,
+            model="Energy Manager",
+            via_device=(DOMAIN, em_sn),
+        )
         entities.append(
             EMBinarySensor(coordinator, em_sn, "night_mode_active", em_device_info)
         )
@@ -288,7 +295,7 @@ class EMBinarySensor(BinarySensorEntity):
         coordinator,
         sn: str,
         key: str,
-        device_info: dict,
+        device_info: DeviceInfo,
     ) -> None:
         """Initialize the EM binary sensor."""
         self._coordinator = coordinator
