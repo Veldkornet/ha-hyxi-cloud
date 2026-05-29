@@ -183,26 +183,13 @@ def detect_phase_type(dev_data: dict) -> str:
 def is_battery_control_enabled(entry: Any, coordinator: Any) -> bool:
     """Return True if battery control is enabled by user options.
 
-    If not explicitly set in options, defaults to True unless VPP is active.
+    If not explicitly set in options, defaults to False.
     """
     val = entry.options.get("enable_battery_control")
     if val is not None:
         return val
 
-    # Default logic when options not set
-    if coordinator is None:
-        return True
-
-    from hyxi_cloud_api import VPP_ACTIVE_MODES
-
-    for dev_data in coordinator.data.values():
-        metrics = dev_data.get("metrics", {})
-        if (
-            metrics.get("workMode") in VPP_ACTIVE_MODES
-            or metrics.get("vppMode") in VPP_ACTIVE_MODES
-        ):
-            return False
-    return True
+    return False
 
 
 PLATFORMS: list[Platform] = [

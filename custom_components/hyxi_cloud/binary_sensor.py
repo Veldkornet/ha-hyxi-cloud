@@ -17,7 +17,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import VPP_ACTIVE_MODES
 
-from .const import CONF_EM_ENABLED, CONF_EM_INVERTER_SN, DOMAIN, MANUFACTURER
+from .const import (
+    CONF_EM_ENABLED,
+    CONF_EM_INVERTER_SN,
+    DOMAIN,
+    MANUFACTURER,
+    get_raw_device_code,
+    normalize_device_type,
+)
 
 ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
@@ -37,8 +44,8 @@ async def async_setup_entry(
     for device_sn, dev_data in coordinator.data.items():
         entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
 
-        dev_type = (dev_data.get("device_type_code") or "").upper()
-        if dev_type in _VPP_CAPABLE_TYPES:
+        dev_type = normalize_device_type(get_raw_device_code(dev_data))
+        if dev_type in ("hybrid_inverter", "all_in_one", "micro_ess"):
             entities.append(
                 HyxiVppControlSensor(coordinator, entry, device_sn, dev_data)
             )
@@ -245,13 +252,13 @@ class HyxiVppControlSensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return True when an active VPP mode is in progress."""
-        return self._metrics.get("vppMode") in VPP_ACTIVE_MODES
+        return str(self._metrics.get("vppMode")) in VPP_ACTIVE_MODES
 
     @property
     def extra_state_attributes(self) -> dict:
         """Expose VPP programme details for dashboard and debugging."""
         m = self._metrics
-        mode = m.get("vppMode") or ""
+        mode = str(m.get("vppMode")) if m.get("vppMode") is not None else ""
         code = m.get("vppCode") or ""
         name = m.get("vppName") or ""
         supplier = m.get("vppSupplierName") or ""
@@ -260,7 +267,7 @@ class HyxiVppControlSensor(CoordinatorEntity, BinarySensorEntity):
         # If VPP is active but details are empty (common via OpenAPI which lacks
         # the app-only vppSupplier endpoint), provide clean fallbacks instead of
         # contradicting "Not enrolled" labels.
-        is_active = mode in VPP_ACTIVE_MODES
+        is_active = str(mode) in VPP_ACTIVE_MODES
         if is_active:
             if not supplier:
                 supplier = "Enrolled (Active VPP)"
