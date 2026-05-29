@@ -17,6 +17,11 @@ from hyxi_cloud_api import __version__ as API_VERSION
 from .const import (
     BASE_URL_DEFAULT,
     CONF_ACCESS_KEY,
+    CONF_EM_ENABLED,
+    CONF_EM_FORECAST_ENTITY,
+    CONF_EM_FORECAST_POWER_ENTITY,
+    CONF_EM_INVERTER_SN,
+    CONF_EM_P1_ENTITY,
     CONF_SECRET_KEY,
     DOMAIN,
     MANUFACTURER,
@@ -132,7 +137,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _remove_legacy_select_entities(hass, coordinator.data)
     await _async_setup_battery_protection(hass, coordinator)
 
+    # Energy Manager: create engine if configured and enabled
+    em_enabled = entry.options.get(CONF_EM_ENABLED, False)
+    em_sn = entry.options.get(CONF_EM_INVERTER_SN)
+    if em_enabled and em_sn and em_sn in coordinator.data:
+        from .engine import EMEntityConfig, EnergyManagerEngine
+
+        em_config = EMEntityConfig(
+            sn=em_sn,
+            p1_entity=entry.options.get(CONF_EM_P1_ENTITY, ""),
+            forecast_entity=entry.options.get(CONF_EM_FORECAST_ENTITY),
+            forecast_power_entity=entry.options.get(CONF_EM_FORECAST_POWER_ENTITY),
+        )
+        engine = EnergyManagerEngine(hass, coordinator, em_config)
+        coordinator.engine = engine
+
+        # Register EM virtual device
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
+            name="Energy Manager",
+            manufacturer=MANUFACTURER,
+            model="Energy Manager",
+            via_device=(DOMAIN, em_sn),
+        )
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Start EM engine after platforms are loaded (entities need to exist first)
+    if coordinator.engine is not None:
+        await coordinator.engine.async_start()
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
@@ -143,6 +177,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator = hass.data[DOMAIN].get(entry.entry_id)
     if coordinator is not None:
+        if coordinator.engine is not None:
+            await coordinator.engine.async_stop()
         for controller in coordinator.protection_controllers.values():
             await controller.async_stop()
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

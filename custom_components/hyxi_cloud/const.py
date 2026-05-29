@@ -212,3 +212,35 @@ PLATFORMS: list[Platform] = [
     Platform.NUMBER,
     Platform.SWITCH,
 ]
+
+
+# Energy Manager option keys
+CONF_EM_ENABLED = "em_enabled"
+CONF_EM_INVERTER_SN = "em_inverter_sn"
+CONF_EM_P1_ENTITY = "em_p1_entity"
+CONF_EM_FORECAST_ENTITY = "em_forecast_entity"
+CONF_EM_FORECAST_POWER_ENTITY = "em_forecast_power_entity"
+CONF_EM_BATTERY_OVERRIDE = "em_battery_capacity_override"
+CONF_EM_BATTERY_CAPACITY = "em_battery_capacity_wh"
+CONF_EM_DRY_RUN = "em_dry_run"
+CONF_EM_LOOP_INTERVAL = "em_loop_interval"
+
+# EM parameter defaults (match pyscript values)
+EM_DEFAULTS: dict[str, int | float] = {
+    "high_load_threshold": 6500,
+    "max_charge_power": 5000,
+    "max_discharge_power": 5000,
+    "min_solar_for_charge": 1000,
+    "mode_switch_cooldown": 60,
+    "power_change_threshold": 100,
+    "power_adjust_cooldown": 30,
+    "night_buffer_pct": 5,
+    "avg_night_consumption": 400,
+    "charge_margin": 150,
+    "charge_entry_threshold": 500,
+    "charge_reentry_delay": 300,
+    "bottomout_cooldown": 300,
+    "p1_smoothing_period": 60,
+    "max_grid_export": 0,
+}
+EM_LOOP_INTERVAL = 15  # seconds

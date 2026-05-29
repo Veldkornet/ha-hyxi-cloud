@@ -57,6 +57,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
         self.entry = entry
         self.protection_controllers: dict[str, Any] = {}
+        self.engine: Any = None
 
         # 🚀 Store metadata on the object, not in the data dictionary!
         self.hyxi_metadata: HyxiMetadata = {
@@ -99,7 +100,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                     "from the app to the developer email first."
                 )
 
-            # Raise UpdateFailed if all non-collector devices return empty telemetry metrics.
+            # Warn (but don't fail) when telemetry is empty.
+            # Raising UpdateFailed here triggers HA exponential backoff,
+            # which compounds polling delays and causes stale-data perception.
             non_collectors = [
                 dev_data
                 for dev_data in devices.values()
@@ -109,7 +112,10 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 not (set(dev_data.get("metrics") or {}) - {"last_seen"})
                 for dev_data in non_collectors
             ):
-                raise UpdateFailed("HYXI telemetry data is currently unavailable.")
+                _LOGGER.warning(
+                    "HYXI Cloud returned success but telemetry metrics are empty. "
+                    "Sensors may show stale values until next successful poll."
+                )
 
             self.hyxi_metadata["last_attempts"] = result.get("attempts", 1)
             self.hyxi_metadata["last_success"] = dt_util.utcnow()

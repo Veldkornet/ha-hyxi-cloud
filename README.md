@@ -94,6 +94,226 @@ The HYXI API defines controls by **phase type** (Single Phase / Three-Phase). Th
 > [!IMPORTANT]
 > If the phase type cannot be determined from either the model name or runtime metrics, **no control entities are created**. This is a safety measure to prevent sending unsupported commands to your inverter. If you believe your device should have controls, please open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/issues) with your device model and we will add support.
 
+#### Energy Manager Standalone (Beta)
+
+The Energy Manager Standalone is an automated battery control engine that runs a 15-second decision loop inside Home Assistant. It reads your P1 smart meter, solar production, battery SOC, and optional solar forecast to automatically manage your inverter's operating mode (charge, discharge, self-consume, idle).
+
+> [!NOTE]
+> This is the **Standalone** energy manager — it makes all decisions locally based on real-time sensor data and configurable rules. A future **Day Ahead** energy manager (optimizing against dynamic energy prices) is planned for a separate release.
+
+**Important:** The Energy Manager builds on top of the existing Battery Protection — it does **not** replace it. SOC minimum/maximum limits are read from the existing protection number entities and are always respected.
+
+##### Prerequisites
+
+- **Enable Device Control & Protection** must be turned on first (Options → Configure)
+- A **P1 smart meter** entity (power sensor) configured in Home Assistant
+
+##### Enabling
+
+1. Go to **Settings > Devices & Services** > **HYXI Cloud** > **Configure**.
+2. Enable **Device Control & Protection** and save.
+3. Re-open **Configure** — the **Enable Energy Manager Standalone (Beta)** toggle is now visible.
+4. Enable it and configure:
+   - **P1 Smart Meter** — your grid power sensor (required, e.g. `sensor.p1_meter_power`)
+   - **Solar Forecast Remaining Today** — remaining solar energy for today in kWh (optional)
+   - **Solar Forecast Current Power** — current predicted solar power in W (optional)
+   - **Inverter to Control** — which inverter the engine manages
+   - **Override Battery Capacity** — check this to manually set battery capacity (see below)
+   - **Battery Capacity (Wh)** — manual override value (only used when override is checked)
+
+The Energy Manager is **disabled by default** even after enabling it in options. You must also turn on the **Energy Manager** switch entity. Each sub-feature (Night Mode, High Load Assist) must be individually enabled via its own switch entity.
+
+##### Solar Forecast Integration
+
+The engine can use solar forecast data to make smarter decisions about battery preservation and charge timing. Two optional forecast entities can be configured:
+
+- **Solar Forecast Remaining Today (kWh):** Used for night preservation decisions — the engine checks whether remaining solar can recharge the battery to the night target before sunset. Compatible with:
+  - [Forecast.Solar](https://www.home-assistant.io/integrations/forecast_solar/) — use the `energy_production_today_remaining` sensor
+  - [Solcast](https://github.com/BJReplay/ha-solcast-solar) — use the `forecast_remaining_today` sensor
+  - Any sensor providing remaining solar energy for today in kWh
+
+- **Solar Forecast Current Power (W):** Currently reserved for future use. Compatible with:
+  - [Forecast.Solar](https://www.home-assistant.io/integrations/forecast_solar/) — use the `power_production_now` sensor
+  - [Solcast](https://github.com/BJReplay/ha-solcast-solar) — use the `forecast_this_hour` sensor
+
+If no forecast entities are configured, the engine estimates solar availability from current production and time to sunset.
+
+##### Battery Capacity
+
+The engine needs to know your battery's total capacity (in Wh) for SOC calculations, night reserve estimation, and high-load cost analysis.
+
+**How it's determined (in priority order):**
+
+1. **Manual override** — If you check *Override Battery Capacity* in the energy manager options and set a value, that value is always used.
+2. **API auto-detection** — The `batCap` metric from your inverter (reported in kWh, converted to Wh). Most hybrid inverters report this automatically.
+3. **Fallback** — 2000 Wh if neither of the above is available.
+
+> [!TIP]
+> If your inverter reports `batCap` correctly (visible as the "Battery Capacity" sensor on your inverter device), you don't need to configure anything. The override is for situations where the API value is missing, incorrect, or you have modified your battery setup.
+
+##### How It Works — Decision Priorities
+
+Every 15 seconds the engine evaluates these priorities in order. The first matching priority wins:
+
+| Priority | Condition | Action | Details |
+| :--- | :--- | :--- | :--- |
+| **1. Emergency Low SOC** | SOC < SOC Minimum | Charge from solar or grid | If solar is producing, charges from solar. If no solar and *Grid Charge Allowed* is on, charges from grid at up to 2000W. Otherwise goes idle to prevent further drain. |
+| **2. Over-Max SOC** | SOC > SOC Maximum | Forced discharge | Discharges at the higher of current grid import or 1000W, capped at max discharge power. Prevents overcharging. |
+| **2b. Export Limiting** | Grid export > max limit | Charge or curtail PV | Single-phase only. Uses peak shaving control. See details below. |
+| **3. High Load Assist** | Home load > threshold | Battery assist or grid-only | Only active when the *High Load Battery Assist* switch is ON. See details below. |
+| **4. Night Mode** | Nighttime (sun below horizon) | Self-consume or idle | Only active when the *Night Mode* switch is ON. See details below. |
+| **5. Solar Optimization** | Solar producing + SOC < max | Smart charge from solar | Waits for sustained grid export before entering charge mode. Continuously tunes charge power to minimize grid import/export. |
+| **Default** | None of the above | Self-consume | Safe fallback. If currently charging or discharging, switches to self-consume. |
+
+##### Night Mode (Priority 4)
+
+**Requires:** *Night Mode* switch entity → ON (default: OFF)
+
+Night Mode manages battery usage during nighttime and preserves battery for overnight consumption:
+
+- **At night (sun below horizon, no solar):**
+  - If SOC is above SOC Minimum → **self-consume** (battery powers the house)
+  - If SOC is at or below SOC Minimum → **idle** (stop discharging, protect the reserve)
+
+- **During daytime — night preservation:**
+  - If SOC has dropped to or below the calculated *night SOC target* and the house is importing from grid and solar forecast cannot cover the gap → **idle** (preserve remaining battery for tonight)
+
+The **night SOC target** is automatically calculated based on:
+- `Average Night Consumption` (W) — configurable, also auto-updated hourly from real P1 data between 21:00–06:00
+- `Night Buffer %` — extra safety margin (default 5%)
+- Battery capacity (from options or API)
+- Hours until sunrise
+
+Formula: `night_target = soc_min + ((avg_consumption × hours_remaining × (1 + buffer%)) / capacity) × 100`
+
+**Example:** With 400W average consumption, 14.8 kWh battery, 5% buffer, 20% SOC minimum, 12 hours until sunrise:
+Night target ≈ 20% + 34% = **54%**. The engine will preserve battery above 54% during daytime if it calculates that solar won't be enough to recharge before sunset.
+
+##### High Load Assist (Priority 3)
+
+**Requires:** *High Load Battery Assist* switch entity → ON (default: OFF)
+
+High Load Assist detects when your home consumption exceeds a configurable threshold and decides whether the battery should help:
+
+- **Home load > High Load Threshold** and assist is enabled:
+  - Calculates the SOC cost of running battery assist for 30 minutes at 50% max discharge power
+  - If the battery can afford it (remaining SOC after assist would still exceed the night SOC target) → **self-consume** (battery helps power the high load)
+  - If the battery cannot afford it (would drain below night target) → **idle** (let the grid handle it, preserve battery for night)
+
+- **Home load below threshold:** No action, falls through to next priority.
+
+**Use case:** Running an oven, EV charger, or heat pump. The engine prevents the battery from draining itself to cover a temporary spike that would leave you with insufficient reserve for the night.
+
+##### Export Limiting (Priority 2b)
+
+**Requires:** *Export Limiting* switch entity → ON (default: OFF)
+
+**Single-phase devices only** — uses peak shaving control (controlId 1021) which is not available on three-phase inverters.
+
+Export Limiting caps how much power is fed back to the grid:
+
+- **Grid export > Max Grid Export** and battery has room (SOC < SOC Maximum):
+  - Charges battery to absorb excess (minimum 300W, capped at max charge power)
+  - Continuously adjusts charge power as export fluctuates
+
+- **Grid export > Max Grid Export** and battery is full:
+  - Sends peak shaving `stop` to curtail PV production entirely
+  - 30-second cooldown between stop/hold toggles prevents oscillation
+
+- **Grid export drops below limit:**
+  - Sends peak shaving `hold` to resume PV production
+  - Returns to self-consume
+
+**Use case:** Feed-in tariff limits, grid connection limits, or reducing grid export to maximize self-consumption.
+
+##### Solar Charge Logic (Priority 5)
+
+When solar is producing and the battery isn't full, the engine optimizes charging:
+
+1. **Entry gate:** Solar must exceed `Min Solar for Charge` (default: 1000W).
+2. **Export confirmation:** Grid export must exceed `Charge Entry Threshold` (default: 500W) for several consecutive readings before entering charge mode. This prevents charge/discharge oscillation on cloudy days.
+3. **Power tuning:** Once charging, the engine continuously adjusts charge power to keep P1 close to zero (not importing, not exporting).
+4. **Bottomout exit:** If charge power drops to minimum (100W) for 3 consecutive ticks due to insufficient solar, exits back to self-consume.
+5. **Sunset urgency:** Within 4 hours of sunset, if SOC is below the night target and solar forecast won't cover it, entry thresholds are relaxed to capture remaining solar.
+
+##### Grid Charge Allowed
+
+The *Grid Charge Allowed* switch (on the inverter device, not the Energy Manager device) controls whether the engine may charge the battery from the grid during emergencies. This is only used when SOC drops below minimum and there is no solar available. Default: OFF.
+
+##### Entity Reference
+
+All Energy Manager entities appear on a virtual **Energy Manager** device linked to your inverter.
+
+**Switches (all default OFF):**
+
+| Entity | Purpose |
+| :--- | :--- |
+| Energy Manager | Master on/off for the decision loop |
+| Night Mode | Enable night self-consume and battery preservation |
+| High Load Battery Assist | Enable battery assist during high home loads |
+| Export Limiting | Cap grid export and charge battery with excess (single-phase only) |
+| Grid Charge Allowed | Allow grid charging in low-SOC emergencies (on inverter device) |
+
+**Number parameters:**
+
+| Entity | Unit | Default | Range | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| High Load Threshold | W | 6500 | 1000–20000 | Home load above this triggers high-load logic |
+| Max Charge Power | W | 5000 | 500–15000 | Maximum charge power sent to inverter |
+| Max Discharge Power | W | 5000 | 500–15000 | Maximum discharge power |
+| Min Solar for Charge | W | 1000 | 200–3000 | Solar must exceed this to consider charging |
+| Mode Switch Cooldown | s | 60 | 10–300 | Minimum seconds between mode changes |
+| Power Change Threshold | W | 100 | 10–500 | Minimum power change before resending command |
+| Power Adjust Cooldown | s | 30 | 5–120 | Minimum seconds between power adjustments |
+| Night Buffer | % | 5 | 0–20 | Extra safety margin for night SOC calculation |
+| Avg Night Consumption | W | 400 | 100–2000 | Baseline night power draw (auto-updated hourly) |
+| Charge Margin | W | 150 | 0–500 | Buffer between solar charge and grid balance point |
+| Charge Entry Threshold | W | 500 | 100–2000 | Grid export required before entering charge mode |
+| Charge Re-entry Delay | s | 300 | 30–600 | Cooldown before re-entering charge after exit |
+| Bottomout Cooldown | s | 300 | 60–900 | Extended cooldown after charge bottomout exit |
+| P1 Smoothing Period | s | 60 | 1–300 | Rolling average window for P1 meter readings |
+| Max Grid Export | W | 0 | 0–10000 | Maximum allowed grid export before charging kicks in (single-phase only) |
+
+**Options flow parameters** (set once in Configure, not entities):
+
+| Setting | Default | Purpose |
+| :--- | :--- | :--- |
+| Override Battery Capacity | OFF | Enable manual battery capacity override |
+| Battery Capacity (Wh) | 2000 | Manual capacity value (only used when override is checked) |
+| Dry-Run Mode | OFF | Engine logs decisions and fires HA events but skips all API calls |
+
+**Sensors (read-only):**
+
+| Entity | Purpose |
+| :--- | :--- |
+| EM Decision | The active decision label (e.g., `solar_charge`, `night_self_consume`) |
+| EM Last Action | Last mode command sent (e.g., `charge @ 2500W`, or `[dry-run] charge @ 2500W`) |
+| EM Status | Engine state: `running`, `stopped`, `disabled`, `cooldown`, `dry_run`, or `error` |
+| Battery Energy Available | Usable energy above SOC minimum (Wh) |
+| Hours Until Sunrise | Calculated from `sun.sun` entity |
+| Hours Until Sunset | Calculated from `sun.sun` entity |
+| P1 Average Power | Rolling average of P1 meter readings, configurable window (W) |
+
+**Binary sensors:**
+
+| Entity | Purpose |
+| :--- | :--- |
+| Night Mode Active | Whether it's currently nighttime (sun below horizon, no solar) |
+| High Load Detected | Whether home load exceeds the high load threshold |
+
+**HA Events:**
+
+The engine fires a `hyxi_em_mode_changed` event on every mode change, usable in automations:
+
+| Field | Description |
+| :--- | :--- |
+| `sn` | Inverter serial number |
+| `mode` | New mode (`charge`, `discharge`, `self_consume`, `idle`) |
+| `power` | Target power in watts (null for idle/self_consume) |
+| `previous_mode` | Mode before the change |
+| `decision` | Decision label that triggered the change |
+| `dry_run` | `true` if in dry-run mode (field absent when not dry-run) |
+
 #### Microinverter
 
 | Controls | controlId |
@@ -137,6 +357,7 @@ Click the **Configure** button on the HYXI integration card to access:
 * **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
 * **Enable Discovery via Alarms:** Proactively discover child devices reporting active alarms (Advanced).
 * **Enable Device Control & Protection:** Opt-in to enable inverter mode buttons, charge/discharge power settings, automatic battery protection thresholds, and micro-inverter power limits or switches. By default, this is disabled to prevent conflicts with external control systems (e.g. energy providers or grid constraints).
+* **Enable Energy Manager Standalone (Beta):** Automated battery management engine. Only visible after enabling Device Control & Protection. See [Energy Manager Standalone](#energy-manager-standalone-beta) above.
 
 ## 🛡️ Quality Assurance
 

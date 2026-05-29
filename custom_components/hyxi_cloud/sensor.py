@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -14,11 +15,14 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_EM_ENABLED,
+    CONF_EM_INVERTER_SN,
     DOMAIN,
     MANUFACTURER,
     detect_phase_type,
@@ -911,6 +915,81 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 continue
             entities.append(HyxiLastSentModeSensor(coordinator, sn))
 
+    # 4. Energy Manager sensors (EM-only)
+    em_sn = entry.options.get(CONF_EM_INVERTER_SN)
+    if entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data:
+        em_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
+            name="Energy Manager",
+            manufacturer=MANUFACTURER,
+            model="Energy Manager",
+            via_device=(DOMAIN, em_sn),
+        )
+        entities.append(
+            EMSensor(
+                coordinator, em_sn, EMSensorDef("current_decision", em_device_info)
+            )
+        )
+        entities.append(
+            EMSensor(coordinator, em_sn, EMSensorDef("last_action", em_device_info))
+        )
+        entities.append(
+            EMSensor(
+                coordinator,
+                em_sn,
+                EMSensorDef("status", em_device_info, icon="mdi:state-machine"),
+            )
+        )
+        entities.append(
+            EMSensor(
+                coordinator,
+                em_sn,
+                EMSensorDef(
+                    "battery_energy_available",
+                    em_device_info,
+                    unit="Wh",
+                    device_class=SensorDeviceClass.ENERGY,
+                ),
+            )
+        )
+        entities.append(
+            EMSensor(
+                coordinator,
+                em_sn,
+                EMSensorDef(
+                    "hours_until_sunrise",
+                    em_device_info,
+                    unit="h",
+                    icon="mdi:weather-sunset-up",
+                ),
+            )
+        )
+        entities.append(
+            EMSensor(
+                coordinator,
+                em_sn,
+                EMSensorDef(
+                    "hours_until_sunset",
+                    em_device_info,
+                    unit="h",
+                    icon="mdi:weather-sunset-down",
+                ),
+            )
+        )
+        entities.append(
+            EMSensor(
+                coordinator,
+                em_sn,
+                EMSensorDef(
+                    "p1_average",
+                    em_device_info,
+                    unit="W",
+                    device_class=SensorDeviceClass.POWER,
+                    state_class=SensorStateClass.MEASUREMENT,
+                ),
+            )
+        )
+
     # FINAL REGISTRATION
     if entities:
         async_add_entities(entities)
@@ -1305,3 +1384,89 @@ class HyxiLastSentModeSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 def _get_protection_controller(coordinator, sn: str):
     """Return the battery protection controller for a device."""
     return getattr(coordinator, "protection_controllers", {}).get(sn)
+
+
+@dataclass
+class EMSensorDef:
+    """Definition for an EM sensor entity."""
+
+    key: str
+    device_info: DeviceInfo
+    unit: str | None = None
+    device_class: SensorDeviceClass | None = None
+    state_class: SensorStateClass | None = None
+    icon: str | None = None
+
+
+class EMSensor(SensorEntity):
+    """Sensor entity backed by the Energy Manager engine.
+
+    Updates are pushed by the engine via a registered callback, not by the
+    coordinator poll cycle.
+    """
+
+    _attr_has_entity_name = True
+
+    _VALUE_GETTERS: ClassVar[dict[str, str]] = {
+        "current_decision": "decision",
+        "last_action": "last_action",
+        "status": "status",
+        "battery_energy_available": "battery_energy_available_wh",
+        "hours_until_sunrise": "_hours_until_sunrise",
+        "hours_until_sunset": "_hours_until_sunset",
+        "p1_average": "p1_avg",
+    }
+
+    def __init__(
+        self,
+        coordinator,
+        sn: str,
+        sensor_def: EMSensorDef,
+    ) -> None:
+        """Initialize the EM sensor."""
+        self._coordinator = coordinator
+        self._sn = sn
+        self._key = sensor_def.key
+        self._attr_unique_id = f"hyxi_{sn}_em_{sensor_def.key}"
+        self._attr_translation_key = f"em_{sensor_def.key}"
+        self._attr_device_info = sensor_def.device_info
+        self._attr_native_unit_of_measurement = sensor_def.unit
+        self._attr_device_class = sensor_def.device_class
+        self._attr_state_class = sensor_def.state_class
+        if sensor_def.icon:
+            self._attr_icon = sensor_def.icon
+
+    async def async_added_to_hass(self) -> None:
+        """Register for engine updates."""
+        engine = self._coordinator.engine
+        if engine:
+            engine.register_update_callback(self._engine_updated)
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister from engine updates."""
+        engine = self._coordinator.engine
+        if engine:
+            engine.unregister_update_callback(self._engine_updated)
+
+    @callback
+    def _engine_updated(self) -> None:
+        """Handle engine state change."""
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self):
+        """Return the current value from the engine."""
+        engine = self._coordinator.engine
+        if not engine:
+            return None
+        getter_name = self._VALUE_GETTERS.get(self._key)
+        if not getter_name:
+            return None
+        attr = getattr(engine, getter_name, None)
+        if callable(attr):
+            value = attr()
+        else:
+            value = attr
+        if isinstance(value, float):
+            return round(value, 1)
+        return value

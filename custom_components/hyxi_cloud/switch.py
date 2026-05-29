@@ -1,14 +1,22 @@
 """Switch platform for HYXI Cloud device control."""
 
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
+from typing import ClassVar
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from hyxi_cloud_api import VPP_ACTIVE_MODES, HyxiApiClient
 
 from .const import (
+    CONF_EM_ENABLED,
+    CONF_EM_INVERTER_SN,
     DOMAIN,
     detect_phase_type,
     get_raw_device_code,
@@ -54,6 +62,46 @@ async def async_setup_entry(
         elif device_type == "micro_inverter":
             if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
+
+    # EM-only switches — only when EM is enabled for this inverter
+    em_sn = entry.options.get(CONF_EM_INVERTER_SN)
+    if entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data:
+        # Grid charge toggle on inverter device
+        entities.append(
+            EMToggleSwitch(
+                coordinator, em_sn, EMToggleDef("grid_charge_allowed"), em_device=False
+            )
+        )
+        # EM engine toggles on EM virtual device
+        entities.append(
+            EMToggleSwitch(coordinator, em_sn, EMToggleDef("enabled"), em_device=True)
+        )
+        entities.append(
+            EMToggleSwitch(
+                coordinator, em_sn, EMToggleDef("night_mode"), em_device=True
+            )
+        )
+        entities.append(
+            EMToggleSwitch(
+                coordinator,
+                em_sn,
+                EMToggleDef("high_load_battery_assist"),
+                em_device=True,
+            )
+        )
+
+        # Export limiting — single-phase only (uses peak shaving controlId 1021)
+        em_dev_data = coordinator.data.get(em_sn, {})
+        em_phase = detect_phase_type(em_dev_data)
+        if em_phase == "single_phase":
+            entities.append(
+                EMToggleSwitch(
+                    coordinator,
+                    em_sn,
+                    EMToggleDef("export_limiting"),
+                    em_device=True,
+                )
+            )
 
     if entities:
         async_add_entities(entities)
@@ -154,3 +202,70 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
                 "Failed to power off microinverter %s: %s", mask_sn(self._sn), err
             )
             raise
+
+
+@dataclass
+class EMToggleDef:
+    """Definition for an EM toggle switch."""
+
+    key: str
+    default_on: bool = False
+
+
+class EMToggleSwitch(SwitchEntity, RestoreEntity):
+    """Toggle switch for Energy Manager parameters.
+
+    Stores state locally (RestoreEntity). The engine reads it each tick.
+    """
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_is_on: bool | None = None
+
+    _ICONS: ClassVar[dict[str, str]] = {
+        "grid_charge_allowed": "mdi:transmission-tower-import",
+        "enabled": "mdi:robot",
+        "night_mode": "mdi:weather-night",
+        "high_load_battery_assist": "mdi:flash-alert-outline",
+        "export_limiting": "mdi:transmission-tower-off",
+    }
+
+    def __init__(
+        self,
+        coordinator,
+        sn: str,
+        toggle_def: EMToggleDef,
+        em_device: bool = False,
+    ) -> None:
+        """Initialize the EM toggle switch."""
+        self._sn = sn
+        key = toggle_def.key
+        self._attr_unique_id = f"hyxi_{sn}_em_{key}"
+        self._attr_translation_key = f"em_{key}"
+        self._attr_icon = self._ICONS.get(key, "mdi:toggle-switch")
+        self._attr_is_on = toggle_def.default_on
+
+        if em_device:
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, f"{sn}_energy_manager")},
+            }
+        else:
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, sn)},
+            }
+
+    async def async_added_to_hass(self) -> None:
+        """Restore last known value on startup."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is not None:
+            self._attr_is_on = last_state.state == "on"
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Turn on."""
+        self._attr_is_on = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn off."""
+        self._attr_is_on = False
+        self.async_write_ha_state()

@@ -148,27 +148,31 @@ async def test_async_update_data_success():
 
 @pytest.mark.asyncio
 async def test_async_update_data_empty_telemetry():
-    """Test that empty telemetry raises UpdateFailed."""
+    """Test that empty telemetry warns but does not raise UpdateFailed."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    # Device with empty metrics (only last_seen) should trigger UpdateFailed
+    # Device with empty metrics (only last_seen) — should warn, not fail
     mock_client.get_all_device_data = AsyncMock(
         return_value={
             "data": {"SN123": {"metrics": {"last_seen": "2026-05-22"}}},
             "attempts": 1,
         }
     )
+    mock_client._request = AsyncMock(  # pylint: disable=protected-access
+        return_value=(200, {"success": False})
+    )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
     )
 
-    with pytest.raises(hc_coord.UpdateFailed) as excinfo:
-        await coordinator._async_update_data()
+    result = await coordinator._async_update_data()
 
-    assert "HYXI telemetry data is currently unavailable." in str(excinfo.value)
-    assert coordinator.hyxi_metadata["api_status"] == "Error"
+    # Data returned despite empty telemetry — no UpdateFailed, no backoff
+    assert "SN123" in result
+    assert coordinator.hyxi_metadata["api_status"] == "Online"
+    assert coordinator.hyxi_metadata["last_success"] is not None
 
 
 @pytest.mark.asyncio

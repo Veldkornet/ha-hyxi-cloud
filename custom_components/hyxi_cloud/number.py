@@ -1,6 +1,7 @@
 """Number platform for HYXI Cloud device control power settings."""
 
 import logging
+from typing import NamedTuple
 
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
@@ -13,7 +14,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
+    CONF_EM_ENABLED,
+    CONF_EM_INVERTER_SN,
     DOMAIN,
+    EM_DEFAULTS,
     MANUFACTURER,
     detect_phase_type,
     get_raw_device_code,
@@ -65,6 +69,43 @@ PROTECTION_NUMBER_DEFS: list[dict[str, str | int]] = [
 ]
 
 
+class EMNumberDef(NamedTuple):
+    """Definition for an Energy Manager number entity."""
+
+    key: str
+    unit: str
+    min_val: float
+    max_val: float
+    step: float
+    icon: str
+
+
+# EM-only: created only when Energy Manager is enabled in options
+EM_NUMBER_DEFS: list[EMNumberDef] = [
+    EMNumberDef("high_load_threshold", "W", 1000, 20000, 500, "mdi:flash-alert"),
+    EMNumberDef("max_charge_power", "W", 500, 15000, 100, "mdi:lightning-bolt"),
+    EMNumberDef(
+        "max_discharge_power", "W", 500, 15000, 100, "mdi:lightning-bolt-outline"
+    ),
+    EMNumberDef(
+        "min_solar_for_charge", "W", 200, 3000, 100, "mdi:solar-power-variant-outline"
+    ),
+    EMNumberDef("mode_switch_cooldown", "s", 10, 300, 5, "mdi:timer-outline"),
+    EMNumberDef("power_change_threshold", "W", 10, 500, 10, "mdi:delta"),
+    EMNumberDef("power_adjust_cooldown", "s", 5, 120, 5, "mdi:timer-sand"),
+    EMNumberDef("night_buffer_pct", "%", 0, 20, 1, "mdi:shield-half-full"),
+    EMNumberDef("avg_night_consumption", "W", 100, 2000, 50, "mdi:weather-night"),
+    EMNumberDef("charge_margin", "W", 0, 500, 25, "mdi:margin"),
+    EMNumberDef(
+        "charge_entry_threshold", "W", 100, 2000, 50, "mdi:solar-power-variant-outline"
+    ),
+    EMNumberDef("charge_reentry_delay", "s", 30, 600, 15, "mdi:timer-lock"),
+    EMNumberDef("bottomout_cooldown", "s", 60, 900, 30, "mdi:timer-alert"),
+    EMNumberDef("p1_smoothing_period", "s", 1, 300, 1, "mdi:chart-timeline-variant"),
+    EMNumberDef("max_grid_export", "W", 0, 10000, 100, "mdi:transmission-tower-export"),
+]
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -104,6 +145,17 @@ async def async_setup_entry(
             # Microinverter power limit (controlId 3012)
             if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
+
+    # EM-only numbers — only when Energy Manager is enabled for this inverter
+    em_sn = entry.options.get(CONF_EM_INVERTER_SN)
+    if entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data:
+        em_dev_data = coordinator.data.get(em_sn, {})
+        em_is_single_phase = detect_phase_type(em_dev_data) == "single_phase"
+        for numdef in EM_NUMBER_DEFS:
+            # max_grid_export only relevant for single-phase export limiting
+            if numdef.key == "max_grid_export" and not em_is_single_phase:
+                continue
+            entities.append(EMParameterNumber(coordinator, em_sn, numdef))
 
     if entities:
         async_add_entities(entities)
@@ -288,3 +340,50 @@ class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
             )
         ) is not None:
             self.hass.async_create_task(controller.async_evaluate())
+
+
+class EMParameterNumber(NumberEntity, RestoreEntity):
+    """Number entity for an Energy Manager parameter.
+
+    Stores a tunable value locally (RestoreEntity). The engine reads it
+    each tick via _get_param().
+    """
+
+    _attr_has_entity_name = True
+    _attr_mode = NumberMode.BOX
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator,
+        sn: str,
+        numdef: EMNumberDef,
+    ) -> None:
+        """Initialize the EM parameter number entity."""
+        self._sn = sn
+        self._attr_unique_id = f"hyxi_{sn}_em_{numdef.key}"
+        self._attr_translation_key = f"em_{numdef.key}"
+        self._attr_native_unit_of_measurement = numdef.unit
+        self._attr_native_min_value = numdef.min_val
+        self._attr_native_max_value = numdef.max_val
+        self._attr_native_step = numdef.step
+        self._attr_icon = numdef.icon
+
+        self._attr_native_value = float(EM_DEFAULTS.get(numdef.key, 0))
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{sn}_energy_manager")},
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Restore last known value on startup."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is not None:
+            try:
+                self._attr_native_value = float(last_state.state)
+            except ValueError, TypeError:
+                pass
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Set the parameter value."""
+        self._attr_native_value = value
+        self.async_write_ha_state()
