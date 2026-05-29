@@ -63,6 +63,7 @@ def mock_ha_environment():
     mock_api = MagicMock()
     mock_api.__name__ = "hyxi_cloud_api"
     mock_api.__version__ = "1.0.4"
+    mock_api.VPP_ACTIVE_MODES = frozenset({"13", "14", "16"})
     sys.modules["hyxi_cloud_api"] = mock_api
     sys.modules["voluptuous"] = mock_ha
 
@@ -436,3 +437,57 @@ async def test_step_user_already_configured(mock_validate_input, config_flow):
 
     config_flow.async_set_unique_id.assert_called_once_with("existing_key")
     config_flow._abort_if_unique_id_configured.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_options_flow_vpp_active_hides_toggles(mock_ha_environment):
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {
+        "update_interval": 10,
+        "enable_battery_control": True,
+        config_flow_mod.CONF_EM_ENABLED: False,
+    }
+
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+
+    # 1. Setup mock coordinator data with a hybrid inverter
+    mock_coordinator = MagicMock()
+    mock_coordinator.data = {
+        "SN123": {
+            "deviceType": "HYBRID_INVERTER",
+            "metrics": {
+                "workMode": "16",  # VPP active
+            },
+        }
+    }
+    options_flow.hass.data = {
+        config_flow_mod.DOMAIN: {config_entry.entry_id: mock_coordinator}
+    }
+
+    # 2. Verify _is_vpp_active returns True
+    assert options_flow._is_vpp_active() is True
+
+    # 3. Verify show_form hides the toggles
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+    result = await options_flow.async_step_init(user_input=None)
+    assert result["type"] == "form"
+
+    # 4. Verify submit preserves hidden toggles
+    options_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+
+    # Submit only interval and discovery (battery_control is not in form input because it's hidden)
+    submit_result = await options_flow.async_step_init(
+        user_input={"update_interval": 30, config_flow_mod.CONF_BACK_DISCOVERY: False}
+    )
+    assert submit_result["type"] == "create_entry"
+    call_kwargs = options_flow.async_create_entry.call_args.kwargs
+
+    # Hidden options must be preserved!
+    assert call_kwargs["data"]["update_interval"] == 30
+    assert call_kwargs["data"]["enable_battery_control"] is True
+    assert config_flow_mod.CONF_EM_ENABLED not in call_kwargs["data"]

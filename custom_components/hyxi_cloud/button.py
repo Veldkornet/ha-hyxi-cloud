@@ -54,7 +54,7 @@ def _is_vpp_active(coordinator, sn: str) -> bool:
     user commands from conflicting with the active VPP dispatch.
     """
     metrics = (coordinator.data.get(sn) or {}).get("metrics", {})
-    return metrics.get("vppMode") in VPP_ACTIVE_MODES
+    return str(metrics.get("vppMode")) in VPP_ACTIVE_MODES
 
 
 async def async_setup_entry(

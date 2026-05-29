@@ -135,6 +135,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
     _remove_legacy_select_entities(hass, coordinator.data)
+    _cleanup_control_entities(hass, entry, coordinator)
     await _async_setup_battery_protection(hass, coordinator)
 
     # Energy Manager: create engine if configured and enabled
@@ -205,6 +206,68 @@ def _remove_legacy_select_entities(hass: HomeAssistant, devices: dict) -> None:
             if entity_id is not None:
                 _LOGGER.debug("Removing legacy HYXI select entity %s", entity_id)
                 registry.async_remove(entity_id)
+
+
+def _cleanup_control_entities(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> None:
+    """Remove control entities from registry if battery control is disabled."""
+    from .const import is_battery_control_enabled
+
+    if is_battery_control_enabled(entry, coordinator):
+        return
+
+    _LOGGER.debug(
+        "Battery control is disabled. Cleaning up any registered control entities from registry"
+    )
+    registry = er.async_get(hass)
+    for sn in coordinator.data:
+        # Buttons
+        for key in (
+            "mode_idle",
+            "mode_charge",
+            "mode_discharge",
+            "mode_self_consume",
+            "peak_shaving_close",
+            "peak_shaving_charge",
+            "peak_shaving_discharge",
+            "peak_shaving_stop",
+            "peak_shaving_hold",
+        ):
+            unique_id = f"hyxi_{sn}_{key}"
+            if entity_id := registry.async_get_entity_id("button", DOMAIN, unique_id):
+                _LOGGER.debug("Removing control button entity %s", entity_id)
+                registry.async_remove(entity_id)
+
+        # Switches
+        for key in ("frequency_control", "micro_power"):
+            unique_id = f"hyxi_{sn}_{key}"
+            if entity_id := registry.async_get_entity_id("switch", DOMAIN, unique_id):
+                _LOGGER.debug("Removing control switch entity %s", entity_id)
+                registry.async_remove(entity_id)
+
+        # Numbers
+        for key in (
+            "charge_power",
+            "discharge_power",
+            "soc_min",
+            "soc_max",
+            "soc_min_hysteresis_pct",
+            "soc_max_hysteresis_pct",
+            "micro_power_limit",
+        ):
+            unique_id = f"hyxi_{sn}_{key}"
+            if entity_id := registry.async_get_entity_id("number", DOMAIN, unique_id):
+                _LOGGER.debug("Removing control number entity %s", entity_id)
+                registry.async_remove(entity_id)
+
+        # Sensors
+        unique_id = f"hyxi_{sn}_last_sent_mode"
+        if entity_id := registry.async_get_entity_id("sensor", DOMAIN, unique_id):
+            _LOGGER.debug("Removing control sensor entity %s", entity_id)
+            registry.async_remove(entity_id)
 
 
 async def _async_setup_battery_protection(
