@@ -14,7 +14,6 @@ from .const import (
     BASE_URL_DEFAULT,
     CONF_ACCESS_KEY,
     CONF_BACK_DISCOVERY,
-    CONF_COUNTRY,
     CONF_SECRET_KEY,
     DOMAIN,
 )
@@ -22,17 +21,14 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-def _build_user_schema(country_default: str) -> vol.Schema:
-    """Build the user/reauth schema with a pre-filled country default."""
+def _build_user_schema() -> vol.Schema:
+    """Build the user/reauth schema."""
     return vol.Schema(
         {
             vol.Required(CONF_ACCESS_KEY): str,
             vol.Required(CONF_SECRET_KEY): selector.TextSelector(
                 selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
             ),
-            vol.Required(
-                CONF_COUNTRY, default=country_default
-            ): selector.CountrySelector(),
         }
     )
 
@@ -51,31 +47,15 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
     def __init__(self):
         """Initialize the flow."""
         self.reauth_entry = None
-        self._resolved_base_url: str = BASE_URL_DEFAULT
 
     async def _validate_input(self, data):
         """Validate the user input allows us to connect."""
         session = async_get_clientsession(self.hass)
 
-        # Resolve the regional base URL once during setup.
-        # Falls back to the default if the switch service is unreachable.
-        country_code = data.get(CONF_COUNTRY, "")
-        base_url = (
-            await HyxiApiClient.resolve_base_url(country_code, session)
-            if country_code
-            else None
-        ) or BASE_URL_DEFAULT
-        _LOGGER.debug(
-            "HYXI using base URL '%s' for country '%s'", base_url, country_code
-        )
-
-        # Store the resolved URL on the flow so async_step_user can persist it.
-        self._resolved_base_url = base_url
-
         client = HyxiApiClient(
             data[CONF_ACCESS_KEY],
             data[CONF_SECRET_KEY],
-            base_url,
+            BASE_URL_DEFAULT,
             session,
         )
 
@@ -113,7 +93,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                     title="HYXI Cloud",
                     data={
                         **user_input,
-                        "base_url": self._resolved_base_url,
+                        "base_url": BASE_URL_DEFAULT,
                     },
                 )
 
@@ -121,7 +101,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_build_user_schema(self.hass.config.country or "AU"),
+            data_schema=_build_user_schema(),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
         )
@@ -148,7 +128,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=_build_user_schema(self.hass.config.country or "AU"),
+            data_schema=_build_user_schema(),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
         )
@@ -169,6 +149,15 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         # Pull current values or defaults
         current_interval = self._config_entry.options.get("update_interval", 5)
 
+        from .const import is_battery_control_enabled
+
+        coordinator = None
+        if hasattr(self, "hass") and self.hass:
+            coordinator = self.hass.data.get(DOMAIN, {}).get(
+                self._config_entry.entry_id
+            )
+        default_control = is_battery_control_enabled(self._config_entry, coordinator)
+
         options_schema = vol.Schema(
             {
                 # Slider for Interval
@@ -183,9 +172,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 # Toggle for Battery Control & Protection
                 vol.Optional(
                     "enable_battery_control",
-                    default=self._config_entry.options.get(
-                        "enable_battery_control", False
-                    ),
+                    default=default_control,
                 ): selector.BooleanSelector(),
             }
         )

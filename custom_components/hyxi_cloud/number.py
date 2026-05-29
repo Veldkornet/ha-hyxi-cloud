@@ -17,6 +17,7 @@ from .const import (
     MANUFACTURER,
     detect_phase_type,
     get_raw_device_code,
+    is_battery_control_enabled,
     mask_sn,
     normalize_device_type,
 )
@@ -82,7 +83,7 @@ async def async_setup_entry(
         if device_type in ("hybrid_inverter", "all_in_one"):
             phase = detect_phase_type(dev_data)
 
-            if entry.options.get("enable_battery_control", False):
+            if is_battery_control_enabled(entry, coordinator):
                 # Power numbers pair with mode control (1062-1065) — three-phase only
                 # Peak shaving (single-phase) uses full inverter power, no wattage setting
                 if phase == "three_phase":
@@ -101,7 +102,7 @@ async def async_setup_entry(
                         )
         elif device_type == "micro_inverter":
             # Microinverter power limit (controlId 3012)
-            if entry.options.get("enable_battery_control", False):
+            if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
 
     if entities:

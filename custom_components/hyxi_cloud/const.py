@@ -7,7 +7,6 @@ from homeassistant.const import Platform
 DOMAIN = "hyxi_cloud"
 CONF_ACCESS_KEY = "access_key"
 CONF_SECRET_KEY = "secret_key"
-CONF_COUNTRY = "country"
 BASE_URL_DEFAULT = "https://open.hyxicloud.com"
 # Legacy alias kept for any imports that haven't migrated yet
 BASE_URL = BASE_URL_DEFAULT
@@ -179,6 +178,31 @@ def detect_phase_type(dev_data: dict) -> str:
             continue
 
     return "unknown"
+
+
+def is_battery_control_enabled(entry: Any, coordinator: Any) -> bool:
+    """Return True if battery control is enabled by user options.
+
+    If not explicitly set in options, defaults to True unless VPP is active.
+    """
+    val = entry.options.get("enable_battery_control")
+    if val is not None:
+        return val
+
+    # Default logic when options not set
+    if coordinator is None:
+        return True
+
+    from hyxi_cloud_api import VPP_ACTIVE_MODES
+
+    for dev_data in coordinator.data.values():
+        metrics = dev_data.get("metrics", {})
+        if (
+            metrics.get("workMode") in VPP_ACTIVE_MODES
+            or metrics.get("vppMode") in VPP_ACTIVE_MODES
+        ):
+            return False
+    return True
 
 
 PLATFORMS: list[Platform] = [

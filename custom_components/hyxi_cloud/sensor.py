@@ -24,6 +24,7 @@ from .const import (
     detect_phase_type,
     get_raw_device_code,
     get_software_version,
+    is_battery_control_enabled,
     is_null_value,
     mask_sn,
     normalize_device_type,
@@ -900,7 +901,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
 
     # 3. Battery protection telemetry
-    if entry.options.get("enable_battery_control", False):
+    if is_battery_control_enabled(entry, coordinator):
         for sn, dev_data in coordinator.data.items():
             device_type = normalize_device_type(get_raw_device_code(dev_data))
             if device_type not in ("hybrid_inverter", "all_in_one"):

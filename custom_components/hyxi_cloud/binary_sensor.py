@@ -230,12 +230,29 @@ class HyxiVppControlSensor(CoordinatorEntity, BinarySensorEntity):
         """Expose VPP programme details for dashboard and debugging."""
         m = self._metrics
         mode = m.get("vppMode") or ""
+        code = m.get("vppCode") or ""
+        name = m.get("vppName") or ""
         supplier = m.get("vppSupplierName") or ""
         manufacturer = m.get("vppManufacturer") or ""
+
+        # If VPP is active but details are empty (common via OpenAPI which lacks
+        # the app-only vppSupplier endpoint), provide clean fallbacks instead of
+        # contradicting "Not enrolled" labels.
+        is_active = mode in VPP_ACTIVE_MODES
+        if is_active:
+            if not supplier:
+                supplier = "Enrolled (Active VPP)"
+            if not manufacturer:
+                manufacturer = "Enrolled"
+            if not name:
+                name = "Active VPP"
+            if not code:
+                code = "Active"
+
         return {
             "vpp_mode": mode or "None",
-            "vpp_code": m.get("vppCode") or "None",
-            "vpp_name": m.get("vppName") or "None",
+            "vpp_code": code or "None",
+            "vpp_name": name or "None",
             "vpp_manufacturer": manufacturer or "Not enrolled",
             "vpp_supplier_name": supplier or "Not enrolled",
         }

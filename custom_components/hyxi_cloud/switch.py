@@ -12,6 +12,7 @@ from .const import (
     DOMAIN,
     detect_phase_type,
     get_raw_device_code,
+    is_battery_control_enabled,
     mask_sn,
     normalize_device_type,
 )
@@ -46,13 +47,13 @@ async def async_setup_entry(
 
             # Frequency control (controlId 1020) — single-phase devices only
             if (
-                entry.options.get("enable_battery_control", False)
+                is_battery_control_enabled(entry, coordinator)
                 and phase == "single_phase"
             ):
                 entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
         # Microinverter power on/off (controlId 3011)
         elif device_type == "micro_inverter":
-            if entry.options.get("enable_battery_control", False):
+            if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
 
     if entities:
