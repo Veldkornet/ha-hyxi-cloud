@@ -52,6 +52,7 @@ async def test_config_flow_success(hass: HomeAssistant):
         assert result2["data"] == {
             CONF_ACCESS_KEY: "test_access_key",
             CONF_SECRET_KEY: "test_secret_key",
+            "base_url": "https://open.hyxicloud.com",
         }
 
 
