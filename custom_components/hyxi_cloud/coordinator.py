@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import Any, TypedDict
 
 from aiohttp import ClientError
 from homeassistant.config_entries import ConfigEntry
@@ -21,9 +21,6 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
-
-if TYPE_CHECKING:
-    from .engine import EnergyManagerEngine
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +57,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
         self.entry = entry
         self.protection_controllers: dict[str, Any] = {}
-        self.engine: EnergyManagerEngine | None = None
+        self.engine: Any = None
 
         # 🚀 Store metadata on the object, not in the data dictionary!
         self.hyxi_metadata: HyxiMetadata = {
