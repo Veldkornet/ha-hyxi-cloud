@@ -32,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 def _is_vpp_active(coordinator, sn: str) -> bool:
     """Return True if a VPP program is currently controlling this device."""
     metrics = (coordinator.data.get(sn) or {}).get("metrics", {})
-    return metrics.get("vppMode") in VPP_ACTIVE_MODES
+    return str(metrics.get("vppMode")) in VPP_ACTIVE_MODES
 
 
 async def async_setup_entry(

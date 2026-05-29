@@ -162,10 +162,14 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             self._options[CONF_BACK_DISCOVERY] = user_input.get(
                 CONF_BACK_DISCOVERY, False
             )
-            self._options["enable_battery_control"] = user_input.get(
-                "enable_battery_control", False
-            )
-            enable_em = user_input.get("enable_energy_manager", False)
+            if "enable_battery_control" in user_input:
+                self._options["enable_battery_control"] = user_input[
+                    "enable_battery_control"
+                ]
+
+            enable_em = self._options.get(CONF_EM_ENABLED, False)
+            if "enable_energy_manager" in user_input:
+                enable_em = user_input["enable_energy_manager"]
 
             # EM requires battery control — auto-enable if user turned on EM
             if enable_em and not self._options.get("enable_battery_control"):
@@ -207,8 +211,8 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             ): selector.BooleanSelector(),
         }
 
-        # Only show control/EM toggles if controllable inverters exist
-        if has_controllable:
+        # Only show control/EM toggles if controllable inverters exist and VPP is inactive
+        if has_controllable and not self._is_vpp_active():
             battery_control_on = self._config_entry.options.get(
                 "enable_battery_control", False
             )
@@ -346,3 +350,22 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
     def _has_controllable_inverter(self) -> bool:
         """Check if any controllable inverter exists."""
         return len(self._get_controllable_sns()) > 0
+
+    def _is_vpp_active(self) -> bool:
+        """Check if any controllable inverter has an active VPP mode."""
+        coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
+        if not coordinator or not coordinator.data:
+            return False
+
+        from hyxi_cloud_api import VPP_ACTIVE_MODES
+
+        for sn in self._get_controllable_sns():
+            dev_data = coordinator.data.get(sn) or {}
+            metrics = dev_data.get("metrics", {})
+            vpp_mode = metrics.get("vppMode")
+            work_mode = metrics.get("workMode")
+            if (vpp_mode is not None and str(vpp_mode) in VPP_ACTIVE_MODES) or (
+                work_mode is not None and str(work_mode) in VPP_ACTIVE_MODES
+            ):
+                return True
+        return False
