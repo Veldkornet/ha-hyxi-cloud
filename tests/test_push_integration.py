@@ -267,3 +267,45 @@ async def test_button_press_renew(mock_coordinator, mock_entry):
             mock_teardown.assert_called_once_with(hass, mock_coordinator, mock_entry)
             mock_setup.assert_called_once_with(hass, mock_entry, mock_coordinator)
             mock_coordinator.async_set_updated_data.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_setup_push_subscription_via_nabu_casa(mock_coordinator, mock_entry):
+    """Test push subscription setup using Nabu Casa cloudhook URL resolution."""
+    hass = MagicMock()
+
+    import homeassistant.components.cloud as cloud_mock
+
+    old_active = cloud_mock.async_active_subscription
+    old_hook = getattr(cloud_mock, "async_get_or_create_cloudhook", None)
+
+    cloud_mock.async_active_subscription = MagicMock(return_value=True)
+    cloud_mock.async_get_or_create_cloudhook = AsyncMock(
+        return_value="https://hooks.nabucasa.com/12345"
+    )
+
+    try:
+        with patch("custom_components.hyxi_cloud.__init__.webhook") as mock_webhook:
+            mock_webhook.async_generate_path.return_value = (
+                "/api/webhook/hyxi_cloud_entry_123"
+            )
+
+            await _async_setup_push_subscription(hass, mock_entry, mock_coordinator)
+
+            assert mock_coordinator.push_enabled is True
+            assert mock_coordinator.webhook_id == "hyxi_cloud_entry_123"
+            assert mock_coordinator.push_status == "active"
+            assert mock_coordinator.push_url == "https://hooks.nabucasa.com/12345"
+
+            mock_webhook.async_register.assert_called_once()
+            mock_coordinator.client.subscribe_real_time_data.assert_called_once_with(
+                "https://hooks.nabucasa.com/12345",
+                ["INV123"],
+                10000,
+            )
+    finally:
+        cloud_mock.async_active_subscription = old_active
+        if old_hook is not None:
+            cloud_mock.async_get_or_create_cloudhook = old_hook
+        else:
+            delattr(cloud_mock, "async_get_or_create_cloudhook")

@@ -327,16 +327,23 @@ async def _async_resolve_webhook_url(
     resolved = None
 
     # Check Nabu Casa first
-    from homeassistant.components import cloud
+    import homeassistant.components.cloud as cloud  # pylint: disable=consider-using-from-import
 
     if cloud.async_active_subscription(hass):
         _LOGGER.debug("HYXI Push: Nabu Casa subscription detected, trying cloud URL")
         try:
-            resolved = cloud.async_get_external_url(hass, webhook_id)
-        except cloud.CloudNotConnected:
-            _LOGGER.debug(
-                "HYXI Push: Nabu Casa cloud not connected, falling back to network URL"
-            )
+            resolved = await cloud.async_get_or_create_cloudhook(hass, webhook_id)
+        except Exception as err:  # pylint: disable=broad-except
+            # Fall back to base Exception if CloudNotAvailable is not a valid exception class (e.g. in tests)
+            exc_cls = getattr(cloud, "CloudNotAvailable", Exception)
+            if not isinstance(exc_cls, type) or not issubclass(exc_cls, BaseException):
+                exc_cls = Exception
+            if isinstance(err, exc_cls):
+                _LOGGER.debug(
+                    "HYXI Push: Nabu Casa cloud hook not connected or available, falling back to network URL"
+                )
+            else:
+                raise err
 
     # Fall back to standard external network settings
     if not resolved:
