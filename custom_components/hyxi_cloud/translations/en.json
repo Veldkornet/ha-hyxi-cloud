@@ -39,7 +39,10 @@
           "back_discovery": "Enable discovery via alarms (Advanced)",
           "enable_battery_control": "Enable Device Control & Protection",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "override_vpp": "Override VPP Lock (force-enable controls during VPP)"
+          "override_vpp": "Override VPP Lock (force-enable controls during VPP)",
+          "enable_realtime_push": "Enable Real-Time Webhook Push",
+          "realtime_push_rate": "Push Update Frequency (seconds)",
+          "realtime_push_url": "Custom Callback URL (optional, dynamic default — base URL, path appended automatically)"
         }
       },
       "energy_manager": {
@@ -156,6 +159,14 @@
       },
       "integration_last_updated": {
         "name": "Integration Last Updated"
+      },
+      "realtime_subscription_status": {
+        "name": "Real-Time Subscription Status",
+        "state": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "error": "Error"
+        }
       },
       "batcap": {
         "name": "Battery Capacity"
@@ -591,6 +602,9 @@
       },
       "clear_alarms": {
         "name": "Clear Active Alarms"
+      },
+      "renew_realtime_subscription": {
+        "name": "Renew Push Subscription"
       }
     }
   }

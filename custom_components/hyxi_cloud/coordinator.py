@@ -67,6 +67,15 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             "api_status": "Starting",
         }
 
+        # Real-time Webhook Push state tracking
+        self.push_enabled: bool = False
+        self.subscribe_code: str | None = None
+        self.webhook_id: str | None = None
+        self.push_url: str | None = None
+        self.last_push_received: datetime | None = None
+        self.push_status: str = "inactive"
+        self.push_error: str | None = None
+
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
         # Read Discovery Toggle

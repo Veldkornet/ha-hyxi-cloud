@@ -39,7 +39,10 @@
           "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)",
           "enable_battery_control": "Apparaatcontrole en -bescherming inschakelen",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "override_vpp": "VPP-vergrendeling overschrijven (bediening forceren tijdens VPP)"
+          "override_vpp": "VPP-vergrendeling overschrijven (bediening forceren tijdens VPP)",
+          "enable_realtime_push": "Enable Real-Time Webhook Push",
+          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
+          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
         }
       },
       "energy_manager": {
@@ -286,7 +289,8 @@
           "optimizer": "Optimalisator",
           "meter": "Meter",
           "battery": "Batterij",
-          "ac_battery": "AC-batterij"
+          "ac_battery": "AC-batterij",
+          "all_in_one": "All-in-One"
         }
       },
       "ratedpower": {
@@ -464,6 +468,14 @@
       },
       "em_status": {
         "name": "EM Status"
+      },
+      "realtime_subscription_status": {
+        "name": "Real-Time Subscription Status",
+        "state": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "error": "Error"
+        }
       }
     },
     "number": {
@@ -590,6 +602,9 @@
       },
       "clear_alarms": {
         "name": "Actieve alarmen wissen"
+      },
+      "renew_realtime_subscription": {
+        "name": "Renew Push Subscription"
       }
     }
   }
