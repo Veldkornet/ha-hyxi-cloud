@@ -38,7 +38,8 @@
           "update_interval": "Opdateringsinterval (1-60 minutter, standard: 5)",
           "back_discovery": "Aktiver opdagelse via alarmer (avanceret)",
           "enable_battery_control": "Aktiver enhedskontrol og -beskyttelse",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "Tilsidesæt VPP-lås (gennemtving kontroller under VPP)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Problem"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

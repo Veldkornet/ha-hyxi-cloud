@@ -38,7 +38,8 @@
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
           "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)",
           "enable_battery_control": "Eszközvezérlés és -védelem engedélyezése",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "VPP-zár felülbírálása (vezérlők kényszerítése VPP alatt)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Probléma"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

@@ -38,7 +38,8 @@
           "update_interval": "Opvragsinterval (1-60 minute, verstek: 5)",
           "back_discovery": "Aktiveer ontdekking via alarms (Gevorderd)",
           "enable_battery_control": "Aktiveer toestelbeheer en -beskerming",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "Ignoreer VPP-slot (forseer kontroles tydens VPP)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Probleem"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

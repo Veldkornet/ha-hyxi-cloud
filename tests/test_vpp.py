@@ -187,6 +187,7 @@ def test_button_and_switch_lockout():
     coordinator = MagicMock()
     coordinator.last_update_success = True
     coordinator.data = {"SN123": {"metrics": {"vppMode": "16"}}}
+    coordinator.config_entry.options = {}
 
     with (
         patch(
@@ -214,3 +215,35 @@ def test_button_and_switch_lockout():
         sw = switch_mod.HyxiFrequencyControlSwitch(coordinator, "SN123", {})
         assert btn.available is True
         assert sw.available is True
+
+
+def test_vpp_override_bypasses_lockout():
+    """Test that buttons and switches remain available during VPP if override is checked."""
+    coordinator = MagicMock()
+    coordinator.last_update_success = True
+    coordinator.data = {"SN123": {"metrics": {"vppMode": "16"}}}
+    coordinator.config_entry = MagicMock()
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.button.VPP_ACTIVE_MODES",
+            frozenset({"13", "14", "16"}),
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.VPP_ACTIVE_MODES",
+            frozenset({"13", "14", "16"}),
+        ),
+    ):
+        # 1. With override disabled, they are unavailable
+        coordinator.config_entry.options = {"override_vpp": False}
+        btn = button_mod.HyxiModeButton(coordinator, "SN123", {}, "idle")
+        sw = switch_mod.HyxiFrequencyControlSwitch(coordinator, "SN123", {})
+        assert btn.available is False
+        assert sw.available is False
+
+        # 2. With override enabled, they are available
+        coordinator.config_entry.options = {"override_vpp": True}
+        btn_override = button_mod.HyxiModeButton(coordinator, "SN123", {}, "idle")
+        sw_override = switch_mod.HyxiFrequencyControlSwitch(coordinator, "SN123", {})
+        assert btn_override.available is True
+        assert sw_override.available is True

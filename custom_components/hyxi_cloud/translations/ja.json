@@ -38,7 +38,8 @@
           "update_interval": "ポーリング間隔 (1-60分, デフォルト: 5)",
           "back_discovery": "アラーム経由の検出を有効にする (高度)",
           "enable_battery_control": "デバイス制御と保護を有効にする",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "VPPロックの上書き (VPP中の制御を強制有効化)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "異常あり"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

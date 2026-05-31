@@ -470,24 +470,215 @@ async def test_options_flow_vpp_active_hides_toggles(mock_ha_environment):
     # 2. Verify _is_vpp_active returns True
     assert options_flow._is_vpp_active() is True
 
-    # 3. Verify show_form hides the toggles
+    # 3. Verify show_form initially hides toggles but shows override_vpp
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "init"}
     )
+
+    import voluptuous as vol
+
+    vol.Optional.reset_mock()
+
     result = await options_flow.async_step_init(user_input=None)
     assert result["type"] == "form"
 
-    # 4. Verify submit preserves hidden toggles
-    options_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
-
-    # Submit only interval and discovery (battery_control is not in form input because it's hidden)
-    submit_result = await options_flow.async_step_init(
-        user_input={"update_interval": 30, config_flow_mod.CONF_BACK_DISCOVERY: False}
+    # Only override_vpp is in the form, not battery control or EM
+    vol.Optional.assert_any_call(config_flow_mod.CONF_OVERRIDE_VPP, default=False)
+    assert (
+        any(
+            call[0][0] == "enable_battery_control"
+            for call in vol.Optional.call_args_list
+        )
+        is False
     )
-    assert submit_result["type"] == "create_entry"
+    assert (
+        any(
+            call[0][0] == "enable_energy_manager"
+            for call in vol.Optional.call_args_list
+        )
+        is False
+    )
+
+    # 4. Submit override_vpp = True. This should trigger a progressive reveal step reload.
+    vol.Optional.reset_mock()
+    submit_result = await options_flow.async_step_init(
+        user_input={
+            "update_interval": 30,
+            config_flow_mod.CONF_BACK_DISCOVERY: False,
+            config_flow_mod.CONF_OVERRIDE_VPP: True,
+        }
+    )
+    assert submit_result["type"] == "form"
+    assert submit_result["step_id"] == "init"
+
+    # In the reloaded form: override_vpp (default True), enable_battery_control (default True) and enable_energy_manager (default False) are shown
+    vol.Optional.assert_any_call(config_flow_mod.CONF_OVERRIDE_VPP, default=True)
+    vol.Optional.assert_any_call("enable_battery_control", default=True)
+    vol.Optional.assert_any_call("enable_energy_manager", default=False)
+
+    # 5. Finally, we submit all options
+    options_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+    final_result = await options_flow.async_step_init(
+        user_input={
+            "update_interval": 30,
+            config_flow_mod.CONF_BACK_DISCOVERY: False,
+            config_flow_mod.CONF_OVERRIDE_VPP: True,
+            "enable_battery_control": True,
+            "enable_energy_manager": False,
+        }
+    )
+    assert final_result["type"] == "create_entry"
     call_kwargs = options_flow.async_create_entry.call_args.kwargs
 
-    # Hidden options must be preserved!
     assert call_kwargs["data"]["update_interval"] == 30
     assert call_kwargs["data"]["enable_battery_control"] is True
+    assert call_kwargs["data"]["override_vpp"] is True
     assert config_flow_mod.CONF_EM_ENABLED not in call_kwargs["data"]
+
+
+@pytest.mark.asyncio
+async def test_options_flow_vpp_active_with_override_shows_toggles(mock_ha_environment):
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {
+        "update_interval": 10,
+        "enable_battery_control": True,
+        config_flow_mod.CONF_EM_ENABLED: False,
+        config_flow_mod.CONF_OVERRIDE_VPP: True,
+    }
+
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+
+    mock_coordinator = MagicMock()
+    mock_coordinator.data = {
+        "SN123": {
+            "deviceType": "HYBRID_INVERTER",
+            "metrics": {
+                "workMode": "16",  # VPP active
+            },
+        }
+    }
+    options_flow.hass.data = {
+        config_flow_mod.DOMAIN: {config_entry.entry_id: mock_coordinator}
+    }
+
+    # Verify _is_vpp_active returns False because of override
+    assert options_flow._is_vpp_active() is False
+
+    # Verify show_form shows the toggles and override_vpp
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+
+    import voluptuous as vol
+
+    vol.Optional.reset_mock()
+
+    result = await options_flow.async_step_init(user_input=None)
+    assert result["type"] == "form"
+
+    vol.Optional.assert_any_call(config_flow_mod.CONF_OVERRIDE_VPP, default=True)
+    vol.Optional.assert_any_call("enable_battery_control", default=True)
+    vol.Optional.assert_any_call("enable_energy_manager", default=False)
+
+
+@pytest.mark.asyncio
+async def test_options_flow_progressive_reveal_all_steps(mock_ha_environment):
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {
+        "update_interval": 10,
+        "enable_battery_control": False,
+        config_flow_mod.CONF_EM_ENABLED: False,
+        config_flow_mod.CONF_OVERRIDE_VPP: False,
+    }
+
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+
+    mock_coordinator = MagicMock()
+    mock_coordinator.data = {
+        "SN123": {
+            "deviceType": "HYBRID_INVERTER",
+            "metrics": {
+                "workMode": "16",  # VPP active
+            },
+        }
+    }
+    options_flow.hass.data = {
+        config_flow_mod.DOMAIN: {config_entry.entry_id: mock_coordinator}
+    }
+
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+
+    import voluptuous as vol
+
+    # Step 1: Open flow. Only override_vpp is shown.
+    vol.Optional.reset_mock()
+    result1 = await options_flow.async_step_init(user_input=None)
+    assert result1["type"] == "form"
+    vol.Optional.assert_any_call(config_flow_mod.CONF_OVERRIDE_VPP, default=False)
+    assert (
+        any(
+            call[0][0] == "enable_battery_control"
+            for call in vol.Optional.call_args_list
+        )
+        is False
+    )
+
+    # Step 2: Check override_vpp. Reloads form. Shows enable_battery_control.
+    vol.Optional.reset_mock()
+    result2 = await options_flow.async_step_init(
+        user_input={
+            "update_interval": 10,
+            config_flow_mod.CONF_BACK_DISCOVERY: False,
+            config_flow_mod.CONF_OVERRIDE_VPP: True,
+        }
+    )
+    assert result2["type"] == "form"
+    vol.Optional.assert_any_call(config_flow_mod.CONF_OVERRIDE_VPP, default=True)
+    vol.Optional.assert_any_call("enable_battery_control", default=False)
+    assert (
+        any(
+            call[0][0] == "enable_energy_manager"
+            for call in vol.Optional.call_args_list
+        )
+        is False
+    )
+
+    # Step 3: Check enable_battery_control. Reloads form. Shows enable_energy_manager.
+    vol.Optional.reset_mock()
+    result3 = await options_flow.async_step_init(
+        user_input={
+            "update_interval": 10,
+            config_flow_mod.CONF_BACK_DISCOVERY: False,
+            config_flow_mod.CONF_OVERRIDE_VPP: True,
+            "enable_battery_control": True,
+        }
+    )
+    assert result3["type"] == "form"
+    vol.Optional.assert_any_call(config_flow_mod.CONF_OVERRIDE_VPP, default=True)
+    vol.Optional.assert_any_call("enable_battery_control", default=True)
+    vol.Optional.assert_any_call("enable_energy_manager", default=False)
+
+    # Step 4: Check enable_energy_manager. Redirects to energy manager flow.
+    options_flow.async_step_energy_manager = AsyncMock(
+        return_value={"type": "form", "step_id": "energy_manager"}
+    )
+    result4 = await options_flow.async_step_init(
+        user_input={
+            "update_interval": 10,
+            config_flow_mod.CONF_BACK_DISCOVERY: False,
+            config_flow_mod.CONF_OVERRIDE_VPP: True,
+            "enable_battery_control": True,
+            "enable_energy_manager": True,
+        }
+    )
+    assert result4["type"] == "form"
+    assert result4["step_id"] == "energy_manager"
+    options_flow.async_step_energy_manager.assert_called_once()

@@ -38,7 +38,8 @@
           "update_interval": "Interwał odpytywania (1-60 minut, domyślnie: 5)",
           "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)",
           "enable_battery_control": "Włącz kontrolę i ochronę urządzenia",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "Pomiń blokadę VPP (wymuś sterowanie podczas VPP)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Problem"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

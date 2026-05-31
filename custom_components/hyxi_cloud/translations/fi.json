@@ -38,7 +38,8 @@
           "update_interval": "Päivitysväli (1-60 minuuttia, oletus: 5)",
           "back_discovery": "Ota löytäminen käyttöön hällytysten kautta (edistynyt)",
           "enable_battery_control": "Ota laitteen ohjaus ja suojaus käyttöön",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "Ohita VPP-lukitus (pakota ohjaus VPP:n aikana)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Ongelma"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

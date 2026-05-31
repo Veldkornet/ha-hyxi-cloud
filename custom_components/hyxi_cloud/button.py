@@ -20,6 +20,7 @@ from hyxi_cloud_api import VPP_ACTIVE_MODES, HyxiApiClient
 
 from .binary_sensor import ACTIVE_ALARM_STATES
 from .const import (
+    CONF_OVERRIDE_VPP,
     DOMAIN,
     MANUFACTURER,
     detect_phase_type,
@@ -53,6 +54,8 @@ def _is_vpp_active(coordinator, sn: str) -> bool:
     When True, manual control buttons must become unavailable to prevent
     user commands from conflicting with the active VPP dispatch.
     """
+    if coordinator.config_entry.options.get(CONF_OVERRIDE_VPP, False):
+        return False
     metrics = (coordinator.data.get(sn) or {}).get("metrics", {})
     return str(metrics.get("vppMode")) in VPP_ACTIVE_MODES
 
