@@ -23,6 +23,7 @@ from .const import (
     CONF_EM_INVERTER_SN,
     CONF_EM_LOOP_INTERVAL,
     CONF_EM_P1_ENTITY,
+    CONF_OVERRIDE_VPP,
     CONF_SECRET_KEY,
     DOMAIN,
     get_raw_device_code,
@@ -157,15 +158,27 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         """Manage the options form."""
         if user_input is not None:
             # Preserve all existing options, update with new values
-            self._options = dict(self._config_entry.options)
+            self._options = (
+                dict(self._options)
+                if self._options
+                else dict(self._config_entry.options)
+            )
             self._options["update_interval"] = user_input["update_interval"]
             self._options[CONF_BACK_DISCOVERY] = user_input.get(
                 CONF_BACK_DISCOVERY, False
             )
+
+            was_override_enabled = self._options.get(CONF_OVERRIDE_VPP, False)
+            was_battery_control_enabled = self._options.get(
+                "enable_battery_control", False
+            )
+
             if "enable_battery_control" in user_input:
                 self._options["enable_battery_control"] = user_input[
                     "enable_battery_control"
                 ]
+            if CONF_OVERRIDE_VPP in user_input:
+                self._options[CONF_OVERRIDE_VPP] = user_input[CONF_OVERRIDE_VPP]
 
             enable_em = self._options.get(CONF_EM_ENABLED, False)
             if "enable_energy_manager" in user_input:
@@ -174,6 +187,26 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             # EM requires battery control — auto-enable if user turned on EM
             if enable_em and not self._options.get("enable_battery_control"):
                 self._options["enable_battery_control"] = True
+
+            # If user just enabled override_vpp, but enable_battery_control wasn't in user_input,
+            # reload the step to reveal it (only if controllable inverters exist).
+            if (
+                self._has_controllable_inverter()
+                and self._options.get(CONF_OVERRIDE_VPP, False)
+                and not was_override_enabled
+                and "enable_battery_control" not in user_input
+            ):
+                return await self.async_step_init()
+
+            # If user just enabled battery_control, but enable_energy_manager wasn't in user_input,
+            # reload the step to reveal it (only if controllable inverters exist).
+            if (
+                self._has_controllable_inverter()
+                and self._options.get("enable_battery_control", False)
+                and not was_battery_control_enabled
+                and "enable_energy_manager" not in user_input
+            ):
+                return await self.async_step_init()
 
             if enable_em:
                 self._options[CONF_EM_ENABLED] = True
@@ -195,8 +228,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=self._options)
 
         # Pull current values or defaults
-        current_interval = self._config_entry.options.get("update_interval", 5)
-        em_enabled = self._config_entry.options.get(CONF_EM_ENABLED, False)
+        options = self._options if self._options else self._config_entry.options
+        current_interval = options.get("update_interval", 5)
+        em_enabled = options.get(CONF_EM_ENABLED, False)
         has_controllable = self._has_controllable_inverter()
 
         schema_dict = {
@@ -207,26 +241,34 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             # Toggle for Alarm-based discovery
             vol.Optional(
                 CONF_BACK_DISCOVERY,
-                default=self._config_entry.options.get(CONF_BACK_DISCOVERY, False),
+                default=options.get(CONF_BACK_DISCOVERY, False),
             ): selector.BooleanSelector(),
         }
 
-        # Only show control/EM toggles if controllable inverters exist and VPP is inactive
-        if has_controllable and not self._is_vpp_active():
-            battery_control_on = self._config_entry.options.get(
-                "enable_battery_control", False
-            )
-            schema_dict[
-                vol.Optional(
-                    "enable_battery_control",
-                    default=battery_control_on,
-                )
-            ] = selector.BooleanSelector()
-            # EM toggle only visible when battery control is already enabled
-            if battery_control_on:
+        # Only show control/EM toggles if controllable inverters exist
+        if has_controllable:
+            vpp_active_raw = self._is_vpp_active_raw()
+            if vpp_active_raw:
                 schema_dict[
-                    vol.Optional("enable_energy_manager", default=em_enabled)
+                    vol.Optional(
+                        CONF_OVERRIDE_VPP,
+                        default=options.get(CONF_OVERRIDE_VPP, False),
+                    )
                 ] = selector.BooleanSelector()
+
+            if not vpp_active_raw or options.get(CONF_OVERRIDE_VPP, False):
+                battery_control_on = options.get("enable_battery_control", False)
+                schema_dict[
+                    vol.Optional(
+                        "enable_battery_control",
+                        default=battery_control_on,
+                    )
+                ] = selector.BooleanSelector()
+                # EM toggle only visible when battery control is already enabled
+                if battery_control_on:
+                    schema_dict[
+                        vol.Optional("enable_energy_manager", default=em_enabled)
+                    ] = selector.BooleanSelector()
 
         return self.async_show_form(step_id="init", data_schema=vol.Schema(schema_dict))
 
@@ -337,6 +379,8 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
     def _get_controllable_sns(self) -> list[str]:
         """Get serial numbers of controllable inverters from coordinator data."""
+        if not hasattr(self, "hass") or self.hass is None:
+            return []
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         if not coordinator or not coordinator.data:
             return []
@@ -353,6 +397,13 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
     def _is_vpp_active(self) -> bool:
         """Check if any controllable inverter has an active VPP mode."""
+        options = self._options if self._options else self._config_entry.options
+        if options.get(CONF_OVERRIDE_VPP, False):
+            return False
+        return self._is_vpp_active_raw()
+
+    def _is_vpp_active_raw(self) -> bool:
+        """Check if any controllable inverter has an active VPP mode raw metrics."""
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         if not coordinator or not coordinator.data:
             return False

@@ -38,7 +38,8 @@
           "update_interval": "Интервал обновления (1-60 минут, по умолчанию: 5)",
           "back_discovery": "Включить обнаружение через аварийные сигналы (расширенный режим)",
           "enable_battery_control": "Включить управление и защиту устройства",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "Обход блокировки VPP (принудительное управление во время VPP)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Проблема"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

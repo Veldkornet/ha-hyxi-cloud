@@ -38,7 +38,8 @@
           "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)",
           "back_discovery": "Activer la découverte via les alarmes (Avancé)",
           "enable_battery_control": "Activer le contrôle et la protection de l'appareil",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "Contourner le verrouillage VPP (forcer les commandes pendant le VPP)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Problème"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

@@ -17,6 +17,7 @@ from hyxi_cloud_api import VPP_ACTIVE_MODES, HyxiApiClient
 from .const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
+    CONF_OVERRIDE_VPP,
     DOMAIN,
     detect_phase_type,
     get_raw_device_code,
@@ -31,6 +32,8 @@ _LOGGER = logging.getLogger(__name__)
 
 def _is_vpp_active(coordinator, sn: str) -> bool:
     """Return True if a VPP program is currently controlling this device."""
+    if coordinator.config_entry.options.get(CONF_OVERRIDE_VPP, False):
+        return False
     metrics = (coordinator.data.get(sn) or {}).get("metrics", {})
     return str(metrics.get("vppMode")) in VPP_ACTIVE_MODES
 

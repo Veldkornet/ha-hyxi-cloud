@@ -38,7 +38,8 @@
           "update_interval": "轮询间隔 (1-60 分钟, 默认: 5)",
           "back_discovery": "启用通过报警发现设备 (高级)",
           "enable_battery_control": "启用设备控制与保护",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "绕过 VPP 锁定（在 VPP 期间强制启用控制）"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "有故障"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

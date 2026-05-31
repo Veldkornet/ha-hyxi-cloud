@@ -38,7 +38,8 @@
           "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
           "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)",
           "enable_battery_control": "Cihaz kontrolünü ve korumasını etkinleştir",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "VPP Kilidini Geçersiz Kıl (VPP sırasında kontrolleri zorla etkinleştir)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Sorun"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

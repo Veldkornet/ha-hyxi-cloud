@@ -38,7 +38,8 @@
           "update_interval": "Interval dotazování (1-60 minut, výchozí: 5)",
           "back_discovery": "Povolit vyhledávání prostřednictvím alarmů (pro pokročilé)",
           "enable_battery_control": "Aktivovat ovládání a ochranu zařízení",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)"
+          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
+          "override_vpp": "Přepsat zámek VPP (vynutit ovládací prvky během VPP)"
         }
       },
       "energy_manager": {
@@ -69,7 +70,7 @@
           "on": "Problém"
         }
       },
-"vpp_active": {
+      "vpp_active": {
         "name": "VPP Control Active",
         "state": {
           "off": "Normal Operation",

@@ -15,6 +15,8 @@ MANUFACTURER = "HYXI Power"
 VERSION = "1.6.0"
 
 CONF_BACK_DISCOVERY = "back_discovery"
+CONF_OVERRIDE_VPP = "override_vpp"
+
 
 NULL_VALUES = {"", "null", "none", "na", "--"}
 
