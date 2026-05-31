@@ -504,13 +504,10 @@ async def _async_handle_webhook(
     # 1. Ingress Header authentication check (defense-in-depth)
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
     if not incoming_ak or incoming_ak != coordinator.client.access_key:
-        # Sanitise the header value before logging — it is user-controlled and could
-        # contain newlines or other control characters that would corrupt log output.
-        safe_ak = (incoming_ak or "")[:8].encode("ascii", errors="replace").decode()
+        # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
-            "Unauthorized push attempt to webhook %s (accessKey prefix: %s…)",
+            "Unauthorized push attempt received on webhook %s",
             webhook_id,
-            safe_ak,
         )
         return web.Response(status=401, text="Unauthorized")
 
