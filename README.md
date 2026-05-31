@@ -24,6 +24,7 @@
 ## ✨ Features
 
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
+- **🔄 Real-Time Push Subscriptions:** Optional support for receiving instantaneous updates for telemetry data and active alarms directly from HYXI Cloud via Home Assistant's webhook endpoints, bypassing polling delays.
 - **🔧 Device Control:** Send supported HYXI Cloud control commands from Home Assistant, including inverter mode buttons, peak shaving buttons, frequency control, and microinverter power controls.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
@@ -70,6 +71,18 @@
 > 3. We will verify the sensor mappings and update the integration!
 
 ### 🔧 Device Control
+
+> [!IMPORTANT]
+> **Device Controls are Opt-In:** To prevent Home Assistant from interfering with external device management or grid curtailment schedules by default, all control entities (such as Operating Mode buttons, power sliders, and switches) are hidden initially.
+>
+> **How to enable them:**
+> 1. Go to **Settings > Devices & Services** > **HYXI Cloud**.
+> 2. Click the **Configure** button on the integration card.
+> 3. Check the box for **"Enable Device Control & Protection"** and save. The integration will reload and all control entities will appear.
+>
+> **VPP Lockout Safety:** If a Virtual Power Plant (VPP) dispatch is active (i.e. your energy provider is actively controlling your device), controls will be automatically disabled/locked out in Home Assistant to prevent command conflicts.
+> - *Bypassing the Lockout:* You can bypass this lockout by checking the **"Override VPP Lock (force-enable controls during VPP)"** option in the Configure card. **Warning:** Enabling this could interfere with grid management commands sent by your energy provider.
+
 
 This integration supports writing control commands to compatible inverters via the HYXI Cloud API.
 
@@ -327,6 +340,24 @@ The engine fires a `hyxi_em_mode_changed` event on every mode change, usable in 
 > [!WARNING]
 > **Micro ESS (EMS):** Control entities are **not** enabled for EMS devices. The HYXI API documentation does not list any control endpoints for EMS — the EMS API section only provides read-only data queries.
 
+#### Real-Time Webhook Push Subscriptions
+
+The integration supports subscribing to real-time telemetry and alarm push notifications from the HYXI Cloud. Instead of waiting for the polling interval, HYXI Cloud will push data and alarm changes directly to Home Assistant as soon as they are received.
+
+##### Configuration
+1. Go to **Settings > Devices & Services** > **HYXI Cloud** > **Configure**.
+2. Toggle **Enable Real-Time Telemetry & Alarm Push**.
+3. Configure the following optional parameters if needed:
+   - **Real-Time Push Rate (s):** Telemetry push rate in seconds (default: 10).
+   - **Real-Time Push Custom Callback URL:** By default, the integration uses the public external URL registered with Home Assistant to configure the webhook. If your Home Assistant's default public URL is not directly accessible by HYXI Cloud (e.g. if you are behind CGNAT, using custom Nginx proxies, or using an ngrok / Cloudflare tunnel), you can provide a custom callback URL here. The webhook path must be appended manually.
+4. Saving the options will register a new webhook callback endpoint on your Home Assistant instance and automatically subscribe to HYXI Cloud.
+
+##### Diagnostics & Monitoring
+The integration provides a **Subscription Status** sensor on your inverter's device page:
+- **State:** Reports `active`, `inactive`, or `error` depending on subscription health.
+- **Attributes:** Displays URLs, subscriber codes, rates, errors, and the timestamp of the last received push frame.
+- **Renewal Button:** A stateless button entity **Renew Subscription** is provided to manually trigger unregistration and re-registration of the webhook if needed.
+
 ### 🛡️ Reliability & Diagnostics
 
 This integration includes a specialized diagnostic system to help you distinguish between local hardware issues and cloud service outages.
@@ -357,6 +388,7 @@ Click the **Configure** button on the HYXI integration card to access:
 * **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
 * **Enable Discovery via Alarms:** Proactively discover child devices reporting active alarms (Advanced).
 * **Enable Device Control & Protection:** Opt-in to enable inverter mode buttons, charge/discharge power settings, automatic battery protection thresholds, and micro-inverter power limits or switches. By default, this is disabled to prevent conflicts with external control systems (e.g. energy providers or grid constraints).
+* **Enable Real-Time Telemetry & Alarm Push:** Registers a webhook endpoint in Home Assistant and subscribes to HYXI Cloud push notifications to receive real-time updates and active alarms.
 * **Enable Energy Manager Standalone (Beta):** Automated battery management engine. Only visible after enabling Device Control & Protection. See [Energy Manager Standalone](#energy-manager-standalone-beta) above.
 
 ## 🛡️ Quality Assurance
