@@ -39,7 +39,10 @@
           "back_discovery": "アラーム経由の検出を有効にする (高度)",
           "enable_battery_control": "デバイス制御と保護を有効にする",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "override_vpp": "VPPロックの上書き (VPP中の制御を強制有効化)"
+          "override_vpp": "VPPロックの上書き (VPP中の制御を強制有効化)",
+          "enable_realtime_push": "Enable Real-Time Webhook Push",
+          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
+          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
         }
       },
       "energy_manager": {
@@ -286,7 +289,8 @@
           "optimizer": "オプティマイザ",
           "meter": "電力量計",
           "battery": "バッテリー",
-          "ac_battery": "ACバッテリー"
+          "ac_battery": "ACバッテリー",
+          "all_in_one": "All-in-One"
         }
       },
       "ratedpower": {
@@ -464,6 +468,14 @@
       },
       "em_status": {
         "name": "EM Status"
+      },
+      "realtime_subscription_status": {
+        "name": "Real-Time Subscription Status",
+        "state": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "error": "Error"
+        }
       }
     },
     "number": {
@@ -590,6 +602,9 @@
       },
       "clear_alarms": {
         "name": "アクティブなアラームをクリア"
+      },
+      "renew_realtime_subscription": {
+        "name": "Renew Push Subscription"
       }
     }
   }

@@ -23,6 +23,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
+    CONF_PUSH_RATE,
     DOMAIN,
     MANUFACTURER,
     detect_phase_type,
@@ -903,6 +904,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 entities.append(HyxiSensor(coordinator, sn, description))
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
+    entities.append(HyxiSubscriptionStatusSensor(coordinator, entry))
 
     # 3. Battery protection telemetry
     if is_battery_control_enabled(entry, coordinator):
@@ -1332,6 +1334,51 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self._update_native_value()
+        super()._handle_coordinator_update()
+
+
+class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor for real-time push subscription status."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "realtime_subscription_status"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_options: ClassVar[list[str]] = ["active", "inactive", "error"]
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_realtime_subscription_status"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "HYXI Cloud Service",
+            "manufacturer": MANUFACTURER,
+            "model": "Cloud API Bridge",
+        }
+        self._update_value()
+
+    def _update_value(self):
+        """Update the entity state."""
+        self._attr_native_value = self.coordinator.push_status
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Return entity specific state attributes."""
+        return {
+            "subscribe_code": self.coordinator.subscribe_code,
+            "post_rate": self.coordinator.entry.options.get(CONF_PUSH_RATE),
+            "callback_url": self.coordinator.push_url,
+            "last_push_received": self.coordinator.last_push_received.isoformat()
+            if self.coordinator.last_push_received
+            else None,
+            "error": self.coordinator.push_error,
+        }
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._update_value()
         super()._handle_coordinator_update()
 
 

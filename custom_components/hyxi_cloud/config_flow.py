@@ -23,8 +23,12 @@ from .const import (
     CONF_EM_INVERTER_SN,
     CONF_EM_LOOP_INTERVAL,
     CONF_EM_P1_ENTITY,
+    CONF_ENABLE_PUSH,
     CONF_OVERRIDE_VPP,
+    CONF_PUSH_RATE,
+    CONF_PUSH_URL,
     CONF_SECRET_KEY,
+    DEFAULT_PUSH_RATE,
     DOMAIN,
     get_raw_device_code,
     normalize_device_type,
@@ -172,6 +176,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             was_battery_control_enabled = self._options.get(
                 "enable_battery_control", False
             )
+            was_push_enabled = self._options.get(CONF_ENABLE_PUSH, False)
 
             if "enable_battery_control" in user_input:
                 self._options["enable_battery_control"] = user_input[
@@ -179,6 +184,14 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 ]
             if CONF_OVERRIDE_VPP in user_input:
                 self._options[CONF_OVERRIDE_VPP] = user_input[CONF_OVERRIDE_VPP]
+
+            if CONF_ENABLE_PUSH in user_input:
+                self._options[CONF_ENABLE_PUSH] = user_input[CONF_ENABLE_PUSH]
+            if CONF_PUSH_RATE in user_input:
+                # SelectSelector always returns strings; coerce back to int for SDK
+                self._options[CONF_PUSH_RATE] = int(user_input[CONF_PUSH_RATE])
+            if CONF_PUSH_URL in user_input:
+                self._options[CONF_PUSH_URL] = user_input[CONF_PUSH_URL]
 
             enable_em = self._options.get(CONF_EM_ENABLED, False)
             if "enable_energy_manager" in user_input:
@@ -208,6 +221,14 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             ):
                 return await self.async_step_init()
 
+            # If user just enabled push, reload step to reveal rate/url input fields
+            if (
+                self._options.get(CONF_ENABLE_PUSH, False)
+                and not was_push_enabled
+                and CONF_PUSH_RATE not in user_input
+            ):
+                return await self.async_step_init()
+
             if enable_em:
                 self._options[CONF_EM_ENABLED] = True
                 return await self.async_step_energy_manager()
@@ -225,6 +246,12 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_EM_DRY_RUN,
             ):
                 self._options.pop(key, None)
+
+            # Push disabled — remove push keys if they were previously set
+            if not self._options.get(CONF_ENABLE_PUSH, False):
+                self._options.pop(CONF_PUSH_RATE, None)
+                self._options.pop(CONF_PUSH_URL, None)
+
             return self.async_create_entry(title="", data=self._options)
 
         # Pull current values or defaults
@@ -243,7 +270,40 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_BACK_DISCOVERY,
                 default=options.get(CONF_BACK_DISCOVERY, False),
             ): selector.BooleanSelector(),
+            # Toggle for Real-Time Push
+            vol.Optional(
+                CONF_ENABLE_PUSH,
+                default=options.get(CONF_ENABLE_PUSH, False),
+            ): selector.BooleanSelector(),
         }
+
+        # If push is enabled, show the rate and url inputs
+        if options.get(CONF_ENABLE_PUSH, False):
+            schema_dict[
+                vol.Required(
+                    CONF_PUSH_RATE,
+                    # default must be str to match SelectSelector string option values
+                    default=str(options.get(CONF_PUSH_RATE, DEFAULT_PUSH_RATE)),
+                )
+            ] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[
+                        # Values are seconds (stored as int, displayed as-is); SDK call converts to ms
+                        {"value": "5", "label": "5 seconds"},
+                        {"value": "10", "label": "10 seconds"},
+                        {"value": "30", "label": "30 seconds"},
+                        {"value": "60", "label": "1 minute"},
+                        {"value": "300", "label": "5 minutes"},
+                    ],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            )
+            schema_dict[
+                vol.Optional(
+                    CONF_PUSH_URL,
+                    default=options.get(CONF_PUSH_URL, ""),
+                )
+            ] = selector.TextSelector()
 
         # Only show control/EM toggles if controllable inverters exist
         if has_controllable:

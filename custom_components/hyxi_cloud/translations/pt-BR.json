@@ -39,7 +39,10 @@
           "back_discovery": "Habilitar descoberta via alarmes (Avançado)",
           "enable_battery_control": "Ativar controle e proteção do dispositivo",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "override_vpp": "Ignorar bloqueio do VPP (forçar controles durante o VPP)"
+          "override_vpp": "Ignorar bloqueio do VPP (forçar controles durante o VPP)",
+          "enable_realtime_push": "Enable Real-Time Webhook Push",
+          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
+          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
         }
       },
       "energy_manager": {
@@ -286,7 +289,8 @@
           "optimizer": "Otimizador",
           "meter": "Medidor",
           "battery": "Bateria",
-          "ac_battery": "Bateria CA"
+          "ac_battery": "Bateria CA",
+          "all_in_one": "All-in-One"
         }
       },
       "ratedpower": {
@@ -464,6 +468,14 @@
       },
       "em_status": {
         "name": "EM Status"
+      },
+      "realtime_subscription_status": {
+        "name": "Real-Time Subscription Status",
+        "state": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "error": "Error"
+        }
       }
     },
     "number": {
@@ -590,6 +602,9 @@
       },
       "clear_alarms": {
         "name": "Limpar alarmes ativos"
+      },
+      "renew_realtime_subscription": {
+        "name": "Renew Push Subscription"
       }
     }
   }

@@ -20,6 +20,7 @@ from hyxi_cloud_api import VPP_ACTIVE_MODES, HyxiApiClient
 
 from .binary_sensor import ACTIVE_ALARM_STATES
 from .const import (
+    CONF_ENABLE_PUSH,
     CONF_OVERRIDE_VPP,
     DOMAIN,
     MANUFACTURER,
@@ -114,6 +115,10 @@ async def async_setup_entry(
                 entities.append(
                     HyxiPeakShavingButton(coordinator, sn, dev_data, option)
                 )
+
+    # Expose the Renew Push Subscription button if push is enabled
+    if entry.options.get(CONF_ENABLE_PUSH, False) is True:
+        entities.append(HyxiRenewSubscriptionButton(coordinator, entry))
 
     if entities:
         async_add_entities(entities)
@@ -418,3 +423,44 @@ def _block_manual_peak_shaving_if_needed(coordinator, sn: str, option: str) -> N
 def _get_protection_controller(coordinator, sn: str):
     """Return the battery protection controller for a device."""
     return getattr(coordinator, "protection_controllers", {}).get(sn)
+
+
+class HyxiRenewSubscriptionButton(ButtonEntity):
+    """Button to manually renew/force HYXI Real-Time Push subscription."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "renew_realtime_subscription"
+    _attr_icon = "mdi:webhook"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        """Initialize the renew subscription button."""
+        self.coordinator = coordinator
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_renew_realtime_subscription"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "HYXI Cloud Service",
+            "manufacturer": MANUFACTURER,
+            "model": "Cloud API Bridge",
+        }
+
+    async def async_press(self) -> None:
+        """Force renew the push subscription callback."""
+        from . import _async_setup_push_subscription, _async_teardown_push_subscription
+
+        _LOGGER.info("Manually triggered HYXI push subscription renewal")
+        try:
+            # Tear down old first
+            await _async_teardown_push_subscription(
+                self.hass, self.coordinator, self._entry
+            )
+            # Re-setup
+            await _async_setup_push_subscription(
+                self.hass, self._entry, self.coordinator
+            )
+
+            # Notify coordinator entities of change
+            self.coordinator.async_set_updated_data(self.coordinator.data)
+        except Exception as err:
+            _LOGGER.error("Failed to renew HYXI push subscription: %s", err)
+            raise HomeAssistantError(f"Subscription renewal failed: {err}") from err

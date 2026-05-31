@@ -17,6 +17,12 @@ VERSION = "1.6.0"
 CONF_BACK_DISCOVERY = "back_discovery"
 CONF_OVERRIDE_VPP = "override_vpp"
 
+# Real-time Webhook Push Constants
+CONF_ENABLE_PUSH = "enable_realtime_push"
+CONF_PUSH_RATE = "realtime_push_rate"
+CONF_PUSH_URL = "realtime_push_url"
+DEFAULT_PUSH_RATE = 10  # 10 seconds (converted to ms at SDK call site)
+
 
 NULL_VALUES = {"", "null", "none", "na", "--"}
 

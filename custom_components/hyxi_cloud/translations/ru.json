@@ -39,7 +39,10 @@
           "back_discovery": "Включить обнаружение через аварийные сигналы (расширенный режим)",
           "enable_battery_control": "Включить управление и защиту устройства",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "override_vpp": "Обход блокировки VPP (принудительное управление во время VPP)"
+          "override_vpp": "Обход блокировки VPP (принудительное управление во время VPP)",
+          "enable_realtime_push": "Enable Real-Time Webhook Push",
+          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
+          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
         }
       },
       "energy_manager": {
@@ -286,7 +289,8 @@
           "optimizer": "Оптимизатор",
           "meter": "Счетчик",
           "battery": "Батарея",
-          "ac_battery": "Батарея переменного тока"
+          "ac_battery": "Батарея переменного тока",
+          "all_in_one": "All-in-One"
         }
       },
       "ratedpower": {
@@ -464,6 +468,14 @@
       },
       "em_status": {
         "name": "EM Status"
+      },
+      "realtime_subscription_status": {
+        "name": "Real-Time Subscription Status",
+        "state": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "error": "Error"
+        }
       }
     },
     "number": {
@@ -590,6 +602,9 @@
       },
       "clear_alarms": {
         "name": "Очистить активные аварии"
+      },
+      "renew_realtime_subscription": {
+        "name": "Renew Push Subscription"
       }
     }
   }

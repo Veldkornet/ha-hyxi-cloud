@@ -259,3 +259,61 @@ def test_no_extra_keys_in_english():
     assert not extra_binary, (
         f"en.json contains legacy binary sensor keys not in code: {extra_binary}"
     )
+
+
+def test_translation_structure_and_keys():
+    """Verify that all translation files have the exact same keys/structure as en.json, and strings.json matches en.json (except title)."""
+    # 1. Load strings.json and en.json
+    strings_path = (
+        Path(__file__).parent / "../custom_components/hyxi_cloud/strings.json"
+    )
+    with strings_path.open(encoding="utf-8") as f:
+        strings_json = json.load(f)
+
+    en_json = load_translation("en.json")
+
+    def get_leaf_keys(d, prefix=""):
+        keys = set()
+        for k, v in d.items():
+            key_path = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                keys.update(get_leaf_keys(v, key_path))
+            else:
+                keys.add(key_path)
+        return keys
+
+    # Compare strings.json with en.json
+    strings_keys = get_leaf_keys(strings_json)
+    en_keys = get_leaf_keys(en_json)
+
+    # Remove "title" from strings_keys as it is allowed to differ
+    strings_keys_filtered = {k for k in strings_keys if k != "title"}
+    en_keys_filtered = {k for k in en_keys if k != "title"}
+
+    missing_in_en = strings_keys_filtered - en_keys_filtered
+    assert not missing_in_en, (
+        f"en.json is missing keys defined in strings.json: {sorted(missing_in_en)}"
+    )
+
+    extra_in_en = en_keys_filtered - strings_keys_filtered
+    assert not extra_in_en, (
+        f"en.json has extra keys not defined in strings.json: {sorted(extra_in_en)}"
+    )
+
+    # 2. Compare en.json with every other language file
+    for lang_file in get_all_languages():
+        if lang_file == "en.json":
+            continue
+
+        lang_json = load_translation(lang_file)
+        lang_keys = get_leaf_keys(lang_json)
+
+        missing_keys = en_keys - lang_keys
+        assert not missing_keys, (
+            f"{lang_file} is missing translation keys relative to en.json: {sorted(missing_keys)}"
+        )
+
+        extra_keys = lang_keys - en_keys
+        assert not extra_keys, (
+            f"{lang_file} has extra translation keys not found in en.json: {sorted(extra_keys)}"
+        )
