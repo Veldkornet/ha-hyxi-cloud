@@ -138,6 +138,7 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
         patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
         patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
@@ -209,6 +210,7 @@ async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
         patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
         patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
@@ -381,6 +383,7 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
         patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
         patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
         patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value

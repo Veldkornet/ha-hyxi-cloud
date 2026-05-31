@@ -662,6 +662,7 @@ async def _async_teardown_alarm_subscription(
         try:
             webhook.async_unregister(hass, webhook_id)
         except KeyError:
+            # Webhook was already unregistered (e.g. double-teardown on crash recovery)
             pass
         coordinator.alarm_webhook_id = None
 
@@ -696,10 +697,10 @@ async def _async_handle_alarm_webhook(
 
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
     if not incoming_ak or incoming_ak != coordinator.client.access_key:
+        # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
-            "Unauthorized alarm push attempt to webhook %s (header accessKey: %s)",
+            "Unauthorized alarm push attempt received on webhook %s",
             webhook_id,
-            incoming_ak,
         )
         return web.Response(status=401, text="Unauthorized")
 
