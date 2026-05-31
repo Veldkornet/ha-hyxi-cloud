@@ -503,7 +503,7 @@ async def _async_handle_webhook(
     """Handle incoming webhook request from HYXI Cloud."""
     from homeassistant.util import dt as dt_util
 
-    _LOGGER.debug("Received HYXI Cloud Push webhook callback")
+    _LOGGER.debug("Received HYXI Cloud Data Push webhook callback")
 
     # 1. Ingress Header authentication check (defense-in-depth)
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
@@ -629,6 +629,7 @@ async def _async_setup_alarm_subscription(
         if res.get("success"):
             coordinator.alarm_subscribe_code = res["data"]["subscribeCode"]
             coordinator.alarm_push_status = "active"
+            coordinator.alarm_push_url = webhook_url
             hass.config_entries.async_update_entry(
                 entry,
                 data={
@@ -704,11 +705,17 @@ async def _async_handle_alarm_webhook(
         )
         return web.Response(status=401, text="Unauthorized")
 
+    from homeassistant.util import dt as dt_util
+
     try:
         payload = await request.json()
     except ValueError:
         _LOGGER.warning("Received invalid JSON payload on HYXI alarm push webhook")
         return web.Response(status=400, text="Invalid JSON")
+
+    # Stamp contact time unconditionally — HYXI sends pings on schedule even
+    # when there are no active alarms (empty dataList), so we always record contact.
+    coordinator.alarm_last_push_received = dt_util.utcnow()
 
     try:
         alarm_results = coordinator.client.process_alarm_push_data(payload)

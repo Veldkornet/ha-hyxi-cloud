@@ -207,19 +207,43 @@ async def test_webhook_handler_success(mock_coordinator):
 
 
 def test_sensor_state_and_attributes(mock_coordinator, mock_entry):
-    """Test push status sensor reflects push state correctly."""
+    """Test push status sensor reflects combined push state correctly."""
+    # ---- Only data push active → partial ----
     mock_coordinator.push_status = "active"
     mock_coordinator.subscribe_code = "sub-123"
     mock_coordinator.push_url = "https://example.com/webhook"
+    mock_coordinator.push_error = None
+    mock_coordinator.last_push_received = None
+    mock_coordinator.alarm_push_status = "inactive"
+    mock_coordinator.alarm_subscribe_code = None
+    mock_coordinator.alarm_push_url = None
+    mock_coordinator.alarm_last_push_received = None
 
     with patch("custom_components.hyxi_cloud.sensor.DOMAIN", DOMAIN):
         sensor = HyxiSubscriptionStatusSensor(mock_coordinator, mock_entry)
 
-        assert sensor.native_value == "active"
+        assert sensor.native_value == "partial"
         attrs = sensor.extra_state_attributes
-        assert attrs["subscribe_code"] == "sub-123"
-        assert attrs["callback_url"] == "https://example.com/webhook"
-        assert attrs["post_rate"] == 10  # stored in seconds
+        assert "data_push" in attrs
+        assert "alarm_push" in attrs
+        assert attrs["data_push"]["status"] == "active"
+        assert attrs["data_push"]["subscribe_code"] == "sub-123"
+        assert attrs["data_push"]["callback_url"] == "https://example.com/webhook"
+        assert attrs["data_push"]["post_rate"] == 10  # stored in seconds
+        assert attrs["alarm_push"]["status"] == "inactive"
+
+    # ---- Both active → active ----
+    mock_coordinator.alarm_push_status = "active"
+    mock_coordinator.alarm_subscribe_code = "alarm-456"
+    mock_coordinator.alarm_push_url = "https://example.com/webhook_alarm"
+
+    with patch("custom_components.hyxi_cloud.sensor.DOMAIN", DOMAIN):
+        sensor2 = HyxiSubscriptionStatusSensor(mock_coordinator, mock_entry)
+
+        assert sensor2.native_value == "active"
+        attrs2 = sensor2.extra_state_attributes
+        assert attrs2["alarm_push"]["status"] == "active"
+        assert attrs2["alarm_push"]["subscribe_code"] == "alarm-456"
 
 
 @pytest.mark.asyncio

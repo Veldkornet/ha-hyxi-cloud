@@ -1338,13 +1338,13 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
 
 
 class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
-    """Diagnostic sensor for real-time push subscription status."""
+    """Diagnostic sensor for real-time push subscription status (data + alarm)."""
 
     _attr_has_entity_name = True
     _attr_translation_key = "realtime_subscription_status"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_options: ClassVar[list[str]] = ["active", "inactive", "error"]
+    _attr_options: ClassVar[list[str]] = ["active", "inactive", "error", "partial"]
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
@@ -1359,20 +1359,47 @@ class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
         self._update_value()
 
     def _update_value(self):
-        """Update the entity state."""
-        self._attr_native_value = self.coordinator.push_status
+        """Derive a combined status from both subscription channels."""
+        data_status = self.coordinator.push_status or "inactive"
+        alarm_status = (
+            getattr(self.coordinator, "alarm_push_status", "inactive") or "inactive"
+        )
+
+        if data_status == "error" or alarm_status == "error":
+            combined = "error"
+        elif data_status == "active" and alarm_status == "active":
+            combined = "active"
+        elif data_status == "active" or alarm_status == "active":
+            combined = "partial"  # one of two subscriptions active
+        else:
+            combined = "inactive"
+
+        self._attr_native_value = combined
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return entity specific state attributes."""
+        """Return state attributes for both push subscription channels."""
+        coord = self.coordinator
+        alarm_last = getattr(coord, "alarm_last_push_received", None)
         return {
-            "subscribe_code": self.coordinator.subscribe_code,
-            "post_rate": self.coordinator.entry.options.get(CONF_PUSH_RATE),
-            "callback_url": self.coordinator.push_url,
-            "last_push_received": self.coordinator.last_push_received.isoformat()
-            if self.coordinator.last_push_received
-            else None,
-            "error": self.coordinator.push_error,
+            # --- Real-time data push ---
+            "data_push": {
+                "status": coord.push_status or "inactive",
+                "subscribe_code": coord.subscribe_code,
+                "callback_url": coord.push_url,
+                "post_rate": coord.entry.options.get(CONF_PUSH_RATE),
+                "last_push_received": coord.last_push_received.isoformat()
+                if coord.last_push_received
+                else None,
+                "error": coord.push_error,
+            },
+            # --- Alarm push ---
+            "alarm_push": {
+                "status": getattr(coord, "alarm_push_status", "inactive") or "inactive",
+                "subscribe_code": getattr(coord, "alarm_subscribe_code", None),
+                "callback_url": getattr(coord, "alarm_push_url", None),
+                "last_push_received": alarm_last.isoformat() if alarm_last else None,
+            },
         }
 
     @callback

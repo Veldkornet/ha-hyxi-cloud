@@ -57,6 +57,7 @@ def mock_coordinator():
     coord.alarm_subscribe_code = None
     coord.alarm_webhook_id = None
     coord.alarm_push_status = "inactive"
+    coord.alarm_last_push_received = None
     coord.client = MagicMock()
     coord.client.access_key = "test_ak"
     coord.client.cancel_subscription = AsyncMock()
@@ -211,6 +212,8 @@ async def test_handle_alarm_webhook_merges_records(mock_hass, mock_coordinator):
     code_768 = next(a for a in alarms if a["alarmCode"] == "768")
     assert code_768["alarmState"] == "1"
     mock_coordinator.async_set_updated_data.assert_called_once()
+    # Timestamp must be set on any valid delivery, including ones with alarm data
+    assert mock_coordinator.alarm_last_push_received is not None
 
 
 @pytest.mark.asyncio
@@ -224,6 +227,8 @@ async def test_handle_alarm_webhook_unauthorized(mock_hass, mock_coordinator):
     )
     assert response.status == 401
     mock_coordinator.client.process_alarm_push_data.assert_not_called()
+    # Timestamp must NOT be set — request was rejected before payload parsing
+    assert mock_coordinator.alarm_last_push_received is None
 
 
 @pytest.mark.asyncio
@@ -268,3 +273,5 @@ async def test_handle_alarm_webhook_untracked_device(mock_hass, mock_coordinator
     # coordinator data for SN001 should be untouched
     assert mock_coordinator.data["SN001"]["alarms"] == []
     mock_coordinator.async_set_updated_data.assert_not_called()
+    # Timestamp IS set — the push was valid and parseable even though SN was unknown
+    assert mock_coordinator.alarm_last_push_received is not None
