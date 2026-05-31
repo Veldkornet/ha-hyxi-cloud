@@ -83,6 +83,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Set up real-time push subscription if enabled (graceful fallback to polling if it fails)
     await _async_setup_push_subscription(hass, entry, coordinator)
+    # Set up alarm push subscription (runs alongside data push, same webhook base URL)
+    if entry.options.get(CONF_ENABLE_PUSH, False):
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
 
     device_registry = dr.async_get(hass)
 
@@ -192,6 +195,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for controller in coordinator.protection_controllers.values():
             await controller.async_stop()
         await _async_teardown_push_subscription(hass, coordinator, entry)
+        await _async_teardown_alarm_subscription(hass, coordinator, entry)
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -544,6 +548,201 @@ async def _async_handle_webhook(
 
     if any_updated:
         coordinator.last_push_received = dt_util.utcnow()
+        coordinator.async_set_updated_data(coordinator.data)
+
+    return web.json_response({"code": "0", "msg": "Success", "success": True})
+
+
+async def _async_setup_alarm_subscription(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> None:
+    """Set up real-time alarm push subscription alongside real-time data push.
+
+    Uses a dedicated webhook ID so HYXI can differentiate callback URLs.
+    The alarm subscribe_code is persisted to entry.data under
+    "alarm_subscribe_code" for crash-safe teardown on next startup.
+    """
+    push_rate_s = int(entry.options.get(CONF_PUSH_RATE, DEFAULT_PUSH_RATE))
+    push_rate_ms = push_rate_s * 1000
+    custom_url = entry.options.get(CONF_PUSH_URL)
+
+    webhook_id = f"hyxi_cloud_{entry.entry_id}_alarm"
+    coordinator.alarm_webhook_id = webhook_id
+
+    # Cancel any orphaned prior subscription
+    prior_code = entry.data.get("alarm_subscribe_code")
+    if prior_code:
+        _LOGGER.debug(
+            "HYXI Alarm Push: Cancelling prior orphaned subscription (code: %s)",
+            prior_code,
+        )
+        try:
+            await coordinator.client.cancel_subscription(prior_code)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "HYXI Alarm Push: Could not cancel prior subscription: %s", err
+            )
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, "alarm_subscribe_code": None}
+        )
+
+    # Register webhook handler
+    try:
+        webhook.async_register(
+            hass,
+            DOMAIN,
+            "HYXI Cloud Alarm Push",
+            webhook_id,
+            lambda h, w_id, req: _async_handle_alarm_webhook(h, w_id, req, coordinator),
+        )
+    except ValueError:
+        pass  # Already registered
+
+    webhook_url = await _async_resolve_webhook_url(hass, webhook_id, custom_url)
+    if not webhook_url:
+        _LOGGER.warning(
+            "HYXI Alarm Push: Could not resolve callback URL — "
+            "alarm push disabled (real-time data push may still be active)."
+        )
+        coordinator.alarm_push_status = "error"
+        return
+
+    device_sns = [sn for sn in coordinator.data if sn]
+    if not device_sns:
+        coordinator.alarm_push_status = "inactive"
+        return
+
+    _LOGGER.debug(
+        "HYXI Alarm Push: Subscribing %s devices at %s",
+        len(device_sns),
+        webhook_url,
+    )
+
+    try:
+        res = await coordinator.client.subscribe_alarm(
+            webhook_url,
+            device_sns,
+            push_rate_ms,
+        )
+        if res.get("success"):
+            coordinator.alarm_subscribe_code = res["data"]["subscribeCode"]
+            coordinator.alarm_push_status = "active"
+            hass.config_entries.async_update_entry(
+                entry,
+                data={
+                    **entry.data,
+                    "alarm_subscribe_code": coordinator.alarm_subscribe_code,
+                },
+            )
+            _LOGGER.info(
+                "Successfully subscribed to HYXI Alarm Push (code: %s)",
+                coordinator.alarm_subscribe_code,
+            )
+        else:
+            coordinator.alarm_push_status = "error"
+            _LOGGER.warning(
+                "HYXI Alarm Push subscription failed: %s",
+                res.get("msg", "Unknown error"),
+            )
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        coordinator.alarm_push_status = "error"
+        _LOGGER.warning("Failed to register HYXI Alarm Push subscription: %s", err)
+
+
+async def _async_teardown_alarm_subscription(
+    hass: HomeAssistant,
+    coordinator: HyxiDataUpdateCoordinator,
+    entry: ConfigEntry | None = None,
+) -> None:
+    """Tear down alarm push subscription and webhook."""
+    webhook_id = getattr(coordinator, "alarm_webhook_id", None)
+    if webhook_id:
+        try:
+            webhook.async_unregister(hass, webhook_id)
+        except KeyError:
+            pass
+        coordinator.alarm_webhook_id = None
+
+    subscribe_code = getattr(coordinator, "alarm_subscribe_code", None)
+    if subscribe_code:
+        _LOGGER.debug("Cancelling HYXI Alarm Push subscription: %s", subscribe_code)
+        try:
+            await coordinator.client.cancel_subscription(subscribe_code)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.warning("Error cancelling HYXI Alarm Push subscription: %s", err)
+        coordinator.alarm_subscribe_code = None
+        if entry is not None:
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, "alarm_subscribe_code": None}
+            )
+
+    coordinator.alarm_push_status = "inactive"
+
+
+async def _async_handle_alarm_webhook(
+    hass: HomeAssistant,
+    webhook_id: str,
+    request: web.Request,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> web.Response:
+    """Handle incoming alarm push webhook from HYXI Cloud.
+
+    Parses the alarm payload via SDK, merges alarm records into
+    coordinator.data[sn]["alarms"] so HyxiDeviceAlarmSensor fires instantly.
+    """
+    _LOGGER.debug("Received HYXI Cloud Alarm Push webhook callback")
+
+    incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
+    if not incoming_ak or incoming_ak != coordinator.client.access_key:
+        _LOGGER.warning(
+            "Unauthorized alarm push attempt to webhook %s (header accessKey: %s)",
+            webhook_id,
+            incoming_ak,
+        )
+        return web.Response(status=401, text="Unauthorized")
+
+    try:
+        payload = await request.json()
+    except ValueError:
+        _LOGGER.warning("Received invalid JSON payload on HYXI alarm push webhook")
+        return web.Response(status=400, text="Invalid JSON")
+
+    try:
+        alarm_results = coordinator.client.process_alarm_push_data(payload)
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        _LOGGER.error("Error parsing alarm push payload: %s", err)
+        return web.Response(status=500, text="Internal Processing Error")
+
+    if not alarm_results:
+        return web.json_response({"code": "0", "msg": "Success", "success": True})
+
+    if coordinator.data is None:
+        coordinator.data = {}
+
+    any_updated = False
+    for sn, alarm_records in alarm_results.items():
+        if sn not in coordinator.data:
+            _LOGGER.warning(
+                "HYXI Alarm Push: received alarm for untracked device SN: %s", sn
+            )
+            continue
+
+        # Merge: replace any alarm records with matching alarmCode, append new ones.
+        existing = coordinator.data[sn].get("alarms") or []
+        existing_by_code = {str(a.get("alarmCode", "")): a for a in existing}
+        for rec in alarm_records:
+            existing_by_code[rec["alarmCode"]] = rec
+        coordinator.data[sn]["alarms"] = list(existing_by_code.values())
+        any_updated = True
+        _LOGGER.debug(
+            "HYXI Alarm Push: updated %d alarm record(s) for device %s",
+            len(alarm_records),
+            sn,
+        )
+
+    if any_updated:
         coordinator.async_set_updated_data(coordinator.data)
 
     return web.json_response({"code": "0", "msg": "Success", "success": True})

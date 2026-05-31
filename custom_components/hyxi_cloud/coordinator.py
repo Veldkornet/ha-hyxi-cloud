@@ -76,6 +76,11 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.push_status: str = "inactive"
         self.push_error: str | None = None
 
+        # Alarm Webhook Push state tracking
+        self.alarm_subscribe_code: str | None = None
+        self.alarm_webhook_id: str | None = None
+        self.alarm_push_status: str = "inactive"
+
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
         # Read Discovery Toggle
