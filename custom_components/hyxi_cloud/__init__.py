@@ -467,6 +467,7 @@ async def _async_teardown_push_subscription(
         try:
             webhook.async_unregister(hass, webhook_id)
         except KeyError:
+            # Webhook was already unregistered (e.g. double-teardown on crash recovery)
             pass
         coordinator.webhook_id = None
 
@@ -503,10 +504,13 @@ async def _async_handle_webhook(
     # 1. Ingress Header authentication check (defense-in-depth)
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
     if not incoming_ak or incoming_ak != coordinator.client.access_key:
+        # Sanitise the header value before logging — it is user-controlled and could
+        # contain newlines or other control characters that would corrupt log output.
+        safe_ak = (incoming_ak or "")[:8].encode("ascii", errors="replace").decode()
         _LOGGER.warning(
-            "Unauthorized push attempt to webhook %s (header accessKey: %s)",
+            "Unauthorized push attempt to webhook %s (accessKey prefix: %s…)",
             webhook_id,
-            incoming_ak,
+            safe_ak,
         )
         return web.Response(status=401, text="Unauthorized")
 
