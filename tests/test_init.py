@@ -497,7 +497,7 @@ async def test_remove_legacy_select_entities(mock_hass):
         mock_registry.async_get_entity_id.side_effect = mock_get_entity_id
 
         # Test with two devices, one with both entities matched, one with neither
-        devices = {"123": {}, "456": {}}
+        devices: dict[str, dict] = {"123": {}, "456": {}}
 
         with patch(
             "custom_components.hyxi_cloud.__init__._LOGGER.debug"
