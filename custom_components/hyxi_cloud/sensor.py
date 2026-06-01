@@ -1029,7 +1029,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                 try:
                     self._last_valid_value = float(last_state.state)
                     self._update_native_value()
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     _LOGGER.debug(
                         "HYXI Restore: Could not parse restored state '%s' for %s",
                         last_state.state,
@@ -1108,7 +1108,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                         return spike_result
             self._last_valid_value = num_value
             return num_value
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return value
 
 
@@ -1243,7 +1243,7 @@ class HyxiSensor(HyxiBaseSensor):
 
         try:
             return float(val)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
     def _parse_device_type(self, dev_data, value):
