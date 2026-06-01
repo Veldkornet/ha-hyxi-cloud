@@ -476,6 +476,9 @@
           "inactive": "Inactive",
           "error": "Error"
         }
+      },
+      "battmp": {
+        "name": "Akun lämpötila"
       }
     },
     "number": {

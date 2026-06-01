@@ -381,6 +381,7 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
             try:
                 self._attr_native_value = float(last_state.state)
             except ValueError, TypeError:
+                # Ignore invalid restored state on startup
                 pass
 
     async def async_set_native_value(self, value: float) -> None:

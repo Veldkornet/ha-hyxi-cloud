@@ -28,9 +28,6 @@ from .const import (
 
 ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
-# VPP-capable device types (must match HyxiApiClient._VPP_CAPABLE_TYPES)
-_VPP_CAPABLE_TYPES = {"INVERTER", "HYBRID_INVERTER", "ALL_IN_ONE", "ESS"}
-
 
 async def async_setup_entry(
     hass: HomeAssistant,

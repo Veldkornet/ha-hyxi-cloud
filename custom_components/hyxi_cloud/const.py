@@ -71,6 +71,38 @@ def mask_sn(sn: str) -> str:
     return hashlib.sha256(sn_str.encode("utf-8")).hexdigest()[:8]
 
 
+def mask_sensitive_key_value(key: str, value: Any) -> Any:
+    """Check if key contains sensitive info (SN, plant ID, IMEI, alias, address, etc.) and mask it."""
+    if value is None:
+        return None
+
+    sensitive_exact = {
+        "alias",
+        "plantaddress",
+        "plantname",
+        "devicename",
+        "alarmname",
+        "gprsimei",
+        "sn",
+        "plantid",
+        "parentsn",
+        "devicesn",
+        "batsn",
+        "emssn",
+    }
+
+    key_lower = str(key).lower()
+    if (
+        key_lower in sensitive_exact
+        or key_lower.endswith("sn")
+        or "plantid" in key_lower
+        or "imei" in key_lower
+    ):
+        return mask_sn(str(value))
+
+    return value
+
+
 def get_raw_device_code(dev_data: dict) -> str:
     """Extract the raw device type code from device data payload."""
     return (

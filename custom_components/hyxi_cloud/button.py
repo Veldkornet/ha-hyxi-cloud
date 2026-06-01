@@ -460,7 +460,7 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
             )
 
             # Notify coordinator entities of change
-            self.coordinator.async_set_updated_data(self.coordinator.data)
+            self.coordinator.async_update_listeners()
         except Exception as err:
             _LOGGER.error("Failed to renew HYXI push subscription: %s", err)
             raise HomeAssistantError(f"Subscription renewal failed: {err}") from err

@@ -35,6 +35,8 @@ from .const import (
     VERSION,
     detect_phase_type,
     get_raw_device_code,
+    mask_sensitive_key_value,
+    mask_sn,
     normalize_device_type,
 )
 from .coordinator import HyxiDataUpdateCoordinator
@@ -204,6 +206,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry when options change."""
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is not None and coordinator.options == entry.options:
+        _LOGGER.debug(
+            "HYXI: Config entry data updated, skipping reload as options did not change"
+        )
+        return
     _LOGGER.debug("HYXI: Options updated, reloading integration to apply new settings")
     await hass.config_entries.async_reload(entry.entry_id)
 
@@ -529,9 +537,19 @@ async def _async_handle_webhook(
         _LOGGER.warning("Received invalid JSON payload on HYXI push webhook")
         return web.Response(status=400, text="Invalid JSON")
 
-    # 3. Process payload via SDK
+    # 3. Process payload via SDK merging with existing metrics
+    existing_metrics = {}
+    if coordinator.data:
+        existing_metrics = {
+            sn: dev_data.get("metrics", {})
+            for sn, dev_data in coordinator.data.items()
+            if dev_data
+        }
+
     try:
-        push_results = coordinator.client.process_push_data(payload)
+        push_results = coordinator.client.process_push_data(
+            payload, existing_metrics=existing_metrics
+        )
     except Exception as err:  # pylint: disable=broad-exception-caught
         _LOGGER.error("Error parsing push payload: %s", err)
         return web.Response(status=500, text="Internal Processing Error")
@@ -549,13 +567,23 @@ async def _async_handle_webhook(
             _LOGGER.warning("Received push data for untracked device SN: %s", sn)
             continue
 
-        coordinator.data[sn].setdefault("metrics", {}).update(device_update["metrics"])
+        coordinator.data[sn]["metrics"] = device_update["metrics"]
         any_updated = True
-        _LOGGER.debug("Updated device %s via push telemetry", sn)
+
+        # Log the push metrics with sensitive keys masked (using mask_sensitive_key_value)
+        logged_metrics = {
+            k: mask_sensitive_key_value(k, v)
+            for k, v in device_update["metrics"].items()
+        }
+        _LOGGER.debug(
+            "HYXI Push Telemetry Update for Device %s: %s",
+            mask_sn(sn),
+            logged_metrics,
+        )
 
     if any_updated:
         coordinator.last_push_received = dt_util.utcnow()
-        coordinator.async_set_updated_data(coordinator.data)
+        coordinator.async_update_listeners()
 
     return web.json_response({"code": "0", "msg": "Success", "success": True})
 
@@ -740,7 +768,8 @@ async def _async_handle_alarm_webhook(
     for sn, alarm_records in alarm_results.items():
         if sn not in coordinator.data:
             _LOGGER.warning(
-                "HYXI Alarm Push: received alarm for untracked device SN: %s", sn
+                "HYXI Alarm Push: received alarm for untracked device SN: %s",
+                mask_sn(sn),
             )
             continue
 
@@ -751,13 +780,20 @@ async def _async_handle_alarm_webhook(
             existing_by_code[rec["alarmCode"]] = rec
         coordinator.data[sn]["alarms"] = list(existing_by_code.values())
         any_updated = True
+
+        # Log the push alarms with sensitive keys masked (using mask_sensitive_key_value)
+        logged_alarms = []
+        for rec in alarm_records:
+            logged_rec = {k: mask_sensitive_key_value(k, v) for k, v in rec.items()}
+            logged_alarms.append(logged_rec)
+
         _LOGGER.debug(
-            "HYXI Alarm Push: updated %d alarm record(s) for device %s",
-            len(alarm_records),
-            sn,
+            "HYXI Alarm Push Telemetry Update for Device %s: %s",
+            mask_sn(sn),
+            logged_alarms,
         )
 
     if any_updated:
-        coordinator.async_set_updated_data(coordinator.data)
+        coordinator.async_update_listeners()
 
     return web.json_response({"code": "0", "msg": "Success", "success": True})
