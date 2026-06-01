@@ -358,6 +358,11 @@ The integration provides a **Subscription Status** sensor on your inverter's dev
 - **Attributes:** Displays URLs, subscriber codes, rates, errors, and the timestamp of the last received push frame.
 - **Renewal Button:** A stateless button entity **Renew Subscription** is provided to manually trigger unregistration and re-registration of the webhook if needed.
 
+##### Interaction with Polling (Fallback Loop)
+You do not need to disable or modify the standard polling interval when enabling push subscriptions:
+- **Automatic Back-Off:** When a real-time push update is successfully received, the integration immediately updates your entities and resets the polling timer. As long as push updates are actively arriving, regular API polling requests are skipped entirely, saving cloud API rate limits.
+- **Polling Fallback:** If push updates stop arriving (e.g., due to a network disruption, proxy failure, or cloud outage), the integration automatically falls back to standard REST API polling to ensure your sensors stay updated. Once push updates resume, polling backs off again.
+
 ### 🛡️ Reliability & Diagnostics
 
 This integration includes a specialized diagnostic system to help you distinguish between local hardware issues and cloud service outages.
