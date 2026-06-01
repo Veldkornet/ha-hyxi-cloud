@@ -496,3 +496,23 @@ async def test_clear_alarms_button_error(mock_coordinator_fixture):
 
     with pytest.raises(button_mod.HyxiApiClient.ControlError):
         await btn.async_press()
+
+
+def test_note_manual_mode():
+    """Test tracking the last user-sent inverter mode."""
+    coordinator = MagicMock()
+    controller = MagicMock()
+    coordinator.protection_controllers = {"SN123": controller}
+
+    button_mod._note_manual_mode(coordinator, "SN123", "test_mode")
+
+    controller.note_manual_mode.assert_called_once_with("test_mode")
+
+
+def test_note_manual_mode_no_controller():
+    """Test tracking mode does not fail when no controller is available."""
+    coordinator = MagicMock()
+    coordinator.protection_controllers = {}
+
+    # Should not raise an exception
+    button_mod._note_manual_mode(coordinator, "SN123", "test_mode")
