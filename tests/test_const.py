@@ -4,9 +4,46 @@ from custom_components.hyxi_cloud.const import (
     detect_phase_type,
     get_raw_device_code,
     get_software_version,
+    is_null_value,
     mask_sn,
     normalize_device_type,
 )
+
+
+def test_is_null_value():
+    """Verify is_null_value correctly identifies null-equivalent values."""
+    # 1. None
+    assert is_null_value(None) is True
+
+    # 2. Exact match from NULL_VALUES
+    assert is_null_value("") is True
+    assert is_null_value("null") is True
+    assert is_null_value("none") is True
+    assert is_null_value("na") is True
+    assert is_null_value("--") is True
+
+    # 3. Different casing
+    assert is_null_value("NULL") is True
+    assert is_null_value("None") is True
+    assert is_null_value("Na") is True
+
+    # 4. Leading/trailing whitespaces
+    assert is_null_value("  null  ") is True
+    assert is_null_value("\tnone\n") is True
+    assert is_null_value(" -- ") is True
+
+    # 5. Non-matching strings
+    assert is_null_value("0") is False
+    assert is_null_value("false") is False
+    assert is_null_value("unknown") is False
+    assert is_null_value("valid_string") is False
+
+    # 6. Other types
+    assert is_null_value(0) is False
+    assert is_null_value(0.0) is False
+    assert is_null_value(False) is False
+    assert is_null_value([]) is False
+    assert is_null_value({}) is False
 
 
 def test_mask_sn():
