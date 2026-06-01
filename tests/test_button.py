@@ -92,7 +92,7 @@ def mock_entry_fixture():
     return entry
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_setup_entry_micro_inverter(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -130,7 +130,7 @@ async def test_async_setup_entry_micro_inverter(
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_setup_entry_three_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -169,7 +169,7 @@ async def test_async_setup_entry_three_phase(
     assert sorted(modes) == ["charge", "discharge", "idle", "self_consume"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_setup_entry_single_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -210,7 +210,7 @@ async def test_async_setup_entry_single_phase(
     assert sorted(options) == ["charge", "close", "discharge", "hold", "stop"]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_async_setup_entry_unknown_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -246,7 +246,7 @@ async def test_async_setup_entry_unknown_phase(
     assert isinstance(entities[0], button_mod.HyxiClearAlarmsButton)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_micro_restart_button_press(mock_coordinator_fixture):
     """Test pressing the microinverter restart button."""
     btn = button_mod.HyxiMicroRestartButton(mock_coordinator_fixture, "SN123", {})
@@ -257,7 +257,7 @@ async def test_micro_restart_button_press(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_micro_restart_button_error(mock_coordinator_fixture):
     """Test error handling when pressing microinverter restart button."""
     mock_coordinator_fixture.client.restart_device.side_effect = (
@@ -269,7 +269,7 @@ async def test_micro_restart_button_error(mock_coordinator_fixture):
         await btn.async_press()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
     """Test pressing idle and self_consume mode buttons."""
     btn_idle = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")
@@ -285,7 +285,7 @@ async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @patch("custom_components.hyxi_cloud.button._get_power_value", return_value=5000)
 async def test_mode_button_press_charge_discharge(
     mock_get_power, mock_coordinator_fixture
@@ -314,7 +314,7 @@ async def test_mode_button_press_charge_discharge(
     mock_get_power.assert_any_call(hass, "SN123", "discharge")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_mode_button_error(mock_coordinator_fixture):
     """Test error handling in mode button press."""
     mock_coordinator_fixture.client.set_mode_idle.side_effect = (
@@ -326,7 +326,7 @@ async def test_mode_button_error(mock_coordinator_fixture):
         await btn.async_press()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_peak_shaving_button_press(mock_coordinator_fixture):
     """Test pressing peak shaving buttons."""
     for option in ["close", "charge", "discharge", "stop", "hold"]:
@@ -341,7 +341,7 @@ async def test_peak_shaving_button_press(mock_coordinator_fixture):
     assert mock_coordinator_fixture.client.set_peak_shaving.call_count == 5
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_peak_shaving_button_error(mock_coordinator_fixture):
     """Test error handling in peak shaving button press."""
     error = button_mod.HyxiApiClient.ControlError("Fail")
@@ -423,7 +423,7 @@ def test_get_power_value_invalid_state():
         assert button_mod._get_power_value(hass, "SN123", "charge") == 100
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_clear_alarms_button_press(mock_coordinator_fixture):
     """Test pressing the clear alarms button with active alarms."""
     # Mock some alarms in data
@@ -457,7 +457,7 @@ async def test_clear_alarms_button_press(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_clear_alarms_button_press_no_alarms(mock_coordinator_fixture):
     """Test pressing clear alarms button with no active alarms."""
     mock_coordinator_fixture.data = {
@@ -479,7 +479,43 @@ async def test_clear_alarms_button_press_no_alarms(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
 
 
-@pytest.mark.asyncio
+def test_is_vpp_active(mock_coordinator_fixture):
+    """Test _is_vpp_active helper function."""
+    coordinator = mock_coordinator_fixture
+
+    # 1. Test override vpp True
+    coordinator.config_entry.options = {button_mod.CONF_OVERRIDE_VPP: True}
+    assert button_mod._is_vpp_active(coordinator, "SN123") is False
+
+    # 2. Test override vpp False, VPP active
+    coordinator.config_entry.options = {button_mod.CONF_OVERRIDE_VPP: False}
+    with patch("custom_components.hyxi_cloud.button.VPP_ACTIVE_MODES", {"16"}):
+        coordinator.data = {"SN123": {"metrics": {"vppMode": "16"}}}
+        assert button_mod._is_vpp_active(coordinator, "SN123") is True
+
+        # Integer mode should also work since code does str(metrics.get("vppMode"))
+        coordinator.data = {"SN123": {"metrics": {"vppMode": 16}}}
+        assert button_mod._is_vpp_active(coordinator, "SN123") is True
+
+    # 3. Test override vpp False, VPP inactive
+    with patch("custom_components.hyxi_cloud.button.VPP_ACTIVE_MODES", {"16"}):
+        coordinator.data = {"SN123": {"metrics": {"vppMode": "0"}}}
+        assert button_mod._is_vpp_active(coordinator, "SN123") is False
+
+        # Missing vppMode
+        coordinator.data = {"SN123": {"metrics": {}}}
+        assert button_mod._is_vpp_active(coordinator, "SN123") is False
+
+        # Missing metrics
+        coordinator.data = {"SN123": {}}
+        assert button_mod._is_vpp_active(coordinator, "SN123") is False
+
+        # Missing SN
+        coordinator.data = {}
+        assert button_mod._is_vpp_active(coordinator, "SN123") is False
+
+
+@pytest.mark.asyncio()
 async def test_clear_alarms_button_error(mock_coordinator_fixture):
     """Test error handling in clear alarms button press."""
     mock_coordinator_fixture.data = {
