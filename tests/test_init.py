@@ -473,3 +473,53 @@ async def test_async_setup_battery_protection_options(mock_hass, mock_entry):
 
         assert "INVERTER_SN" in mock_coordinator.protection_controllers
         mock_controller.async_start.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_remove_legacy_select_entities(mock_hass):
+    """Test removal of legacy select entities."""
+    from custom_components.hyxi_cloud.__init__ import _remove_legacy_select_entities
+
+    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+        mock_registry = MagicMock()
+        mock_er_get.return_value = mock_registry
+
+        # Setup side effect for async_get_entity_id
+        # We want it to return an entity ID for 'hyxi_123_operating_mode' and 'hyxi_456_peak_shaving'
+        # and None for others.
+        def mock_get_entity_id(domain, component, unique_id):
+            if unique_id == "hyxi_123_operating_mode":
+                return "select.hyxi_123_operating_mode"
+            if unique_id == "hyxi_456_peak_shaving":
+                return "select.hyxi_456_peak_shaving"
+            return None
+
+        mock_registry.async_get_entity_id.side_effect = mock_get_entity_id
+
+        # Test with two devices, one with both entities matched, one with neither
+        devices = {"123": {}, "456": {}}
+
+        with patch(
+            "custom_components.hyxi_cloud.__init__._LOGGER.debug"
+        ) as mock_logger:
+            _remove_legacy_select_entities(mock_hass, devices)
+
+            # Check that the registry was fetched
+            mock_er_get.assert_called_once_with(mock_hass)
+
+            # Check that remove was called for the found entities
+            assert mock_registry.async_remove.call_count == 2
+            mock_registry.async_remove.assert_any_call("select.hyxi_123_operating_mode")
+            mock_registry.async_remove.assert_any_call("select.hyxi_456_peak_shaving")
+
+            # Check that it wasn't called for the not found entities (implied by call_count)
+
+            # Check logging
+            assert mock_logger.call_count == 2
+            mock_logger.assert_any_call(
+                "Removing legacy HYXI select entity %s",
+                "select.hyxi_123_operating_mode",
+            )
+            mock_logger.assert_any_call(
+                "Removing legacy HYXI select entity %s", "select.hyxi_456_peak_shaving"
+            )
