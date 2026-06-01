@@ -319,6 +319,7 @@ class EnergyManagerEngine:
             try:
                 return float(cap)
             except ValueError, TypeError:
+                # Ignore invalid battery capacity override value
                 pass
         api_cap = self._get_coordinator_metric("batCap", 0)
         if api_cap > 0:
