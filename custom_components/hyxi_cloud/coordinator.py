@@ -56,6 +56,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         )
         self.client = client
         self.entry = entry
+        self.options = dict(entry.options)
         self.protection_controllers: dict[str, Any] = {}
         self.engine: Any = None
 
@@ -137,6 +138,41 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["last_success"] = dt_util.utcnow()
             self.hyxi_metadata["api_status"] = "Online"
             self.hyxi_metadata["last_error"] = None
+
+            # Merge pulled metrics with existing cached metrics to preserve push-only keys
+            if self.data:
+                for sn, dev_data in devices.items():
+                    if sn in self.data:
+                        existing_metrics = dict(self.data[sn].get("metrics", {}))
+                        new_metrics = dev_data.get("metrics", {})
+
+                        # Update existing metrics with new values
+                        for k, v in new_metrics.items():
+                            if v is not None:
+                                existing_metrics[k] = v
+
+                        # Recalculate derived metrics on the merged dataset
+                        derived = self.client.compute_derived_metrics(
+                            existing_metrics, dev_data.get("device_type_code", "")
+                        )
+                        existing_metrics.update(derived)
+
+                        dev_data["metrics"] = existing_metrics
+
+            # Log the polled metrics for visibility
+            for sn, dev_data in devices.items():
+                if "metrics" in dev_data:
+                    from .const import mask_sensitive_key_value
+
+                    logged_metrics = {
+                        k: mask_sensitive_key_value(k, v)
+                        for k, v in dev_data["metrics"].items()
+                    }
+                    _LOGGER.debug(
+                        "HYXI Polled Telemetry for Device %s: %s",
+                        mask_sn(sn),
+                        logged_metrics,
+                    )
 
             # Return pure device dictionary
             await self._async_sync_device_metadata(devices)

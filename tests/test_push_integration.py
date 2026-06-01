@@ -194,13 +194,14 @@ async def test_webhook_handler_success(mock_coordinator):
 
         # Verify SDK process method was called
         mock_coordinator.client.process_push_data.assert_called_once_with(
-            {"dataList": [{"deviceSn": "INV123", "batSoc": 85}]}
+            {"dataList": [{"deviceSn": "INV123", "batSoc": 85}]},
+            existing_metrics={"INV123": {}},
         )
 
-        # Verify coordinator data updated and set_updated_data called
+        # Verify coordinator data updated and update_listeners called
         assert mock_coordinator.data["INV123"]["metrics"]["batSoc"] == 85
         assert mock_coordinator.last_push_received is not None
-        mock_coordinator.async_set_updated_data.assert_called_once()
+        mock_coordinator.async_update_listeners.assert_called_once()
         mock_json_res.assert_called_once_with(
             {"code": "0", "msg": "Success", "success": True}
         )
@@ -266,7 +267,7 @@ async def test_button_press_renew(mock_coordinator, mock_entry):
 
             mock_teardown.assert_called_once_with(hass, mock_coordinator, mock_entry)
             mock_setup.assert_called_once_with(hass, mock_entry, mock_coordinator)
-            mock_coordinator.async_set_updated_data.assert_called_once()
+            mock_coordinator.async_update_listeners.assert_called_once()
 
 
 @pytest.mark.asyncio

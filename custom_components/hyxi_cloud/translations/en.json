@@ -432,6 +432,9 @@
       "battcl": {
         "name": "Min Cell Temperature"
       },
+      "battmp": {
+        "name": "Battery Temperature"
+      },
       "baticm": {
         "name": "Max Charging Current"
       },

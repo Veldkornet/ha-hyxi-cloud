@@ -64,7 +64,7 @@ def mock_coordinator():
     coord.client.subscribe_alarm = AsyncMock(
         return_value={"success": True, "data": {"subscribeCode": "alarm_code_abc"}}
     )
-    coord.async_set_updated_data = MagicMock()
+    coord.async_update_listeners = MagicMock()
     return coord
 
 
@@ -211,7 +211,7 @@ async def test_handle_alarm_webhook_merges_records(mock_hass, mock_coordinator):
     # Verify 768 was updated from state "0" → "1"
     code_768 = next(a for a in alarms if a["alarmCode"] == "768")
     assert code_768["alarmState"] == "1"
-    mock_coordinator.async_set_updated_data.assert_called_once()
+    mock_coordinator.async_update_listeners.assert_called_once()
     # Timestamp must be set on any valid delivery, including ones with alarm data
     assert mock_coordinator.alarm_last_push_received is not None
 
@@ -272,6 +272,7 @@ async def test_handle_alarm_webhook_untracked_device(mock_hass, mock_coordinator
     assert response.status == 200
     # coordinator data for SN001 should be untouched
     assert mock_coordinator.data["SN001"]["alarms"] == []
-    mock_coordinator.async_set_updated_data.assert_not_called()
+    mock_coordinator.async_update_listeners.assert_not_called()
+
     # Timestamp IS set — the push was valid and parseable even though SN was unknown
     assert mock_coordinator.alarm_last_push_received is not None

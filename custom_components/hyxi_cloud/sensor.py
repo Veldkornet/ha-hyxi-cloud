@@ -71,6 +71,7 @@ BATTERY_SENSORS = {
     "batVcl",
     "batTch",
     "batTcl",
+    "batTmp",
     "batIcm",
     "batIdm",
     "batCharge",
@@ -780,6 +781,14 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:thermometer-low",
+    ),
+    SensorEntityDescription(
+        key="batTmp",
+        native_unit_of_measurement="°C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:thermometer",
     ),
     SensorEntityDescription(
         key="batIcm",

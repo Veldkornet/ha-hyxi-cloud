@@ -358,10 +358,10 @@ The integration provides a **Subscription Status** sensor on your inverter's dev
 - **Attributes:** Displays URLs, subscriber codes, rates, errors, and the timestamp of the last received push frame.
 - **Renewal Button:** A stateless button entity **Renew Subscription** is provided to manually trigger unregistration and re-registration of the webhook if needed.
 
-##### Interaction with Polling (Fallback Loop)
+##### Interaction with Polling (Coexistence Loop)
 You do not need to disable or modify the standard polling interval when enabling push subscriptions:
-- **Automatic Back-Off:** When a real-time push update is successfully received, the integration immediately updates your entities and resets the polling timer. As long as push updates are actively arriving, regular API polling requests are skipped entirely, saving cloud API rate limits.
-- **Polling Fallback:** If push updates stop arriving (e.g., due to a network disruption, proxy failure, or cloud outage), the integration automatically falls back to standard REST API polling to ensure your sensors stay updated. Once push updates resume, polling backs off again.
+- **Coexistence and Syncing:** When a real-time push update is received, it immediately updates your sensors in Home Assistant. However, the standard background polling loop (default: 5 minutes) still runs periodically in the background to fetch and synchronize metrics that are only available via pull queries (such as grid power) and to act as a heartbeat fallback.
+- **Polling Fallback:** If push updates stop arriving (e.g., due to a network disruption, proxy failure, or cloud outage), standard REST API polling will continue as normal to keep your sensors updated.
 
 ### 🛡️ Reliability & Diagnostics
 

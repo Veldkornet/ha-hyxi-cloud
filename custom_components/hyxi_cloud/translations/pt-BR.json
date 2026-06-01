@@ -476,6 +476,9 @@
           "inactive": "Inactive",
           "error": "Error"
         }
+      },
+      "battmp": {
+        "name": "Temperatura da bateria"
       }
     },
     "number": {
