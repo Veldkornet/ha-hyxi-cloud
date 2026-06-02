@@ -431,17 +431,17 @@ async def test_ensure_mode_three_phase_actions():
     controller._coordinator.client.set_mode_idle.assert_awaited_once_with("SN123")
 
     # 2. charge
-    controller._last_mode_switch = 0.0  # bypass cooldown
+    controller._last_mode_switch = -999999.0  # bypass cooldown
     await controller._ensure_mode("charge")
     controller._coordinator.client.set_mode_charge.assert_awaited_once()
 
     # 3. discharge
-    controller._last_mode_switch = 0.0
+    controller._last_mode_switch = -999999.0
     await controller._ensure_mode("discharge")
     controller._coordinator.client.set_mode_discharge.assert_awaited_once()
 
     # 4. self_consume
-    controller._last_mode_switch = 0.0
+    controller._last_mode_switch = -999999.0
     await controller._ensure_mode("self_consume")
     controller._coordinator.client.set_mode_self_consume.assert_awaited_once_with(
         "SN123"

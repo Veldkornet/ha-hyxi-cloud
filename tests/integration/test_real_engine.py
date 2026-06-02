@@ -295,16 +295,16 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
     coordinator.data["SN123"]["metrics"]["batSoc"] = 15
     coordinator.data["SN123"]["metrics"]["ppv"] = 600
     hass.states.async_set("sensor.p1_meter", "-200")  # exporting 200W
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "emergency_solar_charge"
     assert engine.current_mode == "charge"
 
     # 2. Test SOC safety limit: emergency grid charge (when solar not producing, switch enabled)
     coordinator.data["SN123"]["metrics"]["ppv"] = 0
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "grid_charge_emergency"
 
@@ -313,8 +313,8 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
         "switch", DOMAIN, "hyxi_SN123_em_grid_charge_allowed"
     )
     hass.states.async_set(sw_grid_entity_id, "off")
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "low_soc_idle"
 
@@ -324,8 +324,8 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
     # 3. Test SOC safety limit: forced discharge (when SOC > soc_max)
     coordinator.data["SN123"]["metrics"]["batSoc"] = 95
     hass.states.async_set("sensor.p1_meter", "1500")  # importing 1500W
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "forced_discharge_over_max"
     assert engine.current_mode == "discharge"
@@ -341,16 +341,16 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
 
     # Exporting 1500W (P1 = -1500), limit is 1000W
     hass.states.async_set("sensor.p1_meter", "-1500")
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "export_limit_charge"
     assert engine.current_mode == "charge"
 
     # Exporting 1500W, but battery is full (SOC >= soc_max) -> curtail PV
     coordinator.data["SN123"]["metrics"]["batSoc"] = 90
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "export_limit_pv_curtail"
     assert engine._pv_curtailed is True
@@ -358,9 +358,9 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
     # Export within limit -> resume PV
     hass.states.async_set("sensor.p1_meter", "-500")
     # Allow time toggle cooldown by bypassing it or waiting
-    engine._last_pv_curtail_toggle = 0
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_pv_curtail_toggle = -999999.0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "export_limit_pv_resume"
     assert engine._pv_curtailed is False
@@ -377,16 +377,16 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
     # Load exceeds threshold, battery has enough energy
     coordinator.data["SN123"]["metrics"]["home_load"] = 3000
     coordinator.data["SN123"]["metrics"]["batSoc"] = 80
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "high_load_battery_assist"
     assert engine.current_mode == "self_consume"
 
     # Load exceeds threshold, battery depleted (relative to night target + cost) -> grid only
     coordinator.data["SN123"]["metrics"]["batSoc"] = 22
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "high_load_grid_only"
     assert engine.current_mode == "idle"
@@ -405,8 +405,8 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
 
     # Night self consume
     coordinator.data["SN123"]["metrics"]["batSoc"] = 40
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "night_self_consume"
     assert engine.current_mode == "self_consume"
@@ -421,8 +421,8 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
     # Patch _check_soc_limits to return False so we can reach the otherwise unreachable else block in _check_night
     with patch.object(engine, "_check_soc_limits", return_value=False):
         coordinator.data["SN123"]["metrics"]["batSoc"] = 20
-        engine._last_mode_switch = 0
-        engine._last_power_adjust = 0
+        engine._last_mode_switch = -999999.0
+        engine._last_power_adjust = -999999.0
         await engine._make_decision()
         assert engine.decision == "night_reserve_hold"
         assert engine.current_mode == "idle"
@@ -437,30 +437,30 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
     await hass.async_block_till_done()
 
     # Trigger solar logic
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     # It takes readings_needed (default is 2) to enter charge mode
     assert engine.decision == "solar_export_waiting"
 
     # Call it again to exceed readings_needed
-    engine._last_mode_switch = 0
-    engine._last_power_adjust = 0
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
     await engine._make_decision()
     assert engine.decision == "solar_charge"
     assert engine.current_mode == "charge"
 
     # Fine tuning charge power while in charge mode: excess export -> increase charge
     hass.states.async_set("sensor.p1_meter", "-1200")
-    engine._last_power_adjust = 0  # reset cooldown
-    engine._last_mode_switch = 0
+    engine._last_power_adjust = -999999.0  # reset cooldown
+    engine._last_mode_switch = -999999.0
     await engine._make_decision()
     assert engine.decision == "solar_charge"
 
     # Importing -> reduce charge
     hass.states.async_set("sensor.p1_meter", "400")
-    engine._last_power_adjust = 0  # reset cooldown
-    engine._last_mode_switch = 0
+    engine._last_power_adjust = -999999.0  # reset cooldown
+    engine._last_mode_switch = -999999.0
     await engine._make_decision()
     assert engine.decision == "solar_charge_reduced"
 

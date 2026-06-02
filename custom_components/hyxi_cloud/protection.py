@@ -40,7 +40,7 @@ class HyxiBatteryProtectionController:
         self._last_sent_mode: str | None = None
         self._low_soc_hold = False
         self._high_soc_hold = False
-        self._last_mode_switch = 0.0
+        self._last_mode_switch = -999999.0
         self._unsub_listener: CALLBACK_TYPE | None = None
         self._eval_task: asyncio.Task | None = None
 

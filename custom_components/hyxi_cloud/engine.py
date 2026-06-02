@@ -109,14 +109,14 @@ class EnergyManagerEngine:
         self._forecast_power_entity = config.forecast_power_entity
 
         # State tracking
-        self._last_mode_switch: float = 0
+        self._last_mode_switch: float = -999999.0
         self._last_decision: str = ""
         self._last_action: str = ""
         self._in_decision: bool = False
         self._last_fast_path_trigger: float = 0
-        self._last_power_adjust: float = 0
+        self._last_power_adjust: float = -999999.0
         self._last_charge_exit: float = 0
-        self._last_bottomout_exit: float = 0
+        self._last_bottomout_exit: float = -999999.0
         self._charge_entry_export_count: int = 0
         self._charge_bottomout_count: int = 0
         self._current_mode: str | None = None
@@ -124,7 +124,7 @@ class EnergyManagerEngine:
 
         # PV curtailment state (peak shaving stop/hold cycling)
         self._pv_curtailed: bool = False
-        self._last_pv_curtail_toggle: float = 0
+        self._last_pv_curtail_toggle: float = -999999.0
 
         # P1 rolling average
         self._p1_buffer: deque[tuple[float, float]] = deque()
