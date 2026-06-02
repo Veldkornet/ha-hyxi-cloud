@@ -147,9 +147,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                         new_metrics = dev_data.get("metrics", {})
 
                         # Update existing metrics with new values
-                        for k, v in new_metrics.items():
-                            if v is not None:
-                                existing_metrics[k] = v
+                        existing_metrics.update(
+                            {k: v for k, v in new_metrics.items() if v is not None}
+                        )
 
                         # Recalculate derived metrics on the merged dataset
                         derived = self.client.compute_derived_metrics(
