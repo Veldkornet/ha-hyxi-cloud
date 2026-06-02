@@ -97,16 +97,3 @@ if os.environ.get("HYXI_INTEGRATION_TEST") != "1" and not any(
         mock_api = MagicMock()
         mock_api.__version__ = "1.0.4"
         sys.modules["hyxi_cloud_api"] = mock_api
-
-    print(
-        "DEBUG: conftest.py setup complete. homeassistant ID is:",
-        id(sys.modules.get("homeassistant")),
-    )
-    print(
-        "DEBUG: conftest.py setup complete. homeassistant.components ID is:",
-        id(sys.modules.get("homeassistant.components")),
-    )
-    print(
-        "DEBUG: conftest.py setup complete. homeassistant.components.cloud ID is:",
-        id(sys.modules.get("homeassistant.components.cloud")),
-    )
