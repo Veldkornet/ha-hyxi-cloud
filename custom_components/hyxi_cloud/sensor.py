@@ -26,6 +26,7 @@ from .const import (
     CONF_PUSH_RATE,
     DOMAIN,
     MANUFACTURER,
+    NULL_VALUES,
     detect_phase_type,
     get_raw_device_code,
     get_software_version,
@@ -901,7 +902,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         # Process dynamically available valid metrics keys
         for key, v in metrics.items():
-            if not is_null_value(v):
+            if v is not None and not (
+                isinstance(v, str) and v.strip().lower() in NULL_VALUES
+            ):
                 keys_to_add.add(key)
 
         # O(1) removals instead of repeated conditionals
