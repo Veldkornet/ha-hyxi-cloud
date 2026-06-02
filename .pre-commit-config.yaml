@@ -43,3 +43,10 @@ repos:
     rev: v4.0.5
     hooks:
       - id: pylint
+  - repo: local
+    hooks:
+      - id: check-exception-parentheses
+        name: "Check for parenthesized exceptions (use: except Exc1, Exc2:)"
+        entry: 'except\s*\([^)]+,\s*[^)]+\)\s*:'
+        language: pygrep
+        types: [python]
