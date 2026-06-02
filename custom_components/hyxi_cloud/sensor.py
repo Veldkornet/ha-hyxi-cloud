@@ -26,6 +26,7 @@ from .const import (
     CONF_PUSH_RATE,
     DOMAIN,
     MANUFACTURER,
+    NULL_VALUES,
     detect_phase_type,
     get_raw_device_code,
     get_software_version,
@@ -901,7 +902,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         # Process dynamically available valid metrics keys
         for key, v in metrics.items():
-            if not is_null_value(v):
+            if v is not None and not (
+                isinstance(v, str) and v.strip().lower() in NULL_VALUES
+            ):
                 keys_to_add.add(key)
 
         # O(1) removals instead of repeated conditionals
@@ -1029,10 +1032,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                 try:
                     self._last_valid_value = float(last_state.state)
                     self._update_native_value()
-                except (
-                    ValueError,
-                    TypeError,
-                ):
+                except ValueError, TypeError:
                     _LOGGER.debug(
                         "HYXI Restore: Could not parse restored state '%s' for %s",
                         last_state.state,
@@ -1111,10 +1111,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                         return spike_result
             self._last_valid_value = num_value
             return num_value
-        except (
-            ValueError,
-            TypeError,
-        ):
+        except ValueError, TypeError:
             return value
 
 
@@ -1249,10 +1246,7 @@ class HyxiSensor(HyxiBaseSensor):
 
         try:
             return float(val)
-        except (
-            ValueError,
-            TypeError,
-        ):
+        except ValueError, TypeError:
             return None
 
     def _parse_device_type(self, dev_data, value):
@@ -1263,11 +1257,7 @@ class HyxiSensor(HyxiBaseSensor):
             return None
         try:
             return int(round(float(value), 0))
-        except (
-            ValueError,
-            TypeError,
-            OverflowError,
-        ):
+        except ValueError, TypeError, OverflowError:
             return self._process_numeric_value(value)
 
     def _parse_collect_time(self, dev_data, value):
@@ -1278,12 +1268,7 @@ class HyxiSensor(HyxiBaseSensor):
             if val_int > 9999999999:
                 val_int = val_int // 1000
             return datetime.fromtimestamp(val_int, tz=UTC)
-        except (
-            ValueError,
-            TypeError,
-            OSError,
-            OverflowError,
-        ):
+        except ValueError, TypeError, OSError, OverflowError:
             return None
 
     def _parse_last_seen(self, dev_data, value):
