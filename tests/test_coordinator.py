@@ -3,24 +3,34 @@
 
 import importlib
 import sys
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-mock_ha = MagicMock()
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-sys.modules["homeassistant.core"] = mock_ha
-sys.modules["homeassistant.exceptions"] = mock_ha
-sys.modules["homeassistant.helpers"] = mock_ha
+# Retrieve or create mocks
+mock_ha = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    sys.modules["homeassistant"] = mock_ha
 
-mock_util = MagicMock()
-sys.modules["homeassistant.util"] = mock_util
+if "homeassistant.components" not in sys.modules:
+    sys.modules["homeassistant.components"] = mock_ha
 
-mock_config = MagicMock()
-sys.modules["homeassistant.config_entries"] = mock_config
+if "homeassistant.core" not in sys.modules:
+    sys.modules["homeassistant.core"] = mock_ha
 
-mock_coordinator = MagicMock()
+if "homeassistant.exceptions" not in sys.modules:
+    sys.modules["homeassistant.exceptions"] = mock_ha
+
+if "homeassistant.helpers" not in sys.modules:
+    sys.modules["homeassistant.helpers"] = mock_ha
+
+if "homeassistant.util" not in sys.modules:
+    sys.modules["homeassistant.util"] = MagicMock()
+
+if "homeassistant.config_entries" not in sys.modules:
+    sys.modules["homeassistant.config_entries"] = MagicMock()
 
 
 class DummyDataUpdateCoordinator:
@@ -31,28 +41,36 @@ class DummyDataUpdateCoordinator:
         self.data = {}
 
 
-mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
-
-
 class DummyUpdateFailed(Exception):
     pass
 
 
+# Retrieve or create update_coordinator mock, and set the dummy classes
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+
+mock_coordinator: Any = sys.modules["homeassistant.helpers.update_coordinator"]
+mock_coordinator.DataUpdateCoordinator = DummyDataUpdateCoordinator
 mock_coordinator.UpdateFailed = DummyUpdateFailed
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
 
 
 class DummyConfigEntryAuthFailed(Exception):
     pass
 
 
-mock_config_exceptions = MagicMock()
-mock_config_exceptions.ConfigEntryAuthFailed = DummyConfigEntryAuthFailed
-sys.modules["homeassistant.exceptions"] = mock_config_exceptions
+# Ensure ConfigEntryAuthFailed is set on exceptions and config_entries
+mock_exceptions = sys.modules["homeassistant.exceptions"]
+if isinstance(mock_exceptions, MagicMock):
+    mock_exceptions.ConfigEntryAuthFailed = DummyConfigEntryAuthFailed
 
-mock_api = MagicMock()
-mock_api.__version__ = "1.0.4"
-sys.modules["hyxi_cloud_api"] = mock_api
+mock_config = sys.modules["homeassistant.config_entries"]
+if isinstance(mock_config, MagicMock):
+    mock_config.ConfigEntryAuthFailed = DummyConfigEntryAuthFailed
+
+if "hyxi_cloud_api" not in sys.modules:
+    mock_api = MagicMock()
+    mock_api.__version__ = "1.0.4"
+    sys.modules["hyxi_cloud_api"] = mock_api
 
 
 import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position
@@ -298,3 +316,78 @@ async def test_async_sync_device_metadata_device_not_found():
         await coordinator._async_sync_device_metadata(devices)
 
         mock_dev_reg.async_update_device.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_empty_devices_warning():
+    """Verify update warning when no devices are returned."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(
+        return_value={"data": {}, "attempts": 1}
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    with patch("custom_components.hyxi_cloud.coordinator._LOGGER.warning") as mock_warn:
+        result = await coordinator._async_update_data()
+        assert result == {}
+        mock_warn.assert_any_call(
+            "HYXI Cloud returned success, but no plants or devices were found. "
+            "If your developer email differs from your app email, you must share your Plant "
+            "from the app to the developer email first."
+        )
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_merge_existing_metrics():
+    """Verify that update merges new metrics with existing cached metrics and derived metrics."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(
+        return_value={
+            "data": {
+                "SN123": {
+                    "device_type_code": "1",
+                    "metrics": {"new_metric": "value_new", "overlapping": "newer"},
+                }
+            },
+            "attempts": 1,
+        }
+    )
+    mock_client.compute_derived_metrics.return_value = {"derived_key": "derived_value"}
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    # Pre-populate coordinator data
+    coordinator.data = {
+        "SN123": {"metrics": {"old_metric": "value_old", "overlapping": "older"}}
+    }
+
+    result = await coordinator._async_update_data()
+
+    # Overlapping should be updated to "newer"
+    # old_metric should be preserved
+    # derived_key should be calculated and added
+    expected_metrics = {
+        "old_metric": "value_old",
+        "overlapping": "newer",
+        "new_metric": "value_new",
+        "derived_key": "derived_value",
+    }
+    assert result["SN123"]["metrics"] == expected_metrics
+    mock_client.compute_derived_metrics.assert_called_once_with(
+        {
+            "old_metric": "value_old",
+            "overlapping": "newer",
+            "new_metric": "value_new",
+            "derived_key": "derived_value",
+        },
+        "1",
+    )

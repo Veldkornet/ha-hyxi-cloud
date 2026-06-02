@@ -17,12 +17,22 @@ class FakeCoordinatorEntity(FakeBase):
         self.coordinator = coordinator
 
 
-mock_ha = MagicMock()
-mock_ha.__path__ = []
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
-mock_ha.CoordinatorEntity = FakeCoordinatorEntity
+# Retrieve or create mocks
+mock_ha = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    mock_ha.__path__ = []
+    sys.modules["homeassistant"] = mock_ha
+
+if "homeassistant.helpers" not in sys.modules:
+    sys.modules["homeassistant.helpers"] = mock_ha
+
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+
+mock_coordinator = sys.modules["homeassistant.helpers.update_coordinator"]
+if isinstance(mock_coordinator, MagicMock):
+    mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
 
 # 2. LOCAL IMPORTS (After patching sys.modules)
 from custom_components.hyxi_cloud.const import DOMAIN, MANUFACTURER

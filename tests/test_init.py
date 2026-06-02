@@ -25,6 +25,7 @@ class UpdateFailed(Exception):
 if "homeassistant.exceptions" not in sys.modules or not hasattr(
     sys.modules["homeassistant.exceptions"], "ConfigEntryAuthFailed"
 ):
+    print("DEBUG: test_init.py exception mock block is RUNNING!")
     # Harden the mock to behave like a module
     mock_ha = MagicMock()
     mock_ha.__path__ = []
@@ -32,7 +33,7 @@ if "homeassistant.exceptions" not in sys.modules or not hasattr(
     if "homeassistant" not in sys.modules:
         sys.modules["homeassistant"] = mock_ha
     if "homeassistant.components" not in sys.modules:
-        sys.modules["homeassistant.components"] = mock_ha
+        sys.modules["homeassistant.components"] = MagicMock()
     if "homeassistant.const" not in sys.modules:
         sys.modules["homeassistant.const"] = mock_ha
     if "homeassistant.core" not in sys.modules:
@@ -72,10 +73,8 @@ if "aiohttp" not in sys.modules:
     sys.modules["aiohttp"] = MagicMock()
     sys.modules["aiohttp"].ClientError = type("ClientError", (Exception,), {})  # type: ignore[attr-defined]
 
-mock_api = MagicMock()
-mock_api.__name__ = "hyxi_cloud_api"
-mock_api.__version__ = "1.0.4"
-sys.modules["hyxi_cloud_api"] = mock_api
+mock_api = sys.modules["hyxi_cloud_api"]
+
 
 import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position
 
@@ -108,7 +107,12 @@ from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import
 def mock_hass():
     hass = MagicMock()
     hass.data = {}
-    hass.config_entries = AsyncMock()
+    config_entries = MagicMock()
+    config_entries.async_forward_entry_setups = AsyncMock()
+    config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    config_entries.async_reload = AsyncMock()
+    config_entries.async_update_entry = MagicMock()
+    hass.config_entries = config_entries
     return hass
 
 
@@ -523,3 +527,617 @@ async def test_remove_legacy_select_entities(mock_hass):
             mock_logger.assert_any_call(
                 "Removing legacy HYXI select entity %s", "select.hyxi_456_peak_shaving"
             )
+
+
+# --- __init__.py Platform Tests ---
+
+from custom_components.hyxi_cloud.__init__ import (
+    _async_handle_alarm_webhook,
+    _async_handle_webhook,
+    _async_resolve_webhook_url,
+    _async_setup_alarm_subscription,
+    _async_setup_push_subscription,
+    _async_teardown_alarm_subscription,
+    _async_teardown_push_subscription,
+)
+
+
+@pytest.mark.asyncio
+async def test_async_reload_entry_options_not_changed():
+    """Verify async_reload_entry returns early when options haven't changed."""
+    mock_hass = MagicMock()
+    mock_hass.data = {DOMAIN: {"entry_id": MagicMock()}}
+    mock_entry = MagicMock()
+    mock_entry.entry_id = "entry_id"
+    mock_entry.options = {"opt": "val"}
+
+    # We populate the coordinator options to match entry options
+    coordinator = mock_hass.data[DOMAIN]["entry_id"]
+    coordinator.options = {"opt": "val"}
+
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_log:
+        await async_reload_entry(mock_hass, mock_entry)
+        mock_log.assert_any_call(
+            "HYXI: Config entry data updated, skipping reload as options did not change"
+        )
+        mock_hass.config_entries.async_reload.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_resolve_webhook_url(mock_hass):
+    """Verify webhook URL resolution paths including cloud hooks and fallbacks."""
+    # Ensure hass.config.external_url doesn't raise error on yarl.URL parsing
+    mock_hass.config = MagicMock()
+    mock_hass.config.external_url = "https://default.url"
+
+    # 1. Custom URL is configured
+    res1 = await _async_resolve_webhook_url(
+        mock_hass, "web_id", "https://my.custom.url/"
+    )
+    assert res1 == "https://my.custom.url/api/webhook/web_id"
+
+    # 2. Cloud hooks resolution (Nabu Casa subscription active)
+    with patch(
+        "homeassistant.components.cloud.async_active_subscription", return_value=True
+    ):
+        # 2a. Cloud hook successfully created
+        with patch(
+            "homeassistant.components.cloud.async_get_or_create_cloudhook",
+            new=AsyncMock(return_value="https://cloud.hook/web_id"),
+        ):
+            res2 = await _async_resolve_webhook_url(mock_hass, "web_id", None)
+            assert res2 == "https://cloud.hook/web_id"
+
+        # 2b. Cloud hook raises error
+        with patch(
+            "homeassistant.components.cloud.async_get_or_create_cloudhook",
+            new=AsyncMock(side_effect=Exception("cloud_err")),
+        ):
+            # It falls back to standard external settings because Exception isn't CloudNotAvailable
+            with patch(
+                "homeassistant.helpers.network.get_url",
+                return_value="https://local.url",
+            ):
+                res3 = await _async_resolve_webhook_url(mock_hass, "web_id", None)
+                assert res3 == "https://local.url/api/webhook/web_id"
+
+    # 3. No Nabu Casa, network.get_url raises NoURLAvailableError
+    from homeassistant.helpers.network import NoURLAvailableError
+
+    with patch(
+        "homeassistant.components.cloud.async_active_subscription", return_value=False
+    ):
+        with patch(
+            "homeassistant.helpers.network.get_url", side_effect=NoURLAvailableError
+        ):
+            res4 = await _async_resolve_webhook_url(mock_hass, "web_id", None)
+            assert res4 is None
+
+
+@pytest.mark.asyncio
+async def test_async_setup_push_subscription_no_url_or_devices():
+    """Verify push subscription setup failure when URL or devices are missing."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {"enable_realtime_push": True}
+    coordinator = MagicMock()
+    coordinator.data = {}  # No devices
+
+    # 1. Webhook URL cannot be resolved
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value=None,
+    ):
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        assert coordinator.push_status == "error"
+        assert "Could not resolve external URL" in coordinator.push_error
+
+    # 2. Webhook URL resolved but no devices available
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        assert coordinator.push_status == "inactive"
+
+
+@pytest.mark.asyncio
+async def test_async_setup_push_subscription_client_failure_or_error():
+    """Verify push subscription client failure paths."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {"enable_realtime_push": True}
+    coordinator = MagicMock()
+    coordinator.data = {"SN123": {}}
+
+    # 1. SDK returns success=False
+    coordinator.client.subscribe_real_time_data = AsyncMock(
+        return_value={"success": False, "msg": "API Limit exceeded"}
+    )
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        assert coordinator.push_status == "error"
+        assert coordinator.push_error == "API Limit exceeded"
+
+    # 2. SDK raises exception
+    coordinator.client.subscribe_real_time_data = AsyncMock(
+        side_effect=Exception("conn_error")
+    )
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        assert coordinator.push_status == "error"
+        assert coordinator.push_error == "conn_error"
+
+
+@pytest.mark.asyncio
+async def test_webhook_handle_auth_fails():
+    """Verify webhook handles unauthorized requests securely."""
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+
+    request = MagicMock()
+    request.headers = {"accessKey": "wrong_ak"}
+
+    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    assert res.status == 401
+
+
+@pytest.mark.asyncio
+async def test_webhook_handle_invalid_json():
+    """Verify webhook handles invalid JSON payloads gracefully."""
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+
+    request = MagicMock()
+    request.headers = {"accessKey": "correct_ak"}
+    request.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
+
+    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    assert res.status == 400
+
+
+@pytest.mark.asyncio
+async def test_webhook_handle_process_exceptions():
+    """Verify webhook handles process payload exceptions gracefully."""
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+    coordinator.data = {}
+
+    request = MagicMock()
+    request.headers = {"accessKey": "correct_ak"}
+    request.json = AsyncMock(return_value={"data": "raw"})
+    coordinator.client.process_push_data = MagicMock(side_effect=Exception("sdk_error"))
+
+    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    assert res.status == 500
+
+
+@pytest.mark.asyncio
+async def test_webhook_handle_untracked_device():
+    """Verify webhook handles push data for untracked devices."""
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+    coordinator.data = {"SN123": {}}
+
+    request = MagicMock()
+    request.headers = {"accessKey": "correct_ak"}
+    request.json = AsyncMock(return_value={})
+
+    # process_push_data returns updates for untracked device SN999
+    coordinator.client.process_push_data = MagicMock(
+        return_value={"SN999": {"metrics": {"batSoc": 80}}}
+    )
+
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+        res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+        assert res.status == 200
+        assert (
+            mock_warn.call_args[0][0]
+            == "Received push data for untracked device SN: %s"
+        )
+
+
+@pytest.mark.asyncio
+async def test_alarm_subscription_failures_and_webhooks():
+    """Verify alarm subscription setup failures and webhook handling."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.options = {"enable_realtime_push": True}
+    coordinator = MagicMock()
+    coordinator.data = {"SN123": {}}
+    coordinator.client.access_key = "correct_ak"
+
+    # 1. Webhook URL unresolved
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value=None,
+    ):
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
+        assert coordinator.alarm_push_status == "error"
+
+    # 2. No devices available
+    coordinator.data = {}
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
+        assert coordinator.alarm_push_status == "inactive"
+
+    # 3. Client returns failure
+    coordinator.data = {"SN123": {}}
+    coordinator.client.subscribe_alarm = AsyncMock(
+        return_value={"success": False, "msg": "failed"}
+    )
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
+        assert coordinator.alarm_push_status == "error"
+
+    # 4. Client raises exception
+    coordinator.client.subscribe_alarm = AsyncMock(side_effect=Exception("err"))
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
+        assert coordinator.alarm_push_status == "error"
+
+    # 5. Alarm Webhook: auth fails
+    request = MagicMock()
+    request.headers = {"accessKey": "wrong_ak"}
+    res_auth = await _async_handle_alarm_webhook(
+        hass, "alarm_webhook_id", request, coordinator
+    )
+    assert res_auth.status == 401
+
+    # 6. Alarm Webhook: invalid JSON
+    request.headers = {"accessKey": "correct_ak"}
+    request.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
+    res_json = await _async_handle_alarm_webhook(
+        hass, "alarm_webhook_id", request, coordinator
+    )
+    assert res_json.status == 400
+
+    # 7. Alarm Webhook: process raises exception
+    request.json = AsyncMock(return_value={})
+    coordinator.client.process_alarm_push_data = MagicMock(
+        side_effect=Exception("sdk_err")
+    )
+    res_err = await _async_handle_alarm_webhook(
+        hass, "alarm_webhook_id", request, coordinator
+    )
+    assert res_err.status == 500
+
+    # 8. Alarm Webhook: untracked device SN
+    coordinator.client.process_alarm_push_data = MagicMock(
+        return_value={"SN999": [{"alarmCode": "100"}]}
+    )
+    coordinator.data = {"SN123": {}}
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+        res_ok = await _async_handle_alarm_webhook(
+            hass, "alarm_webhook_id", request, coordinator
+        )
+        assert res_ok.status == 200
+        assert (
+            mock_warn.call_args[0][0]
+            == "HYXI Alarm Push: received alarm for untracked device SN: %s"
+        )
+
+
+@pytest.mark.asyncio
+async def test_additional_init_coverage(mock_hass, mock_entry):
+    """Test additional branches and fallback paths in __init__.py for 100% coverage."""
+
+    # 1. Test ValueError raised by Nabu Casa resolved URL (line 345)
+    class CustomCloudNotAvailable(BaseException):
+        pass
+
+    import homeassistant.components.cloud as cloud
+
+    cloud.CloudNotAvailable = CustomCloudNotAvailable
+
+    with patch(
+        "homeassistant.components.cloud.async_active_subscription", return_value=True
+    ):
+        with patch(
+            "homeassistant.components.cloud.async_get_or_create_cloudhook",
+            new=AsyncMock(side_effect=ValueError("real_val_err")),
+        ):
+            with pytest.raises(ValueError, match="real_val_err"):
+                await _async_resolve_webhook_url(mock_hass, "web_id", None)
+
+    # 2. Test successful real-time push subscription (lines 449-456)
+    from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY
+
+    mock_entry.data = {
+        CONF_ACCESS_KEY: "test_access",
+        CONF_SECRET_KEY: "test_secret",
+    }
+    mock_entry.options = {
+        "enable_realtime_push": True,
+        "enable_push": True,
+    }
+
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "model": "hybrid",
+            "device_type_code": "1",
+        }
+    }
+    coordinator.protection_controllers = {}
+    coordinator.engine = None
+    coordinator.webhook_id = None
+    coordinator.subscribe_code = None
+    coordinator.client.access_key = "correct_ak"
+    coordinator.client.cancel_subscription = AsyncMock()
+
+    # Success response from real time subscription
+    coordinator.client.subscribe_real_time_data = AsyncMock(
+        return_value={"success": True, "data": {"subscribeCode": "sub_code_123"}}
+    )
+
+    # Success response from alarm subscription
+    coordinator.client.subscribe_alarm = AsyncMock(
+        return_value={"success": True, "data": {"subscribeCode": "alarm_code_123"}}
+    )
+
+    # Mock resolves webhook URL successfully
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://webhook.url",
+    ):
+        await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
+        assert coordinator.push_status == "active"
+        assert coordinator.subscribe_code == "sub_code_123"
+
+        await _async_setup_alarm_subscription(mock_hass, mock_entry, coordinator)
+        assert coordinator.alarm_push_status == "active"
+        assert coordinator.alarm_subscribe_code == "alarm_code_123"
+
+    # 3. Webhook registration already registered (ValueError) (lines 407-409, 628-629)
+    with patch(
+        "homeassistant.components.webhook.async_register",
+        side_effect=ValueError("Already registered"),
+    ):
+        with patch(
+            "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+            return_value="https://webhook.url",
+        ):
+            # These should not crash (they catch ValueError)
+            await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
+            await _async_setup_alarm_subscription(mock_hass, mock_entry, coordinator)
+
+    # 4. Webhook unregister raises KeyError (lines 479-481, 693-695)
+    with patch(
+        "homeassistant.components.webhook.async_unregister",
+        side_effect=KeyError("Not found"),
+    ):
+        coordinator.webhook_id = "test_webhook"
+        coordinator.alarm_webhook_id = "test_alarm_webhook"
+        await _async_teardown_push_subscription(mock_hass, coordinator, mock_entry)
+        await _async_teardown_alarm_subscription(mock_hass, coordinator, mock_entry)
+        assert coordinator.webhook_id is None
+        assert coordinator.alarm_webhook_id is None
+
+    # 5. Push data webhook process with empty results (line 549)
+    request = MagicMock()
+    request.headers = {"accessKey": "correct_ak"}
+    request.json = AsyncMock(return_value={})
+    coordinator.client.process_push_data = MagicMock(return_value={})
+    res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
+    assert res.status == 200
+
+    # 6. Push data webhook with coordinator.data is None (line 554)
+    coordinator.data = None
+    coordinator.client.process_push_data = MagicMock(
+        return_value={"SN123": {"metrics": {"batSoc": 85}}}
+    )
+    from custom_components.hyxi_cloud.const import mask_sn
+
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+        res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
+        assert res.status == 200
+        assert coordinator.data == {}
+        # SN123 is untracked now
+        mock_warn.assert_any_call(
+            "Received push data for untracked device SN: %s", mask_sn("SN123")
+        )
+
+    # 7. Push data webhook updates successfully (line 577-580)
+    coordinator.data = {"SN123": {"metrics": {}}}
+    coordinator.async_update_listeners = MagicMock()
+    res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
+    assert res.status == 200
+    assert coordinator.data["SN123"]["metrics"] == {"batSoc": 85}
+    coordinator.async_update_listeners.assert_called_once()
+
+    # 8. Alarm push webhook empty results (line 755)
+    coordinator.client.process_alarm_push_data = MagicMock(return_value={})
+    res = await _async_handle_alarm_webhook(
+        mock_hass, "alarm_web_id", request, coordinator
+    )
+    assert res.status == 200
+
+    # 9. Alarm push webhook with coordinator.data is None (line 758)
+    coordinator.data = None
+    coordinator.client.process_alarm_push_data = MagicMock(
+        return_value={"SN123": [{"alarmCode": "99"}]}
+    )
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+        res = await _async_handle_alarm_webhook(
+            mock_hass, "alarm_web_id", request, coordinator
+        )
+        assert res.status == 200
+        assert coordinator.data == {}
+        mock_warn.assert_any_call(
+            "HYXI Alarm Push: received alarm for untracked device SN: %s",
+            mask_sn("SN123"),
+        )
+
+    # 10. Alarm push webhook merges alarm records successfully (lines 770-783, 790)
+    coordinator.data = {"SN123": {"alarms": [{"alarmCode": "99", "msg": "old"}]}}
+    coordinator.async_update_listeners = MagicMock()
+    coordinator.client.process_alarm_push_data = MagicMock(
+        return_value={
+            "SN123": [
+                {"alarmCode": "99", "msg": "new"},
+                {"alarmCode": "100", "msg": "another"},
+            ]
+        }
+    )
+    res = await _async_handle_alarm_webhook(
+        mock_hass, "alarm_web_id", request, coordinator
+    )
+    assert res.status == 200
+    assert len(coordinator.data["SN123"]["alarms"]) == 2
+    # Ensure alarm with code "99" was updated
+    alarms_by_code = {a["alarmCode"]: a for a in coordinator.data["SN123"]["alarms"]}
+    assert alarms_by_code["99"]["msg"] == "new"
+    coordinator.async_update_listeners.assert_called_once()
+
+    # 11. Battery protection setup with invalid phase type (line 303)
+    from custom_components.hyxi_cloud import _async_setup_battery_protection
+
+    coordinator.entry = mock_entry
+    # Battery control enabled
+    mock_entry.options = {"enable_battery_control": True, "charge_power": 1000}
+    coordinator.data = {
+        "SN123": {"device_type_code": "1", "phase_type": "invalid_phase"}
+    }
+    # Should complete without error and not create a protection controller
+    await _async_setup_battery_protection(mock_hass, coordinator)
+    assert not coordinator.protection_controllers
+
+    # 12. Cleanup control entities (lines 242, 277-283)
+    # 12a. When battery control is enabled, cleanup returns early (line 242)
+    from custom_components.hyxi_cloud import _cleanup_control_entities
+
+    with patch("homeassistant.helpers.entity_registry.async_get") as mock_er:
+        _cleanup_control_entities(mock_hass, mock_entry, coordinator)
+        mock_er.assert_not_called()
+
+    # 12b. When battery control is disabled, remove specific control entities (lines 277-283)
+    mock_entry.options = {"enable_battery_control": False}
+    coordinator.data = {"SN123": {}}
+    mock_registry = MagicMock()
+    # Mock entries in registry belonging to this config entry
+    mock_reg_entry = MagicMock()
+    mock_reg_entry.unique_id = "hyxi_SN123_mode_idle"
+    mock_reg_entry.entity_id = "button.hyxi_SN123_mode_idle"
+    mock_reg_entry.domain = "button"
+
+    with patch(
+        "homeassistant.helpers.entity_registry.async_get", return_value=mock_registry
+    ):
+        with patch(
+            "homeassistant.helpers.entity_registry.async_entries_for_config_entry",
+            return_value=[mock_reg_entry],
+        ):
+            _cleanup_control_entities(mock_hass, mock_entry, coordinator)
+            mock_registry.async_remove.assert_called_once_with(
+                "button.hyxi_SN123_mode_idle"
+            )
+
+    # 13. Setup and Unload with Energy Manager and Protection Controllers enabled
+    from custom_components.hyxi_cloud.const import (
+        CONF_EM_ENABLED,
+        CONF_EM_INVERTER_SN,
+        CONF_EM_P1_ENTITY,
+        DOMAIN,
+    )
+
+    # Reset mock_entry
+    mock_entry.options = {
+        CONF_EM_ENABLED: True,
+        CONF_EM_INVERTER_SN: "SN123",
+        CONF_EM_P1_ENTITY: "sensor.p1",
+        "enable_battery_control": True,
+    }
+
+    # Re-init coordinator
+    coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "model": "hybrid-HT",
+            "device_type_code": "1",
+            "phase_type": "three_phase",
+        }
+    }
+    coordinator.protection_controllers = {}
+    coordinator.engine = None
+    coordinator.entry = mock_entry
+    coordinator.async_config_entry_first_refresh = AsyncMock()
+
+    # Mock engine instance
+    mock_engine = MagicMock()
+    mock_engine.async_start = AsyncMock()
+    mock_engine.async_stop = AsyncMock()
+
+    # Mock protection controller
+    mock_controller = MagicMock()
+    mock_controller.async_start = AsyncMock()
+    mock_controller.async_stop = AsyncMock()
+
+    with patch(
+        "custom_components.hyxi_cloud.engine.EnergyManagerEngine",
+        return_value=mock_engine,
+    ):
+        with patch(
+            "custom_components.hyxi_cloud.__init__.HyxiBatteryProtectionController",
+            return_value=mock_controller,
+        ):
+            with patch(
+                "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator",
+                return_value=coordinator,
+            ):
+                with patch(
+                    "custom_components.hyxi_cloud.__init__._remove_legacy_select_entities"
+                ):
+                    with patch(
+                        "custom_components.hyxi_cloud.__init__._cleanup_control_entities"
+                    ):
+                        with patch(
+                            "custom_components.hyxi_cloud.__init__.dr.async_get"
+                        ):
+                            with patch(
+                                "custom_components.hyxi_cloud.__init__.async_get_clientsession"
+                            ):
+                                with patch(
+                                    "custom_components.hyxi_cloud.__init__.HyxiApiClient"
+                                ):
+                                    # Run setup
+                                    res_setup = await async_setup_entry(
+                                        mock_hass, mock_entry
+                                    )
+                                    assert res_setup is True
+                                    assert coordinator.engine is mock_engine
+                                    mock_engine.async_start.assert_called_once()
+                                    mock_controller.async_start.assert_called_once()
+
+                                    # Set up data in mock_hass.data for unload
+                                    mock_hass.data[DOMAIN] = {
+                                        mock_entry.entry_id: coordinator
+                                    }
+
+                                    # Run unload
+                                    res_unload = await async_unload_entry(
+                                        mock_hass, mock_entry
+                                    )
+                                    assert res_unload is True
+                                    mock_engine.async_stop.assert_called_once()
+                                    mock_controller.async_stop.assert_called_once()

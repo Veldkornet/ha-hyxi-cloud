@@ -2,6 +2,7 @@
 
 # pylint: disable=missing-module-docstring, wrong-import-position, import-outside-toplevel
 import sys
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -29,25 +30,36 @@ class FakeRestoreEntity(FakeBase):
 
 
 # Mock homeassistant environment BEFORE importing integration code
-mock_ha = MagicMock()
-mock_ha.callback = lambda func: func
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-sys.modules["homeassistant.core"] = mock_ha
-sys.modules["homeassistant.const"] = mock_ha
-sys.modules["homeassistant.util"] = mock_ha
+mock_ha = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    mock_ha.callback = lambda func: func
+    sys.modules["homeassistant"] = mock_ha
 
-mock_sensor = MagicMock()
-mock_sensor.SensorEntity = FakeSensorEntity
-sys.modules["homeassistant.components.sensor"] = mock_sensor
+if "homeassistant.components" not in sys.modules:
+    sys.modules["homeassistant.components"] = MagicMock()
+if "homeassistant.core" not in sys.modules:
+    sys.modules["homeassistant.core"] = mock_ha
+if "homeassistant.const" not in sys.modules:
+    sys.modules["homeassistant.const"] = mock_ha
+if "homeassistant.util" not in sys.modules:
+    sys.modules["homeassistant.util"] = mock_ha
 
-mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
+if "homeassistant.components.sensor" not in sys.modules:
+    sys.modules["homeassistant.components.sensor"] = MagicMock()
+sensor_mock: Any = sys.modules["homeassistant.components.sensor"]
+sensor_mock.SensorEntity = FakeSensorEntity
 
-mock_restore = MagicMock()
-mock_restore.RestoreEntity = FakeRestoreEntity
-sys.modules["homeassistant.helpers.restore_state"] = mock_restore
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+coord_mock: Any = sys.modules["homeassistant.helpers.update_coordinator"]
+coord_mock.CoordinatorEntity = FakeCoordinatorEntity
+
+if "homeassistant.helpers.restore_state" not in sys.modules:
+    sys.modules["homeassistant.helpers.restore_state"] = MagicMock()
+restore_mock: Any = sys.modules["homeassistant.helpers.restore_state"]
+restore_mock.RestoreEntity = FakeRestoreEntity
+
 
 # Now import the modules
 import custom_components.hyxi_cloud.const as const_mod

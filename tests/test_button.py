@@ -2,6 +2,7 @@
 
 # pylint: disable=missing-module-docstring, wrong-import-position, import-outside-toplevel
 import sys
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -23,24 +24,33 @@ class FakeButtonEntity(FakeBase):
     """Fake button entity."""
 
 
-mock_ha = MagicMock()
-mock_ha.__path__ = []
-mock_ha.callback = lambda func: func
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-sys.modules["homeassistant.config_entries"] = mock_ha
-sys.modules["homeassistant.core"] = mock_ha
-sys.modules["homeassistant.const"] = mock_ha
+mock_ha = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    mock_ha.__path__ = []
+    mock_ha.callback = lambda func: func
+    sys.modules["homeassistant"] = mock_ha
 
-mock_er = MagicMock()
-sys.modules["homeassistant.helpers.entity_registry"] = mock_er
+if "homeassistant.components" not in sys.modules:
+    sys.modules["homeassistant.components"] = mock_ha
+if "homeassistant.config_entries" not in sys.modules:
+    sys.modules["homeassistant.config_entries"] = mock_ha
+if "homeassistant.core" not in sys.modules:
+    sys.modules["homeassistant.core"] = mock_ha
+if "homeassistant.const" not in sys.modules:
+    sys.modules["homeassistant.const"] = mock_ha
 
-mock_ep = MagicMock()
-sys.modules["homeassistant.helpers.entity_platform"] = mock_ep
+if "homeassistant.helpers.entity_registry" not in sys.modules:
+    sys.modules["homeassistant.helpers.entity_registry"] = MagicMock()
 
-mock_button = MagicMock()
-mock_button.ButtonEntity = FakeButtonEntity
-sys.modules["homeassistant.components.button"] = mock_button
+if "homeassistant.helpers.entity_platform" not in sys.modules:
+    sys.modules["homeassistant.helpers.entity_platform"] = MagicMock()
+
+if "homeassistant.components.button" not in sys.modules:
+    sys.modules["homeassistant.components.button"] = MagicMock()
+button_mock: Any = sys.modules["homeassistant.components.button"]
+button_mock.ButtonEntity = FakeButtonEntity
+
 
 mock_coordinator = MagicMock()
 mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
@@ -50,16 +60,8 @@ mock_bs = MagicMock()
 mock_bs.BinarySensorEntity = FakeBase
 sys.modules["homeassistant.components.binary_sensor"] = mock_bs
 
-mock_api = MagicMock()
-mock_api.__version__ = "1.0.4"
+mock_api = sys.modules["hyxi_cloud_api"]
 
-
-class ControlError(Exception):
-    """Mock exception."""
-
-
-mock_api.HyxiApiClient.ControlError = ControlError
-sys.modules["hyxi_cloud_api"] = mock_api
 
 # Now import the modules to test
 import custom_components.hyxi_cloud.button as button_mod

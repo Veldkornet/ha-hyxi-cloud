@@ -4,6 +4,7 @@
 import importlib
 import sys
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,22 +28,43 @@ class FakeBinarySensorEntity(FakeBase):
     pass
 
 
-mock_ha = MagicMock()
-mock_ha.__path__ = []
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
+mock_ha: Any = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    mock_ha.__path__ = []
+    sys.modules["homeassistant"] = mock_ha
+
 mock_ha.CoordinatorEntity = FakeCoordinatorEntity
 mock_ha.BinarySensorEntity = FakeBinarySensorEntity
-sys.modules["homeassistant.components.binary_sensor"] = mock_ha
-sys.modules["homeassistant.config_entries"] = mock_ha
-sys.modules["homeassistant.const"] = mock_ha
-sys.modules["homeassistant.core"] = mock_ha
-sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
 
-mock_util = MagicMock()
-mock_util.__spec__ = None
-sys.modules["homeassistant.util"] = mock_util
+if "homeassistant.components" not in sys.modules:
+    sys.modules["homeassistant.components"] = MagicMock()
+if "homeassistant.components.binary_sensor" not in sys.modules:
+    sys.modules["homeassistant.components.binary_sensor"] = MagicMock()
+bs_mock: Any = sys.modules["homeassistant.components.binary_sensor"]
+bs_mock.BinarySensorEntity = FakeBinarySensorEntity
+
+if "homeassistant.config_entries" not in sys.modules:
+    sys.modules["homeassistant.config_entries"] = mock_ha
+if "homeassistant.const" not in sys.modules:
+    sys.modules["homeassistant.const"] = mock_ha
+if "homeassistant.core" not in sys.modules:
+    sys.modules["homeassistant.core"] = mock_ha
+if "homeassistant.helpers" not in sys.modules:
+    sys.modules["homeassistant.helpers"] = mock_ha
+
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
+coord_mock: Any = sys.modules["homeassistant.helpers.update_coordinator"]
+coord_mock.CoordinatorEntity = FakeCoordinatorEntity
+
+
+mock_util = sys.modules.get("homeassistant.util")
+if mock_util is None:
+    mock_util = MagicMock()
+    mock_util.__spec__ = None
+    sys.modules["homeassistant.util"] = mock_util
+
 
 # We need a real-ish dt_util for parsing to work in the component
 mock_dt = MagicMock()
@@ -168,18 +190,18 @@ def test_device_alarm_sensor(mock_coordinator, mock_entry):
     ],
 )
 def test_connectivity_sensor_freshness_labels(
-    mock_coordinator, mock_entry, last_success_offset, expected_label
+    mock_coordinator, mock_entry, last_success_offset, expected_label, monkeypatch
 ):
     """Test data freshness labels in different scenarios."""
     sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
     now_val = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
 
-    # Directly override the attributes on the mock object the component is using
-
-    bs_mod.dt_util.utcnow = lambda: now_val
-    # We use a simple lambda with a fallback to handle ISO parsing without Z support if needed
-    bs_mod.dt_util.parse_datetime = lambda s: (
-        datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
+    # Directly override the attributes on the mock object the component is using via monkeypatch
+    monkeypatch.setattr(bs_mod.dt_util, "utcnow", lambda: now_val)
+    monkeypatch.setattr(
+        bs_mod.dt_util,
+        "parse_datetime",
+        lambda s: datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None,
     )
 
     mock_coordinator.hyxi_metadata["last_success"] = (

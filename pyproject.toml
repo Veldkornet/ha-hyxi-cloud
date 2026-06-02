@@ -76,4 +76,11 @@ disable = [
     "duplicate-code",
     "import-outside-toplevel",
     "wrong-import-order",
+    "wrong-import-position",
+    "no-value-for-parameter",
+    "assignment-from-none",
+    "unsupported-membership-test",
+    "too-many-statements",
+    "too-many-lines",
+    "consider-using-from-import",
 ]

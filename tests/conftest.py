@@ -38,23 +38,42 @@ def ensure_mock(module_name, attributes=None, mock_obj=None):
                 getattr(mod, attr_name), MagicMock
             ):
                 setattr(mod, attr_name, attr_value)
+
+    # Bind child to parent (if child was just created and parent exists)
+    if "." in module_name:
+        parent_name, child_attr = module_name.rsplit(".", 1)
+        if parent_name in sys.modules:
+            parent_mod = sys.modules[parent_name]
+            setattr(parent_mod, child_attr, mod)
+
+    # Bind children to parent (if parent was just created and children exist)
+    for existing_name, existing_mod in list(sys.modules.items()):
+        if existing_name.startswith(module_name + ".") and existing_name != module_name:
+            subpath = existing_name[len(module_name) + 1 :]
+            if "." not in subpath:  # Direct child
+                setattr(mod, subpath, existing_mod)
+
     return mod
 
 
 if os.environ.get("HYXI_INTEGRATION_TEST") != "1" and not any(
     "tests/integration" in arg for arg in sys.argv
 ):
+    print("DEBUG: conftest.py setting up mocks!")
     # Mock required HA modules and external library so test discovery doesn't crash
     mock_ha = MagicMock()
     mock_ha.__path__ = []
 
     ensure_mock("homeassistant", mock_obj=mock_ha)
     ensure_mock("homeassistant.components")
+    ensure_mock("homeassistant.components.cloud")
+    ensure_mock("homeassistant.components.webhook")
     ensure_mock("homeassistant.components.sensor")
     ensure_mock("homeassistant.components.binary_sensor")
     ensure_mock("homeassistant.config_entries")
     ensure_mock("homeassistant.core")
     ensure_mock("homeassistant.helpers")
+    ensure_mock("homeassistant.helpers.network")
     ensure_mock("homeassistant.helpers.aiohttp_client")
     ensure_mock("homeassistant.helpers.device_registry")
     ensure_mock("homeassistant.helpers.entity_platform")
@@ -78,3 +97,16 @@ if os.environ.get("HYXI_INTEGRATION_TEST") != "1" and not any(
         mock_api = MagicMock()
         mock_api.__version__ = "1.0.4"
         sys.modules["hyxi_cloud_api"] = mock_api
+
+    print(
+        "DEBUG: conftest.py setup complete. homeassistant ID is:",
+        id(sys.modules.get("homeassistant")),
+    )
+    print(
+        "DEBUG: conftest.py setup complete. homeassistant.components ID is:",
+        id(sys.modules.get("homeassistant.components")),
+    )
+    print(
+        "DEBUG: conftest.py setup complete. homeassistant.components.cloud ID is:",
+        id(sys.modules.get("homeassistant.components.cloud")),
+    )

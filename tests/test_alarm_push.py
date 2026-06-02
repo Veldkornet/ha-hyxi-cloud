@@ -11,9 +11,6 @@ if "homeassistant.components.cloud" not in sys.modules:
     sys.modules["homeassistant.components.cloud"] = MagicMock()
 
 # These imports must follow sys.modules patching — pylint: disable=wrong-import-position
-import homeassistant.components.cloud as mock_cloud
-
-mock_cloud.async_active_subscription = MagicMock(return_value=False)
 
 from custom_components.hyxi_cloud.__init__ import (  # pylint: disable=wrong-import-position
     _async_handle_alarm_webhook,

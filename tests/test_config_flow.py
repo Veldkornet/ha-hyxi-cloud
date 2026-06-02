@@ -17,7 +17,7 @@ def mock_ha_environment():
     mock_ha.__path__ = []
 
     sys.modules["homeassistant"] = mock_ha
-    sys.modules["homeassistant.components"] = mock_ha
+    sys.modules["homeassistant.components"] = MagicMock()
     sys.modules["homeassistant.core"] = mock_ha
     sys.modules["homeassistant.exceptions"] = mock_ha
     sys.modules["homeassistant.util"] = mock_ha

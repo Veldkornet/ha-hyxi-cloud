@@ -10,16 +10,7 @@ if "homeassistant.components.webhook" not in sys.modules:
 if "homeassistant.components.cloud" not in sys.modules:
     sys.modules["homeassistant.components.cloud"] = MagicMock()
 
-# Handle mock homeassistant.components if present
-if "homeassistant.components" in sys.modules:
-    mock_comp = sys.modules["homeassistant.components"]
-    if isinstance(mock_comp, MagicMock):
-        mock_comp.cloud.async_active_subscription.return_value = False
-
 # These imports must follow sys.modules patching above — pylint: disable=wrong-import-position
-import homeassistant.components.cloud as mock_cloud
-
-mock_cloud.async_active_subscription = MagicMock(return_value=False)
 
 from custom_components.hyxi_cloud.__init__ import (
     _async_handle_webhook,
@@ -91,6 +82,48 @@ async def test_setup_push_subscription_disabled(mock_coordinator, mock_entry):
 @pytest.mark.asyncio
 async def test_setup_push_subscription_success(mock_coordinator, mock_entry):
     """Test setup registers webhook and calls SDK subscribe method successfully."""
+    import sys
+
+    import homeassistant.components.cloud as cloud
+
+    print(
+        "DEBUG: sys.modules['homeassistant']",
+        sys.modules.get("homeassistant"),
+        "ID:",
+        id(sys.modules.get("homeassistant")),
+    )
+    print(
+        "DEBUG: sys.modules['homeassistant'].components",
+        getattr(sys.modules.get("homeassistant"), "components", None),
+        "ID:",
+        id(getattr(sys.modules.get("homeassistant"), "components", None))
+        if getattr(sys.modules.get("homeassistant"), "components", None)
+        else None,
+    )
+    print(
+        "DEBUG: sys.modules['homeassistant.components']",
+        sys.modules.get("homeassistant.components"),
+        "ID:",
+        id(sys.modules.get("homeassistant.components")),
+    )
+    print(
+        "DEBUG: sys.modules['homeassistant.components.cloud']",
+        sys.modules.get("homeassistant.components.cloud"),
+        "ID:",
+        id(sys.modules.get("homeassistant.components.cloud")),
+    )
+    print(
+        "DEBUG: sys.modules['homeassistant.components'].cloud",
+        getattr(sys.modules.get("homeassistant.components"), "cloud", None),
+        "ID:",
+        id(getattr(sys.modules.get("homeassistant.components"), "cloud", None))
+        if getattr(sys.modules.get("homeassistant.components"), "cloud", None)
+        else None,
+    )
+    print(
+        "DEBUG: cloud is sys.modules['homeassistant.components.cloud']",
+        cloud is sys.modules.get("homeassistant.components.cloud"),
+    )
     hass = MagicMock()
 
     # Bypass the mock components trap

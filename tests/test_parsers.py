@@ -33,38 +33,65 @@ class FakeRestoreEntity(FakeBase):
         pass
 
 
-mock_ha = MagicMock()
-mock_ha.__name__ = "mock_ha"
-mock_ha.__path__ = []  # IMPORTANT for nested module resolution
-mock_ha.callback = lambda func: func
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-sys.modules["homeassistant.config_entries"] = mock_ha
-sys.modules["homeassistant.core"] = mock_ha
-sys.modules["homeassistant.exceptions"] = mock_ha
-sys.modules["homeassistant.const"] = mock_ha
+# Retrieve or create mocks
+mock_ha = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    mock_ha.__name__ = "mock_ha"
+    mock_ha.__path__ = []  # IMPORTANT for nested module resolution
+    mock_ha.callback = lambda func: func
+    sys.modules["homeassistant"] = mock_ha
 
-mock_api = MagicMock()
-mock_api.__name__ = "hyxi_cloud_api"
-mock_api.__version__ = "1.0.4"
-sys.modules["hyxi_cloud_api"] = mock_api
+if "homeassistant.components" not in sys.modules:
+    sys.modules["homeassistant.components"] = MagicMock()
 
-mock_sensor_comp = MagicMock()
-mock_sensor_comp.SensorEntity = FakeSensorEntity
-sys.modules["homeassistant.components.sensor"] = mock_sensor_comp
+if "homeassistant.config_entries" not in sys.modules:
+    sys.modules["homeassistant.config_entries"] = mock_ha
 
-mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+if "homeassistant.core" not in sys.modules:
+    sys.modules["homeassistant.core"] = mock_ha
 
-mock_restore = MagicMock()
-mock_restore.RestoreEntity = FakeRestoreEntity
+if "homeassistant.exceptions" not in sys.modules:
+    sys.modules["homeassistant.exceptions"] = mock_ha
 
-sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.restore_state"] = mock_restore
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
-sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
-sys.modules["homeassistant.util"] = mock_ha
-sys.modules["aiohttp"] = MagicMock()
+if "homeassistant.const" not in sys.modules:
+    sys.modules["homeassistant.const"] = mock_ha
+
+if "hyxi_cloud_api" not in sys.modules:
+    mock_api = MagicMock()
+    mock_api.__name__ = "hyxi_cloud_api"
+    mock_api.__version__ = "1.0.4"
+    sys.modules["hyxi_cloud_api"] = mock_api
+
+if "homeassistant.components.sensor" not in sys.modules:
+    sys.modules["homeassistant.components.sensor"] = MagicMock()
+mock_sensor_comp = sys.modules["homeassistant.components.sensor"]
+if isinstance(mock_sensor_comp, MagicMock):
+    mock_sensor_comp.SensorEntity = FakeSensorEntity
+
+if "homeassistant.helpers" not in sys.modules:
+    sys.modules["homeassistant.helpers"] = mock_ha
+
+if "homeassistant.helpers.restore_state" not in sys.modules:
+    sys.modules["homeassistant.helpers.restore_state"] = MagicMock()
+mock_restore = sys.modules["homeassistant.helpers.restore_state"]
+if isinstance(mock_restore, MagicMock):
+    mock_restore.RestoreEntity = FakeRestoreEntity
+
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+mock_coordinator = sys.modules["homeassistant.helpers.update_coordinator"]
+if isinstance(mock_coordinator, MagicMock):
+    mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+
+if "homeassistant.helpers.aiohttp_client" not in sys.modules:
+    sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
+
+if "homeassistant.util" not in sys.modules:
+    sys.modules["homeassistant.util"] = mock_ha
+
+if "aiohttp" not in sys.modules:
+    sys.modules["aiohttp"] = MagicMock()
 
 from custom_components.hyxi_cloud.sensor import HyxiSensor
 

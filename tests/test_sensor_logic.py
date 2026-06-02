@@ -4,6 +4,7 @@
 import importlib
 import sys
 from datetime import datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -34,25 +35,32 @@ class FakeRestoreEntity(FakeBase):
 
 
 # Create a mock homeassistant environment BEFORE importing integration code
-mock_ha = MagicMock()
-mock_ha.__name__ = "mock_ha"
-mock_ha.__path__ = []  # IMPORTANT for nested module resolution
-mock_ha.callback = lambda func: func
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-sys.modules["homeassistant.config_entries"] = mock_ha
-sys.modules["homeassistant.core"] = mock_ha
-sys.modules["homeassistant.exceptions"] = mock_ha
-sys.modules["homeassistant.const"] = mock_ha
+mock_ha = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    mock_ha.__name__ = "mock_ha"
+    mock_ha.__path__ = []  # IMPORTANT for nested module resolution
+    mock_ha.callback = lambda func: func
+    sys.modules["homeassistant"] = mock_ha
+
+if "homeassistant.components" not in sys.modules:
+    sys.modules["homeassistant.components"] = MagicMock()
+if "homeassistant.config_entries" not in sys.modules:
+    sys.modules["homeassistant.config_entries"] = mock_ha
+if "homeassistant.core" not in sys.modules:
+    sys.modules["homeassistant.core"] = mock_ha
+if "homeassistant.exceptions" not in sys.modules:
+    sys.modules["homeassistant.exceptions"] = mock_ha
+if "homeassistant.const" not in sys.modules:
+    sys.modules["homeassistant.const"] = mock_ha
 
 # Also ensure hyxi_cloud_api has __version__ even if it's mocked
-mock_api = MagicMock()
-mock_api.__name__ = "hyxi_cloud_api"
-mock_api.__version__ = "1.0.4"
-sys.modules["hyxi_cloud_api"] = mock_api
+mock_api = sys.modules["hyxi_cloud_api"]
 
 # We need SensorEntityDescription to retain its attributes instead of being a generic mock
-mock_sensor = MagicMock()
+if "homeassistant.components.sensor" not in sys.modules:
+    sys.modules["homeassistant.components.sensor"] = MagicMock()
+mock_sensor: Any = sys.modules["homeassistant.components.sensor"]
 
 
 def mock_sensor_entity_description(**kwargs):
@@ -64,24 +72,33 @@ def mock_sensor_entity_description(**kwargs):
 
 mock_sensor.SensorEntityDescription = mock_sensor_entity_description
 mock_sensor.SensorEntity = FakeSensorEntity
-mock_sensor.SensorDeviceClass = MagicMock()
-mock_sensor.SensorStateClass = MagicMock()
-
-sys.modules["homeassistant.components.sensor"] = mock_sensor
+if not hasattr(mock_sensor, "SensorDeviceClass"):
+    mock_sensor.SensorDeviceClass = MagicMock()
+if not hasattr(mock_sensor, "SensorStateClass"):
+    mock_sensor.SensorStateClass = MagicMock()
 
 # Other mocked dependencies
-mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity  # Keep this from original
+if "homeassistant.helpers" not in sys.modules:
+    sys.modules["homeassistant.helpers"] = mock_ha
 
-mock_restore = MagicMock()
+if "homeassistant.helpers.restore_state" not in sys.modules:
+    sys.modules["homeassistant.helpers.restore_state"] = MagicMock()
+mock_restore: Any = sys.modules["homeassistant.helpers.restore_state"]
 mock_restore.RestoreEntity = FakeRestoreEntity
 
-sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.restore_state"] = mock_restore
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
-sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
-sys.modules["homeassistant.util"] = mock_ha
-sys.modules["aiohttp"] = MagicMock()
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+mock_coordinator: Any = sys.modules["homeassistant.helpers.update_coordinator"]
+mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
+
+if "homeassistant.helpers.aiohttp_client" not in sys.modules:
+    sys.modules["homeassistant.helpers.aiohttp_client"] = mock_ha
+if "homeassistant.util" not in sys.modules:
+    sys.modules["homeassistant.util"] = mock_ha
+
+if "aiohttp" not in sys.modules:
+    sys.modules["aiohttp"] = MagicMock()
+
 
 # Standardize import style to resolve code scanning alert no. 50
 import custom_components.hyxi_cloud.const as const_mod
@@ -1079,3 +1096,259 @@ async def test_new_telemetry_keys_registration_and_parsing():
         assert sensor_entity.device_info["identifiers"] == {
             ("hyxi_cloud", "BAT_REAL_123")
         }
+
+
+# --- EMSensor and EM platform tests ---
+
+
+@pytest.mark.asyncio
+async def test_em_sensor_lifecycle():
+    """Verify EMSensor lifecycle, callbacks, and value getters."""
+    coordinator = MagicMock()
+    coordinator.engine = None
+
+    device_info = MagicMock()
+    sensor_def = sensor_mod.EMSensorDef(
+        key="p1_average",
+        device_info=device_info,
+        unit="W",
+    )
+
+    # 1. Init
+    sensor = sensor_mod.EMSensor(coordinator, "SN123", sensor_def)
+    assert sensor._attr_unique_id == "hyxi_SN123_em_p1_average"
+
+    # 2. Added to HASS without engine
+    await sensor.async_added_to_hass()
+
+    # 3. Added to HASS with engine
+    mock_engine = MagicMock()
+    coordinator.engine = mock_engine
+    await sensor.async_added_to_hass()
+    mock_engine.register_update_callback.assert_called_once_with(sensor._engine_updated)
+
+    # 4. Engine updated triggers state write
+    sensor.hass = MagicMock()
+    sensor.async_write_ha_state = MagicMock()
+    sensor._engine_updated()
+    sensor.async_write_ha_state.assert_called_once()
+
+    # 5. Native value lookup: engine is None
+    coordinator.engine = None
+    assert sensor.native_value is None
+
+    # 6. Native value lookup: valid value from engine
+    coordinator.engine = mock_engine
+    mock_engine.p1_avg = 123.456
+    assert sensor.native_value == 123.5
+
+    # 7. Native value lookup: non-float value
+    sensor._key = "status"
+    mock_engine.status = "running"
+    assert sensor.native_value == "running"
+
+    # 8. Will remove from HASS
+    await sensor.async_will_remove_from_hass()
+    mock_engine.unregister_update_callback.assert_called_once_with(
+        sensor._engine_updated
+    )
+
+
+@pytest.mark.asyncio
+async def test_hyxi_last_sent_mode_sensor_lifecycle():
+    """Verify HyxiLastSentModeSensor added to HASS and state restoration."""
+    coordinator = MagicMock()
+    coordinator.data = {"SN123": {"device_name": "Test Inverter", "model": "H5K-HT"}}
+
+    # 1. Init
+    sensor = sensor_mod.HyxiLastSentModeSensor(coordinator, "SN123")
+    assert sensor._attr_unique_id == "hyxi_SN123_last_sent_mode"
+    assert sensor.device_info["name"] == "Test Inverter"
+
+    # 2. Added to HASS: no state to restore
+    sensor.async_get_last_state = AsyncMock(return_value=None)
+    await sensor.async_added_to_hass()
+
+    # 3. Added to HASS: restore state, no controller
+    last_state = MagicMock()
+    last_state.state = "idle"
+    sensor.async_get_last_state = AsyncMock(return_value=last_state)
+    coordinator.protection_controllers = {}
+    await sensor.async_added_to_hass()
+
+    # 4. Added to HASS: restore state with controller
+    mock_controller = MagicMock()
+    coordinator.protection_controllers = {"SN123": mock_controller}
+    await sensor.async_added_to_hass()
+    mock_controller.restore_last_sent_mode.assert_called_once_with("idle")
+
+    # 5. Native value lookup
+    mock_controller.last_sent_mode = "charge"
+    assert sensor.native_value == "charge"
+
+    # 6. Native value lookup: no controller
+    coordinator.protection_controllers = {}
+    assert sensor.native_value is None
+
+
+def test_hyxi_subscription_status_sensor():
+    """Verify combined subscription status logic and attributes."""
+    coordinator = MagicMock()
+    coordinator.push_status = "active"
+    coordinator.push_url = "http://push.url"
+    coordinator.subscribe_code = "123"
+    coordinator.push_error = None
+    coordinator.last_push_received = None
+
+    coordinator.alarm_push_status = "active"
+    coordinator.alarm_push_url = "http://alarm.url"
+    coordinator.alarm_subscribe_code = "456"
+    coordinator.alarm_last_push_received = None
+
+    entry = MagicMock()
+    entry.entry_id = "entry_id"
+    entry.options = {"push_rate": 60}
+
+    sensor = sensor_mod.HyxiSubscriptionStatusSensor(coordinator, entry)
+
+    # 1. Combined active
+    assert sensor.native_value == "active"
+
+    # 2. Combined partial
+    coordinator.alarm_push_status = "inactive"
+    sensor._update_value()
+    assert sensor.native_value == "partial"
+
+    # 3. Combined inactive
+    coordinator.push_status = "inactive"
+    sensor._update_value()
+    assert sensor.native_value == "inactive"
+
+    # 4. Combined error
+    coordinator.push_status = "error"
+    sensor._update_value()
+    assert sensor.native_value == "error"
+
+    # 5. Extra state attributes
+    import datetime
+
+    dt = datetime.datetime(2026, 6, 2, 8, 0, 0, tzinfo=datetime.UTC)
+    coordinator.last_push_received = dt
+    coordinator.alarm_last_push_received = dt
+
+    attrs = sensor.extra_state_attributes
+    assert attrs["data_push"]["status"] == "error"
+    assert attrs["data_push"]["last_push_received"] == dt.isoformat()
+    assert attrs["alarm_push"]["status"] == "inactive"
+    assert attrs["alarm_push"]["last_push_received"] == dt.isoformat()
+
+
+def test_hyxi_sensor_advanced_mappings(base_sensor):
+    """Verify advanced key mappings, subtraction logic, and fallback in HyxiSensor."""
+    sensor, coordinator = base_sensor
+
+    # Setup inverter with extra metrics
+    coordinator.data = {
+        "INV123": {
+            "device_name": "Test Inverter",
+            "model": "H5K-HT",
+            "metrics": {
+                "acl": 50.0,
+                "gen_p": 200.0,
+                "ac_p": 150.0,
+                "grid_p": 120.0,
+                "parentSn": "COLLECTOR_123",
+            },
+        }
+    }
+
+    # 1. Parent Sn via_device link
+    sensor.entity_description.key = "gen_p"
+    sensor._sn = "INV123"
+    sensor._dev_data = coordinator.data["INV123"]
+    sensor._metrics = sensor._dev_data["metrics"]
+
+    assert sensor.device_info["via_device"] == ("hyxi_cloud", "COLLECTOR_123")
+
+    # 2. gen_p mapping: (val - acl) * 2.0 -> (200.0 - 50.0) * 2.0 = 300.0
+    sensor._attr_native_value = 200.0
+    assert sensor.native_value == 300.0
+
+    # 3. ac_p mapping: (val - acl) * 0.96 -> (150.0 - 50.0) * 0.96 = 96.0
+    sensor.entity_description.key = "ac_p"
+    sensor._attr_native_value = 150.0
+    assert sensor.native_value == 96.0
+
+    # 4. grid_p mapping: val - acl -> 120.0 - 50.0 = 70.0
+    sensor.entity_description.key = "grid_p"
+    sensor._attr_native_value = 120.0
+    assert sensor.native_value == 70.0
+
+    # 5. Micro Inverter fallback: acE is None or 0.0 -> uses efpv
+    sensor.entity_description.key = "acE"
+    sensor._device_type = "micro_inverter"
+    sensor._parser_func = sensor._parse_default
+
+    # 5a. acE is 0.0, efpv is 12.34
+    sensor._metrics["acE"] = 0.0
+    sensor._metrics["efpv"] = 12.34
+    sensor._last_valid_value = None  # Reset baseline
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == 12.34
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_em_and_battery_options():
+    """Verify async_setup_entry registers EM and last_sent_mode sensors when enabled."""
+    from custom_components.hyxi_cloud.const import DOMAIN
+
+    # Stub dependencies directly on the module dictionary to bypass MagicMock discrepancies
+    sensor_mod.is_battery_control_enabled = lambda e, c: True
+    sensor_mod.detect_phase_type = lambda d: "three_phase"
+    sensor_mod.CONF_EM_ENABLED = "em_enabled"
+    sensor_mod.CONF_EM_INVERTER_SN = "em_inverter_sn"
+
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {
+        "em_enabled": True,
+        "em_inverter_sn": "INV123",
+        "enable_battery_control": True,
+    }
+
+    coordinator = MagicMock()
+    coordinator.data = {
+        "INV123": {
+            "device_type_code": "1",  # HYBRID_INVERTER
+            "model": "H5K-HT",
+            "device_name": "Test Inverter",
+            "metrics": {"batSoc": 50},
+        }
+    }
+    hass.data = {DOMAIN: {"test_entry": coordinator}}
+
+    registered_entities = []
+
+    def mock_async_add_entities(entities):
+        registered_entities.extend(entities)
+
+    # We mock _LOGGER.isEnabledFor(logging.DEBUG) to True to cover that block
+    with patch(
+        "custom_components.hyxi_cloud.sensor._LOGGER.isEnabledFor", return_value=True
+    ):
+        await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
+
+    registered_keys = []
+    for entity in registered_entities:
+        if hasattr(entity, "entity_description"):
+            registered_keys.append(entity.entity_description.key)
+        elif hasattr(entity, "_key"):
+            registered_keys.append(entity._key)
+        elif hasattr(entity, "_attr_unique_id"):
+            registered_keys.append(entity._attr_unique_id)
+
+    # EM sensors should be registered
+    assert "p1_average" in registered_keys
+    # last_sent_mode sensor should be registered
+    assert "hyxi_INV123_last_sent_mode" in registered_keys

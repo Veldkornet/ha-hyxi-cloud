@@ -2,6 +2,7 @@
 
 import math
 import sys
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -41,26 +42,37 @@ class FakeRestoreEntity(FakeBase):
         pass
 
 
-mock_ha = MagicMock()
-mock_ha.callback = lambda func: func
-sys.modules["homeassistant"] = mock_ha
-sys.modules["homeassistant.components"] = mock_ha
-mock_sensor = MagicMock()
-mock_sensor.SensorEntity = FakeSensorEntity
-mock_sensor.SensorStateClass = MagicMock()
-mock_sensor.SensorDeviceClass = MagicMock()
-sys.modules["homeassistant.components.sensor"] = mock_sensor
-mock_coordinator = MagicMock()
-mock_coordinator.CoordinatorEntity = FakeCoordinatorEntity
-mock_ha.__path__ = []
+mock_ha = sys.modules.get("homeassistant")
+if mock_ha is None:
+    mock_ha = MagicMock()
+    mock_ha.callback = lambda func: func
+    mock_ha.__path__ = []
+    sys.modules["homeassistant"] = mock_ha
 
-mock_restore = MagicMock()
-mock_restore.RestoreEntity = FakeRestoreEntity
+if "homeassistant.components" not in sys.modules:
+    sys.modules["homeassistant.components"] = MagicMock()
 
-sys.modules["homeassistant.helpers"] = mock_ha
-sys.modules["homeassistant.helpers.restore_state"] = mock_restore
-sys.modules["homeassistant.helpers.update_coordinator"] = mock_coordinator
-sys.modules["homeassistant.util"] = mock_ha
+if "homeassistant.components.sensor" not in sys.modules:
+    sys.modules["homeassistant.components.sensor"] = MagicMock()
+sensor_mock: Any = sys.modules["homeassistant.components.sensor"]
+sensor_mock.SensorEntity = FakeSensorEntity
+
+if "homeassistant.helpers" not in sys.modules:
+    sys.modules["homeassistant.helpers"] = mock_ha
+
+if "homeassistant.helpers.restore_state" not in sys.modules:
+    sys.modules["homeassistant.helpers.restore_state"] = MagicMock()
+restore_mock: Any = sys.modules["homeassistant.helpers.restore_state"]
+restore_mock.RestoreEntity = FakeRestoreEntity
+
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+coord_mock: Any = sys.modules["homeassistant.helpers.update_coordinator"]
+coord_mock.CoordinatorEntity = FakeCoordinatorEntity
+
+if "homeassistant.util" not in sys.modules:
+    sys.modules["homeassistant.util"] = mock_ha
+
 
 # Now it's safe to import the sensor
 # pylint: disable-next=wrong-import-position
