@@ -245,9 +245,8 @@ def _cleanup_control_entities(
         "Battery control is disabled. Cleaning up any registered control entities from registry"
     )
     registry = er.async_get(hass)
-    for sn in coordinator.data:
-        # Buttons
-        for key in (
+    keys_to_remove = frozenset(
+        (
             "mode_idle",
             "mode_charge",
             "mode_discharge",
@@ -257,21 +256,8 @@ def _cleanup_control_entities(
             "peak_shaving_discharge",
             "peak_shaving_stop",
             "peak_shaving_hold",
-        ):
-            unique_id = f"hyxi_{sn}_{key}"
-            if entity_id := registry.async_get_entity_id("button", DOMAIN, unique_id):
-                _LOGGER.debug("Removing control button entity %s", entity_id)
-                registry.async_remove(entity_id)
-
-        # Switches
-        for key in ("frequency_control", "micro_power"):
-            unique_id = f"hyxi_{sn}_{key}"
-            if entity_id := registry.async_get_entity_id("switch", DOMAIN, unique_id):
-                _LOGGER.debug("Removing control switch entity %s", entity_id)
-                registry.async_remove(entity_id)
-
-        # Numbers
-        for key in (
+            "frequency_control",
+            "micro_power",
             "charge_power",
             "discharge_power",
             "soc_min",
@@ -279,17 +265,22 @@ def _cleanup_control_entities(
             "soc_min_hysteresis_pct",
             "soc_max_hysteresis_pct",
             "micro_power_limit",
-        ):
-            unique_id = f"hyxi_{sn}_{key}"
-            if entity_id := registry.async_get_entity_id("number", DOMAIN, unique_id):
-                _LOGGER.debug("Removing control number entity %s", entity_id)
-                registry.async_remove(entity_id)
+            "last_sent_mode",
+        )
+    )
 
-        # Sensors
-        unique_id = f"hyxi_{sn}_last_sent_mode"
-        if entity_id := registry.async_get_entity_id("sensor", DOMAIN, unique_id):
-            _LOGGER.debug("Removing control sensor entity %s", entity_id)
-            registry.async_remove(entity_id)
+    unique_ids_to_remove = {
+        f"hyxi_{sn}_{key}" for sn in coordinator.data for key in keys_to_remove
+    }
+
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if reg_entry.unique_id in unique_ids_to_remove:
+            _LOGGER.debug(
+                "Removing control %s entity %s",
+                reg_entry.domain,
+                reg_entry.entity_id,
+            )
+            registry.async_remove(reg_entry.entity_id)
 
 
 async def _async_setup_battery_protection(

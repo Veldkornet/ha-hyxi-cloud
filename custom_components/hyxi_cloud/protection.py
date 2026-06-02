@@ -260,7 +260,10 @@ class HyxiBatteryProtectionController:
 
         try:
             return int(float(state.state))
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return default
 
     def _get_power_value(self, direction: str) -> int:
@@ -278,7 +281,10 @@ class HyxiBatteryProtectionController:
         try:
             watts = int(float(state.state))
             return max(watts, 1)
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return 100
 
     def _get_soc(self) -> float | None:
@@ -301,5 +307,8 @@ class HyxiBatteryProtectionController:
             return None
         try:
             return float(value)
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return None

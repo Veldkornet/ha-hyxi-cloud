@@ -284,7 +284,10 @@ class EnergyManagerEngine:
             return default
         try:
             return float(val)
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return default
 
     def _get_ha_state_float(self, entity_id: str | None, default: float = 0.0) -> float:
@@ -296,7 +299,10 @@ class EnergyManagerEngine:
             return default
         try:
             return float(state.state)
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return default
 
     def _get_ha_state_bool(self, entity_id: str | None, default: bool = False) -> bool:
@@ -318,7 +324,10 @@ class EnergyManagerEngine:
             cap = options.get("em_battery_capacity_wh", 2000)
             try:
                 return float(cap)
-            except ValueError, TypeError:
+            except (
+                ValueError,
+                TypeError,
+            ):
                 # Ignore invalid battery capacity override value
                 pass
         api_cap = self._get_coordinator_metric("batCap", 0)
@@ -1178,7 +1187,10 @@ class EnergyManagerEngine:
 
         try:
             value = float(new_state.state)
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return
 
         now = time.monotonic()
@@ -1214,7 +1226,10 @@ class EnergyManagerEngine:
 
         try:
             soc = float(new_state.state)
-        except ValueError, TypeError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             return
 
         soc_min = self._get_protection_param("soc_min", 20)
