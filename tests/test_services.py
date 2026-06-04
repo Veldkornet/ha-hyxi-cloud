@@ -7,8 +7,11 @@ from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.hyxi_cloud import (
     DOMAIN,
+    async_get_subscription_codes,
+    async_register_subscription_code,
     async_setup_services,
     async_unload_entry,
+    async_unregister_subscription_code,
 )
 
 
@@ -159,3 +162,34 @@ async def test_service_call_api_exception(hass, mock_coordinator):
             {"subscribe_code": "bad-code"},
             blocking=True,
         )
+
+
+@pytest.mark.asyncio
+async def test_subscription_code_persistence(hass, mock_coordinator):
+    """Test that subscription codes are successfully written to, loaded from, and removed from the Store."""
+    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    mock_coordinator.known_subscription_codes = []
+    mock_coordinator.async_update_listeners = MagicMock()
+
+    # Verify initially empty
+    codes = await async_get_subscription_codes(hass)
+    assert codes == []
+
+    # Register subscription code
+    await async_register_subscription_code(hass, "test-sub-code-123")
+
+    # Verify stored in Store and set on coordinator
+    codes = await async_get_subscription_codes(hass)
+    assert codes == ["test-sub-code-123"]
+    assert mock_coordinator.known_subscription_codes == ["test-sub-code-123"]
+    mock_coordinator.async_update_listeners.assert_called_once()
+
+    # Unregister code
+    mock_coordinator.async_update_listeners.reset_mock()
+    await async_unregister_subscription_code(hass, "test-sub-code-123")
+
+    # Verify removed
+    codes = await async_get_subscription_codes(hass)
+    assert codes == []
+    assert mock_coordinator.known_subscription_codes == []
+    mock_coordinator.async_update_listeners.assert_called_once()
