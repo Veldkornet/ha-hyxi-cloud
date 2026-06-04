@@ -471,11 +471,36 @@ async def _async_setup_push_subscription(  # pylint: disable=too-many-statements
             )
         else:
             coordinator.push_status = "error"
-            coordinator.push_error = res.get("msg", "Unknown error")
+            msg = res.get("msg", "Unknown error")
+            coordinator.push_error = msg
+            if "B004002" in msg or "repeatedly" in msg:
+                _LOGGER.warning(
+                    "Failed to register HYXI Real-Time Push subscription: %s. "
+                    "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                    "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                    "'hyxi_cloud.cancel_subscription' service.",
+                    msg,
+                )
+            else:
+                _LOGGER.warning(
+                    "Failed to register HYXI Real-Time Push subscription: %s", msg
+                )
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.push_status = "error"
-        coordinator.push_error = str(err)
-        _LOGGER.warning("Failed to register HYXI Real-Time Push subscription: %s", err)
+        err_msg = str(err)
+        coordinator.push_error = err_msg
+        if "B004002" in err_msg or "repeatedly" in err_msg:
+            _LOGGER.warning(
+                "Failed to register HYXI Real-Time Push subscription: %s. "
+                "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                "'hyxi_cloud.cancel_subscription' service.",
+                err_msg,
+            )
+        else:
+            _LOGGER.warning(
+                "Failed to register HYXI Real-Time Push subscription: %s", err
+            )
 
 
 async def _async_teardown_push_subscription(
@@ -692,13 +717,30 @@ async def _async_setup_alarm_subscription(
             )
         else:
             coordinator.alarm_push_status = "error"
-            _LOGGER.warning(
-                "HYXI Alarm Push subscription failed: %s",
-                res.get("msg", "Unknown error"),
-            )
+            msg = res.get("msg", "Unknown error")
+            if "B004002" in msg or "repeatedly" in msg:
+                _LOGGER.warning(
+                    "Failed to register HYXI Alarm Push subscription: %s. "
+                    "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                    "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                    "'hyxi_cloud.cancel_subscription' service.",
+                    msg,
+                )
+            else:
+                _LOGGER.warning("HYXI Alarm Push subscription failed: %s", msg)
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.alarm_push_status = "error"
-        _LOGGER.warning("Failed to register HYXI Alarm Push subscription: %s", err)
+        err_msg = str(err)
+        if "B004002" in err_msg or "repeatedly" in err_msg:
+            _LOGGER.warning(
+                "Failed to register HYXI Alarm Push subscription: %s. "
+                "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                "'hyxi_cloud.cancel_subscription' service.",
+                err_msg,
+            )
+        else:
+            _LOGGER.warning("Failed to register HYXI Alarm Push subscription: %s", err)
 
 
 async def _async_teardown_alarm_subscription(

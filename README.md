@@ -358,6 +358,12 @@ The integration provides a **Subscription Status** sensor on your inverter's dev
 - **Attributes:** Displays URLs, subscriber codes, rates, errors, and the timestamp of the last received push frame.
 - **Renewal Button:** A stateless button entity **Renew Subscription** is provided to manually trigger unregistration and re-registration of the webhook if needed.
 
+##### Troubleshooting Subscription Lockouts
+If registration fails due to a lockout (e.g. API error `B004002` indicating that a device serial number has been subscribed to repeatedly), it usually means an active or orphaned subscription remains on the HYXI Cloud server:
+1. Retrieve the active or orphaned subscription code(s) from the **known_subscription_codes** attribute of your inverter's **Subscription Status** sensor (this list is persistent and survives integration reinstalls).
+2. Go to **Developer Tools > Actions** (or **Services** in older Home Assistant versions) in the Home Assistant UI.
+3. Call the **HYXI Cloud: Cancel Subscription** (`hyxi_cloud.cancel_subscription`) service, providing the subscription code. The integration will call the API to manually tear down that subscription from the server.
+
 ##### Interaction with Polling (Coexistence Loop)
 You do not need to disable or modify the standard polling interval when enabling push subscriptions:
 - **Coexistence and Syncing:** When a real-time push update is received, it immediately updates your sensors in Home Assistant. However, the standard background polling loop (default: 5 minutes) still runs periodically in the background to fetch and synchronize metrics that are only available via pull queries (such as grid power) and to act as a heartbeat fallback.
