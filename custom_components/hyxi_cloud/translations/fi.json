@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI-järjestelmän kokoonpano",
-        "description": "Säädä, miten integraatiosi kommunikoi HYXI Cloudin kanssa.\n\n---",
+        "description": "Säädä, miten integraatiosi kommunikoi HYXI Cloudin kanssa.\n\nJos ohjaimet on lukittu virheellisen VPP-tunnistuksen vuoksi (esim. normaali workMode 16), valitse **Override VPP Lock** palauttaaksesi ne.\n\n---",
         "data": {
           "update_interval": "Päivitysväli (1-60 minuuttia, oletus: 5)",
           "back_discovery": "Ota löytäminen käyttöön hällytysten kautta (edistynyt)",

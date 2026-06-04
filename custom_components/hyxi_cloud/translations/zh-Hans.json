@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI 系统配置",
-        "description": "调整插件与 HYXI Cloud 的通信方式。\n\n---",
+        "description": "调整插件与 HYXI Cloud 的通信方式。\n\n如果由于误报 VPP 检测（例如正常工作模式 16）导致控制被锁定，请勾选 **Override VPP Lock** 以恢复控制。\n\n---",
         "data": {
           "update_interval": "轮询间隔 (1-60 分钟, 默认: 5)",
           "back_discovery": "启用通过报警发现设备 (高级)",

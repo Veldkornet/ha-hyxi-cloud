@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI Systeemconfiguratie",
-        "description": "Pas aan hoe uw integratie communiceert met de HYXI Cloud.\n\n---",
+        "description": "Pas aan hoe uw integratie communiceert met de HYXI Cloud.\n\nAls bedieningselementen zijn vergrendeld vanwege een valse VPP-detectie (bijv. normale workMode 16), vink dan **Override VPP Lock** aan om ze te herstellen.\n\n---",
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
           "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)",

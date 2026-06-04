@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI Sistem Yapılandırması",
-        "description": "Entegrasyonunuzun HYXI Cloud ile nasıl iletişim kuracağını ayarlayın.\n\n---",
+        "description": "Entegrasyonunuzun HYXI Cloud ile nasıl iletişim kuracağını ayarlayın.\n\nKontroller yanlış bir VPP tespiti (örneğin normal çalışma modu 16) nedeniyle kilitlendiyse, bunları geri yüklemek için **Override VPP Lock** seçeneğini işaretleyin.\n\n---",
         "data": {
           "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
           "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)",

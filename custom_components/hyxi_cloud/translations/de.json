@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI Systemkonfiguration",
-        "description": "Passen Sie an, wie Ihre Integration mit der HYXI Cloud kommuniziert.\n\n---",
+        "description": "Passen Sie an, wie Ihre Integration mit der HYXI Cloud kommuniziert.\n\nWenn die Steuerung aufgrund einer falsch-positiven VPP-Erkennung (z. B. normaler workMode 16) gesperrt ist, aktivieren Sie **Override VPP Lock**, um sie wiederherzustellen.\n\n---",
         "data": {
           "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
           "back_discovery": "Discovery über Alarme aktivieren (Erweitert)",
