@@ -7,7 +7,11 @@ from aiohttp import ClientError, web
 from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import network
@@ -185,6 +189,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
+    await async_setup_services(hass)
+
     return True
 
 
@@ -201,6 +207,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
+        if not hass.data[DOMAIN]:
+            if hass.services.has_service(DOMAIN, "cancel_subscription"):
+                hass.services.async_remove(DOMAIN, "cancel_subscription")
     return unload_ok
 
 
@@ -798,3 +807,53 @@ async def _async_handle_alarm_webhook(
         coordinator.async_update_listeners()
 
     return web.json_response({"code": "0", "msg": "Success", "success": True})
+
+
+async def async_setup_services(hass: HomeAssistant) -> None:
+    """Set up custom services for HYXI Cloud."""
+    if hass.services.has_service(DOMAIN, "cancel_subscription"):
+        return
+
+    import voluptuous as vol
+    from homeassistant.helpers import config_validation as cv
+
+    async def async_handle_cancel_subscription(call) -> None:
+        """Handle the cancel_subscription service call."""
+        subscribe_code = call.data["subscribe_code"].strip()
+        if not subscribe_code:
+            raise HomeAssistantError("Subscription code cannot be empty")
+
+        coordinators = list(hass.data.get(DOMAIN, {}).values())
+        if not coordinators:
+            raise HomeAssistantError(
+                "No active HYXI Cloud integration entries found to call the API"
+            )
+
+        # Use the client from the first active integration entry
+        coordinator = coordinators[0]
+        _LOGGER.info("Manually cancelling HYXI subscription: %s", subscribe_code)
+        try:
+            res = await coordinator.client.cancel_subscription(subscribe_code)
+            if res.get("success"):
+                _LOGGER.info(
+                    "Successfully cancelled HYXI subscription: %s", subscribe_code
+                )
+            else:
+                msg = res.get("msg", "Unknown error")
+                raise HomeAssistantError(f"Failed to cancel subscription: {msg}")
+        except Exception as err:
+            _LOGGER.error(
+                "Error manual cancelling HYXI subscription %s: %s", subscribe_code, err
+            )
+            raise HomeAssistantError(f"API error: {err}") from err
+
+    hass.services.async_register(
+        DOMAIN,
+        "cancel_subscription",
+        async_handle_cancel_subscription,
+        schema=vol.Schema(
+            {
+                vol.Required("subscribe_code"): cv.string,
+            }
+        ),
+    )
