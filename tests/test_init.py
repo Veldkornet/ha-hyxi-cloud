@@ -662,6 +662,18 @@ async def test_async_setup_push_subscription_client_failure_or_error():
         assert coordinator.push_status == "error"
         assert coordinator.push_error == "API Limit exceeded"
 
+    # 1b. SDK returns success=False with repeatedly error (B004002)
+    coordinator.client.subscribe_real_time_data = AsyncMock(
+        return_value={"success": False, "msg": "subscribed repeatedly (B004002)"}
+    )
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        assert coordinator.push_status == "error"
+        assert coordinator.push_error == "subscribed repeatedly (B004002)"
+
     # 2. SDK raises exception
     coordinator.client.subscribe_real_time_data = AsyncMock(
         side_effect=Exception("conn_error")
@@ -673,6 +685,18 @@ async def test_async_setup_push_subscription_client_failure_or_error():
         await _async_setup_push_subscription(hass, entry, coordinator)
         assert coordinator.push_status == "error"
         assert coordinator.push_error == "conn_error"
+
+    # 2b. SDK raises exception containing B004002
+    coordinator.client.subscribe_real_time_data = AsyncMock(
+        side_effect=Exception("Error B004002: subscribed repeatedly")
+    )
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        assert coordinator.push_status == "error"
+        assert coordinator.push_error == "Error B004002: subscribed repeatedly"
 
 
 @pytest.mark.asyncio
@@ -786,8 +810,30 @@ async def test_alarm_subscription_failures_and_webhooks():
         await _async_setup_alarm_subscription(hass, entry, coordinator)
         assert coordinator.alarm_push_status == "error"
 
+    # 3b. Client returns failure with B004002
+    coordinator.client.subscribe_alarm = AsyncMock(
+        return_value={"success": False, "msg": "subscribed repeatedly (B004002)"}
+    )
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
+        assert coordinator.alarm_push_status == "error"
+
     # 4. Client raises exception
     coordinator.client.subscribe_alarm = AsyncMock(side_effect=Exception("err"))
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        return_value="https://url",
+    ):
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
+        assert coordinator.alarm_push_status == "error"
+
+    # 4b. Client raises exception with B004002
+    coordinator.client.subscribe_alarm = AsyncMock(
+        side_effect=Exception("err repeatedly B004002")
+    )
     with patch(
         "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
         return_value="https://url",

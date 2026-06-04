@@ -1412,6 +1412,7 @@ class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
                 "callback_url": getattr(coord, "alarm_push_url", None),
                 "last_push_received": alarm_last.isoformat() if alarm_last else None,
             },
+            "known_subscription_codes": getattr(coord, "known_subscription_codes", []),
         }
 
     @callback

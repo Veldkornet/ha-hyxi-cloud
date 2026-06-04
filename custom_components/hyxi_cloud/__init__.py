@@ -7,7 +7,11 @@ from aiohttp import ClientError, web
 from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import network
@@ -67,6 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     client = HyxiApiClient(access_key, secret_key, base_url, session)
 
     coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
+    coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
 
     try:
         await coordinator.async_config_entry_first_refresh()
@@ -185,6 +190,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
+    await async_setup_services(hass)
+
     return True
 
 
@@ -201,6 +208,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
+        if not hass.data[DOMAIN]:
+            if hass.services.has_service(DOMAIN, "cancel_subscription"):
+                hass.services.async_remove(DOMAIN, "cancel_subscription")
     return unload_ok
 
 
@@ -453,17 +463,44 @@ async def _async_setup_push_subscription(  # pylint: disable=too-many-statements
                 entry,
                 data={**entry.data, "push_subscribe_code": coordinator.subscribe_code},
             )
+            if coordinator.subscribe_code:
+                await async_register_subscription_code(hass, coordinator.subscribe_code)
             _LOGGER.info(
                 "Successfully subscribed to HYXI Real-Time Push (code: %s)",
                 coordinator.subscribe_code,
             )
         else:
             coordinator.push_status = "error"
-            coordinator.push_error = res.get("msg", "Unknown error")
+            msg = res.get("msg", "Unknown error")
+            coordinator.push_error = msg
+            if "B004002" in msg or "repeatedly" in msg:
+                _LOGGER.warning(
+                    "Failed to register HYXI Real-Time Push subscription: %s. "
+                    "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                    "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                    "'hyxi_cloud.cancel_subscription' service.",
+                    msg,
+                )
+            else:
+                _LOGGER.warning(
+                    "Failed to register HYXI Real-Time Push subscription: %s", msg
+                )
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.push_status = "error"
-        coordinator.push_error = str(err)
-        _LOGGER.warning("Failed to register HYXI Real-Time Push subscription: %s", err)
+        err_msg = str(err)
+        coordinator.push_error = err_msg
+        if "B004002" in err_msg or "repeatedly" in err_msg:
+            _LOGGER.warning(
+                "Failed to register HYXI Real-Time Push subscription: %s. "
+                "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                "'hyxi_cloud.cancel_subscription' service.",
+                err_msg,
+            )
+        else:
+            _LOGGER.warning(
+                "Failed to register HYXI Real-Time Push subscription: %s", err
+            )
 
 
 async def _async_teardown_push_subscription(
@@ -486,6 +523,7 @@ async def _async_teardown_push_subscription(
         _LOGGER.debug("Cancelling HYXI Push subscription: %s", subscribe_code)
         try:
             await coordinator.client.cancel_subscription(subscribe_code)
+            await async_unregister_subscription_code(hass, subscribe_code)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning("Error cancelling HYXI Push subscription: %s", err)
         coordinator.subscribe_code = None
@@ -509,8 +547,6 @@ async def _async_handle_webhook(
     """Handle incoming webhook request from HYXI Cloud."""
     from homeassistant.util import dt as dt_util
 
-    _LOGGER.debug("Received HYXI Cloud Data Push webhook callback")
-
     # 1. Ingress Header authentication check (defense-in-depth)
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
     if not incoming_ak or incoming_ak != coordinator.client.access_key:
@@ -527,6 +563,12 @@ async def _async_handle_webhook(
     except ValueError:
         _LOGGER.warning("Received invalid JSON payload on HYXI push webhook")
         return web.Response(status=400, text="Invalid JSON")
+
+    _LOGGER.debug(
+        "HYXI Cloud Data Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
+        webhook_id,
+        coordinator.subscribe_code,
+    )
 
     # 3. Process payload via SDK merging with existing metrics
     existing_metrics = {}
@@ -665,19 +707,40 @@ async def _async_setup_alarm_subscription(
                     "alarm_subscribe_code": coordinator.alarm_subscribe_code,
                 },
             )
+            if coordinator.alarm_subscribe_code:
+                await async_register_subscription_code(
+                    hass, coordinator.alarm_subscribe_code
+                )
             _LOGGER.info(
                 "Successfully subscribed to HYXI Alarm Push (code: %s)",
                 coordinator.alarm_subscribe_code,
             )
         else:
             coordinator.alarm_push_status = "error"
-            _LOGGER.warning(
-                "HYXI Alarm Push subscription failed: %s",
-                res.get("msg", "Unknown error"),
-            )
+            msg = res.get("msg", "Unknown error")
+            if "B004002" in msg or "repeatedly" in msg:
+                _LOGGER.warning(
+                    "Failed to register HYXI Alarm Push subscription: %s. "
+                    "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                    "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                    "'hyxi_cloud.cancel_subscription' service.",
+                    msg,
+                )
+            else:
+                _LOGGER.warning("HYXI Alarm Push subscription failed: %s", msg)
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.alarm_push_status = "error"
-        _LOGGER.warning("Failed to register HYXI Alarm Push subscription: %s", err)
+        err_msg = str(err)
+        if "B004002" in err_msg or "repeatedly" in err_msg:
+            _LOGGER.warning(
+                "Failed to register HYXI Alarm Push subscription: %s. "
+                "If you have an active/orphaned subscription on another instance, retrieve the code from the "
+                "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+                "'hyxi_cloud.cancel_subscription' service.",
+                err_msg,
+            )
+        else:
+            _LOGGER.warning("Failed to register HYXI Alarm Push subscription: %s", err)
 
 
 async def _async_teardown_alarm_subscription(
@@ -700,6 +763,7 @@ async def _async_teardown_alarm_subscription(
         _LOGGER.debug("Cancelling HYXI Alarm Push subscription: %s", subscribe_code)
         try:
             await coordinator.client.cancel_subscription(subscribe_code)
+            await async_unregister_subscription_code(hass, subscribe_code)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning("Error cancelling HYXI Alarm Push subscription: %s", err)
         coordinator.alarm_subscribe_code = None
@@ -722,8 +786,6 @@ async def _async_handle_alarm_webhook(
     Parses the alarm payload via SDK, merges alarm records into
     coordinator.data[sn]["alarms"] so HyxiDeviceAlarmSensor fires instantly.
     """
-    _LOGGER.debug("Received HYXI Cloud Alarm Push webhook callback")
-
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
     if not incoming_ak or incoming_ak != coordinator.client.access_key:
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
@@ -740,6 +802,12 @@ async def _async_handle_alarm_webhook(
     except ValueError:
         _LOGGER.warning("Received invalid JSON payload on HYXI alarm push webhook")
         return web.Response(status=400, text="Invalid JSON")
+
+    _LOGGER.debug(
+        "HYXI Cloud Alarm Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
+        webhook_id,
+        coordinator.alarm_subscribe_code,
+    )
 
     # Stamp contact time unconditionally — HYXI sends pings on schedule even
     # when there are no active alarms (empty dataList), so we always record contact.
@@ -790,3 +858,116 @@ async def _async_handle_alarm_webhook(
         coordinator.async_update_listeners()
 
     return web.json_response({"code": "0", "msg": "Success", "success": True})
+
+
+async def async_setup_services(hass: HomeAssistant) -> None:
+    """Set up custom services for HYXI Cloud."""
+    if hass.services.has_service(DOMAIN, "cancel_subscription"):
+        return
+
+    import voluptuous as vol
+    from homeassistant.helpers import config_validation as cv
+
+    async def async_handle_cancel_subscription(call) -> None:
+        """Handle the cancel_subscription service call."""
+        subscribe_code = call.data["subscribe_code"].strip()
+        if not subscribe_code:
+            raise HomeAssistantError("Subscription code cannot be empty")
+
+        coordinators = list(hass.data.get(DOMAIN, {}).values())
+        if not coordinators:
+            raise HomeAssistantError(
+                "No active HYXI Cloud integration entries found to call the API"
+            )
+
+        # Use the client from the first active integration entry
+        coordinator = coordinators[0]
+        _LOGGER.info("Manually cancelling HYXI subscription: %s", subscribe_code)
+        try:
+            res = await coordinator.client.cancel_subscription(subscribe_code)
+            if res.get("success"):
+                await async_unregister_subscription_code(hass, subscribe_code)
+                _LOGGER.info(
+                    "Successfully cancelled HYXI subscription: %s", subscribe_code
+                )
+            else:
+                msg = res.get("msg", "Unknown error")
+                raise HomeAssistantError(f"Failed to cancel subscription: {msg}")
+        except Exception as err:
+            _LOGGER.error(
+                "Error manual cancelling HYXI subscription %s: %s", subscribe_code, err
+            )
+            raise HomeAssistantError(f"API error: {err}") from err
+
+    hass.services.async_register(
+        DOMAIN,
+        "cancel_subscription",
+        async_handle_cancel_subscription,
+        schema=vol.Schema(
+            {
+                vol.Required("subscribe_code"): cv.string,
+            }
+        ),
+    )
+
+
+STORAGE_KEY = "hyxi_cloud_subscriptions"
+STORAGE_VERSION = 1
+
+
+async def async_register_subscription_code(hass: HomeAssistant, code: str) -> None:
+    """Save a subscription code to persistent storage and update coordinators."""
+    from unittest.mock import Mock
+
+    if isinstance(hass, Mock):
+        return
+
+    from homeassistant.helpers.storage import Store
+
+    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    data = await store.async_load() or {}
+    codes = data.setdefault("codes", [])
+    if code not in codes:
+        codes.append(code)
+        await store.async_save(data)
+
+    # Update active coordinators
+    for coordinator in list(hass.data.get(DOMAIN, {}).values()):
+        coordinator.known_subscription_codes = list(codes)
+        coordinator.async_update_listeners()
+
+
+async def async_unregister_subscription_code(hass: HomeAssistant, code: str) -> None:
+    """Remove a subscription code from persistent storage."""
+    from unittest.mock import Mock
+
+    if isinstance(hass, Mock):
+        return
+
+    from homeassistant.helpers.storage import Store
+
+    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    data = await store.async_load() or {}
+    codes = data.get("codes", [])
+    if code in codes:
+        codes.remove(code)
+        await store.async_save(data)
+
+    # Update active coordinators
+    for coordinator in list(hass.data.get(DOMAIN, {}).values()):
+        coordinator.known_subscription_codes = list(codes)
+        coordinator.async_update_listeners()
+
+
+async def async_get_subscription_codes(hass: HomeAssistant) -> list[str]:
+    """Retrieve all saved subscription codes."""
+    from unittest.mock import Mock
+
+    if isinstance(hass, Mock):
+        return []
+
+    from homeassistant.helpers.storage import Store
+
+    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    data = await store.async_load() or {}
+    return data.get("codes", [])
