@@ -509,8 +509,6 @@ async def _async_handle_webhook(
     """Handle incoming webhook request from HYXI Cloud."""
     from homeassistant.util import dt as dt_util
 
-    _LOGGER.debug("Received HYXI Cloud Data Push webhook callback")
-
     # 1. Ingress Header authentication check (defense-in-depth)
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
     if not incoming_ak or incoming_ak != coordinator.client.access_key:
@@ -527,6 +525,12 @@ async def _async_handle_webhook(
     except ValueError:
         _LOGGER.warning("Received invalid JSON payload on HYXI push webhook")
         return web.Response(status=400, text="Invalid JSON")
+
+    _LOGGER.debug(
+        "HYXI Cloud Data Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
+        webhook_id,
+        coordinator.subscribe_code,
+    )
 
     # 3. Process payload via SDK merging with existing metrics
     existing_metrics = {}
@@ -722,8 +726,6 @@ async def _async_handle_alarm_webhook(
     Parses the alarm payload via SDK, merges alarm records into
     coordinator.data[sn]["alarms"] so HyxiDeviceAlarmSensor fires instantly.
     """
-    _LOGGER.debug("Received HYXI Cloud Alarm Push webhook callback")
-
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
     if not incoming_ak or incoming_ak != coordinator.client.access_key:
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
@@ -740,6 +742,12 @@ async def _async_handle_alarm_webhook(
     except ValueError:
         _LOGGER.warning("Received invalid JSON payload on HYXI alarm push webhook")
         return web.Response(status=400, text="Invalid JSON")
+
+    _LOGGER.debug(
+        "HYXI Cloud Alarm Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
+        webhook_id,
+        coordinator.alarm_subscribe_code,
+    )
 
     # Stamp contact time unconditionally — HYXI sends pings on schedule even
     # when there are no active alarms (empty dataList), so we always record contact.

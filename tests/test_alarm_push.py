@@ -273,3 +273,35 @@ async def test_handle_alarm_webhook_untracked_device(mock_hass, mock_coordinator
 
     # Timestamp IS set — the push was valid and parseable even though SN was unknown
     assert mock_coordinator.alarm_last_push_received is not None
+
+
+@pytest.mark.asyncio
+async def test_handle_alarm_webhook_logging_details(
+    mock_hass, mock_coordinator, caplog
+):
+    """Test that the alarm webhook handler logs simplified request details."""
+    import logging
+
+    request = MagicMock()
+    request.headers = {"accessKey": "test_ak"}
+    request.json = AsyncMock(return_value={"dataList": []})
+
+    mock_coordinator.alarm_subscribe_code = "coord-alarm-sub-code"
+    mock_coordinator.client.process_alarm_push_data = MagicMock(return_value={})
+
+    caplog.set_level(logging.DEBUG)
+
+    with patch("custom_components.hyxi_cloud.__init__.web.json_response"):
+        await _async_handle_alarm_webhook(
+            mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
+        )
+
+        # Check logs for expected text
+        log_records = [rec.message for rec in caplog.records]
+        debug_log = [msg for msg in log_records if "webhook callback received" in msg]
+        assert len(debug_log) == 1
+        log_msg = debug_log[0]
+
+        # Verify webhook ID and active subscribe code are logged correctly
+        assert "Webhook ID: hyxi_cloud_entry_test_alarm" in log_msg
+        assert "Active Subscribe Code: coord-alarm-sub-code" in log_msg

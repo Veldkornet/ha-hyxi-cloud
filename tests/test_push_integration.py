@@ -343,3 +343,39 @@ async def test_setup_push_subscription_via_nabu_casa(mock_coordinator, mock_entr
             cloud_mock.async_get_or_create_cloudhook = old_hook
         else:
             delattr(cloud_mock, "async_get_or_create_cloudhook")
+
+
+@pytest.mark.asyncio
+async def test_webhook_handler_logging_details(mock_coordinator, caplog):
+    """Test that the webhook handler logs simplified request details."""
+    import logging
+
+    hass = MagicMock()
+    request = MagicMock()
+    request.headers = {"accessKey": "test_ak"}
+    request.json = AsyncMock(
+        return_value={"dataList": [{"deviceSn": "INV123", "batSoc": 85}]}
+    )
+
+    mock_coordinator.subscribe_code = "coord-sub-code"
+    mock_coordinator.client.process_push_data.return_value = {
+        "INV123": {
+            "sn": "INV123",
+            "metrics": {"batSoc": 85},
+        }
+    }
+
+    caplog.set_level(logging.DEBUG)
+
+    with patch("custom_components.hyxi_cloud.__init__.web.json_response"):
+        await _async_handle_webhook(hass, "webhook_123", request, mock_coordinator)
+
+        # Check logs for expected text
+        log_records = [rec.message for rec in caplog.records]
+        debug_log = [msg for msg in log_records if "webhook callback received" in msg]
+        assert len(debug_log) == 1
+        log_msg = debug_log[0]
+
+        # Verify webhook ID and active subscribe code are logged correctly
+        assert "Webhook ID: webhook_123" in log_msg
+        assert "Active Subscribe Code: coord-sub-code" in log_msg
