@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI Systemkonfiguration",
-        "description": "Juster hvordan din integration kommunikerer med HYXI Cloud.\n\n---",
+        "description": "Juster hvordan din integration kommunikerer med HYXI Cloud.\n\nHvis kontrolelementer er låst på grund af en falsk-positiv VPP-detektion (f.eks. normal workMode 16), skal du markere **Override VPP Lock** for at gendanne dem.\n\n---",
         "data": {
           "update_interval": "Opdateringsinterval (1-60 minutter, standard: 5)",
           "back_discovery": "Aktiver opdagelse via alarmer (avanceret)",

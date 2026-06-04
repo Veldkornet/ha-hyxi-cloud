@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "Configurazione del sistema HYXI",
-        "description": "Regola il modo in cui la tua integrazione comunica con HYXI Cloud.\n\n---",
+        "description": "Regola il modo in cui la tua integrazione comunica con HYXI Cloud.\n\nSe i controlli sono bloccati a causa di un falso rilevamento VPP (es. normale workMode 16), seleziona **Override VPP Lock** per ripristinarli.\n\n---",
         "data": {
           "update_interval": "Intervallo di aggiornamento (1-60 Minuti, Predefinito: 5)",
           "back_discovery": "Abilita il rilevamento tramite allarmi (Avanzato)",

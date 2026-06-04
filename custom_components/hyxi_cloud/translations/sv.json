@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI Systemkonfiguration",
-        "description": "Justera hur din integration kommunicerar med HYXI Cloud.\n\n---",
+        "description": "Justera hur din integration kommunicerar med HYXI Cloud.\n\nOm kontrollerna är låsta på grund av en falsk-positiv VPP-detektering (t.ex. normal workMode 16), markera **Override VPP Lock** för att återställa dem.\n\n---",
         "data": {
           "update_interval": "Uppdateringsintervall (1-60 minuter, standard: 5)",
           "back_discovery": "Aktivera upptäckt via larm (Avancerat)",

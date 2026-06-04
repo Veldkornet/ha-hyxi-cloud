@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI System Configuration",
-        "description": "Adjust how your integration communicates with the HYXI Cloud.\n\n---",
+        "description": "Adjust how your integration communicates with the HYXI Cloud.\n\nIf controls are locked out due to a false-positive VPP detection (e.g. normal workMode 16), check **Override VPP Lock** to restore them.\n\n---",
         "data": {
           "update_interval": "Polling Interval (1-60 Minutes, Default: 5)",
           "back_discovery": "Enable discovery via alarms (Advanced)",

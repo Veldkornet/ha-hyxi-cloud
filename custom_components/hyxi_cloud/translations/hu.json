@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXI rendszerkonfiguráció",
-        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\n---",
+        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\nHa a vezérlők zárolva vannak egy hamis pozitív VPP észlelés miatt (pl. normál workMode 16), jelölje be a **Override VPP Lock** opciót a visszaállításukhoz.\n\n---",
         "data": {
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
           "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)",

@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "HYXIシステム設定",
-        "description": "統合がHYXI Cloudと通信する方法を調整します。\n\n---",
+        "description": "統合がHYXI Cloudと通信する方法を調整します。\n\n誤検知されたVPP制御（例：通常のworkMode 16）により操作がロックされている場合は、**Override VPP Lock**にチェックを入れて復旧させてください。\n\n---",
         "data": {
           "update_interval": "ポーリング間隔 (1-60分, デフォルト: 5)",
           "back_discovery": "アラーム経由の検出を有効にする (高度)",

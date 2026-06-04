@@ -33,7 +33,7 @@
     "step": {
       "init": {
         "title": "Konfiguracja systemu HYXI",
-        "description": "Dostosuj sposób komunikacji integracji z HYXI Cloud.\n\n---",
+        "description": "Dostosuj sposób komunikacji integracji z HYXI Cloud.\n\nJeśli sterowanie zostało zablokowane z powodu błędnego wykrycia VPP (np. normalny tryb pracy 16), zaznacz **Override VPP Lock**, aby je przywrócić.\n\n---",
         "data": {
           "update_interval": "Interwał odpytywania (1-60 minut, domyślnie: 5)",
           "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)",
