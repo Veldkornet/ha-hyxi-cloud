@@ -481,42 +481,6 @@ async def test_clear_alarms_button_press_no_alarms(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
 
 
-def test_is_vpp_active(mock_coordinator_fixture):
-    """Test _is_vpp_active helper function."""
-    coordinator = mock_coordinator_fixture
-
-    # 1. Test override vpp True
-    coordinator.config_entry.options = {button_mod.CONF_OVERRIDE_VPP: True}
-    assert button_mod._is_vpp_active(coordinator, "SN123") is False
-
-    # 2. Test override vpp False, VPP active
-    coordinator.config_entry.options = {button_mod.CONF_OVERRIDE_VPP: False}
-    with patch("custom_components.hyxi_cloud.button.VPP_ACTIVE_MODES", {"16"}):
-        coordinator.data = {"SN123": {"metrics": {"vppMode": "16"}}}
-        assert button_mod._is_vpp_active(coordinator, "SN123") is True
-
-        # Integer mode should also work since code does str(metrics.get("vppMode"))
-        coordinator.data = {"SN123": {"metrics": {"vppMode": 16}}}
-        assert button_mod._is_vpp_active(coordinator, "SN123") is True
-
-    # 3. Test override vpp False, VPP inactive
-    with patch("custom_components.hyxi_cloud.button.VPP_ACTIVE_MODES", {"16"}):
-        coordinator.data = {"SN123": {"metrics": {"vppMode": "0"}}}
-        assert button_mod._is_vpp_active(coordinator, "SN123") is False
-
-        # Missing vppMode
-        coordinator.data = {"SN123": {"metrics": {}}}
-        assert button_mod._is_vpp_active(coordinator, "SN123") is False
-
-        # Missing metrics
-        coordinator.data = {"SN123": {}}
-        assert button_mod._is_vpp_active(coordinator, "SN123") is False
-
-        # Missing SN
-        coordinator.data = {}
-        assert button_mod._is_vpp_active(coordinator, "SN123") is False
-
-
 @pytest.mark.asyncio()
 async def test_clear_alarms_button_error(mock_coordinator_fixture):
     """Test error handling in clear alarms button press."""

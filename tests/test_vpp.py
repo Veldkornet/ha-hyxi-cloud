@@ -1,4 +1,4 @@
-"""Tests for VPP awareness and dynamic control defaults."""
+"""Tests for VPP awareness binary sensor and battery control defaults."""
 # pylint: disable=wrong-import-position
 
 import importlib
@@ -68,13 +68,15 @@ force_mock_attribute(
 )
 
 
-# Mock hyxi_cloud_api
+# VPP_ACTIVE_MODES now only contains confirmed active dispatch modes (13, 14).
+# Mode 16 (VPP enrolled/standby) was removed after live API diagnostic confirmed
+# it causes false-positive lockouts for enrolled-but-idle devices.
 mock_api = MagicMock()
-mock_api.VPP_ACTIVE_MODES = frozenset({"13", "14", "16"})
+mock_api.VPP_ACTIVE_MODES = frozenset({"13", "14"})
 if "hyxi_cloud_api" not in sys.modules:
     sys.modules["hyxi_cloud_api"] = mock_api
 else:
-    sys.modules["hyxi_cloud_api"].VPP_ACTIVE_MODES = frozenset({"13", "14", "16"})  # type: ignore[attr-defined]
+    sys.modules["hyxi_cloud_api"].VPP_ACTIVE_MODES = frozenset({"13", "14"})  # type: ignore[attr-defined]
 
 # Import modules and force reload to ensure they use our fakes
 import custom_components.hyxi_cloud.binary_sensor as binary_sensor_mod
@@ -90,38 +92,42 @@ importlib.reload(switch_mod)
 from custom_components.hyxi_cloud.const import is_battery_control_enabled
 
 
-def test_vpp_control_sensor_states():
-    """Test VPP control status binary sensor behavior and attributes."""
+def test_vpp_dispatch_sensor_on_during_active_dispatch():
+    """VPP binary sensor is ON only during confirmed dispatch modes (13=charge, 14=discharge)."""
     coordinator = MagicMock()
-    coordinator.data = {
-        "SN123": {
-            "metrics": {
-                "vppMode": "16",
-                "vppCode": "VPP1",
-                "vppName": "Virtual Power Plant",
-                "vppManufacturer": "HYXI",
-                "vppSupplierName": "Supplier",
-            }
-        }
-    }
     entry = MagicMock()
     entry.entry_id = "test_entry"
 
     with patch(
         "custom_components.hyxi_cloud.binary_sensor.VPP_ACTIVE_MODES",
-        frozenset({"13", "14", "16"}),
+        frozenset({"13", "14"}),
     ):
-        sensor = binary_sensor_mod.HyxiVppControlSensor(coordinator, entry, "SN123", {})
-        assert sensor.is_on is True
-        attrs = sensor.extra_state_attributes
-        assert attrs["vpp_mode"] == "16"
-        assert attrs["vpp_code"] == "VPP1"
-        assert attrs["vpp_name"] == "Virtual Power Plant"
-        assert attrs["vpp_manufacturer"] == "HYXI"
-        assert attrs["vpp_supplier_name"] == "Supplier"
+        # Mode 13 and 14 must trigger the sensor
+        for active_mode in (13, 14):
+            coordinator.data = {
+                "SN123": {
+                    "metrics": {
+                        "vppMode": active_mode,
+                        "vppCode": "VPP1",
+                        "vppName": "Virtual Power Plant",
+                        "vppManufacturer": "HYXI",
+                        "vppSupplierName": "Supplier",
+                    }
+                }
+            }
+            sensor = binary_sensor_mod.HyxiVppDispatchSensor(
+                coordinator, entry, "SN123", {}
+            )
+            assert sensor.is_on is True, (
+                f"Mode {active_mode} should activate the VPP sensor"
+            )
+            attrs = sensor.extra_state_attributes
+            assert attrs["vpp_mode"] == str(active_mode)
+            assert attrs["vpp_code"] == "VPP1"
+            assert attrs["vpp_name"] == "Virtual Power Plant"
 
-        # Test fallback behavior when details are empty but VPP is active (using integer mode 13/14/16)
-        for active_mode in (13, 14, 16):
+        # Active dispatch with empty detail fields — fallback attributes
+        for active_mode in (13, 14):
             coordinator.data["SN123"]["metrics"] = {
                 "vppMode": active_mode,
                 "vppCode": "",
@@ -129,7 +135,7 @@ def test_vpp_control_sensor_states():
                 "vppManufacturer": "",
                 "vppSupplierName": "",
             }
-            sensor_int = binary_sensor_mod.HyxiVppControlSensor(
+            sensor_int = binary_sensor_mod.HyxiVppDispatchSensor(
                 coordinator, entry, "SN123", {}
             )
             assert sensor_int.is_on is True
@@ -140,17 +146,42 @@ def test_vpp_control_sensor_states():
             assert attrs["vpp_manufacturer"] == "Enrolled"
             assert attrs["vpp_supplier_name"] == "Enrolled (Active VPP)"
 
-        # Test inactive VPP
-        coordinator.data["SN123"]["metrics"] = {
-            "vppMode": "0",
-            "vppCode": "",
-            "vppName": "",
-            "vppManufacturer": "",
-            "vppSupplierName": "",
-        }
-        assert sensor.is_on is False
+
+def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
+    """Mode 16 (enrolled/standby) and normal modes must NOT trigger the VPP sensor."""
+    coordinator = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    with patch(
+        "custom_components.hyxi_cloud.binary_sensor.VPP_ACTIVE_MODES",
+        frozenset({"13", "14"}),
+    ):
+        for inactive_mode in ("16", "0", "1", "2", "3"):
+            coordinator.data = {
+                "SN123": {
+                    "metrics": {
+                        "vppMode": inactive_mode,
+                        "vppCode": "",
+                        "vppName": "",
+                        "vppManufacturer": "",
+                        "vppSupplierName": "",
+                    }
+                }
+            }
+            sensor = binary_sensor_mod.HyxiVppDispatchSensor(
+                coordinator, entry, "SN123", {}
+            )
+            assert sensor.is_on is False, (
+                f"Mode {inactive_mode!r} should NOT activate the VPP sensor"
+            )
+
+        # Verify not-enrolled attribute fallback for mode 0
+        coordinator.data["SN123"]["metrics"]["vppMode"] = "0"
+        sensor = binary_sensor_mod.HyxiVppDispatchSensor(
+            coordinator, entry, "SN123", {}
+        )
         attrs = sensor.extra_state_attributes
-        assert attrs["vpp_mode"] == "0"
         assert attrs["vpp_code"] == "None"
         assert attrs["vpp_name"] == "None"
         assert attrs["vpp_manufacturer"] == "Not enrolled"
@@ -158,7 +189,7 @@ def test_vpp_control_sensor_states():
 
 
 def test_is_battery_control_enabled_helper():
-    """Test dynamic default resolving logic of is_battery_control_enabled."""
+    """Battery control defaults to False and is not affected by workMode."""
     entry = MagicMock()
     # Case 1: Explicitly set in options
     entry.options = {"enable_battery_control": True}
@@ -167,83 +198,14 @@ def test_is_battery_control_enabled_helper():
     entry.options = {"enable_battery_control": False}
     assert is_battery_control_enabled(entry, None) is False
 
-    # Case 2: Not set, no active VPP (should default to False)
+    # Case 2: Not set — always defaults to False regardless of workMode
     entry.options = {}
     coordinator = MagicMock()
     coordinator.data = {"SN123": {"metrics": {"workMode": "0"}}}
-    with patch("hyxi_cloud_api.VPP_ACTIVE_MODES", frozenset({"16"})):
-        assert is_battery_control_enabled(entry, coordinator) is False
+    assert is_battery_control_enabled(entry, coordinator) is False
 
-        # Case 3: Not set, active VPP (should still default to False)
-        coordinator.data["SN123"]["metrics"]["workMode"] = "16"
-        assert is_battery_control_enabled(entry, coordinator) is False
+    coordinator.data["SN123"]["metrics"]["workMode"] = "16"
+    assert is_battery_control_enabled(entry, coordinator) is False
 
-        # Case 4: Coordinator is None
-        assert is_battery_control_enabled(entry, None) is False
-
-
-def test_button_and_switch_lockout():
-    """Test that buttons and switches report unavailable when VPP is active."""
-    coordinator = MagicMock()
-    coordinator.last_update_success = True
-    coordinator.data = {"SN123": {"metrics": {"vppMode": "16"}}}
-    coordinator.config_entry.options = {}
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.button.VPP_ACTIVE_MODES",
-            frozenset({"13", "14", "16"}),
-        ),
-        patch(
-            "custom_components.hyxi_cloud.switch.VPP_ACTIVE_MODES",
-            frozenset({"13", "14", "16"}),
-        ),
-    ):
-        for active_mode in (13, 14, 16):
-            # Button lockout (with integer and string modes)
-            coordinator.data["SN123"]["metrics"]["vppMode"] = active_mode
-            btn = button_mod.HyxiModeButton(coordinator, "SN123", {}, "idle")
-            assert btn.available is False
-
-            # Switch lockout
-            sw = switch_mod.HyxiFrequencyControlSwitch(coordinator, "SN123", {})
-            assert sw.available is False
-
-        # Inactive VPP controls are available
-        coordinator.data["SN123"]["metrics"]["vppMode"] = 0
-        btn = button_mod.HyxiModeButton(coordinator, "SN123", {}, "idle")
-        sw = switch_mod.HyxiFrequencyControlSwitch(coordinator, "SN123", {})
-        assert btn.available is True
-        assert sw.available is True
-
-
-def test_vpp_override_bypasses_lockout():
-    """Test that buttons and switches remain available during VPP if override is checked."""
-    coordinator = MagicMock()
-    coordinator.last_update_success = True
-    coordinator.data = {"SN123": {"metrics": {"vppMode": "16"}}}
-    coordinator.config_entry = MagicMock()
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.button.VPP_ACTIVE_MODES",
-            frozenset({"13", "14", "16"}),
-        ),
-        patch(
-            "custom_components.hyxi_cloud.switch.VPP_ACTIVE_MODES",
-            frozenset({"13", "14", "16"}),
-        ),
-    ):
-        # 1. With override disabled, they are unavailable
-        coordinator.config_entry.options = {"override_vpp": False}
-        btn = button_mod.HyxiModeButton(coordinator, "SN123", {}, "idle")
-        sw = switch_mod.HyxiFrequencyControlSwitch(coordinator, "SN123", {})
-        assert btn.available is False
-        assert sw.available is False
-
-        # 2. With override enabled, they are available
-        coordinator.config_entry.options = {"override_vpp": True}
-        btn_override = button_mod.HyxiModeButton(coordinator, "SN123", {}, "idle")
-        sw_override = switch_mod.HyxiFrequencyControlSwitch(coordinator, "SN123", {})
-        assert btn_override.available is True
-        assert sw_override.available is True
+    # Case 3: Coordinator is None
+    assert is_battery_control_enabled(entry, None) is False

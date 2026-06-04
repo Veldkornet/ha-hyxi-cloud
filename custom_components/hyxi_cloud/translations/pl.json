@@ -39,7 +39,6 @@
           "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)",
           "enable_battery_control": "Włącz kontrolę i ochronę urządzenia",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "override_vpp": "Pomiń blokadę VPP (wymuś sterowanie podczas VPP)",
           "enable_realtime_push": "Enable Real-Time Webhook Push",
           "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
           "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
@@ -73,18 +72,18 @@
           "on": "Problem"
         }
       },
-      "vpp_active": {
-        "name": "VPP Control Active",
-        "state": {
-          "off": "Normal Operation",
-          "on": "VPP Dispatch Active"
-        }
-      },
       "em_night_mode_active": {
         "name": "Night Mode"
       },
       "em_high_load_detected": {
         "name": "High Load Detected"
+      },
+      "vpp_dispatch": {
+        "name": "VPP Dispatch",
+        "state": {
+          "off": "Standby",
+          "on": "Active"
+        }
       }
     },
     "sensor": {

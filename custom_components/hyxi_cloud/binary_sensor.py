@@ -44,7 +44,7 @@ async def async_setup_entry(
         dev_type = normalize_device_type(get_raw_device_code(dev_data))
         if dev_type in ("hybrid_inverter", "all_in_one", "micro_ess"):
             entities.append(
-                HyxiVppControlSensor(coordinator, entry, device_sn, dev_data)
+                HyxiVppDispatchSensor(coordinator, entry, device_sn, dev_data)
             )
 
     # Energy Manager binary sensors (EM-only)
@@ -215,10 +215,10 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         }
 
 
-class HyxiVppControlSensor(CoordinatorEntity, BinarySensorEntity):
-    """Binary sensor indicating whether a VPP program is actively controlling this device.
+class HyxiVppDispatchSensor(CoordinatorEntity, BinarySensorEntity):
+    """Binary sensor indicating whether a VPP program is actively dispatching to/from this device.
 
-    ON  = a VPP dispatch is in progress; manual controls are locked out.
+    ON  = a VPP dispatch is in progress.
     OFF = device is under normal (manual / self-consumption) operation.
 
     Use this entity in automations to detect VPP activity and suppress
@@ -227,14 +227,14 @@ class HyxiVppControlSensor(CoordinatorEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_has_entity_name = True
-    _attr_translation_key = "vpp_active"
+    _attr_translation_key = "vpp_dispatch"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator, entry, sn: str, dev_data: dict) -> None:
-        """Initialize the VPP control sensor."""
+        """Initialize the VPP dispatch sensor."""
         super().__init__(coordinator)
         self.sn = sn
-        self._attr_unique_id = f"{entry.entry_id}_{sn}_vpp_active"
+        self._attr_unique_id = f"{entry.entry_id}_{sn}_vpp_dispatch"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": dev_data.get("device_name") or f"Device {sn}",

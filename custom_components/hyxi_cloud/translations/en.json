@@ -33,13 +33,12 @@
     "step": {
       "init": {
         "title": "HYXI System Configuration",
-        "description": "Adjust how your integration communicates with the HYXI Cloud.\n\nIf controls are locked out due to a false-positive VPP detection (e.g. normal workMode 16), check **Override VPP Lock** to restore them.\n\n---",
+        "description": "Adjust how your integration communicates with the HYXI Cloud.\n\n> ⚠️ **Device Control**: Enable with caution if your inverter is already managed by your energy provider or enrolled in a Virtual Power Plant (VPP) programme. Sending commands while your provider has control may conflict with their dispatch schedule.\n\n---",
         "data": {
           "update_interval": "Polling Interval (1-60 Minutes, Default: 5)",
           "back_discovery": "Enable discovery via alarms (Advanced)",
           "enable_battery_control": "Enable Device Control & Protection",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "override_vpp": "Override VPP Lock (force-enable controls during VPP)",
           "enable_realtime_push": "Enable Real-Time Webhook Push",
           "realtime_push_rate": "Push Update Frequency (seconds)",
           "realtime_push_url": "Custom Callback URL (optional, dynamic default — base URL, path appended automatically)"
@@ -73,18 +72,18 @@
           "on": "Problem"
         }
       },
-      "vpp_active": {
-        "name": "VPP Control Active",
-        "state": {
-          "off": "Normal Operation",
-          "on": "VPP Dispatch Active"
-        }
-      },
       "em_night_mode_active": {
         "name": "Night Mode"
       },
       "em_high_load_detected": {
         "name": "High Load Detected"
+      },
+      "vpp_dispatch": {
+        "name": "VPP Dispatch",
+        "state": {
+          "off": "Standby",
+          "on": "Active"
+        }
       }
     },
     "sensor": {

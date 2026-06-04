@@ -12,12 +12,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
-from hyxi_cloud_api import VPP_ACTIVE_MODES, HyxiApiClient
+from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
-    CONF_OVERRIDE_VPP,
     DOMAIN,
     detect_phase_type,
     get_raw_device_code,
@@ -28,14 +27,6 @@ from .const import (
 from .entity import HyxiEntity
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _is_vpp_active(coordinator, sn: str) -> bool:
-    """Return True if a VPP program is currently controlling this device."""
-    if coordinator.config_entry.options.get(CONF_OVERRIDE_VPP, False):
-        return False
-    metrics = (coordinator.data.get(sn) or {}).get("metrics", {})
-    return str(metrics.get("vppMode")) in VPP_ACTIVE_MODES
 
 
 async def async_setup_entry(
@@ -156,9 +147,7 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
 
     @property
     def available(self) -> bool:
-        """Unavailable when a VPP program is actively controlling this device."""
-        if _is_vpp_active(self.coordinator, self._sn):
-            return False
+        """Unavailable when battery control is not enabled."""
         return super().available
 
 

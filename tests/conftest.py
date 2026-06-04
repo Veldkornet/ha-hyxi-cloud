@@ -59,7 +59,6 @@ def ensure_mock(module_name, attributes=None, mock_obj=None):
 if os.environ.get("HYXI_INTEGRATION_TEST") != "1" and not any(
     "tests/integration" in arg for arg in sys.argv
 ):
-    print("DEBUG: conftest.py setting up mocks!")
     # Mock required HA modules and external library so test discovery doesn't crash
     mock_ha = MagicMock()
     mock_ha.__path__ = []

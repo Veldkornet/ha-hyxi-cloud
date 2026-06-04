@@ -24,7 +24,6 @@ from .const import (
     CONF_EM_LOOP_INTERVAL,
     CONF_EM_P1_ENTITY,
     CONF_ENABLE_PUSH,
-    CONF_OVERRIDE_VPP,
     CONF_PUSH_RATE,
     CONF_PUSH_URL,
     CONF_SECRET_KEY,
@@ -172,7 +171,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 CONF_BACK_DISCOVERY, False
             )
 
-            was_override_enabled = self._options.get(CONF_OVERRIDE_VPP, False)
             was_battery_control_enabled = self._options.get(
                 "enable_battery_control", False
             )
@@ -182,8 +180,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 self._options["enable_battery_control"] = user_input[
                     "enable_battery_control"
                 ]
-            if CONF_OVERRIDE_VPP in user_input:
-                self._options[CONF_OVERRIDE_VPP] = user_input[CONF_OVERRIDE_VPP]
 
             if CONF_ENABLE_PUSH in user_input:
                 self._options[CONF_ENABLE_PUSH] = user_input[CONF_ENABLE_PUSH]
@@ -200,16 +196,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             # EM requires battery control — auto-enable if user turned on EM
             if enable_em and not self._options.get("enable_battery_control"):
                 self._options["enable_battery_control"] = True
-
-            # If user just enabled override_vpp, but enable_battery_control wasn't in user_input,
-            # reload the step to reveal it (only if controllable inverters exist).
-            if (
-                self._has_controllable_inverter()
-                and self._options.get(CONF_OVERRIDE_VPP, False)
-                and not was_override_enabled
-                and "enable_battery_control" not in user_input
-            ):
-                return await self.async_step_init()
 
             # If user just enabled battery_control, but enable_energy_manager wasn't in user_input,
             # reload the step to reveal it (only if controllable inverters exist).
@@ -307,28 +293,18 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         # Only show control/EM toggles if controllable inverters exist
         if has_controllable:
-            vpp_active_raw = self._is_vpp_active_raw()
-            if vpp_active_raw:
+            battery_control_on = options.get("enable_battery_control", False)
+            schema_dict[
+                vol.Optional(
+                    "enable_battery_control",
+                    default=battery_control_on,
+                )
+            ] = selector.BooleanSelector()
+            # EM toggle only visible when battery control is already enabled
+            if battery_control_on:
                 schema_dict[
-                    vol.Optional(
-                        CONF_OVERRIDE_VPP,
-                        default=options.get(CONF_OVERRIDE_VPP, False),
-                    )
+                    vol.Optional("enable_energy_manager", default=em_enabled)
                 ] = selector.BooleanSelector()
-
-            if not vpp_active_raw or options.get(CONF_OVERRIDE_VPP, False):
-                battery_control_on = options.get("enable_battery_control", False)
-                schema_dict[
-                    vol.Optional(
-                        "enable_battery_control",
-                        default=battery_control_on,
-                    )
-                ] = selector.BooleanSelector()
-                # EM toggle only visible when battery control is already enabled
-                if battery_control_on:
-                    schema_dict[
-                        vol.Optional("enable_energy_manager", default=em_enabled)
-                    ] = selector.BooleanSelector()
 
         return self.async_show_form(step_id="init", data_schema=vol.Schema(schema_dict))
 
@@ -454,29 +430,3 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
     def _has_controllable_inverter(self) -> bool:
         """Check if any controllable inverter exists."""
         return len(self._get_controllable_sns()) > 0
-
-    def _is_vpp_active(self) -> bool:
-        """Check if any controllable inverter has an active VPP mode."""
-        options = self._options if self._options else self._config_entry.options
-        if options.get(CONF_OVERRIDE_VPP, False):
-            return False
-        return self._is_vpp_active_raw()
-
-    def _is_vpp_active_raw(self) -> bool:
-        """Check if any controllable inverter has an active VPP mode raw metrics."""
-        coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
-        if not coordinator or not coordinator.data:
-            return False
-
-        from hyxi_cloud_api import VPP_ACTIVE_MODES
-
-        for sn in self._get_controllable_sns():
-            dev_data = coordinator.data.get(sn) or {}
-            metrics = dev_data.get("metrics", {})
-            vpp_mode = metrics.get("vppMode")
-            work_mode = metrics.get("workMode")
-            if (vpp_mode is not None and str(vpp_mode) in VPP_ACTIVE_MODES) or (
-                work_mode is not None and str(work_mode) in VPP_ACTIVE_MODES
-            ):
-                return True
-        return False

@@ -15,7 +15,6 @@ MANUFACTURER = "HYXI Power"
 VERSION = "1.6.0"
 
 CONF_BACK_DISCOVERY = "back_discovery"
-CONF_OVERRIDE_VPP = "override_vpp"
 
 # Real-time Webhook Push Constants
 CONF_ENABLE_PUSH = "enable_realtime_push"
