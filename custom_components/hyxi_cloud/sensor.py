@@ -313,63 +313,63 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:sine-wave",
     ),
     SensorEntityDescription(
         key="ph1i",
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:current-ac",
     ),
     SensorEntityDescription(
         key="ph1p",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:flash",
     ),
     SensorEntityDescription(
         key="ph2v",
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:sine-wave",
     ),
     SensorEntityDescription(
         key="ph2i",
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:current-ac",
     ),
     SensorEntityDescription(
         key="ph2p",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:flash",
     ),
     SensorEntityDescription(
         key="ph3v",
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:sine-wave",
     ),
     SensorEntityDescription(
         key="ph3i",
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:current-ac",
     ),
     SensorEntityDescription(
         key="ph3p",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon="mdi:flash",
     ),
     # ESS / Battery Management (ESS specific)
     SensorEntityDescription(
@@ -907,6 +907,63 @@ async def async_setup_entry(hass, entry, async_add_entities):
             ):
                 keys_to_add.add(key)
 
+        # Pre-register standard sensors to ensure webhook-only metrics are successfully registered
+        if not is_collector_or_dmu:
+            # Common inverter sensors (always applicable)
+            keys_to_add.update(
+                {
+                    "ph1Loadp",
+                    "ph1v",
+                    "ph1i",
+                    "ph1p",
+                    "pv1v",
+                    "pv1i",
+                    "pv1p",
+                    "pv2v",
+                    "pv2i",
+                    "pv2p",
+                    "home_load",
+                    "grid_import",
+                    "grid_export",
+                    "ppv",
+                    "acP",
+                    "acE",
+                    "gridP",
+                    "gridF",
+                    "invSts",
+                    "gridSts",
+                }
+            )
+
+            # Check phase type for Phase 2 & 3 sensors
+            phase_type = detect_phase_type(dev_data)
+            if phase_type == "three_phase":
+                keys_to_add.update(
+                    {
+                        "ph2Loadp",
+                        "ph2v",
+                        "ph2i",
+                        "ph2p",
+                        "ph3Loadp",
+                        "ph3v",
+                        "ph3i",
+                        "ph3p",
+                    }
+                )
+
+            # Check if device type supports battery
+            if device_type in ("hybrid_inverter", "all_in_one"):
+                keys_to_add.update(local_battery_sensors)
+                keys_to_add.update(
+                    {
+                        "bat_charging",
+                        "bat_discharging",
+                        "bat_power_dc",
+                        "bat_charge_total",
+                        "bat_discharge_total",
+                    }
+                )
+
         # O(1) removals instead of repeated conditionals
         if is_collector_or_dmu:
             keys_to_add.difference_update(local_battery_sensors)
@@ -1218,18 +1275,18 @@ class HyxiSensor(HyxiBaseSensor):
         val = super().native_value
 
         # Ensure operands are not None to avoid Mypy operator errors
-        if self.entity_description.key == "gen_p" and val is not None:
+        if self.entity_description.key == "genP" and val is not None:
             ac_l = self._get_metric_float("acl")
             if ac_l is not None and val >= ac_l:
                 val = val - ac_l
             val = val * 2.0
-        elif self.entity_description.key == "ac_p" and val is not None:
+        elif self.entity_description.key == "acP" and val is not None:
             ac_l = self._get_metric_float("acl")
             if ac_l is not None:
                 val = val - ac_l
             val = val * 0.96
         elif (
-            self.entity_description.key == "grid_p"
+            self.entity_description.key == "gridP"
             and val is not None
             and (ac_l := self._get_metric_float("acl")) is not None
         ):

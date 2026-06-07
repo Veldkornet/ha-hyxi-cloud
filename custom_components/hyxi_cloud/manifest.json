@@ -15,7 +15,7 @@
   ],
   "requirements": [
     "aiohttp>=3.13.4",
-    "hyxi-cloud-api>=1.3.5"
+    "hyxi-cloud-api>=1.3.6"
   ],
   "version": "1.6.0"
 }
