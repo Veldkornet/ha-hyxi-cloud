@@ -886,14 +886,12 @@ async def test_async_setup_entry_null_string_filtering():
     coordinator = MagicMock()
     # We provide one valid metric and several 'null' equivalent ones
     coordinator.data = {
-        "INV123": {
-            "device_type_code": "HYBRID_INVERTER",
+        "COLL123": {
+            "device_type_code": "COLLECTOR",
             "metrics": {
-                "totalE": "123.4",  # Valid
-                "batSoc": "null",  # Should be filtered
-                "pbat": "NA",  # Should be filtered
-                "batV": "--",  # Should be filtered
-                "batI": "none",  # Should be filtered
+                "pvPower": "1200.5",  # Valid
+                "invSts": "null",  # Should be filtered
+                "gridSts": "NA",  # Should be filtered
             },
         }
     }
@@ -912,12 +910,10 @@ async def test_async_setup_entry_null_string_filtering():
         if hasattr(entity, "entity_description")
     ]
 
-    # Verify 'totalE' is there but 'batSoc', 'pbat', etc., are NOT
-    assert "totalE" in registered_keys
-    assert "batSoc" not in registered_keys
-    assert "pbat" not in registered_keys
-    assert "batV" not in registered_keys
-    assert "batI" not in registered_keys
+    # Verify 'pvPower' is there but 'invSts', 'gridSts', etc., are NOT
+    assert "pvPower" in registered_keys
+    assert "invSts" not in registered_keys
+    assert "gridSts" not in registered_keys
 
 
 def test_get_metric_float_method():
@@ -1254,33 +1250,33 @@ def test_hyxi_sensor_advanced_mappings(base_sensor):
             "model": "H5K-HT",
             "metrics": {
                 "acl": 50.0,
-                "gen_p": 200.0,
-                "ac_p": 150.0,
-                "grid_p": 120.0,
+                "genP": 200.0,
+                "acP": 150.0,
+                "gridP": 120.0,
                 "parentSn": "COLLECTOR_123",
             },
         }
     }
 
     # 1. Parent Sn via_device link
-    sensor.entity_description.key = "gen_p"
+    sensor.entity_description.key = "genP"
     sensor._sn = "INV123"
     sensor._dev_data = coordinator.data["INV123"]
     sensor._metrics = sensor._dev_data["metrics"]
 
     assert sensor.device_info["via_device"] == ("hyxi_cloud", "COLLECTOR_123")
 
-    # 2. gen_p mapping: (val - acl) * 2.0 -> (200.0 - 50.0) * 2.0 = 300.0
+    # 2. genP mapping: (val - acl) * 2.0 -> (200.0 - 50.0) * 2.0 = 300.0
     sensor._attr_native_value = 200.0
     assert sensor.native_value == 300.0
 
-    # 3. ac_p mapping: (val - acl) * 0.96 -> (150.0 - 50.0) * 0.96 = 96.0
-    sensor.entity_description.key = "ac_p"
+    # 3. acP mapping: (val - acl) * 0.96 -> (150.0 - 50.0) * 0.96 = 96.0
+    sensor.entity_description.key = "acP"
     sensor._attr_native_value = 150.0
     assert sensor.native_value == 96.0
 
-    # 4. grid_p mapping: val - acl -> 120.0 - 50.0 = 70.0
-    sensor.entity_description.key = "grid_p"
+    # 4. gridP mapping: val - acl -> 120.0 - 50.0 = 70.0
+    sensor.entity_description.key = "gridP"
     sensor._attr_native_value = 120.0
     assert sensor.native_value == 70.0
 
