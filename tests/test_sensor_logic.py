@@ -932,6 +932,8 @@ def test_get_metric_float_method():
                 "null_str": "null",
                 "invalid": "abc",
                 "none": None,
+                "type_error": {"key": "value"},
+                "list_error": [1, 2],
             }
         }
     }
@@ -949,6 +951,8 @@ def test_get_metric_float_method():
     assert sensor._get_metric_float("invalid") is None
     assert sensor._get_metric_float("none") is None
     assert sensor._get_metric_float("missing") is None
+    assert sensor._get_metric_float("type_error") is None
+    assert sensor._get_metric_float("list_error") is None
 
 
 @pytest.mark.asyncio
