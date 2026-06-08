@@ -552,3 +552,50 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
 
     await engine.async_stop()
     await hass.async_block_till_done()
+
+
+@pytest.mark.asyncio
+async def test_engine_get_param_fallback(hass: HomeAssistant):
+    """Test fallback logic in _get_param when _get_ha_state_float returns non-float values."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={"access_key": "test_ak", "secret_key": "test_sk"}
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    # 1. Test fallback when entity state is non-float by mocking _get_ha_state_float
+    # We mock _find_entity_id to return a fake ID so it gets to _get_ha_state_float
+    with patch.object(engine, "_find_entity_id", return_value="number.fake_id"):
+        with patch.object(engine, "_get_ha_state_float", return_value=0.0) as mock_get:
+            # high_load_threshold default in EM_DEFAULTS is 6500
+            val = engine._get_param("high_load_threshold")
+            assert (
+                val == 0.0
+            )  # mock returns 0.0, which means _get_ha_state_float caught exception and returned default
+            mock_get.assert_called_once_with("number.fake_id", 6500.0)
+
+    # 2. Test boolean fallback logic
+    with patch.object(engine, "_find_entity_id", side_effect=[None, "switch.fake_id"]):
+        with patch.object(engine, "_get_ha_state_bool", return_value=True):
+            val = engine._get_param("test_bool_key")
+            assert val == 1.0
+
+
+@pytest.mark.asyncio
+async def test_engine_has_peak_shaving_edge_cases(hass: HomeAssistant):
+    """Test edge cases for _has_peak_shaving in engine.py."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={"access_key": "test_ak", "secret_key": "test_sk"}
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.data = None
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    # Test 1: coordinator.data is falsy (None, empty dict)
+    assert engine._has_peak_shaving() is False
