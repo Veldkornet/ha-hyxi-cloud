@@ -150,7 +150,7 @@ class HyxiClearAlarmsButton(CoordinatorEntity, ButtonEntity):
                 if alarm_id is not None:
                     try:
                         active_ids.append(int(alarm_id))
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         _LOGGER.debug(
                             "Skipping alarm with non-integer id %r for device %s",
                             alarm_id,
@@ -349,7 +349,7 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
     if state is not None and state.state not in ("unknown", "unavailable"):
         try:
             return int(float(state.state))
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             _LOGGER.debug(
                 "Power entity %s has non-numeric state %r, using 100W default",
                 entity_id,
