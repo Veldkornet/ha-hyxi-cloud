@@ -1,6 +1,7 @@
 """HYXI Cloud Integration for Home Assistant."""
 # pylint: disable=wrong-import-position
 
+import hmac
 import logging
 
 from aiohttp import ClientError, web
@@ -549,7 +550,7 @@ async def _async_handle_webhook(
 
     # 1. Ingress Header authentication check (defense-in-depth)
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
-    if not incoming_ak or incoming_ak != coordinator.client.access_key:
+    if not incoming_ak or not hmac.compare_digest(incoming_ak, coordinator.client.access_key):
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
             "Unauthorized push attempt received on webhook %s",
@@ -787,7 +788,7 @@ async def _async_handle_alarm_webhook(
     coordinator.data[sn]["alarms"] so HyxiDeviceAlarmSensor fires instantly.
     """
     incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
-    if not incoming_ak or incoming_ak != coordinator.client.access_key:
+    if not incoming_ak or not hmac.compare_digest(incoming_ak, coordinator.client.access_key):
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
             "Unauthorized alarm push attempt received on webhook %s",
