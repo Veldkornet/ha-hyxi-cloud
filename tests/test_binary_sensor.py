@@ -246,8 +246,16 @@ def test_connectivity_sensor_quality_labels(mock_coordinator, mock_entry):
     mock_coordinator.hyxi_metadata["last_attempts"] = 3
     assert sensor.extra_state_attributes["connection_quality"] == "Degraded (3 retries)"
 
-    # 3. Stable (1 retry)
+    # 3. Degraded boundary (2 retries)
+    mock_coordinator.hyxi_metadata["last_attempts"] = 2
+    assert sensor.extra_state_attributes["connection_quality"] == "Degraded (2 retries)"
+
+    # 4. Stable boundary (1 retry)
     mock_coordinator.hyxi_metadata["last_attempts"] = 1
+    assert sensor.extra_state_attributes["connection_quality"] == "Stable"
+
+    # 5. Stable edge case (0 retries / default first attempt)
+    mock_coordinator.hyxi_metadata["last_attempts"] = 0
     assert sensor.extra_state_attributes["connection_quality"] == "Stable"
 
 
