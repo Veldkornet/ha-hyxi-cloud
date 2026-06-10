@@ -606,15 +606,16 @@ async def _async_handle_webhook(
         any_updated = True
 
         # Log the push metrics with sensitive keys masked (using mask_sensitive_key_value)
-        logged_metrics = {
-            k: mask_sensitive_key_value(k, v)
-            for k, v in device_update["metrics"].items()
-        }
-        _LOGGER.debug(
-            "HYXI Push Telemetry Update for Device %s: %s",
-            mask_sn(sn),
-            logged_metrics,
-        )
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            logged_metrics = {
+                k: mask_sensitive_key_value(k, v)
+                for k, v in device_update["metrics"].items()
+            }
+            _LOGGER.debug(
+                "HYXI Push Telemetry Update for Device %s: %s",
+                mask_sn(sn),
+                logged_metrics,
+            )
 
     if any_updated:
         coordinator.last_push_received = dt_util.utcnow()
