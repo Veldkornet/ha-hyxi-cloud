@@ -1,7 +1,8 @@
 """Integration tests for the HYXI Energy Manager decision engine."""
 
+import time
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -552,3 +553,82 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
 
     await engine.async_stop()
     await hass.async_block_till_done()
+
+
+async def test_engine_status_property(hass: HomeAssistant):
+    """Test all branches of the engine status property."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+            "em_dry_run": False,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "model": "HYX-H10K-HT",
+            "device_type_code": "1",
+            "metrics": {},
+        }
+    }
+
+    config = EMEntityConfig(
+        sn="SN123",
+        p1_entity="sensor.p1_meter",
+        forecast_entity="sensor.solar_forecast",
+        forecast_power_entity="sensor.solar_forecast_power",
+    )
+
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    # 1. Stopped
+    assert engine.status == "stopped"
+
+    # Start engine
+    await engine.async_start()
+
+    # 2. Disabled (via em_enabled switch off)
+    with (
+        patch.object(engine, "_find_entity_id", return_value="switch.hyxi_em_enabled"),
+        patch.object(engine, "_get_ha_state_bool", return_value=False),
+    ):
+        assert engine.status == "disabled"
+
+    # 3. Error
+    engine._last_decision = "error"
+    assert engine.status == "error"
+    engine._last_decision = "running"  # reset for next test
+
+    # 4. Cooldown
+    engine._last_mode_switch = time.monotonic() - 10
+    with patch.object(engine, "_get_param", return_value=300):
+        assert engine.status == "cooldown"
+
+    # 5. Dry run
+    # Ensure it doesn't hit cooldown
+    engine._last_mode_switch = time.monotonic() - 400
+    with patch.object(engine, "_get_param", return_value=300):
+        with patch.object(
+            EnergyManagerEngine, "_dry_run", new_callable=PropertyMock
+        ) as mock_dry_run:
+            mock_dry_run.return_value = True
+            assert engine.status == "dry_run"
+
+    # 6. Running
+    with patch.object(engine, "_get_param", return_value=300):
+        with patch.object(
+            EnergyManagerEngine, "_dry_run", new_callable=PropertyMock
+        ) as mock_dry_run:
+            mock_dry_run.return_value = False
+            assert engine.status == "running"
+
+    await engine.async_stop()
