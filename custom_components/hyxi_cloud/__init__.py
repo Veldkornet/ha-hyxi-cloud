@@ -876,14 +876,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         if not subscribe_code:
             raise HomeAssistantError("Subscription code cannot be empty")
 
-        coordinators = list(hass.data.get(DOMAIN, {}).values())
-        if not coordinators:
+        coordinators_values = hass.data.get(DOMAIN, {}).values()
+        if not coordinators_values:
             raise HomeAssistantError(
                 "No active HYXI Cloud integration entries found to call the API"
             )
 
         # Use the client from the first active integration entry
-        coordinator = coordinators[0]
+        coordinator = next(iter(coordinators_values))
+        _LOGGER.info("Manually cancelling HYXI subscription: %s", subscribe_code)
         try:
             await async_cancel_and_unregister_subscription(
                 hass, coordinator.client, subscribe_code
