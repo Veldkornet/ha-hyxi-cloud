@@ -843,16 +843,17 @@ async def _async_handle_alarm_webhook(
         any_updated = True
 
         # Log the push alarms with sensitive keys masked (using mask_sensitive_key_value)
-        logged_alarms = []
-        for rec in alarm_records:
-            logged_rec = {k: mask_sensitive_key_value(k, v) for k, v in rec.items()}
-            logged_alarms.append(logged_rec)
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            logged_alarms = []
+            for rec in alarm_records:
+                logged_rec = {k: mask_sensitive_key_value(k, v) for k, v in rec.items()}
+                logged_alarms.append(logged_rec)
 
-        _LOGGER.debug(
-            "HYXI Alarm Push Telemetry Update for Device %s: %s",
-            mask_sn(sn),
-            logged_alarms,
-        )
+            _LOGGER.debug(
+                "HYXI Alarm Push Telemetry Update for Device %s: %s",
+                mask_sn(sn),
+                logged_alarms,
+            )
 
     if any_updated:
         coordinator.async_update_listeners()
