@@ -825,3 +825,66 @@ class TestChargeBottomout:
         await run_decision(engine)
         assert engine._last_decision == "solar_self_consume"
         assert engine.mode_calls[0][0] == "self_consume"
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# HA State Utilities
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestHAStateUtilities:
+    """Test helper functions that read from HA state."""
+
+    def test_get_ha_state_float(self):
+        """Test getting float from HA state handles valid, invalid and missing states."""
+        from unittest.mock import MagicMock
+
+        from custom_components.hyxi_cloud.engine import EnergyManagerEngine
+
+        # We need to mock HA just enough to test the float getter
+        hass_mock = MagicMock()
+
+        def mock_get(entity_id):
+            if entity_id == "sensor.valid":
+                state = MagicMock()
+                state.state = "42.5"
+                return state
+            if entity_id == "sensor.invalid":
+                state = MagicMock()
+                state.state = "not_a_float"
+                return state
+            if entity_id == "sensor.unknown":
+                state = MagicMock()
+                state.state = "unknown"
+                return state
+            if entity_id == "sensor.unavailable":
+                state = MagicMock()
+                state.state = "unavailable"
+                return state
+            return None
+
+        hass_mock.states.get = mock_get
+
+        # Create minimal engine instance without triggering __init__ logic
+        engine = object.__new__(EnergyManagerEngine)
+        engine._hass = hass_mock
+
+        # Test valid float string
+        assert engine._get_ha_state_float("sensor.valid") == 42.5
+        assert engine._get_ha_state_float("sensor.valid", default=10.0) == 42.5
+
+        # Test invalid float string (testing the except block)
+        assert engine._get_ha_state_float("sensor.invalid") == 0.0
+        assert engine._get_ha_state_float("sensor.invalid", default=10.0) == 10.0
+
+        # Test HA specific missing states
+        assert engine._get_ha_state_float("sensor.unknown") == 0.0
+        assert engine._get_ha_state_float("sensor.unavailable") == 0.0
+
+        # Test completely missing entity
+        assert engine._get_ha_state_float("sensor.missing") == 0.0
+        assert engine._get_ha_state_float("sensor.missing", default=5.0) == 5.0
+
+        # Test None entity_id
+        assert engine._get_ha_state_float(None) == 0.0
+        assert engine._get_ha_state_float(None, default=7.0) == 7.0
