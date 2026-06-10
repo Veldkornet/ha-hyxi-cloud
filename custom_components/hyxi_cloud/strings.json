@@ -608,6 +608,9 @@
       },
       "renew_realtime_subscription": {
         "name": "Renew Push Subscription"
+      },
+      "purge_old_subscriptions": {
+        "name": "Purge Old Subscriptions"
       }
     }
   }

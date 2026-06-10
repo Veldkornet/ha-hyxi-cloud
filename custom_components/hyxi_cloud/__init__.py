@@ -520,10 +520,10 @@ async def _async_teardown_push_subscription(
 
     subscribe_code = coordinator.subscribe_code
     if subscribe_code:
-        _LOGGER.debug("Cancelling HYXI Push subscription: %s", subscribe_code)
         try:
-            await coordinator.client.cancel_subscription(subscribe_code)
-            await async_unregister_subscription_code(hass, subscribe_code)
+            await async_cancel_and_unregister_subscription(
+                hass, coordinator.client, subscribe_code
+            )
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning("Error cancelling HYXI Push subscription: %s", err)
         coordinator.subscribe_code = None
@@ -760,10 +760,10 @@ async def _async_teardown_alarm_subscription(
 
     subscribe_code = getattr(coordinator, "alarm_subscribe_code", None)
     if subscribe_code:
-        _LOGGER.debug("Cancelling HYXI Alarm Push subscription: %s", subscribe_code)
         try:
-            await coordinator.client.cancel_subscription(subscribe_code)
-            await async_unregister_subscription_code(hass, subscribe_code)
+            await async_cancel_and_unregister_subscription(
+                hass, coordinator.client, subscribe_code
+            )
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning("Error cancelling HYXI Alarm Push subscription: %s", err)
         coordinator.alarm_subscribe_code = None
@@ -882,21 +882,24 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Use the client from the first active integration entry
         coordinator = coordinators[0]
-        _LOGGER.info("Manually cancelling HYXI subscription: %s", subscribe_code)
         try:
-            res = await coordinator.client.cancel_subscription(subscribe_code)
-            if res.get("success"):
-                await async_unregister_subscription_code(hass, subscribe_code)
-                _LOGGER.info(
-                    "Successfully cancelled HYXI subscription: %s", subscribe_code
-                )
-            else:
-                msg = res.get("msg", "Unknown error")
-                raise HomeAssistantError(f"Failed to cancel subscription: {msg}")
+            await async_cancel_and_unregister_subscription(
+                hass, coordinator.client, subscribe_code
+            )
         except Exception as err:
             _LOGGER.error(
                 "Error manual cancelling HYXI subscription %s: %s", subscribe_code, err
             )
+            err_msg = str(err)
+            if "subscription request failed" in err_msg:
+                # Extract the API error message
+                api_msg = err_msg.split("subscription request failed:", 1)[-1].strip()
+                if api_msg.startswith("(") and ")" in api_msg:
+                    # Strip any parenthesized code if present (e.g. from real SDK)
+                    pass
+                raise HomeAssistantError(
+                    f"Failed to cancel subscription: {api_msg}"
+                ) from err
             raise HomeAssistantError(f"API error: {err}") from err
 
     hass.services.async_register(
@@ -971,3 +974,57 @@ async def async_get_subscription_codes(hass: HomeAssistant) -> list[str]:
     store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     data = await store.async_load() or {}
     return data.get("codes", [])
+
+
+async def async_cancel_and_unregister_subscription(
+    hass: HomeAssistant, client, code: str
+) -> None:
+    """Cancel a subscription via the API and unregister it from storage if successful or already inactive."""
+    code = code.strip()
+    if not code:
+        return
+
+    _LOGGER.info("Cancelling HYXI subscription: %s", code)
+    try:
+        res = await client.cancel_subscription(code)
+        if isinstance(res, dict) and not res.get("success"):
+            msg = res.get("msg", "Unknown error")
+            sub_err_cls = getattr(client, "SubscriptionError", RuntimeError)
+            if not isinstance(sub_err_cls, type) or not issubclass(
+                sub_err_cls, BaseException
+            ):
+                sub_err_cls = RuntimeError
+            raise sub_err_cls(f"subscription request failed: {msg}")
+
+        await async_unregister_subscription_code(hass, code)
+        _LOGGER.info("Successfully cancelled HYXI subscription: %s", code)
+    except Exception as err:
+        is_sub_err = False
+        sub_err_cls = getattr(client, "SubscriptionError", None)
+        if (
+            sub_err_cls
+            and isinstance(sub_err_cls, type)
+            and issubclass(sub_err_cls, BaseException)
+        ):
+            if isinstance(err, sub_err_cls):
+                is_sub_err = True
+
+        if type(
+            err
+        ).__name__ == "SubscriptionError" or "subscription request failed" in str(err):
+            is_sub_err = True
+
+        if (
+            is_sub_err
+            and "Authentication failed" not in str(err)
+            and "no_response" not in str(err)
+        ):
+            _LOGGER.info(
+                "Subscription code %s was already unsubscribed or invalid (API error: %s), removing from known codes",
+                code,
+                err,
+            )
+            await async_unregister_subscription_code(hass, code)
+        else:
+            _LOGGER.warning("Error cancelling HYXI subscription %s: %s", code, err)
+        raise

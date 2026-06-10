@@ -103,9 +103,10 @@ async def async_setup_entry(
                     HyxiPeakShavingButton(coordinator, sn, dev_data, option)
                 )
 
-    # Expose the Renew Push Subscription button if push is enabled
+    # Expose the Renew Push Subscription and Purge Buttons if push is enabled
     if entry.options.get(CONF_ENABLE_PUSH, False) is True:
         entities.append(HyxiRenewSubscriptionButton(coordinator, entry))
+        entities.append(HyxiPurgeSubscriptionsButton(coordinator, entry))
 
     if entities:
         async_add_entities(entities)
@@ -447,3 +448,84 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
         except Exception as err:
             _LOGGER.error("Failed to renew HYXI push subscription: %s", err)
             raise HomeAssistantError(f"Subscription renewal failed: {err}") from err
+
+
+class HyxiPurgeSubscriptionsButton(ButtonEntity):
+    """Button to purge old (inactive) HYXI subscriptions."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "purge_old_subscriptions"
+    _attr_icon = "mdi:webhook"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        """Initialize the purge subscriptions button."""
+        self.coordinator = coordinator
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_purge_old_subscriptions"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "HYXI Cloud Service",
+            "manufacturer": MANUFACTURER,
+            "model": "Cloud API Bridge",
+        }
+
+    async def async_press(self) -> None:
+        """Purge old inactive subscriptions."""
+        from . import (
+            async_cancel_and_unregister_subscription,
+            async_get_subscription_codes,
+        )
+
+        _LOGGER.info("Manually triggered HYXI purge of old subscriptions")
+
+        # Collect active subscription codes across all loaded coordinators
+        active_codes = set()
+        for coord in self.hass.data.get(DOMAIN, {}).values():
+            if getattr(coord, "subscribe_code", None):
+                active_codes.add(coord.subscribe_code)
+            if getattr(coord, "alarm_subscribe_code", None):
+                active_codes.add(coord.alarm_subscribe_code)
+
+        # Retrieve all saved subscription codes
+        all_known = await async_get_subscription_codes(self.hass)
+
+        # Identify codes to purge (must NOT be in use)
+        to_purge = [code for code in all_known if code not in active_codes]
+
+        if not to_purge:
+            _LOGGER.info("No old subscription codes to purge")
+            return
+
+        _LOGGER.info("Found %d old subscription codes to purge", len(to_purge))
+
+        # Attempt to cancel each inactive code
+        success_count = 0
+        failure_count = 0
+        for code in to_purge:
+            try:
+                await async_cancel_and_unregister_subscription(
+                    self.hass, self.coordinator.client, code
+                )
+                success_count += 1
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                # If the code was successfully unregistered (e.g. because it was already inactive/invalid)
+                all_known_after = await async_get_subscription_codes(self.hass)
+                if code not in all_known_after:
+                    success_count += 1
+                else:
+                    _LOGGER.warning(
+                        "Failed to purge subscription code %s: %s", code, err
+                    )
+                    failure_count += 1
+
+        _LOGGER.info(
+            "Purged old subscriptions complete: %d successfully purged/removed, %d failed",
+            success_count,
+            failure_count,
+        )
+
+        if failure_count > 0:
+            raise HomeAssistantError(
+                f"Purged {success_count} old subscriptions, but {failure_count} failed. "
+                "Check logs for details."
+            )

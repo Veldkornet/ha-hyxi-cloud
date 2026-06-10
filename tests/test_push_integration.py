@@ -379,3 +379,110 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
         # Verify webhook ID and active subscribe code are logged correctly
         assert "Webhook ID: webhook_123" in log_msg
         assert "Active Subscribe Code: coord-sub-code" in log_msg
+
+
+@pytest.mark.asyncio
+async def test_async_cancel_and_unregister_subscription_success(hass):
+    """Test successful unregistration."""
+    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+
+    client = MagicMock()
+    client.cancel_subscription = AsyncMock(return_value={"success": True})
+
+    with patch(
+        "custom_components.hyxi_cloud.async_unregister_subscription_code",
+        new_callable=AsyncMock,
+    ) as mock_unregister:
+        await async_cancel_and_unregister_subscription(hass, client, "test-code")
+        mock_unregister.assert_called_once_with(hass, "test-code")
+
+
+@pytest.mark.asyncio
+async def test_async_cancel_and_unregister_subscription_already_unsubscribed(hass):
+    """Test unregistration when code is already unsubscribed on the server."""
+    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+
+    class DummySubscriptionError(Exception):
+        pass
+
+    client = MagicMock()
+    client.SubscriptionError = DummySubscriptionError
+    client.cancel_subscription = AsyncMock(
+        side_effect=DummySubscriptionError(
+            "subscription request failed (code=C000001): Parameter error"
+        )
+    )
+
+    with patch(
+        "custom_components.hyxi_cloud.async_unregister_subscription_code",
+        new_callable=AsyncMock,
+    ) as mock_unregister:
+        with pytest.raises(DummySubscriptionError):
+            await async_cancel_and_unregister_subscription(hass, client, "test-code")
+        mock_unregister.assert_called_once_with(hass, "test-code")
+
+
+@pytest.mark.asyncio
+async def test_async_cancel_and_unregister_subscription_transient_error(hass):
+    """Test that transient errors (like auth/connection) are NOT unregistered and raise the error."""
+    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+
+    class DummySubscriptionError(Exception):
+        pass
+
+    client = MagicMock()
+    client.SubscriptionError = DummySubscriptionError
+    client.cancel_subscription = AsyncMock(
+        side_effect=DummySubscriptionError("Authentication failed")
+    )
+
+    with patch(
+        "custom_components.hyxi_cloud.async_unregister_subscription_code",
+        new_callable=AsyncMock,
+    ) as mock_unregister:
+        with pytest.raises(DummySubscriptionError, match="Authentication failed"):
+            await async_cancel_and_unregister_subscription(hass, client, "test-code")
+        mock_unregister.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_button_press_purge(mock_coordinator, mock_entry):
+    """Test purge button filters active codes and calls cancel helper."""
+    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
+
+    hass = MagicMock()
+    coordinator2 = MagicMock()
+    coordinator2.subscribe_code = "active-1"
+    coordinator2.alarm_subscribe_code = "active-2"
+
+    mock_coordinator.subscribe_code = "active-3"
+    mock_coordinator.alarm_subscribe_code = None
+
+    hass.data = {
+        DOMAIN: {
+            "entry_1": coordinator2,
+            "entry_2": mock_coordinator,
+        }
+    }
+
+    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
+    button.hass = hass
+
+    stored_codes = ["active-1", "active-2", "active-3", "inactive-1", "inactive-2"]
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.async_get_subscription_codes",
+            new_callable=AsyncMock,
+            return_value=stored_codes,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
+            new_callable=AsyncMock,
+        ) as mock_cancel_helper,
+    ):
+        await button.async_press()
+
+        assert mock_cancel_helper.call_count == 2
+        mock_cancel_helper.assert_any_call(hass, mock_coordinator.client, "inactive-1")
+        mock_cancel_helper.assert_any_call(hass, mock_coordinator.client, "inactive-2")
