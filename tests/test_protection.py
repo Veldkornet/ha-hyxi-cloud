@@ -299,6 +299,18 @@ async def test_async_stop_cancels_evaluation_task():
     assert controller._eval_task is None
 
 
+def test_note_manual_mode():
+    """Verify note_manual_mode correctly updates the last sent mode attribute."""
+    controller = _build_controller(50)
+    assert controller.last_sent_mode is None
+
+    controller.note_manual_mode("charge")
+    assert controller.last_sent_mode == "charge"
+
+    controller.note_manual_mode("idle")
+    assert controller.last_sent_mode == "idle"
+
+
 def test_restore_last_sent_mode_invalid():
     """Verify restore_last_sent_mode ignores invalid/unsupported modes."""
     controller = _build_controller(50)
