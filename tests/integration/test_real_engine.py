@@ -552,3 +552,24 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
 
     await engine.async_stop()
     await hass.async_block_till_done()
+
+
+def test_engine_p1_avg():
+    """Test the p1_avg property of EnergyManagerEngine."""
+    coordinator = MagicMock()
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(MagicMock(), coordinator, config)
+
+    assert engine.p1_avg == 0.0
+
+    # Add one value
+    engine._p1_buffer.append((1.0, 100.0))
+    assert engine.p1_avg == 100.0
+
+    # Add second value
+    engine._p1_buffer.append((2.0, 300.0))
+    assert engine.p1_avg == 200.0
+
+    # Add third value
+    engine._p1_buffer.append((3.0, -100.0))
+    assert engine.p1_avg == 100.0
