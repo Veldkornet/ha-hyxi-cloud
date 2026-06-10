@@ -23,7 +23,6 @@ jobs:
             github.com:443
             objects.githubusercontent.com:443
             pypi.org:443
-            results-receiver.pre-commit.com:443
             productionresultssa16.blob.core.windows.net:443
             productionresults*.blob.core.windows.net:443
 
