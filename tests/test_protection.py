@@ -212,6 +212,14 @@ def test_manual_charge_allowed_below_upper_release_threshold():
     assert controller.should_block_manual_charge() is False
 
 
+def test_manual_charge_blocked_above_release_threshold():
+    """Manual charge should still be blocked between soc_max and upper hysteresis."""
+    controller = _build_controller(89)
+    controller._high_soc_hold = True
+
+    assert controller.should_block_manual_charge() is True
+
+
 # --- Single-Phase Behavior ---
 
 
