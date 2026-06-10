@@ -937,7 +937,7 @@ async def async_register_subscription_code(hass: HomeAssistant, code: str) -> No
         await store.async_save(data)
 
     # Update active coordinators
-    for coordinator in list(hass.data.get(DOMAIN, {}).values()):
+    for coordinator in hass.data.get(DOMAIN, {}).values():
         coordinator.known_subscription_codes = list(codes)
         coordinator.async_update_listeners()
 
@@ -959,7 +959,7 @@ async def async_unregister_subscription_code(hass: HomeAssistant, code: str) -> 
         await store.async_save(data)
 
     # Update active coordinators
-    for coordinator in list(hass.data.get(DOMAIN, {}).values()):
+    for coordinator in hass.data.get(DOMAIN, {}).values():
         coordinator.known_subscription_codes = list(codes)
         coordinator.async_update_listeners()
 
