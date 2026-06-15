@@ -888,3 +888,51 @@ class TestHAStateUtilities:
         # Test None entity_id
         assert engine._get_ha_state_float(None) == 0.0
         assert engine._get_ha_state_float(None, default=7.0) == 7.0
+
+
+class TestHasPeakShaving:
+    """Test Peak Shaving detection logic."""
+
+    def test_has_peak_shaving(self):
+        """Test _has_peak_shaving logic."""
+        from unittest.mock import MagicMock
+
+        from custom_components.hyxi_cloud.engine import EnergyManagerEngine
+
+        # Create minimal engine instance without triggering __init__ logic
+        engine = object.__new__(EnergyManagerEngine)
+        engine._sn = "test_sn"
+        engine._coordinator = MagicMock()
+
+        # 1. Test missing coordinator data
+        engine._coordinator.data = None
+        assert engine._has_peak_shaving() is False
+
+        # 2. Test missing device data for the specific SN
+        engine._coordinator.data = {"other_sn": {}}
+        assert engine._has_peak_shaving() is False
+
+        # 3. Test valid single phase hybrid inverter
+        # "1" normalizes to hybrid_inverter according to const.py
+        engine._coordinator.data = {
+            "test_sn": {
+                "deviceCode": "1",
+                "model": "H5K-LS",  # -LS detects as single_phase
+            }
+        }
+        assert engine._has_peak_shaving() is True
+
+        # 4. Test valid single phase all-in-one inverter
+        engine._coordinator.data["test_sn"]["deviceCode"] = "ALL_IN_ONE"
+        assert engine._has_peak_shaving() is True
+
+        # 5. Test valid phase but wrong device type
+        engine._coordinator.data["test_sn"]["deviceCode"] = "MICRO_INVERTER"
+        assert engine._has_peak_shaving() is False
+
+        # 6. Test valid device type but wrong phase (three-phase)
+        engine._coordinator.data["test_sn"]["deviceCode"] = "1"
+        engine._coordinator.data["test_sn"]["model"] = (
+            "H10K-HT"  # -HT detects as three_phase
+        )
+        assert engine._has_peak_shaving() is False
