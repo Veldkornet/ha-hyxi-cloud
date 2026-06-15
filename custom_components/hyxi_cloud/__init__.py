@@ -42,6 +42,7 @@ from .const import (
     get_raw_device_code,
     mask_sensitive_key_value,
     mask_sn,
+    mask_url,
     normalize_device_type,
 )
 from .coordinator import HyxiDataUpdateCoordinator
@@ -329,7 +330,8 @@ async def _async_resolve_webhook_url(
         base = custom_url.strip().rstrip("/")
         resolved = base + webhook.async_generate_path(webhook_id)
         _LOGGER.info(
-            "HYXI Push: Using custom base URL, callback endpoint: %s", resolved
+            "HYXI Push: Using custom base URL, callback endpoint: %s",
+            mask_url(resolved),
         )
         return resolved
 
@@ -362,7 +364,8 @@ async def _async_resolve_webhook_url(
                 hass, allow_external=True
             ) + webhook.async_generate_path(webhook_id)
             _LOGGER.debug(
-                "HYXI Push: Resolved callback URL via network helper: %s", resolved
+                "HYXI Push: Resolved callback URL via network helper: %s",
+                mask_url(resolved),
             )
         except network.NoURLAvailableError:
             _LOGGER.debug(
@@ -446,8 +449,8 @@ async def _async_setup_push_subscription(  # pylint: disable=too-many-statements
 
     _LOGGER.debug(
         "Subscribing callback URL %s for devices: %s",
-        webhook_url,
-        device_sns,
+        mask_url(webhook_url),
+        [mask_sn(sn) for sn in device_sns],
     )
 
     try:
@@ -569,7 +572,7 @@ async def _async_handle_webhook(
 
     _LOGGER.debug(
         "HYXI Cloud Data Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
-        webhook_id,
+        "hyxi_cloud_***" if webhook_id.startswith("hyxi_cloud_") else "***",
         coordinator.subscribe_code,
     )
 
@@ -691,7 +694,7 @@ async def _async_setup_alarm_subscription(
     _LOGGER.debug(
         "HYXI Alarm Push: Subscribing %s devices at %s",
         len(device_sns),
-        webhook_url,
+        mask_url(webhook_url),
     )
 
     try:
@@ -811,7 +814,7 @@ async def _async_handle_alarm_webhook(
 
     _LOGGER.debug(
         "HYXI Cloud Alarm Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
-        webhook_id,
+        "hyxi_cloud_***" if webhook_id.startswith("hyxi_cloud_") else "***",
         coordinator.alarm_subscribe_code,
     )
 

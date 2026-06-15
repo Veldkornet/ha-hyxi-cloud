@@ -303,5 +303,5 @@ async def test_handle_alarm_webhook_logging_details(
         log_msg = debug_log[0]
 
         # Verify webhook ID and active subscribe code are logged correctly
-        assert "Webhook ID: hyxi_cloud_entry_test_alarm" in log_msg
+        assert "Webhook ID: hyxi_cloud_***" in log_msg
         assert "Active Subscribe Code: coord-alarm-sub-code" in log_msg

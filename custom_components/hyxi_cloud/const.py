@@ -70,6 +70,29 @@ def mask_sn(sn: str) -> str:
     return hashlib.sha256(sn_str.encode("utf-8")).hexdigest()[:8]
 
 
+def mask_url(url: str | None) -> str:
+    """Mask a URL host and webhook ID to prevent leaks in logs."""
+    if not url:
+        return ""
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(str(url))
+        # Mask netloc
+        # For path, mask the final part which is the webhook ID (e.g. /api/webhook/hyxi_cloud_abc123)
+        path_parts = parsed.path.strip("/").split("/")
+        if path_parts:
+            # Check if it looks like a webhook ID
+            if path_parts[-1].startswith("hyxi_cloud_"):
+                path_parts[-1] = "hyxi_cloud_***"
+            elif len(path_parts[-1]) > 10:  # arbitrary long ID
+                path_parts[-1] = "***"
+        masked_path = "/" + "/".join(path_parts)
+        return f"{parsed.scheme}://[MASKED_DOMAIN]{masked_path}"
+    except Exception:  # pylint: disable=broad-except
+        return "https://[MASKED_DOMAIN]/api/webhook/hyxi_cloud_***"
+
+
 def mask_sensitive_key_value(key: str, value: Any) -> Any:
     """Check if key contains sensitive info (SN, plant ID, IMEI, alias, address, etc.) and mask it."""
     if value is None:

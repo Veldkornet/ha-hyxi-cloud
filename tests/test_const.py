@@ -6,6 +6,7 @@ from custom_components.hyxi_cloud.const import (
     get_software_version,
     is_null_value,
     mask_sn,
+    mask_url,
     normalize_device_type,
 )
 
@@ -243,3 +244,22 @@ def test_detect_phase_type_unknown():
     assert detect_phase_type({"model": ""}) == "unknown"
     assert detect_phase_type({"model": "SomeRandomModel"}) == "unknown"
     assert detect_phase_type({"model": None, "metrics": {}}) == "unknown"
+
+
+def test_mask_url():
+    """Verify mask_url correctly obscures URLs."""
+    # 1. Custom URL webhook
+    assert (
+        mask_url("https://example.com/api/webhook/hyxi_cloud_entry_123")
+        == "https://[MASKED_DOMAIN]/api/webhook/hyxi_cloud_***"
+    )
+
+    # 2. Nabu Casa webhook
+    assert (
+        mask_url("https://hooks.nabucasa.com/v1/abc123xyz789")
+        == "https://[MASKED_DOMAIN]/v1/***"
+    )
+
+    # 3. None or empty
+    assert mask_url("") == ""
+    assert mask_url(None) == ""

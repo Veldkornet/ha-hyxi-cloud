@@ -377,7 +377,7 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
         log_msg = debug_log[0]
 
         # Verify webhook ID and active subscribe code are logged correctly
-        assert "Webhook ID: webhook_123" in log_msg
+        assert "Webhook ID: ***" in log_msg
         assert "Active Subscribe Code: coord-sub-code" in log_msg
 
 
