@@ -26,6 +26,7 @@ jobs:
             productionresultssa16.blob.core.windows.net:443
             productionresults*.blob.core.windows.net:443
             proxy.golang.org:443
+            storage.googleapis.com:443
             sum.golang.org:443
             dl.google.com:443
 
