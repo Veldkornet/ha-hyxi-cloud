@@ -47,7 +47,7 @@ def main() -> None:
     )
 
     # Extract hyxi-cloud-api dependency
-    pyproject_api_match = re.search(r'"(hyxi-cloud-api[>=~<=]*.*?)"', pyproject_content)
+    pyproject_api_match = re.search(r'"(hyxi-cloud-api[>=~<]*.*?)"', pyproject_content)
     pyproject_api_version = (
         pyproject_api_match.group(1) if pyproject_api_match else None
     )
