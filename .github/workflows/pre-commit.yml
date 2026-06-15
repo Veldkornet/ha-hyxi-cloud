@@ -22,6 +22,7 @@ jobs:
             files.pythonhosted.org:443
             github.com:443
             objects.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
             pypi.org:443
             productionresultssa16.blob.core.windows.net:443
             productionresults*.blob.core.windows.net:443
