@@ -555,6 +555,21 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
     await hass.async_block_till_done()
 
 
+def test_engine_current_mode():
+    """Test the current_mode property of EnergyManagerEngine."""
+    coordinator = MagicMock()
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(MagicMock(), coordinator, config)
+
+    assert engine.current_mode is None
+
+    engine._current_mode = "charge"
+    assert engine.current_mode == "charge"
+
+    engine._current_mode = "discharge"
+    assert engine.current_mode == "discharge"
+
+
 def test_engine_p1_avg():
     """Test the p1_avg property of EnergyManagerEngine."""
     coordinator = MagicMock()
