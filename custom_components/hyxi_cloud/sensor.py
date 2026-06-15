@@ -1089,6 +1089,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
             if (last_state := await self.async_get_last_state()) is not None:
                 try:
                     self._last_valid_value = float(last_state.state)
+                    self._last_valid_time = None
                     self._update_native_value()
                 except ValueError, TypeError:
                     _LOGGER.debug(
