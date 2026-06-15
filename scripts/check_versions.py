@@ -52,7 +52,22 @@ def main() -> None:
         pyproject_api_match.group(1) if pyproject_api_match else None
     )
 
-    # 3. Read requirements.txt
+    # 3. Read const.py
+    const_path = root / "custom_components" / "hyxi_cloud" / "const.py"
+    if not const_path.exists():
+        print(f"Error: const.py not found at {const_path}")
+        sys.exit(1)
+
+    with const_path.open("r", encoding="utf-8") as f:
+        const_content = f.read()
+
+    # Extract VERSION
+    const_version_match = re.search(
+        r'^VERSION\s*=\s*"(.*?)"', const_content, re.MULTILINE
+    )
+    const_version = const_version_match.group(1) if const_version_match else None
+
+    # 4. Read requirements.txt
     req_path = root / "requirements.txt"
     req_api_version = None
     if req_path.exists():
@@ -62,7 +77,7 @@ def main() -> None:
                     req_api_version = line.strip()
                     break
 
-    # 4. Read requirements_test.txt
+    # 5. Read requirements_test.txt
     req_test_path = root / "requirements_test.txt"
     req_test_api_version = None
     if req_test_path.exists():
@@ -75,12 +90,15 @@ def main() -> None:
     errors = []
 
     # Check integration versions
-    if manifest_version != pyproject_version:
-        errors.append(
-            f"Integration version mismatch:\n"
-            f"  manifest.json: {manifest_version}\n"
-            f"  pyproject.toml: {pyproject_version}"
-        )
+    integration_versions = {
+        "manifest.json": manifest_version,
+        "pyproject.toml": pyproject_version,
+        "const.py": const_version,
+    }
+
+    if len(set(integration_versions.values())) > 1:
+        details = "\n".join(f"  {k}: {v}" for k, v in integration_versions.items())
+        errors.append(f"Integration version mismatch:\n{details}")
 
     # Check hyxi-cloud-api dependency versions
     api_versions = {
