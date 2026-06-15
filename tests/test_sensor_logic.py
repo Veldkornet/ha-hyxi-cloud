@@ -553,6 +553,7 @@ async def test_sensor_added_to_hass_restoration():
     await sensor.async_added_to_hass()
 
     assert sensor._last_valid_value == 123.45
+    assert sensor._last_valid_time is None
 
 
 @pytest.mark.asyncio
