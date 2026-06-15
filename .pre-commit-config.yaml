@@ -50,3 +50,8 @@ repos:
         entry: 'except\s*\([^)]+,\s*[^)]+\)\s*:'
         language: pygrep
         types: [python]
+      - id: check-versions
+        name: "Check version synchronization"
+        entry: python3 scripts/check_versions.py
+        language: system
+        pass_filenames: false
