@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -294,6 +295,13 @@ class EMBinarySensor(BinarySensorEntity):
         "high_load_detected": "mdi:flash-alert",
     }
 
+    _STATE_FUNCS: ClassVar[dict[str, Callable[[Any], bool]]] = {
+        "night_mode_active": lambda engine: engine._is_night(),
+        "high_load_detected": lambda engine: (
+            engine._get_home_load() > engine._get_param("high_load_threshold")
+        ),
+    }
+
     def __init__(
         self,
         coordinator,
@@ -309,6 +317,7 @@ class EMBinarySensor(BinarySensorEntity):
         self._attr_translation_key = f"em_{key}"
         self._attr_device_info = device_info
         self._attr_icon = self._ICONS.get(key)
+        self._state_func = self._STATE_FUNCS.get(key)
 
     async def async_added_to_hass(self) -> None:
         """Register for engine updates."""
@@ -331,12 +340,6 @@ class EMBinarySensor(BinarySensorEntity):
     def is_on(self) -> bool | None:
         """Return the current value from the engine."""
         engine = self._coordinator.engine
-        if not engine:
+        if not engine or not self._state_func:
             return None
-        if self._key == "night_mode_active":
-            return engine._is_night()
-        if self._key == "high_load_detected":
-            home_load = engine._get_home_load()
-            threshold = engine._get_param("high_load_threshold")
-            return home_load > threshold
-        return None
+        return self._state_func(engine)
