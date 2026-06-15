@@ -1073,6 +1073,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
         """Initialize the base sensor."""
         super().__init__(coordinator)
         self._last_valid_value = None
+        self._last_valid_time = None
         self._last_logged_glitch = None
 
     def _update_native_value(self):
@@ -1131,13 +1132,25 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
         """Check for and prevent impossible value jumps."""
         if self._last_valid_value is None:
             return None
-        if (num_value - self._last_valid_value) > 100.0:
+
+        # Allow threshold scaling based on time elapsed since the last update
+        time_elapsed_hours = 168.0  # Default to 1 week if last update time is unknown
+        if getattr(self, "_last_valid_time", None) is not None:
+            now = dt_util.utcnow()
+            time_elapsed_hours = max(
+                0.0, (now - self._last_valid_time).total_seconds() / 3600.0
+            )
+
+        max_allowed_jump = round(100.0 + (50.0 * time_elapsed_hours), 2)
+
+        if (num_value - self._last_valid_value) > max_allowed_jump:
             self._log_glitch_once(
                 num_value,
-                "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+                "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s (max allowed: %s)",
                 self.entity_description.key,
                 self._last_valid_value,
                 num_value,
+                max_allowed_jump,
             )
             return self._last_valid_value
 
@@ -1167,6 +1180,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
                     if spike_result is not None:
                         return spike_result
             self._last_valid_value = num_value
+            self._last_valid_time = dt_util.utcnow()
             return num_value
         except ValueError, TypeError:
             return value

@@ -827,10 +827,15 @@ async def test_base_sensor_added_to_hass_invalid_restoration():
 
 def test_anti_spike_direct_call(base_sensor):
     """Directly test _check_anti_spike logic and coverage."""
+    from datetime import timedelta
+
+    import homeassistant.util.dt as dt_util
+
     sensor, _ = base_sensor
 
-    # Initialize _last_valid_value
+    # Initialize _last_valid_value and time
     sensor._last_valid_value = 100.0
+    sensor._last_valid_time = dt_util.utcnow()
 
     # Valid jump <= 100.0 returns None (meaning let it through)
     assert sensor._check_anti_spike(200.0) is None
@@ -840,11 +845,19 @@ def test_anti_spike_direct_call(base_sensor):
         assert sensor._check_anti_spike(200.1) == 100.0
         mock_log.assert_called_once_with(
             200.1,
-            "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s",
+            "HYXI High-Spike Filter: Ignoring impossible jump on %s from %s to %s (max allowed: %s)",
             sensor.entity_description.key,
             100.0,
             200.1,
+            100.0,
         )
+
+    # If the last update was a long time ago (e.g. 3 hours), a larger jump is allowed
+    sensor._last_valid_time = dt_util.utcnow() - timedelta(hours=3)
+    # Allowed jump is 100.0 + 50.0 * 3 = 250.0. A jump of 249.0 should be allowed.
+    assert sensor._check_anti_spike(349.0) is None
+    # A jump of 251.0 should still be blocked
+    assert sensor._check_anti_spike(351.0) == 100.0
 
 
 def test_anti_dip_direct_call(base_sensor):
@@ -861,10 +874,13 @@ def test_anti_dip_direct_call(base_sensor):
 
 def test_process_numeric_value_anti_spike(base_sensor):
     """Test the return path for _check_anti_spike inside _process_numeric_value."""
+    import homeassistant.util.dt as dt_util
+
     sensor, _ = base_sensor
 
-    # Seed an existing valid value
+    # Seed an existing valid value and time
     sensor._last_valid_value = 100.0
+    sensor._last_valid_time = dt_util.utcnow()
 
     # Pass a value that creates a spike > 100.0
     # _process_numeric_value handles rounding internally, so 200.11 will trigger the spike block
