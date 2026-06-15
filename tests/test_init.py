@@ -1187,3 +1187,39 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                                     assert res_unload is True
                                     mock_engine.async_stop.assert_called_once()
                                     mock_controller.async_stop.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_setup_push_deactivation_cleanup(mock_hass, mock_entry):
+    """Verify push deactivation cleans up active/stored subscription codes."""
+    from custom_components.hyxi_cloud.const import CONF_ENABLE_PUSH
+
+    mock_entry.options = {CONF_ENABLE_PUSH: False}
+    mock_entry.data = {
+        "push_subscribe_code": "sub_code_123",
+        "alarm_subscribe_code": "alarm_code_123",
+    }
+
+    coordinator = MagicMock()
+    coordinator.client = MagicMock()
+    coordinator.client.cancel_subscription = AsyncMock(return_value={"success": True})
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+        new=AsyncMock(),
+    ) as mock_cancel:
+        await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
+        await _async_setup_alarm_subscription(mock_hass, mock_entry, coordinator)
+
+        # Verify cancel and unregister was called for both
+        assert mock_cancel.call_count == 2
+        mock_cancel.assert_any_call(mock_hass, coordinator.client, "sub_code_123")
+        mock_cancel.assert_any_call(mock_hass, coordinator.client, "alarm_code_123")
+
+        # Verify config entry data was updated to clear the codes
+        mock_hass.config_entries.async_update_entry.assert_any_call(
+            mock_entry, data={**mock_entry.data, "push_subscribe_code": None}
+        )
+        mock_hass.config_entries.async_update_entry.assert_any_call(
+            mock_entry, data={**mock_entry.data, "alarm_subscribe_code": None}
+        )

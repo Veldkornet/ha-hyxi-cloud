@@ -90,11 +90,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    # Set up real-time push subscription if enabled (graceful fallback to polling if it fails)
+    # Set up real-time push subscription (handles enablement checks and cleanup of orphaned codes)
     await _async_setup_push_subscription(hass, entry, coordinator)
-    # Set up alarm push subscription (runs alongside data push, same webhook base URL)
-    if entry.options.get(CONF_ENABLE_PUSH, False):
-        await _async_setup_alarm_subscription(hass, entry, coordinator)
+    # Set up alarm push subscription (handles enablement checks and cleanup of orphaned codes)
+    await _async_setup_alarm_subscription(hass, entry, coordinator)
 
     device_registry = dr.async_get(hass)
 
@@ -385,6 +384,23 @@ async def _async_setup_push_subscription(  # pylint: disable=too-many-statements
     enable_push = entry.options.get(CONF_ENABLE_PUSH, False)
     if enable_push is not True:
         coordinator.push_status = "inactive"
+        prior_code = entry.data.get("push_subscribe_code")
+        if prior_code:
+            _LOGGER.debug(
+                "HYXI Push: Cancelling prior subscription on push disable (code: %s)",
+                prior_code,
+            )
+            try:
+                await async_cancel_and_unregister_subscription(
+                    hass, coordinator.client, prior_code
+                )
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                _LOGGER.debug(
+                    "HYXI Push: Could not cancel subscription on push disable: %s", err
+                )
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, "push_subscribe_code": None}
+            )
         return
 
     # Cancel any previously-active subscription that wasn't cleanly torn down
@@ -394,7 +410,9 @@ async def _async_setup_push_subscription(  # pylint: disable=too-many-statements
             "HYXI Push: Cancelling prior orphaned subscription (code: %s)", prior_code
         )
         try:
-            await coordinator.client.cancel_subscription(prior_code)
+            await async_cancel_and_unregister_subscription(
+                hass, coordinator.client, prior_code
+            )
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.debug("HYXI Push: Could not cancel prior subscription: %s", err)
         hass.config_entries.async_update_entry(
@@ -641,6 +659,29 @@ async def _async_setup_alarm_subscription(
     The alarm subscribe_code is persisted to entry.data under
     "alarm_subscribe_code" for crash-safe teardown on next startup.
     """
+    enable_push = entry.options.get(CONF_ENABLE_PUSH, False)
+    if enable_push is not True:
+        coordinator.alarm_push_status = "inactive"
+        prior_code = entry.data.get("alarm_subscribe_code")
+        if prior_code:
+            _LOGGER.debug(
+                "HYXI Alarm Push: Cancelling prior subscription on push disable (code: %s)",
+                prior_code,
+            )
+            try:
+                await async_cancel_and_unregister_subscription(
+                    hass, coordinator.client, prior_code
+                )
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                _LOGGER.debug(
+                    "HYXI Alarm Push: Could not cancel subscription on push disable: %s",
+                    err,
+                )
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, "alarm_subscribe_code": None}
+            )
+        return
+
     push_rate_s = int(entry.options.get(CONF_PUSH_RATE, DEFAULT_PUSH_RATE))
     push_rate_ms = push_rate_s * 1000
     custom_url = entry.options.get(CONF_PUSH_URL)
@@ -656,7 +697,9 @@ async def _async_setup_alarm_subscription(
             prior_code,
         )
         try:
-            await coordinator.client.cancel_subscription(prior_code)
+            await async_cancel_and_unregister_subscription(
+                hass, coordinator.client, prior_code
+            )
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.debug(
                 "HYXI Alarm Push: Could not cancel prior subscription: %s", err
