@@ -379,6 +379,10 @@ This integration includes a specialized diagnostic system to help you distinguis
 | **Device Alarm** | Hardware fault tracking. | Binary sensor that turns `On` if the hardware reports active alarms. |
 | **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
 
+## 🎨 Community Examples
+
+* **[HYXi Ultra Dashboard](https://github.com/Robinbraakman/HYXi-Ultra-Dashboard)**: A custom Lovelace card for the HYXi Halo battery. Visualizes SOC, charge/discharge power, cumulative energy, efficiency, cycles, and estimated payback details.
+
 ## ⚙️ Setup & Configuration
 
 1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXIPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
