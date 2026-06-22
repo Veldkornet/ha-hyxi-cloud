@@ -417,7 +417,7 @@ async def _async_cancel_entry_subscription(
     hass.config_entries.async_update_entry(entry, data={**entry.data, config_key: None})
 
 
-async def _async_execute_real_time_subscription(
+async def _async_execute_real_time_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
     hass: HomeAssistant,
     entry: ConfigEntry,
     coordinator: HyxiDataUpdateCoordinator,
@@ -458,7 +458,7 @@ async def _async_execute_real_time_subscription(
         _log_push_subscription_failure("HYXI Real-Time Push", err_msg)
 
 
-async def _async_execute_alarm_subscription(
+async def _async_execute_alarm_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
     hass: HomeAssistant,
     entry: ConfigEntry,
     coordinator: HyxiDataUpdateCoordinator,
