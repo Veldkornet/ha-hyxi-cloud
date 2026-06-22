@@ -48,6 +48,68 @@ def _build_user_schema() -> vol.Schema:
     )
 
 
+def _build_em_schema(
+    options: dict, sn_options: list[str], current_sn: str
+) -> vol.Schema:
+    """Build the Energy Manager schema."""
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_EM_P1_ENTITY,
+                default=options.get(CONF_EM_P1_ENTITY, ""),
+            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+            vol.Optional(
+                CONF_EM_FORECAST_ENTITY,
+                default=options.get(CONF_EM_FORECAST_ENTITY, ""),
+            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+            vol.Optional(
+                CONF_EM_FORECAST_POWER_ENTITY,
+                default=options.get(CONF_EM_FORECAST_POWER_ENTITY, ""),
+            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+            vol.Required(
+                CONF_EM_INVERTER_SN, default=current_sn
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=sn_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Optional(
+                CONF_EM_BATTERY_OVERRIDE,
+                default=options.get(CONF_EM_BATTERY_OVERRIDE, False),
+            ): selector.BooleanSelector(),
+            vol.Optional(
+                CONF_EM_BATTERY_CAPACITY,
+                default=options.get(CONF_EM_BATTERY_CAPACITY, 2000),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=1000,
+                    max=50000,
+                    step=100,
+                    unit_of_measurement="Wh",
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Optional(
+                CONF_EM_LOOP_INTERVAL,
+                default=options.get(CONF_EM_LOOP_INTERVAL, 15),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=5,
+                    max=60,
+                    step=1,
+                    unit_of_measurement="s",
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            ),
+            vol.Optional(
+                CONF_EM_DRY_RUN,
+                default=options.get(CONF_EM_DRY_RUN, False),
+            ): selector.BooleanSelector(),
+        }
+    )
+
+
 class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Handle a config flow for HYXI Cloud."""
 
@@ -308,32 +370,32 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(step_id="init", data_schema=vol.Schema(schema_dict))
 
+    def _save_energy_manager_input(self, user_input: dict) -> None:
+        """Save the energy manager user input."""
+        self._options[CONF_EM_P1_ENTITY] = user_input[CONF_EM_P1_ENTITY]
+        self._options[CONF_EM_INVERTER_SN] = user_input[CONF_EM_INVERTER_SN]
+        self._options[CONF_EM_BATTERY_OVERRIDE] = user_input.get(
+            CONF_EM_BATTERY_OVERRIDE, False
+        )
+        if user_input.get(CONF_EM_BATTERY_OVERRIDE):
+            self._options[CONF_EM_BATTERY_CAPACITY] = user_input.get(
+                CONF_EM_BATTERY_CAPACITY, 2000
+            )
+        else:
+            self._options.pop(CONF_EM_BATTERY_CAPACITY, None)
+        if user_input.get(CONF_EM_FORECAST_ENTITY):
+            self._options[CONF_EM_FORECAST_ENTITY] = user_input[CONF_EM_FORECAST_ENTITY]
+        if user_input.get(CONF_EM_FORECAST_POWER_ENTITY):
+            self._options[CONF_EM_FORECAST_POWER_ENTITY] = user_input[
+                CONF_EM_FORECAST_POWER_ENTITY
+            ]
+        self._options[CONF_EM_LOOP_INTERVAL] = user_input.get(CONF_EM_LOOP_INTERVAL, 15)
+        self._options[CONF_EM_DRY_RUN] = user_input.get(CONF_EM_DRY_RUN, False)
+
     async def async_step_energy_manager(self, user_input=None):
         """Configure the Energy Manager -- P1 entity, forecast, inverter SN."""
         if user_input is not None:
-            self._options[CONF_EM_P1_ENTITY] = user_input[CONF_EM_P1_ENTITY]
-            self._options[CONF_EM_INVERTER_SN] = user_input[CONF_EM_INVERTER_SN]
-            self._options[CONF_EM_BATTERY_OVERRIDE] = user_input.get(
-                CONF_EM_BATTERY_OVERRIDE, False
-            )
-            if user_input.get(CONF_EM_BATTERY_OVERRIDE):
-                self._options[CONF_EM_BATTERY_CAPACITY] = user_input.get(
-                    CONF_EM_BATTERY_CAPACITY, 2000
-                )
-            else:
-                self._options.pop(CONF_EM_BATTERY_CAPACITY, None)
-            if user_input.get(CONF_EM_FORECAST_ENTITY):
-                self._options[CONF_EM_FORECAST_ENTITY] = user_input[
-                    CONF_EM_FORECAST_ENTITY
-                ]
-            if user_input.get(CONF_EM_FORECAST_POWER_ENTITY):
-                self._options[CONF_EM_FORECAST_POWER_ENTITY] = user_input[
-                    CONF_EM_FORECAST_POWER_ENTITY
-                ]
-            self._options[CONF_EM_LOOP_INTERVAL] = user_input.get(
-                CONF_EM_LOOP_INTERVAL, 15
-            )
-            self._options[CONF_EM_DRY_RUN] = user_input.get(CONF_EM_DRY_RUN, False)
+            self._save_energy_manager_input(user_input)
             return self.async_create_entry(title="", data=self._options)
 
         # Build inverter SN options from coordinator data
@@ -342,74 +404,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         if not current_sn and len(sn_options) == 1:
             current_sn = sn_options[0]
 
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_EM_P1_ENTITY,
-                    default=self._config_entry.options.get(CONF_EM_P1_ENTITY, ""),
-                ): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
-                ),
-                vol.Optional(
-                    CONF_EM_FORECAST_ENTITY,
-                    default=self._config_entry.options.get(CONF_EM_FORECAST_ENTITY, ""),
-                ): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
-                ),
-                vol.Optional(
-                    CONF_EM_FORECAST_POWER_ENTITY,
-                    default=self._config_entry.options.get(
-                        CONF_EM_FORECAST_POWER_ENTITY, ""
-                    ),
-                ): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
-                ),
-                vol.Required(
-                    CONF_EM_INVERTER_SN, default=current_sn
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=sn_options,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                vol.Optional(
-                    CONF_EM_BATTERY_OVERRIDE,
-                    default=self._config_entry.options.get(
-                        CONF_EM_BATTERY_OVERRIDE, False
-                    ),
-                ): selector.BooleanSelector(),
-                vol.Optional(
-                    CONF_EM_BATTERY_CAPACITY,
-                    default=self._config_entry.options.get(
-                        CONF_EM_BATTERY_CAPACITY, 2000
-                    ),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=1000,
-                        max=50000,
-                        step=100,
-                        unit_of_measurement="Wh",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                ),
-                vol.Optional(
-                    CONF_EM_LOOP_INTERVAL,
-                    default=self._config_entry.options.get(CONF_EM_LOOP_INTERVAL, 15),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=5,
-                        max=60,
-                        step=1,
-                        unit_of_measurement="s",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                ),
-                vol.Optional(
-                    CONF_EM_DRY_RUN,
-                    default=self._config_entry.options.get(CONF_EM_DRY_RUN, False),
-                ): selector.BooleanSelector(),
-            }
-        )
+        schema = _build_em_schema(self._config_entry.options, sn_options, current_sn)
 
         return self.async_show_form(step_id="energy_manager", data_schema=schema)
 
