@@ -242,6 +242,12 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         # Pull current values or defaults
         options = self._options if self._options else self._config_entry.options
+        schema = self._build_init_schema(options)
+
+        return self.async_show_form(step_id="init", data_schema=schema)
+
+    def _build_init_schema(self, options: dict) -> vol.Schema:
+        """Build the schema for the init step."""
         current_interval = options.get("update_interval", 5)
         em_enabled = options.get(CONF_EM_ENABLED, False)
         has_controllable = self._has_controllable_inverter()
@@ -305,8 +311,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 schema_dict[
                     vol.Optional("enable_energy_manager", default=em_enabled)
                 ] = selector.BooleanSelector()
-
-        return self.async_show_form(step_id="init", data_schema=vol.Schema(schema_dict))
+        return vol.Schema(schema_dict)
 
     async def async_step_energy_manager(self, user_input=None):
         """Configure the Energy Manager -- P1 entity, forecast, inverter SN."""
@@ -342,25 +347,33 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         if not current_sn and len(sn_options) == 1:
             current_sn = sn_options[0]
 
-        schema = vol.Schema(
+        schema = self._build_energy_manager_schema(
+            self._config_entry.options, current_sn, sn_options
+        )
+
+        return self.async_show_form(step_id="energy_manager", data_schema=schema)
+
+    def _build_energy_manager_schema(
+        self, options: dict, current_sn: str, sn_options: list[str]
+    ) -> vol.Schema:
+        """Build the schema for the energy manager step."""
+        return vol.Schema(
             {
                 vol.Required(
                     CONF_EM_P1_ENTITY,
-                    default=self._config_entry.options.get(CONF_EM_P1_ENTITY, ""),
+                    default=options.get(CONF_EM_P1_ENTITY, ""),
                 ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="sensor")
                 ),
                 vol.Optional(
                     CONF_EM_FORECAST_ENTITY,
-                    default=self._config_entry.options.get(CONF_EM_FORECAST_ENTITY, ""),
+                    default=options.get(CONF_EM_FORECAST_ENTITY, ""),
                 ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="sensor")
                 ),
                 vol.Optional(
                     CONF_EM_FORECAST_POWER_ENTITY,
-                    default=self._config_entry.options.get(
-                        CONF_EM_FORECAST_POWER_ENTITY, ""
-                    ),
+                    default=options.get(CONF_EM_FORECAST_POWER_ENTITY, ""),
                 ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="sensor")
                 ),
@@ -374,15 +387,11 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
                 vol.Optional(
                     CONF_EM_BATTERY_OVERRIDE,
-                    default=self._config_entry.options.get(
-                        CONF_EM_BATTERY_OVERRIDE, False
-                    ),
+                    default=options.get(CONF_EM_BATTERY_OVERRIDE, False),
                 ): selector.BooleanSelector(),
                 vol.Optional(
                     CONF_EM_BATTERY_CAPACITY,
-                    default=self._config_entry.options.get(
-                        CONF_EM_BATTERY_CAPACITY, 2000
-                    ),
+                    default=options.get(CONF_EM_BATTERY_CAPACITY, 2000),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=1000,
@@ -394,7 +403,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
                 vol.Optional(
                     CONF_EM_LOOP_INTERVAL,
-                    default=self._config_entry.options.get(CONF_EM_LOOP_INTERVAL, 15),
+                    default=options.get(CONF_EM_LOOP_INTERVAL, 15),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=5,
@@ -406,12 +415,10 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
                 vol.Optional(
                     CONF_EM_DRY_RUN,
-                    default=self._config_entry.options.get(CONF_EM_DRY_RUN, False),
+                    default=options.get(CONF_EM_DRY_RUN, False),
                 ): selector.BooleanSelector(),
             }
         )
-
-        return self.async_show_form(step_id="energy_manager", data_schema=schema)
 
     def _get_controllable_sns(self) -> list[str]:
         """Get serial numbers of controllable inverters from coordinator data."""
