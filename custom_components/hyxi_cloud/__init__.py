@@ -95,6 +95,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up alarm push subscription (handles enablement checks and cleanup of orphaned codes)
     await _async_setup_alarm_subscription(hass, entry, coordinator)
 
+    _async_register_devices(hass, entry, coordinator)
+
+    _remove_legacy_select_entities(hass, coordinator.data)
+    _cleanup_control_entities(hass, entry, coordinator)
+    await _async_setup_battery_protection(hass, coordinator)
+    _async_setup_energy_manager(hass, entry, coordinator)
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Start EM engine after platforms are loaded (entities need to exist first)
+    if coordinator.engine is not None:
+        await coordinator.engine.async_start()
+
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
+    await async_setup_services(hass)
+
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
+    coordinator = hass.data[DOMAIN].get(entry.entry_id)
+    if coordinator is not None:
+        if coordinator.engine is not None:
+            await coordinator.engine.async_stop()
+        for controller in coordinator.protection_controllers.values():
+            await controller.async_stop()
+        await _async_teardown_push_subscription(hass, coordinator, entry)
+        await _async_teardown_alarm_subscription(hass, coordinator, entry)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+        if not hass.data[DOMAIN]:
+            if hass.services.has_service(DOMAIN, "cancel_subscription"):
+                hass.services.async_remove(DOMAIN, "cancel_subscription")
+    return unload_ok
+
+
+def _async_register_devices(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> None:
+    """Register all devices and establish parent-child relationships."""
     device_registry = dr.async_get(hass)
 
     # Two-pass device registration to guarantee correct via_device ordering.
@@ -154,65 +199,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 via_device=(DOMAIN, parent_sn),
             )
 
-    _remove_legacy_select_entities(hass, coordinator.data)
-    _cleanup_control_entities(hass, entry, coordinator)
-    await _async_setup_battery_protection(hass, coordinator)
 
-    # Energy Manager: create engine if configured and enabled
+def _async_setup_energy_manager(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> None:
+    """Set up the Energy Manager engine and register its virtual device."""
     em_enabled = entry.options.get(CONF_EM_ENABLED, False)
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if em_enabled and em_sn and em_sn in coordinator.data:
-        from .engine import EMEntityConfig, EnergyManagerEngine
+    if not em_enabled or not em_sn or em_sn not in coordinator.data:
+        return
 
-        em_config = EMEntityConfig(
-            sn=em_sn,
-            p1_entity=entry.options.get(CONF_EM_P1_ENTITY, ""),
-            forecast_entity=entry.options.get(CONF_EM_FORECAST_ENTITY),
-            forecast_power_entity=entry.options.get(CONF_EM_FORECAST_POWER_ENTITY),
-        )
-        engine = EnergyManagerEngine(hass, coordinator, em_config)
-        coordinator.engine = engine
+    from .engine import EMEntityConfig, EnergyManagerEngine
 
-        # Register EM virtual device
-        device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
-            name="Energy Manager",
-            manufacturer=MANUFACTURER,
-            model="Energy Manager",
-            via_device=(DOMAIN, em_sn),
-        )
+    em_config = EMEntityConfig(
+        sn=em_sn,
+        p1_entity=entry.options.get(CONF_EM_P1_ENTITY, ""),
+        forecast_entity=entry.options.get(CONF_EM_FORECAST_ENTITY),
+        forecast_power_entity=entry.options.get(CONF_EM_FORECAST_POWER_ENTITY),
+    )
+    engine = EnergyManagerEngine(hass, coordinator, em_config)
+    coordinator.engine = engine
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Start EM engine after platforms are loaded (entities need to exist first)
-    if coordinator.engine is not None:
-        await coordinator.engine.async_start()
-
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
-
-    await async_setup_services(hass)
-
-    return True
-
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
-    if coordinator is not None:
-        if coordinator.engine is not None:
-            await coordinator.engine.async_stop()
-        for controller in coordinator.protection_controllers.values():
-            await controller.async_stop()
-        await _async_teardown_push_subscription(hass, coordinator, entry)
-        await _async_teardown_alarm_subscription(hass, coordinator, entry)
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            if hass.services.has_service(DOMAIN, "cancel_subscription"):
-                hass.services.async_remove(DOMAIN, "cancel_subscription")
-    return unload_ok
+    # Register EM virtual device
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
+        name="Energy Manager",
+        manufacturer=MANUFACTURER,
+        model="Energy Manager",
+        via_device=(DOMAIN, em_sn),
+    )
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
