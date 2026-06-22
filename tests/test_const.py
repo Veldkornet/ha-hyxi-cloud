@@ -5,6 +5,7 @@ from custom_components.hyxi_cloud.const import (
     get_raw_device_code,
     get_software_version,
     is_null_value,
+    mask_sensitive_key_value,
     mask_sn,
     mask_url,
     normalize_device_type,
@@ -263,3 +264,42 @@ def test_mask_url():
     # 3. None or empty
     assert mask_url("") == ""
     assert mask_url(None) == ""
+
+
+def test_mask_sensitive_key_value():
+    """Verify mask_sensitive_key_value correctly obscures sensitive info."""
+    # 1. Null values
+    assert mask_sensitive_key_value("sn", None) is None
+    # Note: the function actually only checks `value is None`, it does not use `is_null_value`
+    # Let's verify empty string isn't considered sensitive and masked to ****, or is it?
+    # mask_sn("") -> "****"
+    assert mask_sensitive_key_value("sn", "") == "****"
+
+    # 2. Exact matches in sensitive_exact
+    assert mask_sensitive_key_value("alias", "Home Inverter") == mask_sn(
+        "Home Inverter"
+    )
+    assert mask_sensitive_key_value("plantAddress", "123 Main St") == mask_sn(
+        "123 Main St"
+    )
+    assert mask_sensitive_key_value("sn", "12345678") == mask_sn("12345678")
+
+    # 3. Endswith "sn" matches
+    assert mask_sensitive_key_value("devicesn", "dev_123") == mask_sn("dev_123")
+    assert mask_sensitive_key_value("batsn", "bat_123") == mask_sn("bat_123")
+    assert mask_sensitive_key_value("someRandomSN", "rand_123") == mask_sn("rand_123")
+
+    # 4. "plantid" or "imei" in key_lower
+    assert mask_sensitive_key_value("my_plantid_number", "plant_123") == mask_sn(
+        "plant_123"
+    )
+    assert mask_sensitive_key_value("gprs_imei_code", "imei_123") == mask_sn("imei_123")
+
+    # 5. Non-sensitive keys remain untouched
+    assert mask_sensitive_key_value("power", 5000) == 5000
+    assert mask_sensitive_key_value("voltage", 230.5) == 230.5
+    assert mask_sensitive_key_value("status", "OK") == "OK"
+    assert mask_sensitive_key_value("model", "H5K-HT") == "H5K-HT"
+
+    # 6. Check different types of values
+    assert mask_sensitive_key_value("sn", 12345) == mask_sn("12345")
