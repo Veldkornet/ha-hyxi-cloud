@@ -108,6 +108,8 @@ def test_safe_int():
     assert number_mod._safe_int("abc", 10) == 10
     assert number_mod._safe_int(None, 10) == 10
     assert number_mod._safe_int(-5, 10) == 10  # expects positive integers
+    assert number_mod._safe_int(0, 10) == 10
+    assert number_mod._safe_int({}, 10) == 10
 
 
 @pytest.mark.asyncio
