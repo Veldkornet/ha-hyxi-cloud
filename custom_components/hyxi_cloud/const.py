@@ -177,7 +177,7 @@ def normalize_device_type(code: str | int | float) -> str:
     if "." in code_str:
         try:
             lookup_key = str(int(float(code_str)))
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             # If float conversion fails (e.g. string labels), just use original code_str
             pass
 
@@ -236,7 +236,7 @@ def detect_phase_type(dev_data: dict) -> str:
         try:
             if float(metrics.get(key, 0)) > 0:
                 return "three_phase"
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             continue
 
     return "unknown"
