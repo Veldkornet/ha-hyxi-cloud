@@ -188,7 +188,9 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
-            raise HomeAssistantError(f"Failed to turn off microinverter: {err}") from err
+            raise HomeAssistantError(
+                f"Failed to turn off microinverter: {err}"
+            ) from err
 
 
 @dataclass
