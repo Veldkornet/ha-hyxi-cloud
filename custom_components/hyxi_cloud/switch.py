@@ -177,7 +177,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
-            raise HomeAssistantError(f"Failed to turn on microinverter: {err}")
+            raise HomeAssistantError(f"Failed to turn on microinverter: {err}") from err
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off the microinverter."""
@@ -188,7 +188,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
-            raise HomeAssistantError(f"Failed to turn off microinverter: {err}")
+            raise HomeAssistantError(f"Failed to turn off microinverter: {err}") from err
 
 
 @dataclass

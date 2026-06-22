@@ -28,7 +28,6 @@ class FakeRestoreEntity(FakeBase):
 
     async def async_added_to_hass(self):
         """Mock async_added_to_hass."""
-        pass
 
 
 class MockHomeAssistantError(Exception):
