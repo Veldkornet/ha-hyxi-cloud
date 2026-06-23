@@ -157,8 +157,8 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
         for sn, dev_data in devices.items():
             if sn in self.data:
-                existing_metrics = dict(self.data[sn].get("metrics", {}))
-                new_metrics = dev_data.get("metrics", {})
+                existing_metrics = dict(self.data[sn].get("metrics") or {})
+                new_metrics = dev_data.get("metrics") or {}
 
                 # Update existing metrics with new values
                 existing_metrics.update(
