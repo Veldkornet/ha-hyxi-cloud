@@ -200,6 +200,12 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["last_error"] = str(err)
             self.hyxi_metadata["api_status"] = "Error"
             raise UpdateFailed(f"Unexpected error: {err}") from err
+        else:
+            _LOGGER.error("Unhandled exception in HYXI update: %s", err)
+            self.hyxi_metadata["last_attempts"] += 1
+            self.hyxi_metadata["last_error"] = str(err)
+            self.hyxi_metadata["api_status"] = "Error"
+            raise UpdateFailed(f"Unhandled exception: {err}") from err
 
     async def _async_sync_device_metadata(self, devices):
         """Sync software/hardware versions to the Device Registry."""
