@@ -18,6 +18,7 @@ from .const import (
     DOMAIN,
     get_raw_device_code,
     get_software_version,
+    mask_sensitive_key_value,
     mask_sn,
     normalize_device_type,
 )
@@ -177,8 +178,6 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         """Log the polled metrics for visibility."""
         for sn, dev_data in devices.items():
             if "metrics" in dev_data:
-                from .const import mask_sensitive_key_value
-
                 logged_metrics = {
                     k: mask_sensitive_key_value(k, v)
                     for k, v in dev_data["metrics"].items()
