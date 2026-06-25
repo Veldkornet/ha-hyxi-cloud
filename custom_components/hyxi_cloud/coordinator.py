@@ -18,6 +18,7 @@ from .const import (
     DOMAIN,
     get_raw_device_code,
     get_software_version,
+    mask_sensitive_key_value,
     mask_sn,
     normalize_device_type,
 )
@@ -139,58 +140,71 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["api_status"] = "Online"
             self.hyxi_metadata["last_error"] = None
 
-            # Merge pulled metrics with existing cached metrics to preserve push-only keys
-            if self.data:
-                for sn, dev_data in devices.items():
-                    if sn in self.data:
-                        existing_metrics = dict(self.data[sn].get("metrics", {}))
-                        new_metrics = dev_data.get("metrics", {})
-
-                        # Update existing metrics with new values
-                        existing_metrics.update(
-                            {k: v for k, v in new_metrics.items() if v is not None}
-                        )
-
-                        # Recalculate derived metrics on the merged dataset
-                        derived = self.client.compute_derived_metrics(
-                            existing_metrics, dev_data.get("device_type_code", "")
-                        )
-                        existing_metrics.update(derived)
-
-                        dev_data["metrics"] = existing_metrics
-
-            # Log the polled metrics for visibility
-            for sn, dev_data in devices.items():
-                if "metrics" in dev_data:
-                    from .const import mask_sensitive_key_value
-
-                    logged_metrics = {
-                        k: mask_sensitive_key_value(k, v)
-                        for k, v in dev_data["metrics"].items()
-                    }
-                    _LOGGER.debug(
-                        "HYXI Polled Telemetry for Device %s: %s",
-                        mask_sn(sn),
-                        logged_metrics,
-                    )
+            self._merge_metrics(devices)
+            self._log_polled_telemetry(devices)
 
             # Return pure device dictionary
             await self._async_sync_device_metadata(devices)
             return devices
 
-        except (
-            ConfigEntryAuthFailed,
-            UpdateFailed,
-        ) as err:
+        except Exception as err:
+            self._handle_update_error(err)
+            raise
+
+    def _merge_metrics(self, devices: dict) -> None:
+        """Merge pulled metrics with existing cached metrics to preserve push-only keys."""
+        if not self.data:
+            return
+
+        for sn, dev_data in devices.items():
+            if sn in self.data:
+                existing_metrics = dict(self.data[sn].get("metrics") or {})
+                new_metrics = dev_data.get("metrics") or {}
+
+                # Update existing metrics with new values
+                existing_metrics.update(
+                    {k: v for k, v in new_metrics.items() if v is not None}
+                )
+
+                # Recalculate derived metrics on the merged dataset
+                derived = self.client.compute_derived_metrics(
+                    existing_metrics, dev_data.get("device_type_code", "")
+                )
+                existing_metrics.update(derived)
+
+                dev_data["metrics"] = existing_metrics
+
+    def _log_polled_telemetry(self, devices: dict) -> None:
+        """Log the polled metrics for visibility."""
+        for sn, dev_data in devices.items():
+            if "metrics" in dev_data:
+                logged_metrics = {
+                    k: mask_sensitive_key_value(k, v)
+                    for k, v in dev_data["metrics"].items()
+                }
+                _LOGGER.debug(
+                    "HYXI Polled Telemetry for Device %s: %s",
+                    mask_sn(sn),
+                    logged_metrics,
+                )
+
+    def _handle_update_error(self, err: Exception) -> None:
+        """Handle exceptions during update and map to HA exceptions."""
+        if isinstance(err, (ConfigEntryAuthFailed, UpdateFailed)):
             self.hyxi_metadata["last_error"] = str(err)
             self.hyxi_metadata["api_status"] = "Error"
-            raise
-        except (ClientError, TimeoutError) as err:
+        elif isinstance(err, (ClientError, TimeoutError)):
             _LOGGER.error("Unexpected error in HYXI update: %s", err)
             self.hyxi_metadata["last_attempts"] += 1
             self.hyxi_metadata["last_error"] = str(err)
             self.hyxi_metadata["api_status"] = "Error"
             raise UpdateFailed(f"Unexpected error: {err}") from err
+        else:
+            _LOGGER.error("Unhandled exception in HYXI update: %s", err)
+            self.hyxi_metadata["last_attempts"] += 1
+            self.hyxi_metadata["last_error"] = str(err)
+            self.hyxi_metadata["api_status"] = "Error"
+            raise UpdateFailed(f"Unhandled exception: {err}") from err
 
     async def _async_sync_device_metadata(self, devices):
         """Sync software/hardware versions to the Device Registry."""
