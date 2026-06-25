@@ -9,6 +9,7 @@ from typing import ClassVar
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -175,11 +176,8 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self._attr_is_on = True
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
-        except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
-                "Failed to power on microinverter %s: %s", mask_sn(self._sn), err
-            )
-            raise
+        except Exception as err:
+            raise HomeAssistantError(f"Failed to turn on microinverter: {err}") from err
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off the microinverter."""
@@ -189,11 +187,10 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self._attr_is_on = False
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
-        except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
-                "Failed to power off microinverter %s: %s", mask_sn(self._sn), err
-            )
-            raise
+        except Exception as err:
+            raise HomeAssistantError(
+                f"Failed to turn off microinverter: {err}"
+            ) from err
 
 
 @dataclass
