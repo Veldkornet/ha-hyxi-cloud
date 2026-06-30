@@ -78,6 +78,16 @@ import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=w
 importlib.reload(hc_coord)
 
 
+@pytest.fixture(autouse=True)
+def mock_store():
+    """Mock the Store class."""
+    with patch("custom_components.hyxi_cloud.coordinator.Store") as mock_store:
+        mock_instance = mock_store.return_value
+        mock_instance.async_save = AsyncMock()
+        mock_instance.async_load = AsyncMock(return_value=None)
+        yield mock_store
+
+
 @pytest.mark.asyncio
 async def test_async_update_data_unexpected_error():
     """Test unexpected errors are caught and logged."""

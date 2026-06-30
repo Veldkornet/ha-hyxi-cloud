@@ -693,9 +693,7 @@ async def _async_handle_webhook(
 
     for sn, device_update in push_results.items():
         if sn not in coordinator.data:
-            _LOGGER.warning(
-                "Received push data for untracked device SN: %s", mask_sn(sn)
-            )
+            _LOGGER.debug("Received push data for untracked device SN: %s", mask_sn(sn))
             continue
 
         coordinator.data[sn]["metrics"] = device_update["metrics"]

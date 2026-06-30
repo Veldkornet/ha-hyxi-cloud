@@ -762,11 +762,11 @@ async def test_webhook_handle_untracked_device():
         return_value={"SN999": {"metrics": {"batSoc": 80}}}
     )
 
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_debug:
         res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
         assert res.status == 200
         assert (
-            mock_warn.call_args[0][0]
+            mock_debug.call_args[0][0]
             == "Received push data for untracked device SN: %s"
         )
 
@@ -995,12 +995,12 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     )
     from custom_components.hyxi_cloud.const import mask_sn
 
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_debug:
         res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
         assert res.status == 200
         assert coordinator.data == {}
         # SN123 is untracked now
-        mock_warn.assert_any_call(
+        mock_debug.assert_any_call(
             "Received push data for untracked device SN: %s", mask_sn("SN123")
         )
 
