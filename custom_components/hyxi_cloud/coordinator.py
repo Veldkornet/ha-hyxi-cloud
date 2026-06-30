@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import HyxiApiClient
@@ -85,6 +86,10 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.alarm_push_url: str | None = None
         self.alarm_last_push_received: datetime | None = None
 
+        self.device_store: Store[dict[str, Any]] = Store(
+            hass, 1, f"hyxi_cloud_devices_{entry.entry_id}"
+        )
+
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
         # Read Discovery Toggle
@@ -112,11 +117,35 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             devices = result["data"]
 
             if not devices:
+                cached_devices = await self.device_store.async_load()
+                if cached_devices:
+                    _LOGGER.warning(
+                        "HYXI Cloud API returned 0 devices, but we found %d cached devices in storage. "
+                        "Assuming temporary API outage and loading devices from storage.",
+                        len(cached_devices),
+                    )
+                    self.hyxi_metadata["api_status"] = "Offline"
+                    self.hyxi_metadata["last_error"] = (
+                        "API returned 0 devices (loaded from cache)"
+                    )
+                    self._merge_metrics(cached_devices)
+                    self._log_polled_telemetry(cached_devices)
+                    await self._async_sync_device_metadata(cached_devices)
+                    return cached_devices
+
                 _LOGGER.warning(
                     "HYXI Cloud returned success, but no plants or devices were found. "
                     "If your developer email differs from your app email, you must share your Plant "
                     "from the app to the developer email first."
                 )
+            else:
+                try:
+                    await self.device_store.async_save(devices)
+                except Exception as save_err:  # pylint: disable=broad-except
+                    # Intentional broad catch to ensure cache save failures never break the update loop
+                    _LOGGER.exception(
+                        "Failed to persist devices to storage: %s", save_err
+                    )
 
             # Warn (but don't fail) when telemetry is empty.
             # Raising UpdateFailed here triggers HA exponential backoff,
@@ -147,6 +176,24 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             await self._async_sync_device_metadata(devices)
             return devices
 
+        except (ClientError, TimeoutError, UpdateFailed) as err:
+            try:
+                cached_devices = await self.device_store.async_load()
+                if cached_devices:
+                    self.hyxi_metadata["last_error"] = str(err)
+                    self.hyxi_metadata["api_status"] = "Offline"
+                    _LOGGER.exception(
+                        "HYXI Cloud API fetch failed. Falling back to %d cached devices from storage.",
+                        len(cached_devices),
+                    )
+                    self._merge_metrics(cached_devices)
+                    await self._async_sync_device_metadata(cached_devices)
+                    return cached_devices
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Cache fallback recovery failed")
+
+            self._handle_update_error(err)
+            raise
         except Exception as err:
             self._handle_update_error(err)
             raise
