@@ -191,7 +191,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                     await self._async_sync_device_metadata(cached_devices)
                     return cached_devices
             except Exception as fallback_err:  # pylint: disable=broad-except
-                _LOGGER.error("Cache fallback recovery failed: %s", fallback_err)
+                _LOGGER.exception("Cache fallback recovery failed: %s", fallback_err)
 
             self._handle_update_error(err)
             raise
