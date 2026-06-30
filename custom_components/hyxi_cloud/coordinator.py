@@ -141,8 +141,11 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             else:
                 try:
                     await self.device_store.async_save(devices)
-                except (TypeError, OSError) as save_err:
-                    _LOGGER.error("Failed to persist devices to storage: %s", save_err)
+                except Exception as save_err:  # pylint: disable=broad-except
+                    # Intentional broad catch to ensure cache save failures never break the update loop
+                    _LOGGER.exception(
+                        "Failed to persist devices to storage: %s", save_err
+                    )
 
             # Warn (but don't fail) when telemetry is empty.
             # Raising UpdateFailed here triggers HA exponential backoff,
@@ -174,18 +177,21 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             return devices
 
         except (ClientError, TimeoutError, UpdateFailed) as err:
-            cached_devices = await self.device_store.async_load()
-            if cached_devices:
-                self.hyxi_metadata["last_error"] = str(err)
-                self.hyxi_metadata["api_status"] = "Offline"
-                _LOGGER.exception(
-                    "HYXI Cloud API fetch failed: %s. Falling back to %d cached devices from storage.",
-                    err,
-                    len(cached_devices),
-                )
-                self._merge_metrics(cached_devices)
-                await self._async_sync_device_metadata(cached_devices)
-                return cached_devices
+            try:
+                cached_devices = await self.device_store.async_load()
+                if cached_devices:
+                    self.hyxi_metadata["last_error"] = str(err)
+                    self.hyxi_metadata["api_status"] = "Offline"
+                    _LOGGER.exception(
+                        "HYXI Cloud API fetch failed: %s. Falling back to %d cached devices from storage.",
+                        err,
+                        len(cached_devices),
+                    )
+                    self._merge_metrics(cached_devices)
+                    await self._async_sync_device_metadata(cached_devices)
+                    return cached_devices
+            except Exception as fallback_err:  # pylint: disable=broad-except
+                _LOGGER.error("Cache fallback recovery failed: %s", fallback_err)
 
             self._handle_update_error(err)
             raise
