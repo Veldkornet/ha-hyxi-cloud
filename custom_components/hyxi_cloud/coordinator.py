@@ -139,7 +139,10 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                         "from the app to the developer email first."
                     )
             else:
-                await self.device_store.async_save(devices)
+                try:
+                    await self.device_store.async_save(devices)
+                except Exception as save_err:
+                    _LOGGER.error("Failed to persist devices to storage: %s", save_err)
 
             # Warn (but don't fail) when telemetry is empty.
             # Raising UpdateFailed here triggers HA exponential backoff,
@@ -175,7 +178,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             if cached_devices:
                 self.hyxi_metadata["last_error"] = str(err)
                 self.hyxi_metadata["api_status"] = "Offline"
-                _LOGGER.error(
+                _LOGGER.exception(
                     "HYXI Cloud API fetch failed: %s. Falling back to %d cached devices from storage.",
                     err,
                     len(cached_devices),
