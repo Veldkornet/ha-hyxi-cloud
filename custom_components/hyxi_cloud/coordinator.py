@@ -132,16 +132,16 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                     self._log_polled_telemetry(cached_devices)
                     await self._async_sync_device_metadata(cached_devices)
                     return cached_devices
-                else:
-                    _LOGGER.warning(
-                        "HYXI Cloud returned success, but no plants or devices were found. "
-                        "If your developer email differs from your app email, you must share your Plant "
-                        "from the app to the developer email first."
-                    )
+
+                _LOGGER.warning(
+                    "HYXI Cloud returned success, but no plants or devices were found. "
+                    "If your developer email differs from your app email, you must share your Plant "
+                    "from the app to the developer email first."
+                )
             else:
                 try:
                     await self.device_store.async_save(devices)
-                except Exception as save_err:
+                except (TypeError, OSError) as save_err:
                     _LOGGER.error("Failed to persist devices to storage: %s", save_err)
 
             # Warn (but don't fail) when telemetry is empty.
