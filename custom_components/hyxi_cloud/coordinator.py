@@ -86,7 +86,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.alarm_push_url: str | None = None
         self.alarm_last_push_received: datetime | None = None
 
-        self.device_store = Store(hass, 1, f"hyxi_cloud_devices_{entry.entry_id}")
+        self.device_store: Store[dict[str, Any]] = Store(
+            hass, 1, f"hyxi_cloud_devices_{entry.entry_id}"
+        )
 
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
@@ -122,7 +124,14 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                         "Assuming temporary API outage and loading devices from storage.",
                         len(cached_devices),
                     )
-                    devices = cached_devices
+                    self.hyxi_metadata["api_status"] = "Offline"
+                    self.hyxi_metadata["last_error"] = (
+                        "API returned 0 devices (loaded from cache)"
+                    )
+                    self._merge_metrics(cached_devices)
+                    self._log_polled_telemetry(cached_devices)
+                    await self._async_sync_device_metadata(cached_devices)
+                    return cached_devices
                 else:
                     _LOGGER.warning(
                         "HYXI Cloud returned success, but no plants or devices were found. "
@@ -161,11 +170,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             await self._async_sync_device_metadata(devices)
             return devices
 
-        except Exception as err:
-            if isinstance(err, ConfigEntryAuthFailed):
-                self._handle_update_error(err)
-                raise
-
+        except (ClientError, TimeoutError, UpdateFailed) as err:
             cached_devices = await self.device_store.async_load()
             if cached_devices:
                 self.hyxi_metadata["last_error"] = str(err)
@@ -179,6 +184,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 await self._async_sync_device_metadata(cached_devices)
                 return cached_devices
 
+            self._handle_update_error(err)
+            raise
+        except Exception as err:
             self._handle_update_error(err)
             raise
 
