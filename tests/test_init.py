@@ -576,6 +576,12 @@ async def test_async_resolve_webhook_url(mock_hass):
     )
     assert res1 == "https://my.custom.url/api/webhook/web_id"
 
+    # 1b. Custom URL is unencrypted HTTP (should be rejected)
+    res1b = await _async_resolve_webhook_url(
+        mock_hass, "web_id", "http://my.custom.url/"
+    )
+    assert res1b is None
+
     # 2. Cloud hooks resolution (Nabu Casa subscription active)
     with patch(
         "homeassistant.components.cloud.async_active_subscription", return_value=True

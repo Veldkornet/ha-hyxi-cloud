@@ -346,6 +346,11 @@ async def _async_resolve_webhook_url(
     if custom_url and custom_url.strip():
         # Treat custom_url as the base URL — always append the HA webhook path.
         base = custom_url.strip().rstrip("/")
+        if not base.lower().startswith("https://"):
+            _LOGGER.error(
+                "HYXI Push: Custom webhook URL must use HTTPS. Ignoring unencrypted URL."
+            )
+            return None
         resolved = base + webhook.async_generate_path(webhook_id)
         _LOGGER.info(
             "HYXI Push: Using custom base URL, callback endpoint: %s",
