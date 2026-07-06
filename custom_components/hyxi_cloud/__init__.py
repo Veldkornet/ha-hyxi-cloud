@@ -1,6 +1,7 @@
 """HYXI Cloud Integration for Home Assistant."""
 # pylint: disable=wrong-import-position
 
+import asyncio
 import hmac
 import logging
 
@@ -324,6 +325,7 @@ async def _async_setup_battery_protection(
         _LOGGER.debug("Battery control and protection is disabled by user settings")
         return
 
+    tasks = []
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if device_type not in ("hybrid_inverter", "all_in_one"):
@@ -334,7 +336,10 @@ async def _async_setup_battery_protection(
 
         controller = HyxiBatteryProtectionController(hass, coordinator, sn)
         coordinator.protection_controllers[sn] = controller
-        await controller.async_start()
+        tasks.append(controller.async_start())
+
+    if tasks:
+        await asyncio.gather(*tasks)
 
 
 async def _async_resolve_webhook_url(
