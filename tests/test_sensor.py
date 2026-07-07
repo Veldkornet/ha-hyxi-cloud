@@ -1,8 +1,8 @@
 """Tests for the sensor platform."""
 
 import importlib
-import unittest
 import sys
+import unittest
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock
@@ -87,7 +87,7 @@ if "homeassistant.helpers.storage" not in sys.modules:
     sys.modules["homeassistant.helpers"] = mock_ha
 if "homeassistant.helpers.restore_state" not in sys.modules:
     sys.modules["homeassistant.helpers.restore_state"] = mock_ha
-sys.modules["homeassistant.helpers.restore_state"].RestoreEntity = FakeRestoreEntity
+sys.modules["homeassistant.helpers.restore_state"].RestoreEntity = FakeRestoreEntity  # type: ignore[attr-defined]
 
 if "homeassistant.helpers.update_coordinator" not in sys.modules:
     sys.modules["homeassistant.helpers.update_coordinator"] = mock_ha
