@@ -113,6 +113,7 @@ def mock_hass():
     config_entries.async_reload = AsyncMock()
     config_entries.async_update_entry = MagicMock()
     hass.config_entries = config_entries
+    hass.async_create_task = lambda coro: __import__("asyncio").create_task(coro)
     return hass
 
 

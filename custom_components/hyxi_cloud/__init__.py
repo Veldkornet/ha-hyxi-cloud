@@ -336,12 +336,17 @@ async def _async_setup_battery_protection(
 
         controller = HyxiBatteryProtectionController(hass, coordinator, sn)
         coordinator.protection_controllers[sn] = controller
-        tasks.append(controller.async_start())
+        tasks.append(hass.async_create_task(controller.async_start()))
 
     if tasks:
         try:
             await asyncio.gather(*tasks)
         except Exception:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+
             for controller in coordinator.protection_controllers.values():
                 await controller.async_stop()
             coordinator.protection_controllers.clear()
