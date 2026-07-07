@@ -206,7 +206,6 @@ async def test_async_setup_entry(mock_coordinator, mock_entry):
 
 def test_process_numeric_value_normal():
     """Test standard numeric processing."""
-    sensor_mod.is_null_value = lambda v: v in ("null", None)
 
     sensor = sensor_mod.HyxiBaseSensor(MagicMock())
     sensor.entity_description = MagicMock()
@@ -225,7 +224,6 @@ def test_process_numeric_value_normal():
 
 def test_anti_dip_filter():
     """Test that the anti-dip filter works correctly for TOTAL_INCREASING sensors."""
-    sensor_mod.is_null_value = lambda v: v in ("null", None)
 
     sensor = sensor_mod.HyxiBaseSensor(MagicMock())
     sensor.entity_description = MagicMock()
@@ -248,7 +246,6 @@ def test_anti_dip_filter():
 
 def test_anti_spike_filter():
     """Test that the anti-spike filter works correctly for TOTAL_INCREASING sensors."""
-    sensor_mod.is_null_value = lambda v: v in ("null", None)
 
     sensor = sensor_mod.HyxiBaseSensor(MagicMock())
     sensor.entity_description = MagicMock()
