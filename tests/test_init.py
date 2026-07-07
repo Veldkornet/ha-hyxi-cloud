@@ -133,6 +133,20 @@ def mock_entry():
 
 
 @pytest.mark.asyncio
+async def test_webhook_handle_auth_fails_non_ascii():
+    """Verify webhook handles non-ASCII access key in auth without crashing (DoS protection)."""
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+
+    request = MagicMock()
+    request.headers = {"accessKey": "malicious_ñ_key"}
+
+    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    assert res.status == 401
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_success(mock_hass, mock_entry):
     """Test successful setup of entry."""
     with (
