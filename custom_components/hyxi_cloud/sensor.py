@@ -1459,14 +1459,24 @@ class HyxiSensor(HyxiBaseSensor):
         key = self.entity_description.key
         value = metrics.get(key)
 
-        # 🚀 Fallback Logic for Micro Inverters (acE -> efpv)
-        # If acE is not provided or zero, attempt fallback to efpv for Micro Inverters.
+        # Fallback Logic for Micro Inverters (acE -> efpv, gridF -> f)
         if key == "acE" and (value is None or str(value) == "0.0"):
             if getattr(self, "_device_type", None) in (
                 "grid_connected_inverter",
                 "micro_inverter",
             ):
                 value = metrics.get("efpv")
+
+        if key == "gridF" and value is None:
+            if getattr(self, "_device_type", None) in (
+                "grid_connected_inverter",
+                "micro_inverter",
+            ):
+                value = metrics.get("f")
+
+        # 🚀 Fallback Logic for Battery Temperature (batTmp -> batTch)
+        if key == "batTmp" and value is None:
+            value = metrics.get("batTch")
 
         parsed_val = self._parser_func(dev_data, value)
         if (
