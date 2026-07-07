@@ -514,6 +514,8 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
 
         failed_codes = []
         for code, result in zip(to_purge, results, strict=True):
+            if isinstance(result, asyncio.CancelledError):
+                raise result
             if isinstance(result, Exception):
                 failed_codes.append((code, result))
             else:
