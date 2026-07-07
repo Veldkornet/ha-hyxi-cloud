@@ -642,10 +642,14 @@ async def _async_handle_webhook(
     from homeassistant.util import dt as dt_util
 
     # 1. Ingress Header authentication check (defense-in-depth)
-    incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
-    if not incoming_ak or not hmac.compare_digest(
-        incoming_ak, coordinator.client.access_key
-    ):
+    incoming_ak = request.headers.get("accessKey")
+    is_valid_auth = False
+    if incoming_ak and coordinator.client.access_key:
+        is_valid_auth = hmac.compare_digest(
+            incoming_ak.encode("utf-8"), coordinator.client.access_key.encode("utf-8")
+        )
+
+    if not is_valid_auth:
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
             "Unauthorized push attempt received on webhook %s",
@@ -829,10 +833,14 @@ async def _async_handle_alarm_webhook(
     Parses the alarm payload via SDK, merges alarm records into
     coordinator.data[sn]["alarms"] so HyxiDeviceAlarmSensor fires instantly.
     """
-    incoming_ak = request.headers.get("accessKey") or request.headers.get("AccessKey")
-    if not incoming_ak or not hmac.compare_digest(
-        incoming_ak, coordinator.client.access_key
-    ):
+    incoming_ak = request.headers.get("accessKey")
+    is_valid_auth = False
+    if incoming_ak and coordinator.client.access_key:
+        is_valid_auth = hmac.compare_digest(
+            incoming_ak.encode("utf-8"), coordinator.client.access_key.encode("utf-8")
+        )
+
+    if not is_valid_auth:
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
             "Unauthorized alarm push attempt received on webhook %s",

@@ -71,6 +71,19 @@ def mock_coordinator():
 
 
 @pytest.mark.asyncio
+async def test_handle_alarm_webhook_unauthorized_non_ascii(mock_hass, mock_coordinator):
+    """Test webhook handles non-ASCII access key securely without crashing (DoS protection)."""
+    mock_coordinator.client.access_key = "correct_ak"
+    request = MagicMock()
+    request.headers = {"accessKey": "malicious_ñ_key"}
+
+    res = await _async_handle_alarm_webhook(
+        mock_hass, "webhook_id", request, mock_coordinator
+    )
+    assert res.status == 401
+
+
+@pytest.mark.asyncio
 async def test_setup_alarm_subscription_success(
     mock_hass, mock_entry, mock_coordinator
 ):
