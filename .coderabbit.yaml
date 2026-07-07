@@ -43,3 +43,6 @@ reviews:
        - Ensure any modified GitHub Actions workflows pin actions using 40-character commit hashes instead of version tags (e.g., actions/checkout@de0fac2...).
        - Flag workflows that do not use `step-security/harden-runner` as their first step with `egress-policy: block`.
        - Ensure GITHUB_TOKEN permissions are explicitly declared and adhere to the principle of least privilege.
+
+    7. Python Syntax (PEP 758):
+       - Do NOT flag `except ValueError, TypeError:` (exception grouping without parentheses) as a syntax error. This project uses a custom pre-commit hook (`check-exception-parentheses`) that explicitly enforces PEP 758 syntax and forbids parenthesized exception grouping.
