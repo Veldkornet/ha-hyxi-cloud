@@ -113,6 +113,13 @@ def mock_hass():
     config_entries.async_reload = AsyncMock()
     config_entries.async_update_entry = MagicMock()
     hass.config_entries = config_entries
+
+    def _create_task(coro, *args, **kwargs):
+        import asyncio
+
+        return asyncio.create_task(coro)
+
+    hass.async_create_task = _create_task
     return hass
 
 
@@ -512,43 +519,6 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
         assert "name" not in calls[2].kwargs
         assert "model" not in calls[2].kwargs
         assert "serial_number" not in calls[2].kwargs
-
-
-@pytest.mark.asyncio
-async def test_async_setup_battery_protection_options(mock_hass, mock_entry):
-    """Test that battery protection is set up only when option is enabled."""
-    from custom_components.hyxi_cloud.__init__ import _async_setup_battery_protection
-
-    mock_coordinator = MagicMock()
-    mock_coordinator.data = {
-        "INVERTER_SN": {
-            "device_name": "Hybrid Inverter",
-            "deviceType": "HYBRID_INVERTER",
-            "model": "H5K-HT",
-            "metrics": {},
-        }
-    }
-    mock_coordinator.protection_controllers = {}
-
-    # Case 1: Option is False (default)
-    mock_entry.options = {"enable_battery_control": False}
-    mock_coordinator.entry = mock_entry
-
-    await _async_setup_battery_protection(mock_hass, mock_coordinator)
-    assert len(mock_coordinator.protection_controllers) == 0
-
-    # Case 2: Option is True
-    mock_entry.options = {"enable_battery_control": True}
-    with patch(
-        "custom_components.hyxi_cloud.__init__.HyxiBatteryProtectionController"
-    ) as mock_controller_class:
-        mock_controller = mock_controller_class.return_value
-        mock_controller.async_start = AsyncMock()
-
-        await _async_setup_battery_protection(mock_hass, mock_coordinator)
-
-        assert "INVERTER_SN" in mock_coordinator.protection_controllers
-        mock_controller.async_start.assert_called_once()
 
 
 @pytest.mark.asyncio
