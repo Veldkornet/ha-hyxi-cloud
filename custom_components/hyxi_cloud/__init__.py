@@ -339,7 +339,13 @@ async def _async_setup_battery_protection(
         tasks.append(controller.async_start())
 
     if tasks:
-        await asyncio.gather(*tasks)
+        try:
+            await asyncio.gather(*tasks)
+        except Exception:
+            for controller in coordinator.protection_controllers.values():
+                await controller.async_stop()
+            coordinator.protection_controllers.clear()
+            raise
 
 
 async def _async_resolve_webhook_url(
