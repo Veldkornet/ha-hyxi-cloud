@@ -341,7 +341,7 @@ async def _async_setup_battery_protection(
     if tasks:
         try:
             await asyncio.gather(*tasks)
-        except Exception:
+        except Exception, asyncio.CancelledError:
             for task in tasks:
                 if not task.done():
                     task.cancel()
