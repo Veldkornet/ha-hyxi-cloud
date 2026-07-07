@@ -442,8 +442,6 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
         assert "serial_number" not in calls[2].kwargs
 
 
-
-
 @pytest.mark.asyncio
 async def test_remove_legacy_select_entities(mock_hass):
     """Test removal of legacy select entities."""
