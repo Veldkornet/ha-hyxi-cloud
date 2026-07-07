@@ -140,8 +140,7 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
             "data_freshness": freshness,
             "cloud_endpoint": "open.hyxicloud.com",
             "last_error": metadata.get("last_error") or "None",
-            "cache_active": metadata.get("api_status")
-            in ("Offline", "Starting (cached)"),
+            "cache_active": bool(metadata.get("cache_active", False)),
             "api_status": metadata.get("api_status") or "Starting",
         }
 

@@ -164,6 +164,7 @@ def test_connectivity_sensor_diagnostics(mock_coordinator, mock_entry):
 
     # Test cache_active when Offline
     mock_coordinator.hyxi_metadata["api_status"] = "Offline"
+    mock_coordinator.hyxi_metadata["cache_active"] = True
     attrs = sensor.extra_state_attributes
     assert attrs["cache_active"] is True
     assert attrs["api_status"] == "Offline"
