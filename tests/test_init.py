@@ -167,6 +167,7 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock()
         mock_coordinator.engine = None  # No EM engine
         mock_coordinator.data = {
@@ -239,6 +240,7 @@ async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock()
         mock_coordinator.engine = None  # No EM engine
         mock_coordinator.data = {
@@ -288,6 +290,7 @@ async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
             side_effect=ConfigEntryAuthFailed
         )
@@ -312,6 +315,7 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
             side_effect=UpdateFailed("Timeout")
         )
@@ -342,6 +346,7 @@ async def test_async_setup_entry_client_error(mock_hass, mock_entry):
         mock_coordinator = mock_coordinator_class.return_value
         # Use our local sys.modules injected class
         client_err = sys.modules["aiohttp"].ClientError("API connection error")
+        mock_coordinator.async_preload_cache = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
             side_effect=client_err
         )
@@ -370,6 +375,7 @@ async def test_async_setup_entry_timeout_error(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock(
             side_effect=TimeoutError("Connection timed out")
         )
@@ -470,6 +476,7 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
         patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock()
         mock_coordinator.engine = None  # No EM engine
         mock_coordinator.data = {
@@ -1175,6 +1182,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     coordinator.protection_controllers = {}
     coordinator.engine = None
     coordinator.entry = mock_entry
+    coordinator.async_preload_cache = AsyncMock()
     coordinator.async_config_entry_first_refresh = AsyncMock()
 
     # Mock engine instance
