@@ -1467,11 +1467,11 @@ class HyxiSensor(HyxiBaseSensor):
             ):
                 value = metrics.get("efpv")
 
-        if key == "gridF" and value is None:
+        if key == "gridF" and (value is None or is_null_value(value)):
             value = metrics.get("f")
 
         # 🚀 Fallback Logic for Battery Temperature (batTmp -> batTch)
-        if key == "batTmp" and value is None:
+        if key == "batTmp" and (value is None or is_null_value(value)):
             value = metrics.get("batTch")
 
         parsed_val = self._parser_func(dev_data, value)
