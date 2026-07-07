@@ -1468,11 +1468,7 @@ class HyxiSensor(HyxiBaseSensor):
                 value = metrics.get("efpv")
 
         if key == "gridF" and value is None:
-            if getattr(self, "_device_type", None) in (
-                "grid_connected_inverter",
-                "micro_inverter",
-            ):
-                value = metrics.get("f")
+            value = metrics.get("f")
 
         # 🚀 Fallback Logic for Battery Temperature (batTmp -> batTch)
         if key == "batTmp" and value is None:
