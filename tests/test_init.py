@@ -323,6 +323,64 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_client_error(mock_hass, mock_entry):
+    """Test setup failing due to ClientError."""
+    with (
+        patch(
+            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+    ):
+        mock_coordinator = mock_coordinator_class.return_value
+        # Use our local sys.modules injected class
+        client_err = sys.modules["aiohttp"].ClientError("API connection error")
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(
+            side_effect=client_err
+        )
+
+        with patch(
+            "custom_components.hyxi_cloud.__init__._LOGGER.warning"
+        ) as mock_logger:
+            with pytest.raises(ConfigEntryNotReady) as exc:
+                await async_setup_entry(mock_hass, mock_entry)
+
+            assert "Connection error: API connection error" in str(exc.value)
+            mock_logger.assert_called_with(
+                "HYXI Cloud not ready: %s",
+                mock_coordinator.async_config_entry_first_refresh.side_effect,
+            )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_timeout_error(mock_hass, mock_entry):
+    """Test setup failing due to TimeoutError."""
+    with (
+        patch(
+            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+    ):
+        mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(
+            side_effect=TimeoutError("Connection timed out")
+        )
+
+        with patch(
+            "custom_components.hyxi_cloud.__init__._LOGGER.warning"
+        ) as mock_logger:
+            with pytest.raises(ConfigEntryNotReady) as exc:
+                await async_setup_entry(mock_hass, mock_entry)
+
+            assert "Connection error: Connection timed out" in str(exc.value)
+            mock_logger.assert_called_with(
+                "HYXI Cloud not ready: %s",
+                mock_coordinator.async_config_entry_first_refresh.side_effect,
+            )
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_missing_keys(mock_hass):
     """Test setup failing due to missing keys."""
     entry = MagicMock()
