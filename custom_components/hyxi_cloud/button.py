@@ -7,6 +7,7 @@ that have no readable state: pressing a button fires a command; there is no
 persistent state to become stale or misleading.
 """
 
+import asyncio
 import logging
 
 from homeassistant.components.button import ButtonEntity
@@ -498,18 +499,32 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
 
         _LOGGER.info("Found %d old subscription codes to purge", len(to_purge))
 
-        # Attempt to cancel each inactive code
+        # Attempt to cancel each inactive code concurrently
         success_count = 0
         failure_count = 0
-        for code in to_purge:
-            try:
-                await async_cancel_and_unregister_subscription(
-                    self.hass, self.coordinator.client, code
-                )
+
+        tasks = [
+            async_cancel_and_unregister_subscription(
+                self.hass, self.coordinator.client, code
+            )
+            for code in to_purge
+        ]
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        failed_codes = []
+        for code, result in zip(to_purge, results, strict=True):
+            if isinstance(result, asyncio.CancelledError):
+                raise result
+            if isinstance(result, Exception):
+                failed_codes.append((code, result))
+            else:
                 success_count += 1
-            except Exception as err:  # pylint: disable=broad-exception-caught
+
+        if failed_codes:
+            all_known_after = await async_get_subscription_codes(self.hass)
+            for code, err in failed_codes:
                 # If the code was successfully unregistered (e.g. because it was already inactive/invalid)
-                all_known_after = await async_get_subscription_codes(self.hass)
                 if code not in all_known_after:
                     success_count += 1
                 else:

@@ -1,6 +1,7 @@
 """HYXI Cloud Integration for Home Assistant."""
 # pylint: disable=wrong-import-position
 
+import asyncio
 import hmac
 import logging
 
@@ -968,6 +969,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
 STORAGE_KEY = "hyxi_cloud_subscriptions"
 STORAGE_VERSION = 1
+_SUBSCRIPTION_STORE_LOCK = asyncio.Lock()
 
 
 async def async_register_subscription_code(hass: HomeAssistant, code: str) -> None:
@@ -980,16 +982,17 @@ async def async_register_subscription_code(hass: HomeAssistant, code: str) -> No
     from homeassistant.helpers.storage import Store
 
     store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    data = await store.async_load() or {}
-    codes = data.setdefault("codes", [])
-    if code not in codes:
-        codes.append(code)
-        await store.async_save(data)
+    async with _SUBSCRIPTION_STORE_LOCK:
+        data = await store.async_load() or {}
+        codes = data.setdefault("codes", [])
+        if code not in codes:
+            codes.append(code)
+            await store.async_save(data)
 
-    # Update active coordinators
-    for coordinator in hass.data.get(DOMAIN, {}).values():
-        coordinator.known_subscription_codes = list(codes)
-        coordinator.async_update_listeners()
+        # Update active coordinators
+        for coordinator in hass.data.get(DOMAIN, {}).values():
+            coordinator.known_subscription_codes = list(codes)
+            coordinator.async_update_listeners()
 
 
 async def async_unregister_subscription_code(hass: HomeAssistant, code: str) -> None:
@@ -1002,16 +1005,17 @@ async def async_unregister_subscription_code(hass: HomeAssistant, code: str) -> 
     from homeassistant.helpers.storage import Store
 
     store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    data = await store.async_load() or {}
-    codes = data.get("codes", [])
-    if code in codes:
-        codes.remove(code)
-        await store.async_save(data)
+    async with _SUBSCRIPTION_STORE_LOCK:
+        data = await store.async_load() or {}
+        codes = data.get("codes", [])
+        if code in codes:
+            codes.remove(code)
+            await store.async_save(data)
 
-    # Update active coordinators
-    for coordinator in hass.data.get(DOMAIN, {}).values():
-        coordinator.known_subscription_codes = list(codes)
-        coordinator.async_update_listeners()
+        # Update active coordinators
+        for coordinator in hass.data.get(DOMAIN, {}).values():
+            coordinator.known_subscription_codes = list(codes)
+            coordinator.async_update_listeners()
 
 
 async def async_get_subscription_codes(hass: HomeAssistant) -> list[str]:
