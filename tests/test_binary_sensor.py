@@ -157,6 +157,17 @@ def test_connectivity_sensor_diagnostics(mock_coordinator, mock_entry):
     mock_coordinator.hyxi_metadata["last_attempts"] = 1
     attrs = sensor.extra_state_attributes
     assert attrs["connection_quality"] == "Stable"
+    assert attrs["cache_active"] is False
+    assert (
+        attrs["api_status"] == "Starting"
+    )  # Default when api_status is missing from metadata mock
+
+    # Test cache_active when Offline
+    mock_coordinator.hyxi_metadata["api_status"] = "Offline"
+    mock_coordinator.hyxi_metadata["cache_active"] = True
+    attrs = sensor.extra_state_attributes
+    assert attrs["cache_active"] is True
+    assert attrs["api_status"] == "Offline"
 
     assert sensor.available is True
 

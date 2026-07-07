@@ -34,6 +34,7 @@ class HyxiMetadata(TypedDict):
     last_success: datetime | None
     last_error: str | None
     api_status: str
+    cache_active: bool
 
 
 CACHE_MAX_AGE = timedelta(days=7)
@@ -91,6 +92,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             "last_success": None,
             "last_error": None,
             "api_status": "Starting",
+            "cache_active": False,
         }
 
         # Real-time Webhook Push state tracking
@@ -132,12 +134,16 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 )
                 self.data = devices  # pylint: disable=attribute-defined-outside-init
                 self.hyxi_metadata["api_status"] = "Starting (cached)"
-            elif devices:
-                _LOGGER.debug(
-                    "Cache found but expired (>%d days old), skipping pre-seed",
-                    CACHE_MAX_AGE.days,
-                )
+                self.hyxi_metadata["cache_active"] = True
+            else:
+                self.hyxi_metadata["cache_active"] = False
+                if devices:
+                    _LOGGER.debug(
+                        "Cache found but expired (>%d days old), skipping pre-seed",
+                        CACHE_MAX_AGE.days,
+                    )
         except Exception:  # pylint: disable=broad-except
+            self.hyxi_metadata["cache_active"] = False
             _LOGGER.debug("Cache pre-seed failed, will rely on API for first load")
 
     async def _async_update_data(self):
@@ -177,6 +183,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 # real cause and incorrectly mark the integration as Offline.
                 self.hyxi_metadata["api_status"] = "Degraded"
                 self.hyxi_metadata["last_error"] = "API returned 0 devices"
+                self.hyxi_metadata["cache_active"] = bool(self.data)
                 return self.data or {}
             try:
                 await self.device_store.async_save(
@@ -206,6 +213,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["last_attempts"] = result.get("attempts", 1)
             self.hyxi_metadata["last_success"] = dt_util.utcnow()
             self.hyxi_metadata["api_status"] = "Online"
+            self.hyxi_metadata["cache_active"] = False
             self.hyxi_metadata["last_error"] = None
 
             self._merge_metrics(devices)
@@ -222,6 +230,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                 if cached_devices and not _is_cache_expired(raw):
                     self.hyxi_metadata["last_error"] = str(err)
                     self.hyxi_metadata["api_status"] = "Offline"
+                    self.hyxi_metadata["cache_active"] = True
                     _LOGGER.warning(
                         "HYXI Cloud API fetch failed. Falling back to %d cached devices from storage.",
                         len(cached_devices),
@@ -238,9 +247,11 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.warning("Cache fallback recovery failed")
 
+            self.hyxi_metadata["cache_active"] = False
             self._handle_update_error(err)
             raise
         except Exception as err:
+            self.hyxi_metadata["cache_active"] = False
             self._handle_update_error(err)
             raise
 

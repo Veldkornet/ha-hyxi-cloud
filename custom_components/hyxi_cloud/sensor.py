@@ -96,6 +96,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="ph2Loadp",
@@ -103,6 +104,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="ph3Loadp",
@@ -110,6 +112,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
+        suggested_display_precision=0,
     ),
     # PV String Sensors
     SensorEntityDescription(
@@ -118,6 +121,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-panel",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="pv2v",
@@ -125,6 +129,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-panel",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="pv1i",
@@ -132,6 +137,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-dc",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="pv2i",
@@ -139,6 +145,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-dc",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="pv1p",
@@ -146,6 +153,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="pv2p",
@@ -153,6 +161,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="pv3v",
@@ -160,6 +169,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-panel",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="pv4v",
@@ -167,6 +177,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-panel",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="pv3i",
@@ -174,6 +185,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-dc",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="pv4i",
@@ -181,6 +193,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-dc",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="pv3p",
@@ -188,6 +201,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="pv4p",
@@ -195,6 +209,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
+        suggested_display_precision=0,
     ),
     # Battery Electricals
     SensorEntityDescription(
@@ -203,6 +218,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:car-battery",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="batI",
@@ -210,6 +226,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-dc",
+        suggested_display_precision=2,
     ),
     # Internal Spec Sensors
     SensorEntityDescription(
@@ -218,6 +235,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=1,
     ),
     # Hardware Capabilities
     SensorEntityDescription(
@@ -226,6 +244,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="acE",
@@ -233,6 +252,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:flash",
+        suggested_display_precision=2,
     ),
     # Status Codes
     SensorEntityDescription(
@@ -249,6 +269,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:lightning-bolt",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="ratedVoltage",
@@ -256,12 +277,14 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:lightning-bolt",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="ratedFrequency",
         native_unit_of_measurement="Hz",
         device_class=SensorDeviceClass.FREQUENCY,
         entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="wifiVer",
@@ -299,6 +322,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-arrow-up",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="maxDischargePower",
@@ -306,6 +330,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-arrow-down",
+        suggested_display_precision=0,
     ),
     # Phase Powers Detailed
     SensorEntityDescription(
@@ -314,6 +339,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:sine-wave",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="ph1i",
@@ -321,6 +347,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-ac",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="ph1p",
@@ -328,6 +355,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="ph2v",
@@ -335,6 +363,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:sine-wave",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="ph2i",
@@ -342,6 +371,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-ac",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="ph2p",
@@ -349,6 +379,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="ph3v",
@@ -356,6 +387,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:sine-wave",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="ph3i",
@@ -363,6 +395,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-ac",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="ph3p",
@@ -370,6 +403,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash",
+        suggested_display_precision=0,
     ),
     # ESS / Battery Management (ESS specific)
     SensorEntityDescription(
@@ -378,6 +412,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.BATTERY,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-high",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="cuvolt",
@@ -385,6 +420,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:lightning-bolt",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="cucurr",
@@ -392,6 +428,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:current-ac",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="cupower",
@@ -399,12 +436,14 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-charging",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="cusoh",
         native_unit_of_measurement="%",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-heart-variant",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="cuavgcelltemp",
@@ -412,6 +451,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:thermometer",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="duichargetoday",
@@ -419,6 +459,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-plus",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="duiunchargetoday",
@@ -426,6 +467,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus",
+        suggested_display_precision=2,
     ),
     # Hybrid Inverter Core Sensors
     SensorEntityDescription(
@@ -441,6 +483,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="batP",
@@ -449,6 +492,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="ppv",
@@ -456,6 +500,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="home_load",
@@ -463,6 +508,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="grid_import",
@@ -470,6 +516,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transmission-tower-import",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="grid_export",
@@ -477,6 +524,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transmission-tower-export",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="bat_charging",
@@ -484,6 +532,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-arrow-up",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="bat_discharging",
@@ -491,6 +540,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-arrow-down",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="totalE",
@@ -498,6 +548,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:counter",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="bat_charge_total",
@@ -505,6 +556,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-plus-variant",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="bat_discharge_total",
@@ -512,6 +564,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus-variant",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="batSoh",
@@ -526,6 +579,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="temp",
@@ -534,6 +588,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:thermometer",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="packNum",
@@ -547,6 +602,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-check",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="collectTime",
@@ -566,6 +622,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="signalVal",
@@ -573,6 +630,7 @@ SENSOR_TYPES = [
         icon="mdi:wifi",
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="comMode",
@@ -591,6 +649,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="vac",
@@ -598,6 +657,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:sine-wave",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="vpv",
@@ -605,6 +665,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-panel",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="eToday",
@@ -612,6 +673,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:solar-power-variant",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="efpv",
@@ -620,6 +682,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:solar-power-variant",
+        suggested_display_precision=2,
     ),
     # Micro ESS / New Telemetry Sensors
     SensorEntityDescription(
@@ -663,6 +726,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:solar-power",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="pvNum",
@@ -675,6 +739,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:thermometer",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="dcSideTemper",
@@ -682,6 +747,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:thermometer",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="gridF",
@@ -689,6 +755,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="gridP",
@@ -696,6 +763,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transmission-tower",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="gridQ",
@@ -703,12 +771,14 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transmission-tower",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="gridPfd",
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:angle-acute",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="gridAp",
@@ -716,6 +786,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.APPARENT_POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:transmission-tower",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="offGridF",
@@ -723,6 +794,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="offGridP",
@@ -730,6 +802,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:power-plug-off",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="offGridQ",
@@ -737,12 +810,14 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:power-plug-off",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="offGridPfd",
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:angle-acute",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="offGridAp",
@@ -750,6 +825,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.APPARENT_POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:power-plug-off",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="batVch",
@@ -758,6 +834,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-high",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="batVcl",
@@ -766,6 +843,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:battery-low",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="batTch",
@@ -774,6 +852,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:thermometer-high",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="batTcl",
@@ -782,6 +861,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:thermometer-low",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="batTmp",
@@ -790,6 +870,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:thermometer",
+        suggested_display_precision=1,
     ),
     SensorEntityDescription(
         key="batIcm",
@@ -798,6 +879,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:current-dc",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="batIdm",
@@ -806,6 +888,7 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:current-dc",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="batCharge",
@@ -813,6 +896,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-plus",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="batDisCharge",
@@ -820,6 +904,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="totalEchg",
@@ -827,6 +912,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-plus-variant",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="totalEdchg",
@@ -834,6 +920,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon="mdi:battery-minus-variant",
+        suggested_display_precision=2,
     ),
 ]
 
