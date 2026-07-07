@@ -231,6 +231,10 @@ def test_detect_phase_type_metrics():
     assert detect_phase_type({"metrics": {"ph2v": "N/A"}}) == "unknown"
     assert detect_phase_type({"metrics": {"ph2v": None}}) == "unknown"
 
+    # Null/empty metrics
+    assert detect_phase_type({"metrics": None}) == "unknown"
+    assert detect_phase_type({"metrics": {}}) == "unknown"
+
 
 def test_detect_phase_type_model_takes_priority():
     """Model suffix takes priority over metrics."""
