@@ -36,6 +36,29 @@ class HyxiMetadata(TypedDict):
     api_status: str
 
 
+CACHE_MAX_AGE = timedelta(days=7)
+
+
+def _extract_cached_devices(raw: dict | None) -> dict | None:
+    """Extract the device dict from cache storage, handling old and new formats."""
+    if not raw:
+        return None
+    if "devices" in raw:
+        return raw["devices"]  # New format: {"cached_at": ..., "devices": {...}}
+    return raw  # Old format: bare device dict (expired by _is_cache_expired)
+
+
+def _is_cache_expired(raw: dict | None) -> bool:
+    """Return True if cache data is missing, old-format, or older than CACHE_MAX_AGE."""
+    if not raw or "cached_at" not in raw:
+        return True  # Old format or missing — treat as expired
+    try:
+        cached_at = datetime.fromisoformat(raw["cached_at"])
+        return dt_util.utcnow() - cached_at > CACHE_MAX_AGE
+    except ValueError, TypeError:
+        return True
+
+
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from HYXI API."""
 
@@ -89,6 +112,33 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.device_store: Store[dict[str, Any]] = Store(
             hass, 1, f"hyxi_cloud_devices_{entry.entry_id}"
         )
+        self.known_subscription_codes: list[str] = []
+
+    async def async_preload_cache(self) -> None:
+        """Pre-seed coordinator.data from persistent cache before the first API call.
+
+        Called from async_setup_entry before async_config_entry_first_refresh().
+        This ensures the coordinator has data immediately if the API is slow or
+        unreachable at startup, so the fallback in _async_update_data requires
+        no additional disk read and setup completes without ConfigEntryNotReady.
+        """
+        try:
+            raw = await self.device_store.async_load()
+            devices = _extract_cached_devices(raw)
+            if devices and not _is_cache_expired(raw):
+                _LOGGER.debug(
+                    "Pre-seeding coordinator from cache (%d devices) before first API call",
+                    len(devices),
+                )
+                self.data = devices  # pylint: disable=attribute-defined-outside-init
+                self.hyxi_metadata["api_status"] = "Starting (cached)"
+            elif devices:
+                _LOGGER.debug(
+                    "Cache found but expired (>%d days old), skipping pre-seed",
+                    CACHE_MAX_AGE.days,
+                )
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.debug("Cache pre-seed failed, will rely on API for first load")
 
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
@@ -117,35 +167,24 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             devices = result["data"]
 
             if not devices:
-                cached_devices = await self.device_store.async_load()
-                if cached_devices:
-                    _LOGGER.warning(
-                        "HYXI Cloud API returned 0 devices, but we found %d cached devices in storage. "
-                        "Assuming temporary API outage and loading devices from storage.",
-                        len(cached_devices),
-                    )
-                    self.hyxi_metadata["api_status"] = "Offline"
-                    self.hyxi_metadata["last_error"] = (
-                        "API returned 0 devices (loaded from cache)"
-                    )
-                    self._merge_metrics(cached_devices)
-                    self._log_polled_telemetry(cached_devices)
-                    await self._async_sync_device_metadata(cached_devices)
-                    return cached_devices
-
                 _LOGGER.warning(
                     "HYXI Cloud returned success, but no plants or devices were found. "
                     "If your developer email differs from your app email, you must share your Plant "
                     "from the app to the developer email first."
                 )
-            else:
-                try:
-                    await self.device_store.async_save(devices)
-                except Exception as save_err:  # pylint: disable=broad-except
-                    # Intentional broad catch to ensure cache save failures never break the update loop
-                    _LOGGER.exception(
-                        "Failed to persist devices to storage: %s", save_err
-                    )
+                # The API succeeded — this is an account/plant configuration issue,
+                # not a connectivity failure. Loading stale cache here would mask the
+                # real cause and incorrectly mark the integration as Offline.
+                self.hyxi_metadata["api_status"] = "Degraded"
+                self.hyxi_metadata["last_error"] = "API returned 0 devices"
+                return self.data or {}
+            try:
+                await self.device_store.async_save(
+                    {"cached_at": dt_util.utcnow().isoformat(), "devices": devices}
+                )
+            except Exception as save_err:  # pylint: disable=broad-except
+                # Intentional broad catch to ensure cache save failures never break the update loop
+                _LOGGER.warning("Failed to persist devices to storage: %s", save_err)
 
             # Warn (but don't fail) when telemetry is empty.
             # Raising UpdateFailed here triggers HA exponential backoff,
@@ -178,19 +217,26 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
         except (ClientError, TimeoutError, UpdateFailed) as err:
             try:
-                cached_devices = await self.device_store.async_load()
-                if cached_devices:
+                raw = await self.device_store.async_load()
+                cached_devices = _extract_cached_devices(raw)
+                if cached_devices and not _is_cache_expired(raw):
                     self.hyxi_metadata["last_error"] = str(err)
                     self.hyxi_metadata["api_status"] = "Offline"
-                    _LOGGER.exception(
+                    _LOGGER.warning(
                         "HYXI Cloud API fetch failed. Falling back to %d cached devices from storage.",
                         len(cached_devices),
                     )
                     self._merge_metrics(cached_devices)
                     await self._async_sync_device_metadata(cached_devices)
                     return cached_devices
+                if cached_devices and _is_cache_expired(raw):
+                    _LOGGER.warning(
+                        "HYXI Cloud API fetch failed and cache is expired (>%d days old). "
+                        "Not loading stale cache.",
+                        CACHE_MAX_AGE.days,
+                    )
             except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Cache fallback recovery failed")
+                _LOGGER.warning("Cache fallback recovery failed")
 
             self._handle_update_error(err)
             raise

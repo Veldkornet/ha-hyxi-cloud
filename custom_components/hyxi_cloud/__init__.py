@@ -76,6 +76,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
     coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
 
+    # Pre-seed coordinator.data from persistent cache so that if the API is slow
+    # or unreachable at startup, data is immediately available and the fallback
+    # in _async_update_data requires no additional disk read.
+    await coordinator.async_preload_cache()
+
     try:
         await coordinator.async_config_entry_first_refresh()
     except ConfigEntryAuthFailed:
