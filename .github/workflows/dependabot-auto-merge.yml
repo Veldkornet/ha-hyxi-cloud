@@ -66,13 +66,18 @@ jobs:
         if: >
           steps.metadata.outputs.update-type != 'version-update:semver-major' &&
           steps.verify.outputs.is_allowed == 'true'
-        run: gh pr review --approve "$PR_URL"
+        run: |
+          if ! OUTPUT=$(gh pr review --approve "$PR_URL" 2>&1); then
+            echo "::notice title=Approval Failed::Failed to automatically approve PR. This is usually due to permission restrictions. Output: $OUTPUT"
+          fi
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
       - name: Enable auto-merge for Dependabot PRs
-        if: steps.verify.outputs.is_allowed == 'true'
+        if: >
+          steps.metadata.outputs.update-type != 'version-update:semver-major' &&
+          steps.verify.outputs.is_allowed == 'true'
         run: |
           if ! OUTPUT=$(gh pr merge --auto --squash "$PR_URL" 2>&1); then
             if echo "$OUTPUT" | grep -iq "workflow.*permission"; then
