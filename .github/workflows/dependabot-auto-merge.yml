@@ -35,6 +35,8 @@ jobs:
           (
             startsWith(steps.metadata.outputs.dependency-names, 'actions/') ||
             startsWith(steps.metadata.outputs.dependency-names, 'github/') ||
+            startsWith(steps.metadata.outputs.dependency-names, 'dependabot/') ||
+            startsWith(steps.metadata.outputs.dependency-names, 'step-security/') ||
             steps.metadata.outputs.dependency-names == 'pytest' ||
             steps.metadata.outputs.dependency-names == 'ruff'
           )
