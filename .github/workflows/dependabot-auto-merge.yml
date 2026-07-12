@@ -32,12 +32,7 @@ jobs:
       - name: Enable auto-merge for Dependabot PRs
         if: >
           steps.metadata.outputs.update-type != 'version-update:semver-major' &&
-          (
-            startsWith(steps.metadata.outputs.dependency-names, 'actions/') ||
-            startsWith(steps.metadata.outputs.dependency-names, 'github/') ||
-            steps.metadata.outputs.dependency-names == 'pytest' ||
-            steps.metadata.outputs.dependency-names == 'ruff'
-          )
+          contains(fromJson('["actions/checkout", "actions/dependency-review-action", "actions/download-artifact", "actions/github-script", "actions/labeler", "actions/setup-python", "actions/upload-artifact", "dependabot/fetch-metadata", "github/codeql-action", "gitleaks/gitleaks-action", "google/osv-scanner-action", "hacs/action", "home-assistant/actions", "ossf/scorecard-action", "pre-commit/action", "release-drafter/release-drafter", "softprops/action-gh-release", "step-security/harden-runner", "pytest", "ruff", "pytest-asyncio", "hypothesis", "pytest-homeassistant-custom-component"]'), steps.metadata.outputs.dependency-names)
         run: |
           gh pr review --approve "$PR_URL"
           gh pr merge --auto --squash "$PR_URL"
