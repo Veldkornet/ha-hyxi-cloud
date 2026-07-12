@@ -1476,7 +1476,11 @@ class HyxiSensor(HyxiBaseSensor):
 
         # 🚀 Fallback Logic for Battery Temperature (batTmp -> batTch)
         if key == "batTmp" and (value is None or is_null_value(value)):
-            value = metrics.get("batTch")
+            if getattr(self, "_device_type", None) in (
+                "hybrid_inverter",
+                "all_in_one",
+            ):
+                value = metrics.get("batTch")
 
         parsed_val = self._parser_func(dev_data, value)
         if (
