@@ -62,13 +62,26 @@ jobs:
 
           echo "is_allowed=$ALLOWED" >> "$GITHUB_OUTPUT"
 
-      - name: Enable auto-merge for Dependabot PRs
+      - name: Approve Dependabot PR
         if: >
           steps.metadata.outputs.update-type != 'version-update:semver-major' &&
           steps.verify.outputs.is_allowed == 'true'
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Enable auto-merge for Dependabot PRs
+        if: steps.verify.outputs.is_allowed == 'true'
         run: |
-          gh pr review --approve "$PR_URL"
-          gh pr merge --auto --squash "$PR_URL"
+          if ! OUTPUT=$(gh pr merge --auto --squash "$PR_URL" 2>&1); then
+            if echo "$OUTPUT" | grep -iq "workflow.*permission"; then
+              echo "::notice title=Manual Merge Required::GitHub Actions cannot auto-merge PRs that modify workflow files due to security restrictions. Please merge manually."
+            else
+              echo "::error::Failed to enable auto-merge: $OUTPUT"
+              exit 1
+            fi
+          fi
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
