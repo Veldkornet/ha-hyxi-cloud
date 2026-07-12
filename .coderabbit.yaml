@@ -45,4 +45,4 @@ reviews:
        - Ensure GITHUB_TOKEN permissions are explicitly declared and adhere to the principle of least privilege.
 
     7. Python Syntax (PEP 758):
-       - Refer to `.agents/AGENTS.md` for our strict PEP 758 exception grouping syntax rules. Do NOT flag `except ValueError, TypeError:` without parentheses as a syntax error.
+       - Refer to `.agents/AGENTS.md` for our strict PEP 758 exception grouping syntax rules. Do not enforce generic Python 3 exception group assumptions without consulting `.agents/AGENTS.md`.
