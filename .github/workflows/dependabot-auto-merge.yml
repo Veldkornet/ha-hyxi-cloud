@@ -1,5 +1,7 @@
 name: Dependabot auto-merge
-on: pull_request
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -28,10 +30,10 @@ jobs:
         if: >
           steps.metadata.outputs.update-type != 'version-update:semver-major' &&
           (
-            contains(steps.metadata.outputs.dependency-names, 'actions/') ||
-            contains(steps.metadata.outputs.dependency-names, 'github/') ||
-            contains(steps.metadata.outputs.dependency-names, 'pytest') ||
-            contains(steps.metadata.outputs.dependency-names, 'ruff')
+            startsWith(steps.metadata.outputs.dependency-names, 'actions/') ||
+            startsWith(steps.metadata.outputs.dependency-names, 'github/') ||
+            steps.metadata.outputs.dependency-names == 'pytest' ||
+            steps.metadata.outputs.dependency-names == 'ruff'
           )
         run: |
           gh pr review --approve "$PR_URL"
