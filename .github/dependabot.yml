@@ -5,6 +5,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action*"
 
   # 2. Keep Python dependencies up to date
   - package-ecosystem: "pip"
