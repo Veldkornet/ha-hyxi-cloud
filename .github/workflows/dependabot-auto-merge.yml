@@ -34,7 +34,7 @@ jobs:
         env:
           DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
         run: |
-          ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action/init" "github/codeql-action/analyze" "github/codeql-action/upload-sarif" "gitleaks/gitleaks-action" "google/osv-scanner-action/osv-scanner-action" "hacs/action" "home-assistant/actions/hassfest" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
+          ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action" "gitleaks/gitleaks-action" "google/osv-scanner-action" "hacs/action" "home-assistant/actions" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
 
           # Dependabot outputs a comma-separated string for grouped updates
           IFS=',' read -r -a DEPS <<< "$DEPENDENCY_NAMES"
@@ -43,17 +43,11 @@ jobs:
           for DEP in "${DEPS[@]}"; do
             DEP=$(echo "$DEP" | xargs) # trim whitespace
 
-            MATCH=false
-            for ALLOWED_DEP in "${ALLOWED_DEPS[@]}"; do
-              if [[ "$ALLOWED_DEP" == "$DEP" ]]; then
-                MATCH=true
-                break
-              fi
-            done
-
-            if [[ "$MATCH" == "false" ]]; then
+            if ! printf '%s\n' "${ALLOWED_DEPS[@]}" | grep -Fxq "$DEP"; then
               echo "Dependency $DEP is not in the allowlist."
               ALLOWED=false
+              # We avoid exiting with a non-zero status here so we don't put a confusing
+              # red 'X' (failed CI check) on PRs that simply require a manual review.
               break
             fi
           done
