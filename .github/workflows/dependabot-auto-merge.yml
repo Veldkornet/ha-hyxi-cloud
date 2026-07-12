@@ -29,10 +29,39 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
+      - name: Verify allowed dependencies
+        id: verify
+        run: |
+          ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action/init" "github/codeql-action/analyze" "github/codeql-action/upload-sarif" "gitleaks/gitleaks-action" "google/osv-scanner-action/osv-scanner-action" "hacs/action" "home-assistant/actions/hassfest" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
+
+          # Dependabot outputs a comma-separated string for grouped updates
+          IFS=',' read -r -a DEPS <<< "${{ steps.metadata.outputs.dependency-names }}"
+
+          ALLOWED=true
+          for DEP in "${DEPS[@]}"; do
+            DEP=$(echo "$DEP" | xargs) # trim whitespace
+
+            MATCH=false
+            for ALLOWED_DEP in "${ALLOWED_DEPS[@]}"; do
+              if [[ "$ALLOWED_DEP" == "$DEP" ]]; then
+                MATCH=true
+                break
+              fi
+            done
+
+            if [[ "$MATCH" == "false" ]]; then
+              echo "Dependency $DEP is not in the allowlist."
+              ALLOWED=false
+              break
+            fi
+          done
+
+          echo "is_allowed=$ALLOWED" >> "$GITHUB_OUTPUT"
+
       - name: Enable auto-merge for Dependabot PRs
         if: >
           steps.metadata.outputs.update-type != 'version-update:semver-major' &&
-          contains(fromJson('["actions/checkout", "actions/dependency-review-action", "actions/download-artifact", "actions/github-script", "actions/labeler", "actions/setup-python", "actions/upload-artifact", "dependabot/fetch-metadata", "github/codeql-action", "gitleaks/gitleaks-action", "google/osv-scanner-action", "hacs/action", "home-assistant/actions", "ossf/scorecard-action", "pre-commit/action", "release-drafter/release-drafter", "softprops/action-gh-release", "step-security/harden-runner", "pytest", "ruff", "pytest-asyncio", "hypothesis", "pytest-homeassistant-custom-component"]'), steps.metadata.outputs.dependency-names)
+          steps.verify.outputs.is_allowed == 'true'
         run: |
           gh pr review --approve "$PR_URL"
           gh pr merge --auto --squash "$PR_URL"
