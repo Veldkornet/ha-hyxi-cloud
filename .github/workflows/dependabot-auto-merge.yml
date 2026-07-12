@@ -16,7 +16,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -25,7 +25,7 @@ jobs:
 
       - name: Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v2.3.0
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
@@ -34,17 +34,25 @@ jobs:
         env:
           DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
         run: |
-          ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action" "gitleaks/gitleaks-action" "google/osv-scanner-action" "hacs/action" "home-assistant/actions" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
+          set -euo pipefail
+
+          ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/stale" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action" "github/codeql-action/init" "github/codeql-action/analyze" "github/codeql-action/upload-sarif" "gitleaks/gitleaks-action" "google/osv-scanner-action" "hacs/action" "home-assistant/actions" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
 
           # Dependabot outputs a comma-separated string for grouped updates
-          IFS=',' read -r -a DEPS <<< "$DEPENDENCY_NAMES"
+          IFS=',' read -r -a DEPS <<< "$DEPENDENCY_NAMES" || true
+
+          if [ "${#DEPS[@]}" -eq 0 ] || [ -z "${DEPS[0]}" ]; then
+            echo "::notice title=Manual Review Required::No dependencies found in metadata. Skipping auto-merge."
+            echo "is_allowed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           ALLOWED=true
           for DEP in "${DEPS[@]}"; do
             DEP=$(echo "$DEP" | xargs) # trim whitespace
 
             if ! printf '%s\n' "${ALLOWED_DEPS[@]}" | grep -Fxq "$DEP"; then
-              echo "Dependency $DEP is not in the allowlist."
+              echo "::notice title=Manual Review Required::Dependency '$DEP' is not in the strict allowlist. Skipping auto-merge."
               ALLOWED=false
               # We avoid exiting with a non-zero status here so we don't put a confusing
               # red 'X' (failed CI check) on PRs that simply require a manual review.
@@ -54,13 +62,31 @@ jobs:
 
           echo "is_allowed=$ALLOWED" >> "$GITHUB_OUTPUT"
 
+      - name: Approve Dependabot PR
+        if: >
+          steps.metadata.outputs.update-type != 'version-update:semver-major' &&
+          steps.verify.outputs.is_allowed == 'true'
+        run: |
+          if ! OUTPUT=$(gh pr review --approve "$PR_URL" 2>&1); then
+            echo "::notice title=Approval Failed::Failed to automatically approve PR. This is usually due to permission restrictions. Output: $OUTPUT"
+          fi
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
       - name: Enable auto-merge for Dependabot PRs
         if: >
           steps.metadata.outputs.update-type != 'version-update:semver-major' &&
           steps.verify.outputs.is_allowed == 'true'
         run: |
-          gh pr review --approve "$PR_URL"
-          gh pr merge --auto --squash "$PR_URL"
+          if ! OUTPUT=$(gh pr merge --auto --squash "$PR_URL" 2>&1); then
+            if echo "$OUTPUT" | grep -iq "workflow.*permission"; then
+              echo "::notice title=Manual Merge Required::GitHub Actions cannot auto-merge PRs that modify workflow files due to security restrictions. Please merge manually."
+            else
+              echo "::error::Failed to enable auto-merge: $OUTPUT"
+              exit 1
+            fi
+          fi
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
