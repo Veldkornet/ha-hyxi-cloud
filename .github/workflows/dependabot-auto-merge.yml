@@ -39,7 +39,13 @@ jobs:
           ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/stale" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action" "github/codeql-action/init" "github/codeql-action/analyze" "github/codeql-action/upload-sarif" "gitleaks/gitleaks-action" "google/osv-scanner-action" "hacs/action" "home-assistant/actions" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
 
           # Dependabot outputs a comma-separated string for grouped updates
-          IFS=',' read -r -a DEPS <<< "$DEPENDENCY_NAMES" || true
+          IFS=',' read -r -a DEPS <<< "$DEPENDENCY_NAMES"
+
+          if [ "${#DEPS[@]}" -eq 0 ] || [ -z "${DEPS[0]}" ]; then
+            echo "::notice title=Manual Review Required::No dependencies found in metadata. Skipping auto-merge."
+            echo "is_allowed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           ALLOWED=true
           for DEP in "${DEPS[@]}"; do
