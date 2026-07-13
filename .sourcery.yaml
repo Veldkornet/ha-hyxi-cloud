@@ -21,8 +21,8 @@ rules:
         except* (${exceptions}):
             ${statements+}
     # Ensure it only flags it if it does not contain the 'as' keyword structurally
-    # and has a comma (meaning multiple exceptions)
-    condition: not exceptions.matches_regex(r"\bas\b") and exceptions.matches_regex(r",")
+    # and is structurally a Tuple of multiple exceptions
+    condition: not exceptions.matches_regex(r"\bas\b") and exceptions.node_type == "Tuple"
     explanation: |
       This project enforces the modern PEP 758 standard.
       Multiple exceptions must be comma-separated without surrounding parentheses unless an `as` clause is present.
@@ -51,4 +51,9 @@ rules:
           try:
               pass
           except (ValueError, TypeError) as e:
+              pass
+      - no-match: |
+          try:
+              pass
+          except factory(ValueError, TypeError):
               pass
