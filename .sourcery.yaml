@@ -4,9 +4,9 @@ rule_settings:
   enable:
     - default
   disable:
-    # Disable any default rules that try to group or modify exception syntax 
+    # Disable any default rules that try to group or modify exception syntax
     # to prevent conflicts with your custom hook and PEP 758.
-    - catch-multiple-exceptions 
+    - catch-multiple-exceptions
 
 rules:
   - id: enforce-pep-758-exception-grouping
@@ -16,9 +16,9 @@ rules:
     pattern: |
       except (${exceptions}):
           ${body}
-    # Ensure it only flags it if it does not contain the 'as' keyword structurally 
+    # Ensure it only flags it if it does not contain the 'as' keyword structurally
     # (Since Sourcery treats the exception match as a single capture, we can filter it)
     condition: not exceptions.matches(".* as .*")
     explanation: |
-      This project enforces the modern PEP 758 standard. 
+      This project enforces the modern PEP 758 standard.
       Multiple exceptions must be comma-separated without surrounding parentheses unless an `as` clause is present.
