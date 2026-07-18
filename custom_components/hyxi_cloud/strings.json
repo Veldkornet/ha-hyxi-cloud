@@ -94,9 +94,6 @@
       "pbat": {
         "name": "Battery Power"
       },
-      "batP": {
-        "name": "Battery Power (Raw)"
-      },
       "ppv": {
         "name": "Solar Power"
       },
@@ -482,6 +479,9 @@
       },
       "em_status": {
         "name": "EM Status"
+      },
+      "batp": {
+        "name": "Battery Power (Raw)"
       }
     },
     "number": {

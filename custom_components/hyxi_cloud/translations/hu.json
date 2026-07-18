@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Akkumulátor teljesítmény"
       },
-      "batP": {
-        "name": "Akkumulátor teljesítmény (Raw)"
-      },
       "ppv": {
         "name": "Napelem teljesítmény"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Akkumulátor hőmérséklet"
+      },
+      "batp": {
+        "name": "Akkumulátor teljesítmény (Raw)"
       }
     },
     "number": {

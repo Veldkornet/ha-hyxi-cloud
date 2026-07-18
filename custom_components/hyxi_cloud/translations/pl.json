@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Moc akumulatora"
       },
-      "batP": {
-        "name": "Moc akumulatora (Raw)"
-      },
       "ppv": {
         "name": "Moc instalacji solarnej"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Temperatura baterii"
+      },
+      "batp": {
+        "name": "Moc akumulatora (Raw)"
       }
     },
     "number": {

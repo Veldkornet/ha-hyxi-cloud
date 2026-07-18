@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Akun teho"
       },
-      "batP": {
-        "name": "Akun teho (Raw)"
-      },
       "ppv": {
         "name": "Aurinkopaneelien teho"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Akun lämpötila"
+      },
+      "batp": {
+        "name": "Akun teho (Raw)"
       }
     },
     "number": {

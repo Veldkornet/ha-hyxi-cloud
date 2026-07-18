@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Potenza batteria"
       },
-      "batP": {
-        "name": "Potenza batteria (Raw)"
-      },
       "ppv": {
         "name": "Potenza solare"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Temperatura della batteria"
+      },
+      "batp": {
+        "name": "Potenza batteria (Raw)"
       }
     },
     "number": {

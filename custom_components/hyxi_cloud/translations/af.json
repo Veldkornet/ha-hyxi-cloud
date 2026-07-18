@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Battery-krag"
       },
-      "batP": {
-        "name": "Battery-krag (Raw)"
-      },
       "ppv": {
         "name": "Sonkrag"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Batterytemperatuur"
+      },
+      "batp": {
+        "name": "Battery-krag (Raw)"
       }
     },
     "number": {

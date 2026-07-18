@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Batterieleistung"
       },
-      "batP": {
-        "name": "Batterieleistung (Raw)"
-      },
       "ppv": {
         "name": "Solarleistung"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Batterietemperatur"
+      },
+      "batp": {
+        "name": "Batterieleistung (Raw)"
       }
     },
     "number": {

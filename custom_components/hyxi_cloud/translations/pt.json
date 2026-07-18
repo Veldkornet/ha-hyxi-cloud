@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Potência da Bateria (Inversor)"
       },
-      "batP": {
-        "name": "Potência da Bateria (Inversor) (Raw)"
-      },
       "ppv": {
         "name": "Potência Solar"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Temperatura da bateria"
+      },
+      "batp": {
+        "name": "Potência da Bateria (Inversor) (Raw)"
       }
     },
     "number": {

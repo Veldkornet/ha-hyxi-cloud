@@ -93,9 +93,6 @@
       "pbat": {
         "name": "Batarya Gücü"
       },
-      "batP": {
-        "name": "Batarya Gücü (Raw)"
-      },
       "ppv": {
         "name": "Güneş Gücü"
       },
@@ -481,6 +478,9 @@
       },
       "battmp": {
         "name": "Batarya Sıcaklığı"
+      },
+      "batp": {
+        "name": "Batarya Gücü (Raw)"
       }
     },
     "number": {
