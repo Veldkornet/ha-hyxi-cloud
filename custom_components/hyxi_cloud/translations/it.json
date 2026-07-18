@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Annulla abbonamento",
+      "description": "Annulla manualmente un abbonamento push/allarme attivo o orfano sul server HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Codice abbonamento",
+          "description": "Il codice di abbonamento a 32 caratteri. Puoi trovare i codici attivi/orfani nei file di archiviazione interni di Home Assistant (\".storage/core.config_entries\" o \".storage/hyxi_cloud_subscriptions\" - solo per utenti esperti)."
+        }
+      }
+    }
   }
 }

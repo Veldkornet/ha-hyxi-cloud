@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Előfizetés törlése",
+      "description": "Aktív vagy elárvult push/riasztás előfizetés manuális törlése a HYXI Cloud szerveren.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Előfizetés kódja",
+          "description": "A 32 karakteres előfizetés kódja. Az aktív/elárvult kódokat a Home Assistant belső tárolófájljaiban találja (\".storage/core.config_entries\" vagy \".storage/hyxi_cloud_subscriptions\" - csak haladó felhasználóknak)."
+        }
+      }
+    }
   }
 }

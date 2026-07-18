@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "取消订阅",
+      "description": "手动取消HYXI Cloud服务器上活动的或孤立的推送/告警订阅。",
+      "fields": {
+        "subscribe_code": {
+          "name": "订阅代码",
+          "description": "32个字符的订阅代码。您可以在Home Assistant的内部存储文件中找到活动的/孤立的代码（\".storage/core.config_entries\" 或 \".storage/hyxi_cloud_subscriptions\" - 仅限高级用户）。"
+        }
+      }
+    }
   }
 }

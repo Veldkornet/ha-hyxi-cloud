@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "サブスクリプションをキャンセル",
+      "description": "HYXI Cloudサーバー上でアクティブまたは孤立したプッシュ/アラームサブスクリプションを手動でキャンセルします。",
+      "fields": {
+        "subscribe_code": {
+          "name": "サブスクリプションコード",
+          "description": "32文字のサブスクリプションコード。Home Assistantの内部ストレージファイル（「.storage/core.config_entries」または「.storage/hyxi_cloud_subscriptions」- 上級ユーザーのみ）で、アクティブ/孤立したコードを見つけることができます。"
+        }
+      }
+    }
   }
 }

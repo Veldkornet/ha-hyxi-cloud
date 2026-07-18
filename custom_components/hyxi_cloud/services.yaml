@@ -4,7 +4,8 @@ cancel_subscription:
   fields:
     subscribe_code:
       name: Subscription Code
-      description: The subscription code/ID (e.g. from debug logs or core.config_entries).
+      description: The 32-character subscription code/ID. You can find active/orphaned codes inside Home Assistant's internal storage files (".storage/core.config_entries" or ".storage/hyxi_cloud_subscriptions" - advanced users only).
+      example: "A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6"
       required: true
       selector:
         text:

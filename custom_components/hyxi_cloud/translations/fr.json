@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Annuler l'abonnement",
+      "description": "Annuler manuellement un abonnement push/alarme actif ou orphelin sur le serveur HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Code d'abonnement",
+          "description": "Le code d'abonnement de 32 caractères. Vous pouvez trouver des codes actifs/orphelins dans les fichiers de stockage internes de Home Assistant (\".storage/core.config_entries\" ou \".storage/hyxi_cloud_subscriptions\" - utilisateurs avancés uniquement)."
+        }
+      }
+    }
   }
 }

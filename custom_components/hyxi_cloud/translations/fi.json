@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Peruuta tilaus",
+      "description": "Peruuta manuaalisesti aktiivinen tai orvoksi jäänyt push/hälytys-tilaus HYXI Cloud -palvelimella.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Tilauskoodi",
+          "description": "32-merkkinen tilauskoodi. Löydät aktiiviset/orvoksi jääneet koodit Home Assistantin sisäisistä tallennustiedostoista (\".storage/core.config_entries\" tai \".storage/hyxi_cloud_subscriptions\" - vain edistyneille käyttäjille)."
+        }
+      }
+    }
   }
 }

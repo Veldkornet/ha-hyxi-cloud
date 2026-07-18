@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Abonneliği İptal Et",
+      "description": "HYXI Cloud sunucusundaki aktif veya yetim kalmış bir push/alarm aboneliğini manuel olarak iptal edin.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Abonelik Kodu",
+          "description": "32 karakterlik abonelik kodu. Aktif/yetim kalmış kodları Home Assistant'ın dahili depolama dosyalarında bulabilirsiniz (\".storage/core.config_entries\" veya \".storage/hyxi_cloud_subscriptions\" - sadece gelişmiş kullanıcılar için)."
+        }
+      }
+    }
   }
 }

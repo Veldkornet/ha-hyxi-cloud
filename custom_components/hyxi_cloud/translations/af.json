@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Kanselleer Intekening",
+      "description": "Kanselleer 'n aktiewe of wees push/alarm intekening handmatig op die HYXI Cloud bediener.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Intekeningkode",
+          "description": "Die 32-karakter intekeningkode. U kan aktiewe/wees kodes vind in Home Assistant se interne stoorlêers (\".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\" - slegs gevorderde gebruikers)."
+        }
+      }
+    }
   }
 }

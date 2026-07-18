@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Annuller abonnement",
+      "description": "Annuller manuelt et aktivt eller forældreløst push/alarm abonnement på HYXI Cloud-serveren.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Abonnementskode",
+          "description": "Den 32-tegns abonnementskode. Du kan finde aktive/forældreløse koder i Home Assistants interne lagringsfiler (\".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\" - kun for avancerede brugere)."
+        }
+      }
+    }
   }
 }

@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Zrušit předplatné",
+      "description": "Ručně zrušit aktivní nebo osiřelé push/alarm předplatné na serveru HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Kód předplatného",
+          "description": "32místný kód předplatného. Aktivní/osiřelé kódy najdete v interních souborech Home Assistanta (\".storage/core.config_entries\" nebo \".storage/hyxi_cloud_subscriptions\" - pouze pro pokročilé uživatele)."
+        }
+      }
+    }
   }
 }
