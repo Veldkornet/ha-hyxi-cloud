@@ -207,7 +207,7 @@ async def test_handle_alarm_webhook_merges_records(mock_hass, mock_coordinator):
 
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
-    request.json = AsyncMock(return_value={"dataList": []})
+    request.text = AsyncMock(return_value='{"dataList": []}')
 
     response = await _async_handle_alarm_webhook(
         mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
@@ -246,7 +246,7 @@ async def test_handle_alarm_webhook_invalid_json(mock_hass, mock_coordinator):
     """Malformed JSON returns 400."""
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
-    request.json = AsyncMock(side_effect=ValueError("bad json"))
+    request.text = AsyncMock(return_value="{bad json}")
 
     response = await _async_handle_alarm_webhook(
         mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
@@ -274,7 +274,7 @@ async def test_handle_alarm_webhook_untracked_device(mock_hass, mock_coordinator
 
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
-    request.json = AsyncMock(return_value={"dataList": []})
+    request.text = AsyncMock(return_value='{"dataList": []}')
 
     response = await _async_handle_alarm_webhook(
         mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
@@ -297,7 +297,7 @@ async def test_handle_alarm_webhook_logging_details(
 
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
-    request.json = AsyncMock(return_value={"dataList": []})
+    request.text = AsyncMock(return_value='{"dataList": []}')
 
     mock_coordinator.alarm_subscribe_code = "coord-alarm-sub-code"
     mock_coordinator.client.process_alarm_push_data = MagicMock(return_value={})

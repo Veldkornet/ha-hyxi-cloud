@@ -684,6 +684,7 @@ async def _async_handle_webhook(
         return web.Response(status=401, text="Unauthorized")
 
     # 2. Parse JSON payload
+    text = ""
     try:
         text = await request.text()
         import json
@@ -893,10 +894,29 @@ async def _async_handle_alarm_webhook(
 
     from homeassistant.util import dt as dt_util
 
+    # Parse JSON payload safely
+    text = ""
     try:
-        payload = await request.json()
-    except ValueError:
-        _LOGGER.warning("Received invalid JSON payload on HYXI alarm push webhook")
+        text = await request.text()
+        import json
+
+        try:
+            payload = json.loads(text)
+        except ValueError:
+            # Maybe it's URL-encoded
+            from urllib.parse import parse_qs
+
+            parsed = parse_qs(text)
+            if "payload" in parsed:
+                payload = json.loads(parsed["payload"][0])
+            else:
+                raise ValueError("Not JSON and not URL-encoded payload") from None
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        _LOGGER.warning(
+            "Received invalid JSON payload on HYXI alarm push webhook. Error: %s. Raw text: %s",
+            e,
+            text[:500],
+        )
         return web.Response(status=400, text="Invalid JSON")
 
     _LOGGER.debug(
