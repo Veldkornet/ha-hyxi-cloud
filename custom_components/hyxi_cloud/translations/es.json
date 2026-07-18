@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Cancelar suscripción",
+      "description": "Cancelar manualmente una suscripción push/alarma activa o huérfana en el servidor HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Código de suscripción",
+          "description": "El código/ID de suscripción (ej. de \".storage/core.config_entries\" o \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

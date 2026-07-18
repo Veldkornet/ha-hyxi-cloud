@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Zrušit předplatné",
+      "description": "Ručně zrušit aktivní nebo osiřelé push/alarm předplatné na serveru HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Kód předplatného",
+          "description": "Kód/ID předplatného (např. z \".storage/core.config_entries\" nebo \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

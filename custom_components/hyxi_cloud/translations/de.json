@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Abonnement kündigen",
+      "description": "Ein aktives oder verwaistes Push/Alarm-Abonnement manuell auf dem HYXI Cloud-Server stornieren.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Abonnementcode",
+          "description": "Der Abonnementcode/die ID (z.B. von \".storage/core.config_entries\" oder \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

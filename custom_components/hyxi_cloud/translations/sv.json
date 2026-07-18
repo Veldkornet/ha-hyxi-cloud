@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Avbryt prenumeration",
+      "description": "Avbryt manuellt en aktiv eller övergiven push/larmprenumeration på HYXI Cloud-servern.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Prenumerationskod",
+          "description": "Prenumerationskoden/ID (t.ex. från \".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

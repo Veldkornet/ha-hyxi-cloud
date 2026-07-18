@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Cancelar Assinatura",
+      "description": "Cancelar manualmente uma assinatura push/alarme ativa ou órfã no servidor HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Código de Assinatura",
+          "description": "O código/ID de assinatura (ex. de \".storage/core.config_entries\" ou \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

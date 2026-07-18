@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Abonnement annuleren",
+      "description": "Handmatig een actief of zwevend push/alarm abonnement annuleren op de HYXI Cloud server.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Abonnementscode",
+          "description": "De abonnementscode/ID (bijv. van \".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

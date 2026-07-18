@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "取消订阅",
+      "description": "手动取消HYXI Cloud服务器上活动的或孤立的推送/告警订阅。",
+      "fields": {
+        "subscribe_code": {
+          "name": "订阅代码",
+          "description": "订阅代码/ID（例如来自 \".storage/core.config_entries\" 或 \".storage/hyxi_cloud_subscriptions\"）。"
+        }
+      }
+    }
   }
 }

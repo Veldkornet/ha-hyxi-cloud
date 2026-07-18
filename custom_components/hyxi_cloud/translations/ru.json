@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Отменить подписку",
+      "description": "Вручную отменить активную или потерянную подписку push/alarm на сервере HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Код подписки",
+          "description": "Код/ID подписки (например, из \".storage/core.config_entries\" или \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

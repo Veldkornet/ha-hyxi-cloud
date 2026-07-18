@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Előfizetés törlése",
+      "description": "Aktív vagy elárvult push/riasztás előfizetés manuális törlése a HYXI Cloud szerveren.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Előfizetés kódja",
+          "description": "Az előfizetés kódja/ID-je (pl. \".storage/core.config_entries\" vagy \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }

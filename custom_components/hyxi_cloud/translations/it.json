@@ -624,5 +624,17 @@
         "name": "Purge Old Subscriptions"
       }
     }
+  },
+  "services": {
+    "cancel_subscription": {
+      "name": "Annulla abbonamento",
+      "description": "Annulla manualmente un abbonamento push/allarme attivo o orfano sul server HYXI Cloud.",
+      "fields": {
+        "subscribe_code": {
+          "name": "Codice abbonamento",
+          "description": "Il codice/ID di abbonamento (es. da \".storage/core.config_entries\" o \".storage/hyxi_cloud_subscriptions\")."
+        }
+      }
+    }
   }
 }
