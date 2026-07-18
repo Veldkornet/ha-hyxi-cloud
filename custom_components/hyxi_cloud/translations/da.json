@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Abonnementskode",
-          "description": "Abonnementskoden/ID'et (f.eks. fra \".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\")."
+          "description": "Den 32-tegns abonnementskode. Du kan finde aktive/forældreløse koder i Home Assistants interne lagringsfiler (\".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\" - kun for avancerede brugere)."
         }
       }
     }

@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Intekeningkode",
-          "description": "Die intekeningkode/ID (bv. vanaf \".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\")."
+          "description": "Die 32-karakter intekeningkode. U kan aktiewe/wees kodes vind in Home Assistant se interne stoorlêers (\".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\" - slegs gevorderde gebruikers)."
         }
       }
     }

@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "サブスクリプションコード",
-          "description": "サブスクリプションコード/ID（例：\".storage/core.config_entries\"または\".storage/hyxi_cloud_subscriptions\"から）。"
+          "description": "32文字のサブスクリプションコード。Home Assistantの内部ストレージファイル（「.storage/core.config_entries」または「.storage/hyxi_cloud_subscriptions」- 上級ユーザーのみ）で、アクティブ/孤立したコードを見つけることができます。"
         }
       }
     }

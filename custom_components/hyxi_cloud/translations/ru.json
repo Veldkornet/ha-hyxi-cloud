@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Код подписки",
-          "description": "Код/ID подписки (например, из \".storage/core.config_entries\" или \".storage/hyxi_cloud_subscriptions\")."
+          "description": "32-значный код подписки. Активные/потерянные коды можно найти во внутренних файлах Home Assistant (\".storage/core.config_entries\" или \".storage/hyxi_cloud_subscriptions\" - только для опытных пользователей)."
         }
       }
     }

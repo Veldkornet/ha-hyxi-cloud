@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Prenumerationskod",
-          "description": "Prenumerationskoden/ID (t.ex. från \".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\")."
+          "description": "Den 32-tecken långa prenumerationskoden. Du hittar aktiva/övergivna koder i Home Assistants interna lagringsfiler (\".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\" - endast för avancerade användare)."
         }
       }
     }

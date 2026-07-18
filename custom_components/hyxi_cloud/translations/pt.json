@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Código de Subscrição",
-          "description": "O código/ID de subscrição (ex. de \".storage/core.config_entries\" ou \".storage/hyxi_cloud_subscriptions\")."
+          "description": "O código de subscrição de 32 caracteres. Pode encontrar códigos ativos/órfãos nos ficheiros de armazenamento internos do Home Assistant (\".storage/core.config_entries\" ou \".storage/hyxi_cloud_subscriptions\" - apenas para utilizadores avançados)."
         }
       }
     }

@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Tilauskoodi",
-          "description": "Tilauskoodi/ID (esim. \".storage/core.config_entries\" tai \".storage/hyxi_cloud_subscriptions\")."
+          "description": "32-merkkinen tilauskoodi. Löydät aktiiviset/orvoksi jääneet koodit Home Assistantin sisäisistä tallennustiedostoista (\".storage/core.config_entries\" tai \".storage/hyxi_cloud_subscriptions\" - vain edistyneille käyttäjille)."
         }
       }
     }

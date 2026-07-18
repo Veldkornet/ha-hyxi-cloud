@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Abonnementscode",
-          "description": "De abonnementscode/ID (bijv. van \".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\")."
+          "description": "De 32-tekens abonnementscode. U kunt actieve/zwevende codes vinden in de interne opslagbestanden van Home Assistant (\".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\" - alleen voor geavanceerde gebruikers)."
         }
       }
     }

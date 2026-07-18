@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Előfizetés kódja",
-          "description": "Az előfizetés kódja/ID-je (pl. \".storage/core.config_entries\" vagy \".storage/hyxi_cloud_subscriptions\")."
+          "description": "A 32 karakteres előfizetés kódja. Az aktív/elárvult kódokat a Home Assistant belső tárolófájljaiban találja (\".storage/core.config_entries\" vagy \".storage/hyxi_cloud_subscriptions\" - csak haladó felhasználóknak)."
         }
       }
     }

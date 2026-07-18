@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Abonnementcode",
-          "description": "Der Abonnementcode/die ID (z.B. von \".storage/core.config_entries\" oder \".storage/hyxi_cloud_subscriptions\")."
+          "description": "Der 32-stellige Abonnementcode. Sie finden aktive/verwaiste Codes in den internen Speicherdateien von Home Assistant (\".storage/core.config_entries\" oder \".storage/hyxi_cloud_subscriptions\" - nur für fortgeschrittene Benutzer)."
         }
       }
     }

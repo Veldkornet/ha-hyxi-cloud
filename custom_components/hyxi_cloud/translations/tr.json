@@ -632,7 +632,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Abonelik Kodu",
-          "description": "Abonelik kodu/kimliği (örn. \".storage/core.config_entries\" veya \".storage/hyxi_cloud_subscriptions\" konumundan)."
+          "description": "32 karakterlik abonelik kodu. Aktif/yetim kalmış kodları Home Assistant'ın dahili depolama dosyalarında bulabilirsiniz (\".storage/core.config_entries\" veya \".storage/hyxi_cloud_subscriptions\" - sadece gelişmiş kullanıcılar için)."
         }
       }
     }
