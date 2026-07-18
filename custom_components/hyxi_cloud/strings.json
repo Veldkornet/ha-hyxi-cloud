@@ -479,6 +479,9 @@
       },
       "em_status": {
         "name": "EM Status"
+      },
+      "batp": {
+        "name": "Battery Power (Raw)"
       }
     },
     "number": {

@@ -478,6 +478,9 @@
       },
       "battmp": {
         "name": "Teplota baterie"
+      },
+      "batp": {
+        "name": "Výkon baterie (Raw)"
       }
     },
     "number": {

@@ -478,6 +478,9 @@
       },
       "battmp": {
         "name": "Batterietemperatur"
+      },
+      "batp": {
+        "name": "Batterieleistung (Raw)"
       }
     },
     "number": {

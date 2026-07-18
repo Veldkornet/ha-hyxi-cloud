@@ -478,6 +478,9 @@
       },
       "battmp": {
         "name": "Akun lämpötila"
+      },
+      "batp": {
+        "name": "Akun teho (Raw)"
       }
     },
     "number": {

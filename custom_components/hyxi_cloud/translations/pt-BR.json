@@ -478,6 +478,9 @@
       },
       "battmp": {
         "name": "Temperatura da bateria"
+      },
+      "batp": {
+        "name": "Potência da Bateria (Inversor) (Raw)"
       }
     },
     "number": {

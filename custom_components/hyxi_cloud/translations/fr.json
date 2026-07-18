@@ -478,6 +478,9 @@
       },
       "battmp": {
         "name": "Température de la batterie"
+      },
+      "batp": {
+        "name": "Puissance de la batterie (Raw)"
       }
     },
     "number": {

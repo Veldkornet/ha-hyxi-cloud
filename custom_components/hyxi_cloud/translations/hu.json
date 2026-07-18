@@ -478,6 +478,9 @@
       },
       "battmp": {
         "name": "Akkumulátor hőmérséklet"
+      },
+      "batp": {
+        "name": "Akkumulátor teljesítmény (Raw)"
       }
     },
     "number": {

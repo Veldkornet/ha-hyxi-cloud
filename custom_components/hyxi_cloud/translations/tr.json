@@ -478,6 +478,9 @@
       },
       "battmp": {
         "name": "Batarya Sıcaklığı"
+      },
+      "batp": {
+        "name": "Batarya Gücü (Raw)"
       }
     },
     "number": {
