@@ -1141,8 +1141,7 @@ async def async_cancel_and_unregister_subscription(
             "User information not found",
             "Invalid access token",
             "Server rejected token",
-            "A000002",
-            "A000005",
+            "A0000",
             "C000006",
         )
         is_token_error = any(msg in err_str for msg in token_errors)
