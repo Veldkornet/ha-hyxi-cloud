@@ -704,7 +704,7 @@ async def _async_handle_webhook(
         _LOGGER.warning(
             "Received invalid JSON payload on HYXI push webhook. Error: %s. Raw text: %s",
             e,
-            text[:500],
+            repr(text[:500]),
         )
         return web.Response(status=400, text="Invalid JSON")
 
@@ -915,7 +915,7 @@ async def _async_handle_alarm_webhook(
         _LOGGER.warning(
             "Received invalid JSON payload on HYXI alarm push webhook. Error: %s. Raw text: %s",
             e,
-            text[:500],
+            repr(text[:500]),
         )
         return web.Response(status=400, text="Invalid JSON")
 
