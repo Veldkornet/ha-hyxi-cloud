@@ -1135,11 +1135,19 @@ async def async_cancel_and_unregister_subscription(
         ).__name__ == "SubscriptionError" or "subscription request failed" in str(err):
             is_sub_err = True
 
-        if (
-            is_sub_err
-            and "Authentication failed" not in str(err)
-            and "no_response" not in str(err)
-        ):
+        err_str = str(err)
+        token_errors = (
+            "Authentication failed",
+            "User information not found",
+            "Invalid access token",
+            "Server rejected token",
+            "A000002",
+            "A000005",
+            "C000006",
+        )
+        is_token_error = any(msg in err_str for msg in token_errors)
+
+        if is_sub_err and not is_token_error and "no_response" not in err_str:
             _LOGGER.info(
                 "Subscription code %s was already unsubscribed or invalid (API error: %s), removing from known codes",
                 code,
