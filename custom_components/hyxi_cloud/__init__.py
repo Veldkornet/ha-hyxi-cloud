@@ -685,9 +685,26 @@ async def _async_handle_webhook(
 
     # 2. Parse JSON payload
     try:
-        payload = await request.json()
-    except ValueError:
-        _LOGGER.warning("Received invalid JSON payload on HYXI push webhook")
+        text = await request.text()
+        import json
+
+        try:
+            payload = json.loads(text)
+        except ValueError:
+            # Maybe it's URL-encoded? Some platforms send payload={...}
+            from urllib.parse import parse_qs
+
+            parsed = parse_qs(text)
+            if "payload" in parsed:
+                payload = json.loads(parsed["payload"][0])
+            else:
+                raise ValueError("Not JSON and not URL-encoded payload") from None
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        _LOGGER.warning(
+            "Received invalid JSON payload on HYXI push webhook. Error: %s. Raw text: %s",
+            e,
+            text[:500],
+        )
         return web.Response(status=400, text="Invalid JSON")
 
     _LOGGER.debug(
