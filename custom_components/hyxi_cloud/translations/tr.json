@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Batarya Gücü"
       },
+      "batP": {
+        "name": "Batarya Gücü (Raw)"
+      },
       "ppv": {
         "name": "Güneş Gücü"
       },

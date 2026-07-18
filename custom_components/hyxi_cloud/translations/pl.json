@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Moc akumulatora"
       },
+      "batP": {
+        "name": "Moc akumulatora (Raw)"
+      },
       "ppv": {
         "name": "Moc instalacji solarnej"
       },

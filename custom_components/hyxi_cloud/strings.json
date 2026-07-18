@@ -95,7 +95,7 @@
         "name": "Battery Power"
       },
       "batP": {
-        "name": "Battery Power (DC)"
+        "name": "Battery Power (Raw)"
       },
       "ppv": {
         "name": "Solar Power"

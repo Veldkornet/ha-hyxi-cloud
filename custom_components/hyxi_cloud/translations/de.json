@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Batterieleistung"
       },
+      "batP": {
+        "name": "Batterieleistung (Raw)"
+      },
       "ppv": {
         "name": "Solarleistung"
       },

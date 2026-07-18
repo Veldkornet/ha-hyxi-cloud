@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Potencia de la batería"
       },
+      "batP": {
+        "name": "Potencia de la batería (Raw)"
+      },
       "ppv": {
         "name": "Potencia solar"
       },

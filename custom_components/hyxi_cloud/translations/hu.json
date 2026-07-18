@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Akkumulátor teljesítmény"
       },
+      "batP": {
+        "name": "Akkumulátor teljesítmény (Raw)"
+      },
       "ppv": {
         "name": "Napelem teljesítmény"
       },

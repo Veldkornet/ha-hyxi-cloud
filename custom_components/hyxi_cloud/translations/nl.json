@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Batterijvermogen"
       },
+      "batP": {
+        "name": "Batterijvermogen (Raw)"
+      },
       "ppv": {
         "name": "Zonne-energie"
       },

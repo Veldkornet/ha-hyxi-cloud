@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Výkon baterie"
       },
+      "batP": {
+        "name": "Výkon baterie (Raw)"
+      },
       "ppv": {
         "name": "Solární výkon"
       },

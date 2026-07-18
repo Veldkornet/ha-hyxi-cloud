@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Akun teho"
       },
+      "batP": {
+        "name": "Akun teho (Raw)"
+      },
       "ppv": {
         "name": "Aurinkopaneelien teho"
       },

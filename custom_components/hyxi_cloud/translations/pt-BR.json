@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Potência da Bateria (Inversor)"
       },
+      "batP": {
+        "name": "Potência da Bateria (Inversor) (Raw)"
+      },
       "ppv": {
         "name": "Potência Solar"
       },
