@@ -93,6 +93,9 @@
       "pbat": {
         "name": "Battery Power"
       },
+      "batP": {
+        "name": "Battery Power (DC)"
+      },
       "ppv": {
         "name": "Solar Power"
       },

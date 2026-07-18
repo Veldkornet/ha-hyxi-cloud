@@ -487,7 +487,6 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="batP",
-        translation_key="pbat",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
