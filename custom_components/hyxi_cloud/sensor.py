@@ -79,9 +79,6 @@ BATTERY_SENSORS = {
     "batIdm",
     "batCharge",
     "batDisCharge",
-    "totalE",
-    "totalEnt",
-    "totalEpt",
     "totalEchg",
     "totalEdchg",
 }
