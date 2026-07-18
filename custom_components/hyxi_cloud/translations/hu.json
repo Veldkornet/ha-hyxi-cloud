@@ -481,6 +481,15 @@
       },
       "batp": {
         "name": "Akkumulátor teljesítmény (Raw)"
+      },
+      "totalent": {
+        "name": "Total Grid Import Energy"
+      },
+      "totalept": {
+        "name": "Total Grid Export Energy"
+      },
+      "q": {
+        "name": "Total Reactive Power"
       }
     },
     "number": {
