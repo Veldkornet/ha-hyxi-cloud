@@ -209,8 +209,8 @@ async def test_webhook_handler_success(mock_coordinator):
     hass = MagicMock()
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
-    request.json = AsyncMock(
-        return_value={"dataList": [{"deviceSn": "INV123", "batSoc": 85}]}
+    request.text = AsyncMock(
+        return_value='{"dataList": [{"deviceSn": "INV123", "batSoc": 85}]}'
     )
 
     mock_coordinator.client.process_push_data.return_value = {
@@ -353,8 +353,8 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
     hass = MagicMock()
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
-    request.json = AsyncMock(
-        return_value={"dataList": [{"deviceSn": "INV123", "batSoc": 85}]}
+    request.text = AsyncMock(
+        return_value='{"dataList": [{"deviceSn": "INV123", "batSoc": 85}]}'
     )
 
     mock_coordinator.subscribe_code = "coord-sub-code"

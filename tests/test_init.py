@@ -777,7 +777,7 @@ async def test_webhook_handle_invalid_json():
 
     request = MagicMock()
     request.headers = {"accessKey": "correct_ak"}
-    request.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
+    request.text = AsyncMock(return_value="{bad json}")
 
     res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
     assert res.status == 400
@@ -793,7 +793,7 @@ async def test_webhook_handle_process_exceptions():
 
     request = MagicMock()
     request.headers = {"accessKey": "correct_ak"}
-    request.json = AsyncMock(return_value={"data": "raw"})
+    request.text = AsyncMock(return_value='{"data": "raw"}')
     coordinator.client.process_push_data = MagicMock(side_effect=Exception("sdk_error"))
 
     res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
@@ -810,7 +810,7 @@ async def test_webhook_handle_untracked_device():
 
     request = MagicMock()
     request.headers = {"accessKey": "correct_ak"}
-    request.json = AsyncMock(return_value={})
+    request.text = AsyncMock(return_value="{}")
 
     # process_push_data returns updates for untracked device SN999
     coordinator.client.process_push_data = MagicMock(
@@ -906,14 +906,14 @@ async def test_alarm_subscription_failures_and_webhooks():
 
     # 6. Alarm Webhook: invalid JSON
     request.headers = {"accessKey": "correct_ak"}
-    request.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
+    request.text = AsyncMock(return_value="{bad json}")
     res_json = await _async_handle_alarm_webhook(
         hass, "alarm_webhook_id", request, coordinator
     )
     assert res_json.status == 400
 
     # 7. Alarm Webhook: process raises exception
-    request.json = AsyncMock(return_value={})
+    request.text = AsyncMock(return_value="{}")
     coordinator.client.process_alarm_push_data = MagicMock(
         side_effect=Exception("sdk_err")
     )
@@ -1038,7 +1038,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     # 5. Push data webhook process with empty results (line 549)
     request = MagicMock()
     request.headers = {"accessKey": "correct_ak"}
-    request.json = AsyncMock(return_value={})
+    request.text = AsyncMock(return_value="{}")
     coordinator.client.process_push_data = MagicMock(return_value={})
     res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
     assert res.status == 200
