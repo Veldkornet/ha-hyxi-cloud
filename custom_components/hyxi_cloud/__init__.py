@@ -38,6 +38,7 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     PLATFORMS,
+    TOKEN_ERROR_MESSAGES,
     VERSION,
     detect_phase_type,
     get_raw_device_code,
@@ -1136,15 +1137,7 @@ async def async_cancel_and_unregister_subscription(
             is_sub_err = True
 
         err_str = str(err)
-        token_errors = (
-            "Authentication failed",
-            "User information not found",
-            "Invalid access token",
-            "Server rejected token",
-            "A0000",
-            "C000006",
-        )
-        is_token_error = any(msg in err_str for msg in token_errors)
+        is_token_error = any(msg in err_str for msg in TOKEN_ERROR_MESSAGES)
 
         if is_sub_err and not is_token_error and "no_response" not in err_str:
             _LOGGER.info(
@@ -1153,6 +1146,12 @@ async def async_cancel_and_unregister_subscription(
                 err,
             )
             await async_unregister_subscription_code(hass, code)
+        elif is_token_error:
+            _LOGGER.debug(
+                "Preserving subscription code %s because cancellation failed due to a token/auth error: %s",
+                code,
+                err,
+            )
         else:
             _LOGGER.warning("Error cancelling HYXI subscription %s: %s", code, err)
         raise
