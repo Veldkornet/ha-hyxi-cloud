@@ -12,7 +12,7 @@ BASE_URL_DEFAULT = "https://open.hyxicloud.com"
 BASE_URL = BASE_URL_DEFAULT
 
 MANUFACTURER = "HYXI Power"
-VERSION = "1.6.4"
+VERSION = "1.6.5"
 
 CONF_BACK_DISCOVERY = "back_discovery"
 
