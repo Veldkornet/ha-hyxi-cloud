@@ -489,7 +489,7 @@
         "name": "Total Grid Export Energy"
       },
       "q": {
-        "name": "Total Reactive Power"
+        "name": "Reactive Power"
       }
     },
     "number": {
