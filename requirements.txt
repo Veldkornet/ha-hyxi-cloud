@@ -4,4 +4,4 @@ voluptuous>=0.16.0
 hyxi-cloud-api>=1.4.2
 
 # Development/Linting tools
-ruff>=0.15.21
+ruff>=0.15.22
