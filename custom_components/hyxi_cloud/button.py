@@ -411,7 +411,9 @@ def _get_protection_controller(coordinator, sn: str):
 
 
 class HyxiRenewSubscriptionButton(ButtonEntity):
-    """Button to manually renew/force HYXI Real-Time Push subscription."""
+    """Button to force-renew both HYXI push subscriptions (real-time data
+    and alarm), regardless of whether the underlying cancel call succeeds.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = "renew_realtime_subscription"
@@ -430,24 +432,39 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
         }
 
     async def async_press(self) -> None:
-        """Force renew the push subscription callback."""
-        from . import _async_setup_push_subscription, _async_teardown_push_subscription
+        """Force renew both push subscriptions (data + alarm); clears the
+        local code even if the remote cancel fails, since this is an
+        explicit user action and the code stays in known_subscription_codes
+        as a fallback either way."""
+        from . import (
+            _async_setup_alarm_subscription,
+            _async_setup_push_subscription,
+            _async_teardown_alarm_subscription,
+            _async_teardown_push_subscription,
+        )
 
-        _LOGGER.info("Manually triggered HYXI push subscription renewal")
+        _LOGGER.info("Manually triggered HYXI push subscription renewal (data + alarm)")
         try:
-            # Tear down old first
+            # Tear down old subscriptions first, forcing a local reset even
+            # if the remote cancel call fails.
             await _async_teardown_push_subscription(
-                self.hass, self.coordinator, self._entry
+                self.hass, self.coordinator, self._entry, force=True
             )
-            # Re-setup
+            await _async_teardown_alarm_subscription(
+                self.hass, self.coordinator, self._entry, force=True
+            )
+            # Re-setup both
             await _async_setup_push_subscription(
+                self.hass, self._entry, self.coordinator
+            )
+            await _async_setup_alarm_subscription(
                 self.hass, self._entry, self.coordinator
             )
 
             # Notify coordinator entities of change
             self.coordinator.async_update_listeners()
         except Exception as err:
-            _LOGGER.error("Failed to renew HYXI push subscription: %s", err)
+            _LOGGER.error("Failed to renew HYXI push subscriptions: %s", err)
             raise HomeAssistantError(f"Subscription renewal failed: {err}") from err
 
 

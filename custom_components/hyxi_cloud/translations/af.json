@@ -38,24 +38,24 @@
           "update_interval": "Opvragsinterval (1-60 minute, verstek: 5)",
           "back_discovery": "Aktiveer ontdekking via alarms (Gevorderd)",
           "enable_battery_control": "Aktiveer toestelbeheer en -beskerming",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "enable_realtime_push": "Enable Real-Time Webhook Push",
-          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
-          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
+          "enable_energy_manager": "Aktiveer Energiebestuurder Alleenstaande (Beta)",
+          "enable_realtime_push": "Aktiveer Realtydse Webhook-stoot",
+          "realtime_push_rate": "Push-opdateringfrekwensie (millisekondes, omvang: 5000-3600000)",
+          "realtime_push_url": "Pasgemaakte Terugroep-URL (opsioneel, dinamiese verstek)"
         }
       },
       "energy_manager": {
-        "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data.",
+        "title": "Energiebestuurder",
+        "description": "Stel die Energiebestuurder op om battery-gebruik te optimaliseer gebaseer op sonkrag-opwekking, kragnetmeter, en voorspellingsdata.",
         "data": {
-          "em_p1_entity": "P1 Smart Meter (power sensor)",
-          "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
-          "em_forecast_power_entity": "Solar Forecast Current Power (optional)",
-          "em_inverter_sn": "Inverter to Control",
-          "em_battery_capacity_override": "Override Battery Capacity",
-          "em_battery_capacity_wh": "Battery Capacity (Wh)",
-          "em_loop_interval": "Decision Loop Interval (seconds)",
-          "em_dry_run": "Dry-Run Mode (no API calls)"
+          "em_p1_entity": "P1 Slim Meter (kragsensor)",
+          "em_forecast_entity": "Sonkragvoorspelling Oorblywend Vandag (opsioneel)",
+          "em_forecast_power_entity": "Sonkragvoorspelling Huidige Krag (opsioneel)",
+          "em_inverter_sn": "Omsetter om te Beheer",
+          "em_battery_capacity_override": "Oorskryf Batterykapasiteit",
+          "em_battery_capacity_wh": "Batterykapasiteit (Wh)",
+          "em_loop_interval": "Besluitlus-interval (sekondes)",
+          "em_dry_run": "Toetsmodus (geen API-oproepe)"
         }
       }
     }
@@ -73,16 +73,16 @@
         }
       },
       "em_night_mode_active": {
-        "name": "Night Mode"
+        "name": "Nagmodus"
       },
       "em_high_load_detected": {
-        "name": "High Load Detected"
+        "name": "Hoë Las Bespeur"
       },
       "vpp_dispatch": {
-        "name": "VPP Dispatch",
+        "name": "VPP-versending",
         "state": {
-          "off": "Standby",
-          "on": "Active"
+          "off": "Russtand",
+          "on": "Aktief"
         }
       }
     },
@@ -97,7 +97,7 @@
         "name": "Sonkrag"
       },
       "duisoc": {
-        "name": "Battery SOC"
+        "name": "Battery-SOC"
       },
       "cuvolt": {
         "name": "Battery-spanning"
@@ -109,7 +109,7 @@
         "name": "Battery-krag (EMS)"
       },
       "cusoh": {
-        "name": "Battery SOH"
+        "name": "Battery-SOH"
       },
       "cuavgcelltemp": {
         "name": "Battery-pak Temp"
@@ -289,7 +289,7 @@
           "meter": "Meter",
           "battery": "Battery",
           "ac_battery": "AC-battery",
-          "all_in_one": "All-in-One"
+          "all_in_one": "Alles-in-Een"
         }
       },
       "ratedpower": {
@@ -445,35 +445,35 @@
         "name": "Nominale frekwensie"
       },
       "last_sent_mode": {
-        "name": "Last Sent Mode"
+        "name": "Laaste Gestuurde Modus"
       },
       "em_current_decision": {
-        "name": "EM Decision"
+        "name": "EM-besluit"
       },
       "em_last_action": {
-        "name": "EM Last Action"
+        "name": "EM Laaste Aksie"
       },
       "em_battery_energy_available": {
-        "name": "Battery Energy Available"
+        "name": "Beskikbare Batteryenergie"
       },
       "em_hours_until_sunrise": {
-        "name": "Hours Until Sunrise"
+        "name": "Ure tot Sonop"
       },
       "em_hours_until_sunset": {
-        "name": "Hours Until Sunset"
+        "name": "Ure tot Sononder"
       },
       "em_p1_average": {
-        "name": "P1 Average Power"
+        "name": "P1 Gemiddelde Krag"
       },
       "em_status": {
-        "name": "EM Status"
+        "name": "EM-status"
       },
       "realtime_subscription_status": {
-        "name": "Real-Time Subscription Status",
+        "name": "Intydse Intekenstatus",
         "state": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "error": "Error"
+          "active": "Aktief",
+          "inactive": "Onaktief",
+          "error": "Fout"
         }
       },
       "battmp": {
@@ -483,13 +483,13 @@
         "name": "Battery-krag (Raw)"
       },
       "totalent": {
-        "name": "Total Grid Import Energy"
+        "name": "Totale Netinvoerenergie"
       },
       "totalept": {
-        "name": "Total Grid Export Energy"
+        "name": "Totale Netuitvoerenergie"
       },
       "q": {
-        "name": "Reactive Power"
+        "name": "Reaktiewe Krag"
       }
     },
     "number": {
@@ -506,58 +506,58 @@
         "name": "SOC Minimum"
       },
       "soc_max": {
-        "name": "SOC Maximum"
+        "name": "SOC Maksimum"
       },
       "soc_min_hysteresis_pct": {
-        "name": "SOC Min Hysteresis"
+        "name": "SOC Min-histerese"
       },
       "soc_max_hysteresis_pct": {
-        "name": "SOC Max Hysteresis"
+        "name": "SOC Maks-histerese"
       },
       "em_high_load_threshold": {
-        "name": "High Load Threshold"
+        "name": "Hoë Las Drempel"
       },
       "em_max_charge_power": {
-        "name": "Max Charge Power"
+        "name": "Maks Laaikrag"
       },
       "em_max_discharge_power": {
-        "name": "Max Discharge Power"
+        "name": "Maks Ontlaaikrag"
       },
       "em_min_solar_for_charge": {
-        "name": "Min Solar for Charge"
+        "name": "Min Sonkrag vir Laai"
       },
       "em_mode_switch_cooldown": {
-        "name": "Mode Switch Cooldown"
+        "name": "Modus-wissel Afkoeltyd"
       },
       "em_power_change_threshold": {
-        "name": "Power Change Threshold"
+        "name": "Kragveranderingsdrempel"
       },
       "em_power_adjust_cooldown": {
-        "name": "Power Adjust Cooldown"
+        "name": "Kragaanpassing Afkoeltyd"
       },
       "em_night_buffer_pct": {
-        "name": "Night Buffer"
+        "name": "Nagbuffer"
       },
       "em_avg_night_consumption": {
-        "name": "Avg Night Consumption"
+        "name": "Gem. Nagverbruik"
       },
       "em_charge_margin": {
-        "name": "Charge Margin"
+        "name": "Laaimarge"
       },
       "em_charge_entry_threshold": {
-        "name": "Charge Entry Threshold"
+        "name": "Laai-intreedrempel"
       },
       "em_charge_reentry_delay": {
-        "name": "Charge Re-entry Delay"
+        "name": "Laai-heringtreevertraging"
       },
       "em_bottomout_cooldown": {
-        "name": "Bottom-out Cooldown"
+        "name": "Laagtepunt Afkoeltyd"
       },
       "em_max_grid_export": {
-        "name": "Max Grid Export"
+        "name": "Maks Netuitvoer"
       },
       "em_p1_smoothing_period": {
-        "name": "P1 Smoothing Period"
+        "name": "P1-gladstrykperiode"
       }
     },
     "switch": {
@@ -568,19 +568,19 @@
         "name": "Krag"
       },
       "em_grid_charge_allowed": {
-        "name": "Grid Charge Allowed"
+        "name": "Netlading Toegelaat"
       },
       "em_enabled": {
-        "name": "Energy Manager"
+        "name": "Energiebestuurder"
       },
       "em_high_load_battery_assist": {
-        "name": "High Load Battery Assist"
+        "name": "Batterybystand by Hoë Las"
       },
       "em_night_mode": {
-        "name": "Night Mode"
+        "name": "Nagmodus"
       },
       "em_export_limiting": {
-        "name": "Export Limiting"
+        "name": "Uitvoerbeperking"
       }
     },
     "button": {
@@ -618,10 +618,10 @@
         "name": "Maak aktiewe alarms skoon"
       },
       "renew_realtime_subscription": {
-        "name": "Renew Push Subscription"
+        "name": "Vernuwe Stoot-intekeninge"
       },
       "purge_old_subscriptions": {
-        "name": "Purge Old Subscriptions"
+        "name": "Verwyder Ou Intekeninge"
       }
     }
   },

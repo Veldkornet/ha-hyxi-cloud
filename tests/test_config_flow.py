@@ -171,11 +171,13 @@ async def test_validate_input_timeout(
 async def test_validate_input_unknown_error(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):
+    """An unexpected exception is caught, logged, and reported as the
+    'unknown' error rather than propagating unhandled/unlogged."""
     mock_api_client_class.return_value = mock_hyxi_client
     mock_hyxi_client._refresh_token.side_effect = Exception("Unknown Error")
 
-    with pytest.raises(Exception, match="Unknown Error"):
-        await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    assert result == "unknown"
 
 
 @pytest.mark.asyncio

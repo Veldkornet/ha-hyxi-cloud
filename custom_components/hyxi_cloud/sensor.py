@@ -1301,6 +1301,11 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
             self._last_valid_time = dt_util.utcnow()
             return num_value
         except ValueError, TypeError:
+            _LOGGER.debug(
+                "Could not parse numeric value for %s: %r",
+                self.entity_description.key,
+                value,
+            )
             return value
 
 
@@ -1591,6 +1596,15 @@ class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
         else:
             combined = "inactive"
 
+        old = getattr(self, "_attr_native_value", None)
+        if combined != old:
+            _LOGGER.debug(
+                "Subscription status: %s -> %s (data=%s, alarm=%s)",
+                old,
+                combined,
+                data_status,
+                alarm_status,
+            )
         self._attr_native_value = combined
 
     @property

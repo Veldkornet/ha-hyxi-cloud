@@ -1274,8 +1274,47 @@ async def test_async_setup_push_deactivation_cleanup(mock_hass, mock_entry):
 
         # Verify config entry data was updated to clear the codes
         mock_hass.config_entries.async_update_entry.assert_any_call(
-            mock_entry, data={**mock_entry.data, "push_subscribe_code": None}
+            mock_entry,
+            data={
+                **mock_entry.data,
+                "push_subscribe_code": None,
+                "push_subscribe_fingerprint": None,
+            },
         )
         mock_hass.config_entries.async_update_entry.assert_any_call(
-            mock_entry, data={**mock_entry.data, "alarm_subscribe_code": None}
+            mock_entry,
+            data={
+                **mock_entry.data,
+                "alarm_subscribe_code": None,
+                "alarm_subscribe_fingerprint": None,
+            },
         )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_push_deactivation_preserves_code_on_cancel_failure(
+    mock_hass, mock_entry
+):
+    """A failed cancel (e.g. transient/network error) must NOT wipe the
+    persisted subscription code -- it's the only way to recover the
+    account's one push subscription slot without contacting the supplier."""
+    from custom_components.hyxi_cloud.const import CONF_ENABLE_PUSH
+
+    mock_entry.options = {CONF_ENABLE_PUSH: False}
+    mock_entry.data = {
+        "push_subscribe_code": "sub_code_123",
+        "alarm_subscribe_code": "alarm_code_123",
+    }
+
+    coordinator = MagicMock()
+    coordinator.client = MagicMock()
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+        new=AsyncMock(side_effect=RuntimeError("temporary network error")),
+    ):
+        await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
+        await _async_setup_alarm_subscription(mock_hass, mock_entry, coordinator)
+
+        # A failed cancel must never clear the persisted codes.
+        mock_hass.config_entries.async_update_entry.assert_not_called()

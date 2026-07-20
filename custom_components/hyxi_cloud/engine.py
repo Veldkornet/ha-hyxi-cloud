@@ -1108,6 +1108,13 @@ class EnergyManagerEngine:
 
     def _set_decision(self, decision: str) -> None:
         """Update the current decision label."""
+        if decision != self._last_decision:
+            _LOGGER.debug(
+                "EM %s: Decision %s -> %s",
+                mask_sn(self._sn),
+                self._last_decision,
+                decision,
+            )
         self._last_decision = decision
         self._notify_sensors()
 

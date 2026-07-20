@@ -38,24 +38,24 @@
           "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
           "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)",
           "enable_battery_control": "Cihaz kontrolünü ve korumasını etkinleştir",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "enable_realtime_push": "Enable Real-Time Webhook Push",
-          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
-          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
+          "enable_energy_manager": "Bağımsız Enerji Yöneticisini Etkinleştir (Beta)",
+          "enable_realtime_push": "Gerçek Zamanlı Webhook Push'u Etkinleştir",
+          "realtime_push_rate": "Push Güncelleme Sıklığı (milisaniye, aralık: 5000-3600000)",
+          "realtime_push_url": "Özel Callback URL'si (isteğe bağlı, dinamik varsayılan)"
         }
       },
       "energy_manager": {
-        "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data.",
+        "title": "Enerji Yöneticisi",
+        "description": "Enerji Yöneticisini, güneş üretimi, şebeke sayacı ve tahmin verilerine dayalı olarak batarya kullanımını optimize edecek şekilde yapılandırın.",
         "data": {
-          "em_p1_entity": "P1 Smart Meter (power sensor)",
-          "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
-          "em_forecast_power_entity": "Solar Forecast Current Power (optional)",
-          "em_inverter_sn": "Inverter to Control",
-          "em_battery_capacity_override": "Override Battery Capacity",
-          "em_battery_capacity_wh": "Battery Capacity (Wh)",
-          "em_loop_interval": "Decision Loop Interval (seconds)",
-          "em_dry_run": "Dry-Run Mode (no API calls)"
+          "em_p1_entity": "P1 Akıllı Sayaç (güç sensörü)",
+          "em_forecast_entity": "Bugün Kalan Güneş Tahmini (isteğe bağlı)",
+          "em_forecast_power_entity": "Güncel Güneş Tahmini Gücü (isteğe bağlı)",
+          "em_inverter_sn": "Kontrol Edilecek İnverter",
+          "em_battery_capacity_override": "Batarya Kapasitesini Geçersiz Kıl",
+          "em_battery_capacity_wh": "Batarya Kapasitesi (Wh)",
+          "em_loop_interval": "Karar Döngüsü Aralığı (saniye)",
+          "em_dry_run": "Deneme Modu (API çağrısı yok)"
         }
       }
     }
@@ -73,16 +73,16 @@
         }
       },
       "em_night_mode_active": {
-        "name": "Night Mode"
+        "name": "Gece Modu"
       },
       "em_high_load_detected": {
-        "name": "High Load Detected"
+        "name": "Yüksek Yük Algılandı"
       },
       "vpp_dispatch": {
-        "name": "VPP Dispatch",
+        "name": "VPP Sevkiyatı",
         "state": {
-          "off": "Standby",
-          "on": "Active"
+          "off": "Bekleme",
+          "on": "Aktif"
         }
       }
     },
@@ -289,7 +289,7 @@
           "meter": "Sayaç",
           "battery": "Batarya",
           "ac_battery": "AC Batarya",
-          "all_in_one": "All-in-One"
+          "all_in_one": "Hepsi Bir Arada"
         }
       },
       "ratedpower": {
@@ -445,35 +445,35 @@
         "name": "Nominal Frekans"
       },
       "last_sent_mode": {
-        "name": "Last Sent Mode"
+        "name": "Son Gönderilen Mod"
       },
       "em_current_decision": {
-        "name": "EM Decision"
+        "name": "EM Kararı"
       },
       "em_last_action": {
-        "name": "EM Last Action"
+        "name": "EM Son Eylemi"
       },
       "em_battery_energy_available": {
-        "name": "Battery Energy Available"
+        "name": "Kullanılabilir Batarya Enerjisi"
       },
       "em_hours_until_sunrise": {
-        "name": "Hours Until Sunrise"
+        "name": "Gün Doğumuna Kalan Saat"
       },
       "em_hours_until_sunset": {
-        "name": "Hours Until Sunset"
+        "name": "Gün Batımına Kalan Saat"
       },
       "em_p1_average": {
-        "name": "P1 Average Power"
+        "name": "P1 Ortalama Güç"
       },
       "em_status": {
-        "name": "EM Status"
+        "name": "EM Durumu"
       },
       "realtime_subscription_status": {
-        "name": "Real-Time Subscription Status",
+        "name": "Gerçek Zamanlı Abonelik Durumu",
         "state": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "error": "Error"
+          "active": "Aktif",
+          "inactive": "Pasif",
+          "error": "Hata"
         }
       },
       "battmp": {
@@ -483,13 +483,13 @@
         "name": "Batarya Gücü (Raw)"
       },
       "totalent": {
-        "name": "Total Grid Import Energy"
+        "name": "Toplam Şebeke İthal Enerjisi"
       },
       "totalept": {
-        "name": "Total Grid Export Energy"
+        "name": "Toplam Şebeke İhraç Enerjisi"
       },
       "q": {
-        "name": "Reactive Power"
+        "name": "Reaktif Güç"
       }
     },
     "number": {
@@ -506,58 +506,58 @@
         "name": "SOC Minimum"
       },
       "soc_max": {
-        "name": "SOC Maximum"
+        "name": "SOC Maksimum"
       },
       "soc_min_hysteresis_pct": {
-        "name": "SOC Min Hysteresis"
+        "name": "SOC Min Histerezis"
       },
       "soc_max_hysteresis_pct": {
-        "name": "SOC Max Hysteresis"
+        "name": "SOC Maks Histerezis"
       },
       "em_high_load_threshold": {
-        "name": "High Load Threshold"
+        "name": "Yüksek Yük Eşiği"
       },
       "em_max_charge_power": {
-        "name": "Max Charge Power"
+        "name": "Maks Şarj Gücü"
       },
       "em_max_discharge_power": {
-        "name": "Max Discharge Power"
+        "name": "Maks Deşarj Gücü"
       },
       "em_min_solar_for_charge": {
-        "name": "Min Solar for Charge"
+        "name": "Şarj için Min Güneş Gücü"
       },
       "em_mode_switch_cooldown": {
-        "name": "Mode Switch Cooldown"
+        "name": "Mod Değişimi Bekleme Süresi"
       },
       "em_power_change_threshold": {
-        "name": "Power Change Threshold"
+        "name": "Güç Değişimi Eşiği"
       },
       "em_power_adjust_cooldown": {
-        "name": "Power Adjust Cooldown"
+        "name": "Güç Ayarı Bekleme Süresi"
       },
       "em_night_buffer_pct": {
-        "name": "Night Buffer"
+        "name": "Gece Tamponu"
       },
       "em_avg_night_consumption": {
-        "name": "Avg Night Consumption"
+        "name": "Ort. Gece Tüketimi"
       },
       "em_charge_margin": {
-        "name": "Charge Margin"
+        "name": "Şarj Marjı"
       },
       "em_charge_entry_threshold": {
-        "name": "Charge Entry Threshold"
+        "name": "Şarj Giriş Eşiği"
       },
       "em_charge_reentry_delay": {
-        "name": "Charge Re-entry Delay"
+        "name": "Şarja Yeniden Giriş Gecikmesi"
       },
       "em_bottomout_cooldown": {
-        "name": "Bottom-out Cooldown"
+        "name": "Dip Nokta Bekleme Süresi"
       },
       "em_max_grid_export": {
-        "name": "Max Grid Export"
+        "name": "Maks Şebeke İhracatı"
       },
       "em_p1_smoothing_period": {
-        "name": "P1 Smoothing Period"
+        "name": "P1 Yumuşatma Periyodu"
       }
     },
     "switch": {
@@ -568,19 +568,19 @@
         "name": "Güç"
       },
       "em_grid_charge_allowed": {
-        "name": "Grid Charge Allowed"
+        "name": "Şebeke Şarjına İzin Verildi"
       },
       "em_enabled": {
-        "name": "Energy Manager"
+        "name": "Enerji Yöneticisi"
       },
       "em_high_load_battery_assist": {
-        "name": "High Load Battery Assist"
+        "name": "Yüksek Yükte Batarya Desteği"
       },
       "em_night_mode": {
-        "name": "Night Mode"
+        "name": "Gece Modu"
       },
       "em_export_limiting": {
-        "name": "Export Limiting"
+        "name": "İhracat Sınırlaması"
       }
     },
     "button": {
@@ -618,10 +618,10 @@
         "name": "Aktif alarmları temizle"
       },
       "renew_realtime_subscription": {
-        "name": "Renew Push Subscription"
+        "name": "Push Aboneliklerini Yenile"
       },
       "purge_old_subscriptions": {
-        "name": "Purge Old Subscriptions"
+        "name": "Eski Abonelikleri Temizle"
       }
     }
   },

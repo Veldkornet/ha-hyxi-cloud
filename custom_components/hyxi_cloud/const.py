@@ -22,15 +22,6 @@ CONF_PUSH_RATE = "realtime_push_rate"
 CONF_PUSH_URL = "realtime_push_url"
 DEFAULT_PUSH_RATE = 10  # 10 seconds (converted to ms at SDK call site)
 
-TOKEN_ERROR_MESSAGES = (
-    "Authentication failed",
-    "User information not found",
-    "Invalid access token",
-    "Server rejected token",
-    "A0000",
-    "C000006",
-)
-
 NULL_VALUES = {"", "null", "none", "na", "--"}
 
 

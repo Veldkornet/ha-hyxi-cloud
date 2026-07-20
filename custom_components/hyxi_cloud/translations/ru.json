@@ -38,24 +38,24 @@
           "update_interval": "Интервал обновления (1-60 минут, по умолчанию: 5)",
           "back_discovery": "Включить обнаружение через аварийные сигналы (расширенный режим)",
           "enable_battery_control": "Включить управление и защиту устройства",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "enable_realtime_push": "Enable Real-Time Webhook Push",
-          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
-          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
+          "enable_energy_manager": "Включить автономный Энергоменеджер (Бета)",
+          "enable_realtime_push": "Включить push-уведомления в реальном времени",
+          "realtime_push_rate": "Частота Push-обновлений (миллисекунды, диапазон: 5000-3600000)",
+          "realtime_push_url": "Пользовательский URL обратного вызова (необязательно, динамическое значение по умолчанию)"
         }
       },
       "energy_manager": {
-        "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data.",
+        "title": "Энергоменеджер",
+        "description": "Настройте Энергоменеджер для оптимизации использования батареи на основе выработки солнечной энергии, показаний счётчика сети и прогнозных данных.",
         "data": {
-          "em_p1_entity": "P1 Smart Meter (power sensor)",
-          "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
-          "em_forecast_power_entity": "Solar Forecast Current Power (optional)",
-          "em_inverter_sn": "Inverter to Control",
-          "em_battery_capacity_override": "Override Battery Capacity",
-          "em_battery_capacity_wh": "Battery Capacity (Wh)",
-          "em_loop_interval": "Decision Loop Interval (seconds)",
-          "em_dry_run": "Dry-Run Mode (no API calls)"
+          "em_p1_entity": "Умный счётчик P1 (датчик мощности)",
+          "em_forecast_entity": "Прогноз солнечной генерации на оставшуюся часть дня (необязательно)",
+          "em_forecast_power_entity": "Прогноз текущей солнечной мощности (необязательно)",
+          "em_inverter_sn": "Управляемый инвертор",
+          "em_battery_capacity_override": "Переопределить ёмкость батареи",
+          "em_battery_capacity_wh": "Ёмкость батареи (Втч)",
+          "em_loop_interval": "Интервал цикла принятия решений (секунды)",
+          "em_dry_run": "Тестовый режим (без вызовов API)"
         }
       }
     }
@@ -73,16 +73,16 @@
         }
       },
       "em_night_mode_active": {
-        "name": "Night Mode"
+        "name": "Ночной режим"
       },
       "em_high_load_detected": {
-        "name": "High Load Detected"
+        "name": "Обнаружена высокая нагрузка"
       },
       "vpp_dispatch": {
-        "name": "VPP Dispatch",
+        "name": "Диспетчеризация VPP",
         "state": {
-          "off": "Standby",
-          "on": "Active"
+          "off": "Ожидание",
+          "on": "Активно"
         }
       }
     },
@@ -289,7 +289,7 @@
           "meter": "Счетчик",
           "battery": "Батарея",
           "ac_battery": "Батарея переменного тока",
-          "all_in_one": "All-in-One"
+          "all_in_one": "Всё-в-одном"
         }
       },
       "ratedpower": {
@@ -445,35 +445,35 @@
         "name": "Номинальная частота"
       },
       "last_sent_mode": {
-        "name": "Last Sent Mode"
+        "name": "Последний отправленный режим"
       },
       "em_current_decision": {
-        "name": "EM Decision"
+        "name": "Решение EM"
       },
       "em_last_action": {
-        "name": "EM Last Action"
+        "name": "Последнее действие EM"
       },
       "em_battery_energy_available": {
-        "name": "Battery Energy Available"
+        "name": "Доступная энергия батареи"
       },
       "em_hours_until_sunrise": {
-        "name": "Hours Until Sunrise"
+        "name": "Часов до восхода"
       },
       "em_hours_until_sunset": {
-        "name": "Hours Until Sunset"
+        "name": "Часов до заката"
       },
       "em_p1_average": {
-        "name": "P1 Average Power"
+        "name": "Средняя мощность P1"
       },
       "em_status": {
-        "name": "EM Status"
+        "name": "Статус EM"
       },
       "realtime_subscription_status": {
-        "name": "Real-Time Subscription Status",
+        "name": "Статус подписки в реальном времени",
         "state": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "error": "Error"
+          "active": "Активна",
+          "inactive": "Неактивна",
+          "error": "Ошибка"
         }
       },
       "battmp": {
@@ -483,13 +483,13 @@
         "name": "Мощность батареи (Raw)"
       },
       "totalent": {
-        "name": "Total Grid Import Energy"
+        "name": "Общая потреблённая энергия сети"
       },
       "totalept": {
-        "name": "Total Grid Export Energy"
+        "name": "Общая отданная энергия сети"
       },
       "q": {
-        "name": "Reactive Power"
+        "name": "Реактивная мощность"
       }
     },
     "number": {
@@ -503,61 +503,61 @@
         "name": "Ограничение мощности"
       },
       "soc_min": {
-        "name": "SOC Minimum"
+        "name": "Минимальный SOC"
       },
       "soc_max": {
-        "name": "SOC Maximum"
+        "name": "Максимальный SOC"
       },
       "soc_min_hysteresis_pct": {
-        "name": "SOC Min Hysteresis"
+        "name": "Гистерезис мин. SOC"
       },
       "soc_max_hysteresis_pct": {
-        "name": "SOC Max Hysteresis"
+        "name": "Гистерезис макс. SOC"
       },
       "em_high_load_threshold": {
-        "name": "High Load Threshold"
+        "name": "Порог высокой нагрузки"
       },
       "em_max_charge_power": {
-        "name": "Max Charge Power"
+        "name": "Макс. мощность зарядки"
       },
       "em_max_discharge_power": {
-        "name": "Max Discharge Power"
+        "name": "Макс. мощность разрядки"
       },
       "em_min_solar_for_charge": {
-        "name": "Min Solar for Charge"
+        "name": "Мин. солнечная мощность для зарядки"
       },
       "em_mode_switch_cooldown": {
-        "name": "Mode Switch Cooldown"
+        "name": "Задержка смены режима"
       },
       "em_power_change_threshold": {
-        "name": "Power Change Threshold"
+        "name": "Порог изменения мощности"
       },
       "em_power_adjust_cooldown": {
-        "name": "Power Adjust Cooldown"
+        "name": "Задержка регулировки мощности"
       },
       "em_night_buffer_pct": {
-        "name": "Night Buffer"
+        "name": "Ночной запас"
       },
       "em_avg_night_consumption": {
-        "name": "Avg Night Consumption"
+        "name": "Средн. ночное потребление"
       },
       "em_charge_margin": {
-        "name": "Charge Margin"
+        "name": "Запас зарядки"
       },
       "em_charge_entry_threshold": {
-        "name": "Charge Entry Threshold"
+        "name": "Порог начала зарядки"
       },
       "em_charge_reentry_delay": {
-        "name": "Charge Re-entry Delay"
+        "name": "Задержка повторного входа в зарядку"
       },
       "em_bottomout_cooldown": {
-        "name": "Bottom-out Cooldown"
+        "name": "Задержка минимума"
       },
       "em_max_grid_export": {
-        "name": "Max Grid Export"
+        "name": "Макс. экспорт в сеть"
       },
       "em_p1_smoothing_period": {
-        "name": "P1 Smoothing Period"
+        "name": "Период сглаживания P1"
       }
     },
     "switch": {
@@ -568,19 +568,19 @@
         "name": "Питание"
       },
       "em_grid_charge_allowed": {
-        "name": "Grid Charge Allowed"
+        "name": "Разрешена зарядка от сети"
       },
       "em_enabled": {
-        "name": "Energy Manager"
+        "name": "Энергоменеджер"
       },
       "em_high_load_battery_assist": {
-        "name": "High Load Battery Assist"
+        "name": "Помощь батареи при высокой нагрузке"
       },
       "em_night_mode": {
-        "name": "Night Mode"
+        "name": "Ночной режим"
       },
       "em_export_limiting": {
-        "name": "Export Limiting"
+        "name": "Ограничение экспорта"
       }
     },
     "button": {
@@ -618,10 +618,10 @@
         "name": "Очистить активные аварии"
       },
       "renew_realtime_subscription": {
-        "name": "Renew Push Subscription"
+        "name": "Обновить push-подписки"
       },
       "purge_old_subscriptions": {
-        "name": "Purge Old Subscriptions"
+        "name": "Очистить старые подписки"
       }
     }
   },
