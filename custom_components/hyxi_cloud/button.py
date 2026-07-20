@@ -28,6 +28,7 @@ from .const import (
     get_raw_device_code,
     is_battery_control_enabled,
     mask_sn,
+    mask_subscription_code,
     normalize_device_type,
 )
 
@@ -554,7 +555,7 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
                 _LOGGER.warning(
                     "Could not cancel subscription %s remotely (%s); "
                     "removing it from the local registry anyway as requested",
-                    code,
+                    mask_subscription_code(code),
                     err,
                 )
                 try:
@@ -564,7 +565,7 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
                 except Exception as storage_err:  # pylint: disable=broad-exception-caught
                     _LOGGER.error(
                         "Failed to remove subscription code %s from local registry: %s",
-                        code,
+                        mask_subscription_code(code),
                         storage_err,
                     )
                     failure_count += 1
