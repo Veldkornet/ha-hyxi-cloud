@@ -138,8 +138,13 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         _LOGGER.debug("Validating HYXI credentials against %s", BASE_URL_DEFAULT)
         try:
-            # Attempt a token refresh to verify AK/SK
+            # Attempt a token refresh to verify AK/SK. The client returns
+            # None for network/connection failures and False for an explicit
+            # credential rejection -- report them differently so a user with
+            # valid keys and a flaky connection isn't told their keys are bad.
             success = await client._refresh_token()
+            if success is None:
+                return "cannot_connect"
             if not success:
                 return "invalid_auth"
 

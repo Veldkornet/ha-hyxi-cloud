@@ -492,6 +492,7 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
         from . import (
             async_cancel_and_unregister_subscription,
             async_get_subscription_codes,
+            async_unregister_subscription_code,
         )
 
         _LOGGER.info("Manually triggered HYXI purge of old subscriptions")
@@ -538,21 +539,41 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
             else:
                 success_count += 1
 
+        remote_failed = 0
         if failed_codes:
             all_known_after = await async_get_subscription_codes(self.hass)
             for code, err in failed_codes:
-                # If the code was successfully unregistered (e.g. because it was already inactive/invalid)
                 if code not in all_known_after:
+                    # Already gone from the registry (e.g. removed by a concurrent path)
                     success_count += 1
-                else:
-                    _LOGGER.warning(
-                        "Failed to purge subscription code %s: %s", code, err
+                    continue
+                # Purge is an explicit user action, so remove the code from
+                # the local registry even though the remote cancel failed --
+                # HYXI has no "not found" response, so a dead code would
+                # otherwise fail here forever and never be purgeable.
+                _LOGGER.warning(
+                    "Could not cancel subscription %s remotely (%s); "
+                    "removing it from the local registry anyway as requested",
+                    code,
+                    err,
+                )
+                try:
+                    await async_unregister_subscription_code(self.hass, code)
+                    success_count += 1
+                    remote_failed += 1
+                except Exception as storage_err:  # pylint: disable=broad-exception-caught
+                    _LOGGER.error(
+                        "Failed to remove subscription code %s from local registry: %s",
+                        code,
+                        storage_err,
                     )
                     failure_count += 1
 
         _LOGGER.info(
-            "Purged old subscriptions complete: %d successfully purged/removed, %d failed",
+            "Purged old subscriptions complete: %d purged/removed "
+            "(%d of those only locally, remote cancel failed), %d failed",
             success_count,
+            remote_failed,
             failure_count,
         )
 

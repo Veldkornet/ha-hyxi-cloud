@@ -139,8 +139,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await coordinator.engine.async_stop()
         for controller in coordinator.protection_controllers.values():
             await controller.async_stop()
-        await _async_teardown_push_subscription(hass, coordinator, entry)
-        await _async_teardown_alarm_subscription(hass, coordinator, entry)
+        # Leave the subscriptions alive on the server (cancel_remote=False):
+        # the persisted code + fingerprint let the next setup reuse them,
+        # avoiding a cancel/resubscribe cycle on every restart and reload.
+        # Permanent cleanup happens in async_remove_entry when the entry is
+        # actually deleted.
+        await _async_teardown_push_subscription(
+            hass, coordinator, entry, cancel_remote=False
+        )
+        await _async_teardown_alarm_subscription(
+            hass, coordinator, entry, cancel_remote=False
+        )
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -149,6 +158,42 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass.services.async_remove(DOMAIN, "cancel_subscription")
     _LOGGER.debug("HYXI Cloud entry %s unload result: %s", entry.entry_id, unload_ok)
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Cancel any remaining subscriptions when the entry is permanently removed.
+
+    Regular unload keeps subscriptions alive for reuse on the next load, so
+    actual deletion of the integration must do the remote cleanup here.
+    """
+    codes = [
+        entry.data.get("push_subscribe_code"),
+        entry.data.get("alarm_subscribe_code"),
+    ]
+    codes = [c for c in codes if c]
+    if not codes:
+        return
+
+    access_key = entry.data.get(CONF_ACCESS_KEY)
+    secret_key = entry.data.get(CONF_SECRET_KEY)
+    if not access_key or not secret_key:
+        return
+
+    session = async_get_clientsession(hass)
+    client = HyxiApiClient(
+        access_key, secret_key, entry.data.get("base_url") or BASE_URL_DEFAULT, session
+    )
+    for code in codes:
+        try:
+            await async_cancel_and_unregister_subscription(hass, client, code)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.warning(
+                "Could not cancel subscription %s during entry removal: %s "
+                "(it remains in known_subscription_codes for manual cleanup via "
+                "the hyxi_cloud.cancel_subscription service)",
+                code,
+                err,
+            )
 
 
 def _async_register_devices(
@@ -725,17 +770,23 @@ async def _async_teardown_push_subscription(
     coordinator: HyxiDataUpdateCoordinator,
     entry: ConfigEntry | None = None,
     force: bool = False,
+    cancel_remote: bool = True,
 ) -> None:
     """Tear down push subscription and webhook.
+
+    `cancel_remote=False` (regular unload on restart/reload) unregisters the
+    webhook but leaves the subscription alive on the server and its code
+    persisted, so the next setup can reuse it via the stored fingerprint
+    instead of burning a cancel/resubscribe cycle.
 
     `force` clears the local subscription code even if the remote cancel
     call fails. Only appropriate for an explicit, user-initiated action
     (e.g. the Renew Subscription button) -- the automatic teardown paths
-    (restart/reload) must never do this, since the code is otherwise the
-    only way to recover the account's one push subscription slot without
-    contacting the supplier. It stays safe even when forced because the
-    code remains in the account-wide `known_subscription_codes` store
-    (only removed on a confirmed API cancel) for manual recovery.
+    must never do this, since the code is otherwise the only way to recover
+    the account's one push subscription slot without contacting the
+    supplier. It stays safe even when forced because the code remains in
+    the account-wide `known_subscription_codes` store (only removed on a
+    confirmed API cancel) for manual recovery.
     """
     webhook_id = coordinator.webhook_id
     if webhook_id:
@@ -747,7 +798,12 @@ async def _async_teardown_push_subscription(
         coordinator.webhook_id = None
 
     subscribe_code = coordinator.subscribe_code
-    if subscribe_code:
+    if subscribe_code and not cancel_remote:
+        _LOGGER.debug(
+            "Keeping HYXI Push subscription active for reuse on next load (code: %s)",
+            subscribe_code,
+        )
+    elif subscribe_code:
         cancel_confirmed = False
         try:
             await async_cancel_and_unregister_subscription(
@@ -991,12 +1047,14 @@ async def _async_teardown_alarm_subscription(
     coordinator: HyxiDataUpdateCoordinator,
     entry: ConfigEntry | None = None,
     force: bool = False,
+    cancel_remote: bool = True,
 ) -> None:
     """Tear down alarm push subscription and webhook.
 
-    `force` clears the local subscription code even if the remote cancel
-    call fails -- see `_async_teardown_push_subscription` for why this is
-    only safe for an explicit, user-initiated action.
+    See `_async_teardown_push_subscription` for the semantics of
+    `cancel_remote` (keep the subscription alive for reuse on regular
+    unload) and `force` (clear local state even on a failed cancel; only
+    safe for an explicit, user-initiated action).
     """
     webhook_id = getattr(coordinator, "alarm_webhook_id", None)
     if webhook_id:
@@ -1008,7 +1066,12 @@ async def _async_teardown_alarm_subscription(
         coordinator.alarm_webhook_id = None
 
     subscribe_code = getattr(coordinator, "alarm_subscribe_code", None)
-    if subscribe_code:
+    if subscribe_code and not cancel_remote:
+        _LOGGER.debug(
+            "Keeping HYXI Alarm Push subscription active for reuse on next load (code: %s)",
+            subscribe_code,
+        )
+    elif subscribe_code:
         cancel_confirmed = False
         try:
             await async_cancel_and_unregister_subscription(

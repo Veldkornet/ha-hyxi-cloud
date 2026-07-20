@@ -155,6 +155,23 @@ async def test_validate_input_cannot_connect(
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
 @patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
+async def test_validate_input_network_error_is_not_invalid_auth(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
+    """A network/connection failure during token refresh (client returns
+    None) must be reported as cannot_connect, not invalid_auth -- otherwise
+    a user with valid keys and a flaky connection is told their keys are
+    wrong."""
+    mock_api_client_class.return_value = mock_hyxi_client
+    mock_hyxi_client._refresh_token.return_value = None
+
+    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    assert result == "cannot_connect"
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
+@patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
 async def test_validate_input_timeout(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):

@@ -243,6 +243,25 @@ async def test_teardown_alarm_subscription_preserves_code_on_cancel_failure(
 
 
 @pytest.mark.asyncio
+async def test_teardown_alarm_subscription_no_remote_cancel_on_unload(
+    mock_hass, mock_entry, mock_coordinator
+):
+    """With cancel_remote=False (regular unload), the alarm subscription is
+    left alive and its persisted code untouched."""
+    mock_coordinator.alarm_subscribe_code = "alarm_code_abc"
+    mock_coordinator.alarm_webhook_id = "hyxi_cloud_entry_test_alarm"
+    mock_entry.data = {"alarm_subscribe_code": "alarm_code_abc"}
+
+    await _async_teardown_alarm_subscription(
+        mock_hass, mock_coordinator, mock_entry, cancel_remote=False
+    )
+
+    mock_coordinator.client.cancel_subscription.assert_not_called()
+    mock_hass.config_entries.async_update_entry.assert_not_called()
+    assert mock_coordinator.alarm_push_status == "inactive"
+
+
+@pytest.mark.asyncio
 async def test_teardown_alarm_subscription_force_clears_on_cancel_failure(
     mock_hass, mock_entry, mock_coordinator
 ):

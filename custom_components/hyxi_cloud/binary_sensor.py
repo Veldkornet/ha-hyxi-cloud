@@ -188,6 +188,7 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
             self._attr_device_info["via_device"] = (DOMAIN, parent_sn)
         self._update_internal_state()
 
+    @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self._update_internal_state()
@@ -258,6 +259,7 @@ class HyxiVppDispatchSensor(CoordinatorEntity, BinarySensorEntity):
         }
         self._last_vpp_mode = self._metrics.get("vppMode")
 
+    @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator, logging mode transitions."""
         new_mode = self._metrics.get("vppMode")
