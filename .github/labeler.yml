@@ -51,6 +51,7 @@
           - ".github/**/*"  # 🚀 Double asterisks catch all subfolders/files
           - "dev_env/**/*"
           - ".vscode/tasks.json"
+          - ".pre-commit-config.yaml"
 
 # 📚 Documentation
 "documentation":
@@ -59,5 +60,6 @@
           - "*.md"                                      # Root level markdown files
           - "LICENSE"                                   # Legal updates
           - "custom_components/hyxi_cloud/strings.json" # Translation updates
+          - "custom_components/hyxi_cloud/translations/*" # Translation updates
           - "docs/**/*"                                 # Anything inside a docs folder
           - ".github/ISSUE_TEMPLATE/*.md"               # Issue template updates
