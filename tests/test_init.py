@@ -425,6 +425,75 @@ async def test_async_unload_entry_success(mock_hass, mock_entry):
 
 
 @pytest.mark.asyncio
+async def test_async_unload_entry_keeps_subscriptions_alive(mock_hass, mock_entry):
+    """Regular unload must NOT cancel subscriptions remotely -- they are kept
+    alive (code + fingerprint persisted) for reuse on the next load."""
+    mock_coordinator = MagicMock()
+    mock_coordinator.protection_controllers = {}
+    mock_coordinator.engine = None
+    mock_coordinator.subscribe_code = "sub_code_123"
+    mock_coordinator.alarm_subscribe_code = "alarm_code_123"
+    mock_coordinator.client.cancel_subscription = AsyncMock()
+    mock_hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
+    mock_hass.config_entries.async_unload_platforms.return_value = True
+
+    assert await async_unload_entry(mock_hass, mock_entry) is True
+
+    mock_coordinator.client.cancel_subscription.assert_not_called()
+    mock_hass.config_entries.async_update_entry.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_remove_entry_cancels_subscriptions(mock_hass, mock_entry):
+    """Permanent entry removal cancels both subscriptions remotely."""
+    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+
+    mock_entry.data = {
+        "access_key": "ak",
+        "secret_key": "sk",
+        "push_subscribe_code": "sub_code_123",
+        "alarm_subscribe_code": "alarm_code_123",
+    }
+
+    with (
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient") as mock_client_cls,
+        patch(
+            "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+            new_callable=AsyncMock,
+        ) as mock_cancel,
+    ):
+        await async_remove_entry(mock_hass, mock_entry)
+
+        assert mock_cancel.call_count == 2
+        cancelled = {call.args[2] for call in mock_cancel.call_args_list}
+        assert cancelled == {"sub_code_123", "alarm_code_123"}
+        mock_client_cls.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_async_remove_entry_survives_cancel_failure(mock_hass, mock_entry):
+    """Removal must not raise even if the remote cancel fails."""
+    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+
+    mock_entry.data = {
+        "access_key": "ak",
+        "secret_key": "sk",
+        "push_subscribe_code": "sub_code_123",
+    }
+
+    with (
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch(
+            "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+            new=AsyncMock(side_effect=RuntimeError("network error")),
+        ),
+    ):
+        await async_remove_entry(mock_hass, mock_entry)
+
+
+@pytest.mark.asyncio
 async def test_async_unload_entry_failure(mock_hass, mock_entry):
     """Test failed unload of a config entry."""
     mock_coordinator = MagicMock()
@@ -1274,8 +1343,47 @@ async def test_async_setup_push_deactivation_cleanup(mock_hass, mock_entry):
 
         # Verify config entry data was updated to clear the codes
         mock_hass.config_entries.async_update_entry.assert_any_call(
-            mock_entry, data={**mock_entry.data, "push_subscribe_code": None}
+            mock_entry,
+            data={
+                **mock_entry.data,
+                "push_subscribe_code": None,
+                "push_subscribe_fingerprint": None,
+            },
         )
         mock_hass.config_entries.async_update_entry.assert_any_call(
-            mock_entry, data={**mock_entry.data, "alarm_subscribe_code": None}
+            mock_entry,
+            data={
+                **mock_entry.data,
+                "alarm_subscribe_code": None,
+                "alarm_subscribe_fingerprint": None,
+            },
         )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_push_deactivation_preserves_code_on_cancel_failure(
+    mock_hass, mock_entry
+):
+    """A failed cancel (e.g. transient/network error) must NOT wipe the
+    persisted subscription code -- it's the only way to recover the
+    account's one push subscription slot without contacting the supplier."""
+    from custom_components.hyxi_cloud.const import CONF_ENABLE_PUSH
+
+    mock_entry.options = {CONF_ENABLE_PUSH: False}
+    mock_entry.data = {
+        "push_subscribe_code": "sub_code_123",
+        "alarm_subscribe_code": "alarm_code_123",
+    }
+
+    coordinator = MagicMock()
+    coordinator.client = MagicMock()
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+        new=AsyncMock(side_effect=RuntimeError("temporary network error")),
+    ):
+        await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
+        await _async_setup_alarm_subscription(mock_hass, mock_entry, coordinator)
+
+        # A failed cancel must never clear the persisted codes.
+        mock_hass.config_entries.async_update_entry.assert_not_called()

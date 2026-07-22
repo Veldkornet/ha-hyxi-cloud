@@ -618,7 +618,7 @@
         "name": "Clear Active Alarms"
       },
       "renew_realtime_subscription": {
-        "name": "Renew Push Subscription"
+        "name": "Renew Push Subscriptions"
       },
       "purge_old_subscriptions": {
         "name": "Purge Old Subscriptions"

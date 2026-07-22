@@ -38,24 +38,24 @@
           "update_interval": "Opdateringsinterval (1-60 minutter, standard: 5)",
           "back_discovery": "Aktiver opdagelse via alarmer (avanceret)",
           "enable_battery_control": "Aktiver enhedskontrol og -beskyttelse",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "enable_realtime_push": "Enable Real-Time Webhook Push",
-          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
-          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
+          "enable_energy_manager": "Aktivér Energistyring Standalone (Beta)",
+          "enable_realtime_push": "Aktivér Realtids Webhook Push",
+          "realtime_push_rate": "Push-opdateringsfrekvens (millisekunder, interval: 5000-3600000)",
+          "realtime_push_url": "Brugerdefineret Callback-URL (valgfri, dynamisk standard)"
         }
       },
       "energy_manager": {
-        "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data.",
+        "title": "Energistyring",
+        "description": "Konfigurer Energistyring til at optimere batteriforbrug baseret på solproduktion, netmåler og prognosedata.",
         "data": {
-          "em_p1_entity": "P1 Smart Meter (power sensor)",
-          "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
-          "em_forecast_power_entity": "Solar Forecast Current Power (optional)",
-          "em_inverter_sn": "Inverter to Control",
-          "em_battery_capacity_override": "Override Battery Capacity",
-          "em_battery_capacity_wh": "Battery Capacity (Wh)",
-          "em_loop_interval": "Decision Loop Interval (seconds)",
-          "em_dry_run": "Dry-Run Mode (no API calls)"
+          "em_p1_entity": "P1 Smart Måler (effektsensor)",
+          "em_forecast_entity": "Resterende Solprognose i Dag (valgfri)",
+          "em_forecast_power_entity": "Aktuel Solprognose Effekt (valgfri)",
+          "em_inverter_sn": "Inverter der skal Styres",
+          "em_battery_capacity_override": "Tilsidesæt Batterikapacitet",
+          "em_battery_capacity_wh": "Batterikapacitet (Wh)",
+          "em_loop_interval": "Beslutningsloop-interval (sekunder)",
+          "em_dry_run": "Testtilstand (ingen API-kald)"
         }
       }
     }
@@ -73,16 +73,16 @@
         }
       },
       "em_night_mode_active": {
-        "name": "Night Mode"
+        "name": "Natfunktion"
       },
       "em_high_load_detected": {
-        "name": "High Load Detected"
+        "name": "Høj Belastning Registreret"
       },
       "vpp_dispatch": {
-        "name": "VPP Dispatch",
+        "name": "VPP-afsendelse",
         "state": {
           "off": "Standby",
-          "on": "Active"
+          "on": "Aktiv"
         }
       }
     },
@@ -289,7 +289,7 @@
           "meter": "Måler",
           "battery": "Batteri",
           "ac_battery": "AC-batteri",
-          "all_in_one": "All-in-One"
+          "all_in_one": "Alt-i-Ét"
         }
       },
       "ratedpower": {
@@ -351,8 +351,8 @@
       "gridsts": {
         "name": "Netstatus",
         "state": {
-          "0": "Off-Grid",
-          "1": "On-Grid"
+          "0": "Uden For Nettet",
+          "1": "På Nettet"
         }
       },
       "devicegridconn": {
@@ -445,35 +445,35 @@
         "name": "Nominel frekvens"
       },
       "last_sent_mode": {
-        "name": "Last Sent Mode"
+        "name": "Sidst Sendte Tilstand"
       },
       "em_current_decision": {
-        "name": "EM Decision"
+        "name": "EM-beslutning"
       },
       "em_last_action": {
-        "name": "EM Last Action"
+        "name": "EM Seneste Handling"
       },
       "em_battery_energy_available": {
-        "name": "Battery Energy Available"
+        "name": "Tilgængelig Batterienergi"
       },
       "em_hours_until_sunrise": {
-        "name": "Hours Until Sunrise"
+        "name": "Timer til Solopgang"
       },
       "em_hours_until_sunset": {
-        "name": "Hours Until Sunset"
+        "name": "Timer til Solnedgang"
       },
       "em_p1_average": {
-        "name": "P1 Average Power"
+        "name": "P1 Gennemsnitseffekt"
       },
       "em_status": {
-        "name": "EM Status"
+        "name": "EM-status"
       },
       "realtime_subscription_status": {
-        "name": "Real-Time Subscription Status",
+        "name": "Realtidsabonnementsstatus",
         "state": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "error": "Error"
+          "active": "Aktiv",
+          "inactive": "Inaktiv",
+          "error": "Fejl"
         }
       },
       "battmp": {
@@ -483,13 +483,13 @@
         "name": "Batterieffekt (Raw)"
       },
       "totalent": {
-        "name": "Total Grid Import Energy"
+        "name": "Total Netimportenergi"
       },
       "totalept": {
-        "name": "Total Grid Export Energy"
+        "name": "Total Neteksportenergi"
       },
       "q": {
-        "name": "Reactive Power"
+        "name": "Reaktiv Effekt"
       }
     },
     "number": {
@@ -506,58 +506,58 @@
         "name": "SOC Minimum"
       },
       "soc_max": {
-        "name": "SOC Maximum"
+        "name": "SOC Maksimum"
       },
       "soc_min_hysteresis_pct": {
-        "name": "SOC Min Hysteresis"
+        "name": "SOC Min-hysterese"
       },
       "soc_max_hysteresis_pct": {
-        "name": "SOC Max Hysteresis"
+        "name": "SOC Maks-hysterese"
       },
       "em_high_load_threshold": {
-        "name": "High Load Threshold"
+        "name": "Høj Belastning Tærskel"
       },
       "em_max_charge_power": {
-        "name": "Max Charge Power"
+        "name": "Maks Ladeeffekt"
       },
       "em_max_discharge_power": {
-        "name": "Max Discharge Power"
+        "name": "Maks Afladeeffekt"
       },
       "em_min_solar_for_charge": {
-        "name": "Min Solar for Charge"
+        "name": "Min Solenergi til Opladning"
       },
       "em_mode_switch_cooldown": {
-        "name": "Mode Switch Cooldown"
+        "name": "Tilstandsskift Nedkølingstid"
       },
       "em_power_change_threshold": {
-        "name": "Power Change Threshold"
+        "name": "Effektændringstærskel"
       },
       "em_power_adjust_cooldown": {
-        "name": "Power Adjust Cooldown"
+        "name": "Effektjustering Nedkølingstid"
       },
       "em_night_buffer_pct": {
-        "name": "Night Buffer"
+        "name": "Natbuffer"
       },
       "em_avg_night_consumption": {
-        "name": "Avg Night Consumption"
+        "name": "Gns. Natforbrug"
       },
       "em_charge_margin": {
-        "name": "Charge Margin"
+        "name": "Opladningsmargin"
       },
       "em_charge_entry_threshold": {
-        "name": "Charge Entry Threshold"
+        "name": "Opladningsstart Tærskel"
       },
       "em_charge_reentry_delay": {
-        "name": "Charge Re-entry Delay"
+        "name": "Genindtrædelsesforsinkelse"
       },
       "em_bottomout_cooldown": {
-        "name": "Bottom-out Cooldown"
+        "name": "Bundpunkt Nedkølingstid"
       },
       "em_max_grid_export": {
-        "name": "Max Grid Export"
+        "name": "Maks Netudledning"
       },
       "em_p1_smoothing_period": {
-        "name": "P1 Smoothing Period"
+        "name": "P1-udjævningsperiode"
       }
     },
     "switch": {
@@ -568,19 +568,19 @@
         "name": "Strøm"
       },
       "em_grid_charge_allowed": {
-        "name": "Grid Charge Allowed"
+        "name": "Netopladning Tilladt"
       },
       "em_enabled": {
-        "name": "Energy Manager"
+        "name": "Energistyring"
       },
       "em_high_load_battery_assist": {
-        "name": "High Load Battery Assist"
+        "name": "Batteriassistance ved Høj Belastning"
       },
       "em_night_mode": {
-        "name": "Night Mode"
+        "name": "Natfunktion"
       },
       "em_export_limiting": {
-        "name": "Export Limiting"
+        "name": "Eksportbegrænsning"
       }
     },
     "button": {
@@ -618,10 +618,10 @@
         "name": "Ryd aktive alarmer"
       },
       "renew_realtime_subscription": {
-        "name": "Renew Push Subscription"
+        "name": "Forny Push-abonnementer"
       },
       "purge_old_subscriptions": {
-        "name": "Purge Old Subscriptions"
+        "name": "Ryd Gamle Abonnementer"
       }
     }
   },

@@ -2,6 +2,7 @@
 # pylint: disable=wrong-import-position
 
 import asyncio
+import hashlib
 import hmac
 import logging
 
@@ -38,12 +39,12 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     PLATFORMS,
-    TOKEN_ERROR_MESSAGES,
     VERSION,
     detect_phase_type,
     get_raw_device_code,
     mask_sensitive_key_value,
     mask_sn,
+    mask_subscription_code,
     mask_url,
     normalize_device_type,
 )
@@ -119,26 +120,81 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await async_setup_services(hass)
 
+    _LOGGER.debug(
+        "HYXI Cloud entry %s setup complete: %d devices, protection=%s, engine=%s",
+        entry.entry_id,
+        len(coordinator.data or {}),
+        bool(getattr(coordinator, "protection_controllers", None)),
+        coordinator.engine is not None,
+    )
+
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    _LOGGER.debug("Unloading HYXI Cloud entry %s", entry.entry_id)
     coordinator = hass.data[DOMAIN].get(entry.entry_id)
     if coordinator is not None:
         if coordinator.engine is not None:
             await coordinator.engine.async_stop()
         for controller in coordinator.protection_controllers.values():
             await controller.async_stop()
-        await _async_teardown_push_subscription(hass, coordinator, entry)
-        await _async_teardown_alarm_subscription(hass, coordinator, entry)
+        # Leave the subscriptions alive on the server (cancel_remote=False):
+        # the persisted code + fingerprint let the next setup reuse them,
+        # avoiding a cancel/resubscribe cycle on every restart and reload.
+        # Permanent cleanup happens in async_remove_entry when the entry is
+        # actually deleted.
+        await _async_teardown_push_subscription(
+            hass, coordinator, entry, cancel_remote=False
+        )
+        await _async_teardown_alarm_subscription(
+            hass, coordinator, entry, cancel_remote=False
+        )
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
         if not hass.data[DOMAIN]:
             if hass.services.has_service(DOMAIN, "cancel_subscription"):
                 hass.services.async_remove(DOMAIN, "cancel_subscription")
+    _LOGGER.debug("HYXI Cloud entry %s unload result: %s", entry.entry_id, unload_ok)
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Cancel any remaining subscriptions when the entry is permanently removed.
+
+    Regular unload keeps subscriptions alive for reuse on the next load, so
+    actual deletion of the integration must do the remote cleanup here.
+    """
+    codes = [
+        entry.data.get("push_subscribe_code"),
+        entry.data.get("alarm_subscribe_code"),
+    ]
+    codes = [c for c in codes if c]
+    if not codes:
+        return
+
+    access_key = entry.data.get(CONF_ACCESS_KEY)
+    secret_key = entry.data.get(CONF_SECRET_KEY)
+    if not access_key or not secret_key:
+        return
+
+    session = async_get_clientsession(hass)
+    client = HyxiApiClient(
+        access_key, secret_key, entry.data.get("base_url") or BASE_URL_DEFAULT, session
+    )
+    for code in codes:
+        try:
+            await async_cancel_and_unregister_subscription(hass, client, code)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.warning(
+                "Could not cancel subscription %s during entry removal: %s "
+                "(it remains in known_subscription_codes for manual cleanup via "
+                "the hyxi_cloud.cancel_subscription service)",
+                mask_subscription_code(code),
+                err,
+            )
 
 
 def _async_register_devices(
@@ -216,6 +272,12 @@ def _async_setup_energy_manager(
     em_enabled = entry.options.get(CONF_EM_ENABLED, False)
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
     if not em_enabled or not em_sn or em_sn not in coordinator.data:
+        _LOGGER.debug(
+            "EM not started: enabled=%s sn_configured=%s sn_in_data=%s",
+            em_enabled,
+            bool(em_sn),
+            bool(em_sn) and em_sn in coordinator.data,
+        )
         return
 
     from .engine import EMEntityConfig, EnergyManagerEngine
@@ -335,9 +397,17 @@ async def _async_setup_battery_protection(
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if device_type not in ("hybrid_inverter", "all_in_one"):
+            _LOGGER.debug(
+                "Skipping protection for %s: device_type=%s not controllable",
+                mask_sn(sn),
+                device_type,
+            )
             continue
         phase = detect_phase_type(dev_data)
         if phase not in ("three_phase", "single_phase"):
+            _LOGGER.debug(
+                "Skipping protection for %s: unrecognized phase=%s", mask_sn(sn), phase
+            )
             continue
 
         controller = HyxiBatteryProtectionController(hass, coordinator, sn)
@@ -348,6 +418,10 @@ async def _async_setup_battery_protection(
         try:
             await asyncio.gather(*tasks)
         except Exception, asyncio.CancelledError:
+            _LOGGER.debug(
+                "Battery protection startup failed, cleaning up controllers",
+                exc_info=True,
+            )
             for task in tasks:
                 if not task.done():
                     task.cancel()
@@ -421,6 +495,94 @@ async def _async_resolve_webhook_url(
     return resolved
 
 
+def _compute_subscription_fingerprint(
+    webhook_url: str, device_sns: list[str], push_rate_ms: int
+) -> str:
+    """Fingerprint the parameters a push subscription was created with.
+
+    Used to decide whether a persisted subscription code can be reused as-is
+    on the next setup, or whether something that would make it stale
+    (callback URL, device list, or push rate) has changed and it needs to be
+    cancelled and re-created.
+    """
+    raw = f"{webhook_url}|{','.join(sorted(device_sns))}|{push_rate_ms}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _should_reuse_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
+    entry: ConfigEntry,
+    config_key: str,
+    fingerprint_key: str,
+    webhook_url: str,
+    device_sns: list[str],
+    push_rate_ms: int,
+) -> str | None:
+    """Return the persisted subscription code if it's still valid for reuse.
+
+    A code is reusable when nothing that would invalidate it (callback URL,
+    device list, or push rate) has changed since it was created, per the
+    stored fingerprint. Returns None if there's no persisted code, or the
+    fingerprint no longer matches and a fresh subscribe is needed. Shared by
+    the push and alarm setup flows so this decision only needs to be
+    changed in one place.
+    """
+    prior_code = entry.data.get(config_key)
+    if not prior_code:
+        return None
+    fingerprint = _compute_subscription_fingerprint(
+        webhook_url, device_sns, push_rate_ms
+    )
+    if entry.data.get(fingerprint_key) == fingerprint:
+        return prior_code
+    return None
+
+
+def _clear_subscription_entry_data(
+    hass: HomeAssistant, entry: ConfigEntry, config_key: str, fingerprint_key: str
+) -> None:
+    """Clear a persisted subscription code and its fingerprint from entry.data."""
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, config_key: None, fingerprint_key: None}
+    )
+
+
+async def _async_maybe_cancel_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
+    hass: HomeAssistant,
+    client,
+    subscribe_code: str,
+    log_prefix: str,
+    force: bool,
+    cancel_remote: bool,
+) -> bool:
+    """Attempt to cancel a subscription per cancel_remote/force semantics.
+
+    Returns True if the caller should clear its local code/fingerprint --
+    either the cancel was confirmed, or force=True. Returns False to
+    preserve the local record: the subscription is being kept alive for
+    reuse (cancel_remote=False), or the cancel failed without force. Shared
+    by the push and alarm teardown flows.
+    """
+    if not cancel_remote:
+        _LOGGER.debug(
+            "Keeping %s subscription active for reuse on next load (code: %s)",
+            log_prefix,
+            mask_subscription_code(subscribe_code),
+        )
+        return False
+
+    try:
+        await async_cancel_and_unregister_subscription(hass, client, subscribe_code)
+        return True
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        _LOGGER.warning(
+            "Error cancelling %s subscription%s: %s",
+            log_prefix,
+            "" if not force else " (forcing local reset anyway)",
+            err,
+        )
+        return force
+
+
 def _log_push_subscription_failure(push_type: str, err_msg: str) -> None:
     """Log a formatted warning for push subscription failures."""
     if "B004002" in err_msg or "repeatedly" in err_msg:
@@ -436,12 +598,13 @@ def _log_push_subscription_failure(push_type: str, err_msg: str) -> None:
         _LOGGER.warning("Failed to register %s subscription: %s", push_type, err_msg)
 
 
-async def _async_cancel_entry_subscription(
+async def _async_cancel_entry_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
     hass: HomeAssistant,
     entry: ConfigEntry,
     coordinator: HyxiDataUpdateCoordinator,
     config_key: str,
     log_prefix: str,
+    fingerprint_key: str | None = None,
 ) -> None:
     """Cancel a previously stored subscription code and clear it from the config entry."""
     prior_code = entry.data.get(config_key)
@@ -451,16 +614,24 @@ async def _async_cancel_entry_subscription(
     _LOGGER.debug(
         "%s: Cancelling prior/orphaned subscription (code: %s)",
         log_prefix,
-        prior_code,
+        mask_subscription_code(prior_code),
     )
     try:
         await async_cancel_and_unregister_subscription(
             hass, coordinator.client, prior_code
         )
     except Exception as err:  # pylint: disable=broad-exception-caught
-        _LOGGER.debug("%s: Could not cancel prior subscription: %s", log_prefix, err)
+        _LOGGER.debug(
+            "%s: Could not cancel prior subscription, preserving code for retry: %s",
+            log_prefix,
+            err,
+        )
+        return
 
-    hass.config_entries.async_update_entry(entry, data={**entry.data, config_key: None})
+    new_data = {**entry.data, config_key: None}
+    if fingerprint_key:
+        new_data[fingerprint_key] = None
+    hass.config_entries.async_update_entry(entry, data=new_data)
 
 
 async def _async_execute_real_time_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
@@ -482,15 +653,22 @@ async def _async_execute_real_time_subscription(  # pylint: disable=too-many-arg
             coordinator.subscribe_code = res["data"]["subscribeCode"]
             coordinator.push_status = "active"
             coordinator.push_error = None
+            fingerprint = _compute_subscription_fingerprint(
+                webhook_url, device_sns, push_rate_ms
+            )
             hass.config_entries.async_update_entry(
                 entry,
-                data={**entry.data, "push_subscribe_code": coordinator.subscribe_code},
+                data={
+                    **entry.data,
+                    "push_subscribe_code": coordinator.subscribe_code,
+                    "push_subscribe_fingerprint": fingerprint,
+                },
             )
             if coordinator.subscribe_code:
                 await async_register_subscription_code(hass, coordinator.subscribe_code)
             _LOGGER.info(
                 "Successfully subscribed to HYXI Real-Time Push (code: %s)",
-                coordinator.subscribe_code,
+                mask_subscription_code(coordinator.subscribe_code),
             )
         else:
             coordinator.push_status = "error"
@@ -523,11 +701,15 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
             coordinator.alarm_subscribe_code = res["data"]["subscribeCode"]
             coordinator.alarm_push_status = "active"
             coordinator.alarm_push_url = webhook_url
+            fingerprint = _compute_subscription_fingerprint(
+                webhook_url, device_sns, push_rate_ms
+            )
             hass.config_entries.async_update_entry(
                 entry,
                 data={
                     **entry.data,
                     "alarm_subscribe_code": coordinator.alarm_subscribe_code,
+                    "alarm_subscribe_fingerprint": fingerprint,
                 },
             )
             if coordinator.alarm_subscribe_code:
@@ -536,7 +718,7 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
                 )
             _LOGGER.info(
                 "Successfully subscribed to HYXI Alarm Push (code: %s)",
-                coordinator.alarm_subscribe_code,
+                mask_subscription_code(coordinator.alarm_subscribe_code),
             )
         else:
             coordinator.alarm_push_status = "error"
@@ -558,14 +740,14 @@ async def _async_setup_push_subscription(
     if enable_push is not True:
         coordinator.push_status = "inactive"
         await _async_cancel_entry_subscription(
-            hass, entry, coordinator, "push_subscribe_code", "HYXI Push"
+            hass,
+            entry,
+            coordinator,
+            "push_subscribe_code",
+            "HYXI Push",
+            fingerprint_key="push_subscribe_fingerprint",
         )
         return
-
-    # Cancel any previously-active subscription that wasn't cleanly torn down
-    await _async_cancel_entry_subscription(
-        hass, entry, coordinator, "push_subscribe_code", "HYXI Push"
-    )
 
     push_rate_s = int(entry.options.get(CONF_PUSH_RATE, DEFAULT_PUSH_RATE))
     push_rate_ms = push_rate_s * 1000
@@ -575,7 +757,9 @@ async def _async_setup_push_subscription(
     coordinator.webhook_id = webhook_id
     coordinator.push_enabled = True
 
-    # Register webhook handler
+    # Register webhook handler. HA's webhook registry is in-memory, so this
+    # must run on every load regardless of whether the subscription itself
+    # is reused below.
     try:
         webhook.async_register(
             hass,
@@ -603,6 +787,9 @@ async def _async_setup_push_subscription(
         coordinator.push_error = (
             "Could not resolve external URL — set a Custom Callback URL in options"
         )
+        # Do not touch any existing subscription here -- an unresolved URL
+        # doesn't mean the persisted subscription is bad, and it's not worth
+        # burning it on a guess.
         return
 
     coordinator.push_url = webhook_url
@@ -612,6 +799,39 @@ async def _async_setup_push_subscription(
         _LOGGER.debug("No devices available to subscribe to push notifications")
         coordinator.push_status = "inactive"
         return
+
+    # There is no HYXI endpoint to verify a code is still valid server-side;
+    # if it has gone stale, the "Renew Subscription" button forces a fresh
+    # cancel + subscribe.
+    reused_code = _should_reuse_subscription(
+        entry,
+        "push_subscribe_code",
+        "push_subscribe_fingerprint",
+        webhook_url,
+        device_sns,
+        push_rate_ms,
+    )
+    if reused_code:
+        coordinator.subscribe_code = reused_code
+        coordinator.push_status = "active"
+        coordinator.push_error = None
+        _LOGGER.debug(
+            "HYXI Push: Reusing existing subscription (code: %s)",
+            mask_subscription_code(reused_code),
+        )
+        return
+
+    # Something that requires a new subscription changed (or there's no
+    # usable prior one) -- cancel any previous/orphaned code before
+    # subscribing fresh.
+    await _async_cancel_entry_subscription(
+        hass,
+        entry,
+        coordinator,
+        "push_subscribe_code",
+        "HYXI Push",
+        fingerprint_key="push_subscribe_fingerprint",
+    )
 
     _LOGGER.debug(
         "Subscribing callback URL %s for devices: %s",
@@ -628,8 +848,25 @@ async def _async_teardown_push_subscription(
     hass: HomeAssistant,
     coordinator: HyxiDataUpdateCoordinator,
     entry: ConfigEntry | None = None,
+    force: bool = False,
+    cancel_remote: bool = True,
 ) -> None:
-    """Tear down push subscription and webhook."""
+    """Tear down push subscription and webhook.
+
+    `cancel_remote=False` (regular unload on restart/reload) unregisters the
+    webhook but leaves the subscription alive on the server and its code
+    persisted, so the next setup can reuse it via the stored fingerprint
+    instead of burning a cancel/resubscribe cycle.
+
+    `force` clears the local subscription code even if the remote cancel
+    call fails. Only appropriate for an explicit, user-initiated action
+    (e.g. the Renew Subscription button) -- the automatic teardown paths
+    must never do this, since the code is otherwise the only way to recover
+    the account's one push subscription slot without contacting the
+    supplier. It stays safe even when forced because the code remains in
+    the account-wide `known_subscription_codes` store (only removed on a
+    confirmed API cancel) for manual recovery.
+    """
     webhook_id = coordinator.webhook_id
     if webhook_id:
         try:
@@ -641,18 +878,15 @@ async def _async_teardown_push_subscription(
 
     subscribe_code = coordinator.subscribe_code
     if subscribe_code:
-        try:
-            await async_cancel_and_unregister_subscription(
-                hass, coordinator.client, subscribe_code
-            )
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.warning("Error cancelling HYXI Push subscription: %s", err)
-        coordinator.subscribe_code = None
-        # Clear the persisted code — subscription is now cleanly cancelled.
-        if entry is not None:
-            hass.config_entries.async_update_entry(
-                entry, data={**entry.data, "push_subscribe_code": None}
-            )
+        should_clear = await _async_maybe_cancel_subscription(
+            hass, coordinator.client, subscribe_code, "HYXI Push", force, cancel_remote
+        )
+        if should_clear:
+            coordinator.subscribe_code = None
+            if entry is not None:
+                _clear_subscription_entry_data(
+                    hass, entry, "push_subscribe_code", "push_subscribe_fingerprint"
+                )
 
     coordinator.push_enabled = False
     coordinator.push_status = "inactive"
@@ -712,7 +946,7 @@ async def _async_handle_webhook(
     _LOGGER.debug(
         "HYXI Cloud Data Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
         "hyxi_cloud_***" if webhook_id.startswith("hyxi_cloud_") else "***",
-        coordinator.subscribe_code,
+        mask_subscription_code(coordinator.subscribe_code),
     )
 
     # 3. Process payload via SDK merging with existing metrics
@@ -782,7 +1016,12 @@ async def _async_setup_alarm_subscription(
     if enable_push is not True:
         coordinator.alarm_push_status = "inactive"
         await _async_cancel_entry_subscription(
-            hass, entry, coordinator, "alarm_subscribe_code", "HYXI Alarm Push"
+            hass,
+            entry,
+            coordinator,
+            "alarm_subscribe_code",
+            "HYXI Alarm Push",
+            fingerprint_key="alarm_subscribe_fingerprint",
         )
         return
 
@@ -793,12 +1032,9 @@ async def _async_setup_alarm_subscription(
     webhook_id = f"hyxi_cloud_{entry.entry_id}_alarm"
     coordinator.alarm_webhook_id = webhook_id
 
-    # Cancel any orphaned prior subscription
-    await _async_cancel_entry_subscription(
-        hass, entry, coordinator, "alarm_subscribe_code", "HYXI Alarm Push"
-    )
-
-    # Register webhook handler
+    # Register webhook handler. HA's webhook registry is in-memory, so this
+    # must run on every load regardless of whether the subscription itself
+    # is reused below.
     try:
         webhook.async_register(
             hass,
@@ -817,12 +1053,44 @@ async def _async_setup_alarm_subscription(
             "alarm push disabled (real-time data push may still be active)."
         )
         coordinator.alarm_push_status = "error"
+        # Do not touch any existing subscription here -- an unresolved URL
+        # doesn't mean the persisted subscription is bad.
         return
 
     device_sns = [sn for sn in coordinator.data if sn]
     if not device_sns:
         coordinator.alarm_push_status = "inactive"
         return
+
+    reused_code = _should_reuse_subscription(
+        entry,
+        "alarm_subscribe_code",
+        "alarm_subscribe_fingerprint",
+        webhook_url,
+        device_sns,
+        push_rate_ms,
+    )
+    if reused_code:
+        coordinator.alarm_subscribe_code = reused_code
+        coordinator.alarm_push_status = "active"
+        coordinator.alarm_push_url = webhook_url
+        _LOGGER.debug(
+            "HYXI Alarm Push: Reusing existing subscription (code: %s)",
+            mask_subscription_code(reused_code),
+        )
+        return
+
+    # Something that requires a new subscription changed (or there's no
+    # usable prior one) -- cancel any previous/orphaned code before
+    # subscribing fresh.
+    await _async_cancel_entry_subscription(
+        hass,
+        entry,
+        coordinator,
+        "alarm_subscribe_code",
+        "HYXI Alarm Push",
+        fingerprint_key="alarm_subscribe_fingerprint",
+    )
 
     _LOGGER.debug(
         "HYXI Alarm Push: Subscribing %s devices at %s",
@@ -839,8 +1107,16 @@ async def _async_teardown_alarm_subscription(
     hass: HomeAssistant,
     coordinator: HyxiDataUpdateCoordinator,
     entry: ConfigEntry | None = None,
+    force: bool = False,
+    cancel_remote: bool = True,
 ) -> None:
-    """Tear down alarm push subscription and webhook."""
+    """Tear down alarm push subscription and webhook.
+
+    See `_async_teardown_push_subscription` for the semantics of
+    `cancel_remote` (keep the subscription alive for reuse on regular
+    unload) and `force` (clear local state even on a failed cancel; only
+    safe for an explicit, user-initiated action).
+    """
     webhook_id = getattr(coordinator, "alarm_webhook_id", None)
     if webhook_id:
         try:
@@ -852,17 +1128,20 @@ async def _async_teardown_alarm_subscription(
 
     subscribe_code = getattr(coordinator, "alarm_subscribe_code", None)
     if subscribe_code:
-        try:
-            await async_cancel_and_unregister_subscription(
-                hass, coordinator.client, subscribe_code
-            )
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.warning("Error cancelling HYXI Alarm Push subscription: %s", err)
-        coordinator.alarm_subscribe_code = None
-        if entry is not None:
-            hass.config_entries.async_update_entry(
-                entry, data={**entry.data, "alarm_subscribe_code": None}
-            )
+        should_clear = await _async_maybe_cancel_subscription(
+            hass,
+            coordinator.client,
+            subscribe_code,
+            "HYXI Alarm Push",
+            force,
+            cancel_remote,
+        )
+        if should_clear:
+            coordinator.alarm_subscribe_code = None
+            if entry is not None:
+                _clear_subscription_entry_data(
+                    hass, entry, "alarm_subscribe_code", "alarm_subscribe_fingerprint"
+                )
 
     coordinator.alarm_push_status = "inactive"
 
@@ -923,7 +1202,7 @@ async def _async_handle_alarm_webhook(
     _LOGGER.debug(
         "HYXI Cloud Alarm Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
         "hyxi_cloud_***" if webhook_id.startswith("hyxi_cloud_") else "***",
-        coordinator.alarm_subscribe_code,
+        mask_subscription_code(coordinator.alarm_subscribe_code),
     )
 
     # Stamp contact time unconditionally — HYXI sends pings on schedule even
@@ -1000,14 +1279,19 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         # Use the client from the first active integration entry
         coordinator = next(iter(coordinators_values))
-        _LOGGER.info("Manually cancelling HYXI subscription: %s", subscribe_code)
+        _LOGGER.info(
+            "Manually cancelling HYXI subscription: %s",
+            mask_subscription_code(subscribe_code),
+        )
         try:
             await async_cancel_and_unregister_subscription(
                 hass, coordinator.client, subscribe_code
             )
         except Exception as err:
             _LOGGER.error(
-                "Error manual cancelling HYXI subscription %s: %s", subscribe_code, err
+                "Error manual cancelling HYXI subscription %s: %s",
+                mask_subscription_code(subscribe_code),
+                err,
             )
             err_msg = str(err)
             if "subscription request failed" in err_msg:
@@ -1101,57 +1385,32 @@ async def async_get_subscription_codes(hass: HomeAssistant) -> list[str]:
 async def async_cancel_and_unregister_subscription(
     hass: HomeAssistant, client, code: str
 ) -> None:
-    """Cancel a subscription via the API and unregister it from storage if successful or already inactive."""
+    """Cancel a subscription via the API and unregister it from storage.
+
+    The code is only removed from local storage when the API confirms the
+    cancellation succeeded. HYXI has no "subscription not found" error code,
+    so a failure response (including transient/rate-limit errors) is not a
+    reliable signal that the subscription is actually gone -- losing track
+    of it locally means contacting the supplier to reset the account's one
+    push subscription slot. Any failure is preserved and re-raised so
+    callers know not to discard their own record of the code either.
+    """
     code = code.strip()
     if not code:
         return
 
-    _LOGGER.info("Cancelling HYXI subscription: %s", code)
-    try:
-        res = await client.cancel_subscription(code)
-        if isinstance(res, dict) and not res.get("success"):
-            msg = res.get("msg", "Unknown error")
-            sub_err_cls = getattr(client, "SubscriptionError", RuntimeError)
-            if not isinstance(sub_err_cls, type) or not issubclass(
-                sub_err_cls, BaseException
-            ):
-                sub_err_cls = RuntimeError
-            raise sub_err_cls(f"subscription request failed: {msg}")
-
-        await async_unregister_subscription_code(hass, code)
-        _LOGGER.info("Successfully cancelled HYXI subscription: %s", code)
-    except Exception as err:
-        is_sub_err = False
-        sub_err_cls = getattr(client, "SubscriptionError", None)
-        if (
-            sub_err_cls
-            and isinstance(sub_err_cls, type)
-            and issubclass(sub_err_cls, BaseException)
+    _LOGGER.info("Cancelling HYXI subscription: %s", mask_subscription_code(code))
+    res = await client.cancel_subscription(code)
+    if isinstance(res, dict) and not res.get("success"):
+        msg = res.get("msg", "Unknown error")
+        sub_err_cls = getattr(client, "SubscriptionError", RuntimeError)
+        if not isinstance(sub_err_cls, type) or not issubclass(
+            sub_err_cls, BaseException
         ):
-            if isinstance(err, sub_err_cls):
-                is_sub_err = True
+            sub_err_cls = RuntimeError
+        raise sub_err_cls(f"subscription request failed: {msg}")
 
-        if type(
-            err
-        ).__name__ == "SubscriptionError" or "subscription request failed" in str(err):
-            is_sub_err = True
-
-        err_str = str(err)
-        is_token_error = any(msg in err_str for msg in TOKEN_ERROR_MESSAGES)
-
-        if is_sub_err and not is_token_error and "no_response" not in err_str:
-            _LOGGER.info(
-                "Subscription code %s was already unsubscribed or invalid (API error: %s), removing from known codes",
-                code,
-                err,
-            )
-            await async_unregister_subscription_code(hass, code)
-        elif is_token_error:
-            _LOGGER.debug(
-                "Preserving subscription code %s because cancellation failed due to a token/auth error: %s",
-                code,
-                err,
-            )
-        else:
-            _LOGGER.warning("Error cancelling HYXI subscription %s: %s", code, err)
-        raise
+    await async_unregister_subscription_code(hass, code)
+    _LOGGER.info(
+        "Successfully cancelled HYXI subscription: %s", mask_subscription_code(code)
+    )

@@ -54,6 +54,10 @@ class HyxiBatteryProtectionController:
         if self._unsub_listener is not None:
             return
 
+        _LOGGER.debug(
+            "Protection %s: battery protection controller starting", mask_sn(self._sn)
+        )
+
         # Proactively restore the last sent mode from HASS state registry if it exists
         entity_id = f"sensor.hyxi_{self._sn}_last_sent_mode"
         if (state := self._hass.states.get(entity_id)) is not None:
@@ -77,6 +81,10 @@ class HyxiBatteryProtectionController:
         if self._unsub_listener is not None:
             self._unsub_listener()
             self._unsub_listener = None
+            _LOGGER.debug(
+                "Protection %s: battery protection controller stopping",
+                mask_sn(self._sn),
+            )
         if self._eval_task is not None and not self._eval_task.done():
             self._eval_task.cancel()
             self._eval_task = None
@@ -140,11 +148,19 @@ class HyxiBatteryProtectionController:
         """Evaluate the current SOC and enforce protection limits."""
         dev_data = (self._coordinator.data or {}).get(self._sn)
         if not dev_data:
+            _LOGGER.debug(
+                "Protection %s: skipping evaluation, no coordinator data yet",
+                mask_sn(self._sn),
+            )
             return
 
         metrics = dev_data.get("metrics") or {}
         soc = self._metric_float(metrics.get("batSoc"))
         if soc is None:
+            _LOGGER.debug(
+                "Protection %s: skipping evaluation, batSoc metric missing",
+                mask_sn(self._sn),
+            )
             return
 
         soc_min = self._get_param("soc_min", DEFAULT_SOC_MIN)
@@ -167,7 +183,25 @@ class HyxiBatteryProtectionController:
             ),
         )
 
+        _LOGGER.debug(
+            "Protection %s: soc=%.1f soc_min=%.1f soc_max=%.1f low_hold=%s high_hold=%s last_mode=%s",
+            mask_sn(self._sn),
+            soc,
+            soc_min,
+            soc_max,
+            self._low_soc_hold,
+            self._high_soc_hold,
+            self._last_sent_mode,
+        )
+
         if soc <= soc_min:
+            if not self._low_soc_hold:
+                _LOGGER.debug(
+                    "Protection %s: entering low-SOC hold (soc=%.1f <= soc_min=%.1f)",
+                    mask_sn(self._sn),
+                    soc,
+                    soc_min,
+                )
             self._low_soc_hold = True
             if self._last_sent_mode != "charge":
                 await self._ensure_mode("hold" if phase == "single_phase" else "idle")
@@ -180,9 +214,22 @@ class HyxiBatteryProtectionController:
                         "hold" if phase == "single_phase" else "idle"
                     )
                 return
+            _LOGGER.debug(
+                "Protection %s: exiting low-SOC hold (soc=%.1f >= resume=%.1f)",
+                mask_sn(self._sn),
+                soc,
+                soc_min_resume,
+            )
             self._low_soc_hold = False
 
         if soc >= soc_max:
+            if not self._high_soc_hold:
+                _LOGGER.debug(
+                    "Protection %s: entering high-SOC hold (soc=%.1f >= soc_max=%.1f)",
+                    mask_sn(self._sn),
+                    soc,
+                    soc_max,
+                )
             self._high_soc_hold = True
             if phase == "single_phase":
                 if self._last_sent_mode not in ("discharge", "hold"):
@@ -203,13 +250,26 @@ class HyxiBatteryProtectionController:
                 ):
                     await self._ensure_mode("idle")
                 return
+            _LOGGER.debug(
+                "Protection %s: exiting high-SOC hold (soc=%.1f <= resume=%.1f)",
+                mask_sn(self._sn),
+                soc,
+                soc_max_resume,
+            )
             self._high_soc_hold = False
 
     async def _ensure_mode(self, mode: str) -> None:
         """Send a mode command if cooldown allows it and mode changed."""
         if self._last_sent_mode == mode:
             return
-        if (time.monotonic() - self._last_mode_switch) < MODE_SWITCH_COOLDOWN:
+        remaining = MODE_SWITCH_COOLDOWN - (time.monotonic() - self._last_mode_switch)
+        if remaining > 0:
+            _LOGGER.debug(
+                "Protection %s: mode switch to %s suppressed, cooldown %.0fs remaining",
+                mask_sn(self._sn),
+                mode,
+                remaining,
+            )
             return
 
         await self._send_control(mode)
@@ -222,6 +282,9 @@ class HyxiBatteryProtectionController:
         """Send the requested control using the correct phase-specific API."""
         client = self._coordinator.client
         phase = self._phase_type()
+        _LOGGER.debug(
+            "Protection %s: sending mode=%s phase=%s", mask_sn(self._sn), mode, phase
+        )
 
         if phase == "three_phase":
             if mode == "idle":
@@ -261,6 +324,13 @@ class HyxiBatteryProtectionController:
         try:
             return int(float(state.state))
         except ValueError, TypeError:
+            _LOGGER.debug(
+                "Protection %s: could not parse %s state %r, using default %s",
+                mask_sn(self._sn),
+                entity_id,
+                state.state,
+                default,
+            )
             return default
 
     def _get_power_value(self, direction: str) -> int:
@@ -279,6 +349,12 @@ class HyxiBatteryProtectionController:
             watts = int(float(state.state))
             return max(watts, 1)
         except ValueError, TypeError:
+            _LOGGER.debug(
+                "Protection %s: could not parse %s state %r, using default 100",
+                mask_sn(self._sn),
+                entity_id,
+                state.state,
+            )
             return 100
 
     def _get_soc(self) -> float | None:

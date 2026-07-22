@@ -38,24 +38,24 @@
           "update_interval": "Interwał odpytywania (1-60 minut, domyślnie: 5)",
           "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)",
           "enable_battery_control": "Włącz kontrolę i ochronę urządzenia",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "enable_realtime_push": "Enable Real-Time Webhook Push",
-          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
-          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
+          "enable_energy_manager": "Włącz samodzielny Menedżer Energii (Beta)",
+          "enable_realtime_push": "Włącz push w czasie rzeczywistym (webhook)",
+          "realtime_push_rate": "Częstotliwość aktualizacji Push (milisekundy, zakres: 5000-3600000)",
+          "realtime_push_url": "Niestandardowy URL Callback (opcjonalnie, dynamiczna wartość domyślna)"
         }
       },
       "energy_manager": {
-        "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data.",
+        "title": "Menedżer Energii",
+        "description": "Skonfiguruj Menedżera Energii, aby optymalizować wykorzystanie baterii na podstawie produkcji słonecznej, licznika sieciowego i danych prognozy.",
         "data": {
-          "em_p1_entity": "P1 Smart Meter (power sensor)",
-          "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
-          "em_forecast_power_entity": "Solar Forecast Current Power (optional)",
-          "em_inverter_sn": "Inverter to Control",
-          "em_battery_capacity_override": "Override Battery Capacity",
-          "em_battery_capacity_wh": "Battery Capacity (Wh)",
-          "em_loop_interval": "Decision Loop Interval (seconds)",
-          "em_dry_run": "Dry-Run Mode (no API calls)"
+          "em_p1_entity": "Inteligentny licznik P1 (czujnik mocy)",
+          "em_forecast_entity": "Pozostała dzisiejsza prognoza słoneczna (opcjonalnie)",
+          "em_forecast_power_entity": "Aktualna moc z prognozy słonecznej (opcjonalnie)",
+          "em_inverter_sn": "Falownik do sterowania",
+          "em_battery_capacity_override": "Zastąp pojemność baterii",
+          "em_battery_capacity_wh": "Pojemność baterii (Wh)",
+          "em_loop_interval": "Interwał pętli decyzyjnej (sekundy)",
+          "em_dry_run": "Tryb próbny (bez wywołań API)"
         }
       }
     }
@@ -73,16 +73,16 @@
         }
       },
       "em_night_mode_active": {
-        "name": "Night Mode"
+        "name": "Tryb nocny"
       },
       "em_high_load_detected": {
-        "name": "High Load Detected"
+        "name": "Wykryto wysokie obciążenie"
       },
       "vpp_dispatch": {
-        "name": "VPP Dispatch",
+        "name": "Dyspozycja VPP",
         "state": {
-          "off": "Standby",
-          "on": "Active"
+          "off": "Tryb czuwania",
+          "on": "Aktywny"
         }
       }
     },
@@ -289,7 +289,7 @@
           "meter": "Licznik",
           "battery": "Bateria",
           "ac_battery": "Bateria AC",
-          "all_in_one": "All-in-One"
+          "all_in_one": "Wszystko w jednym"
         }
       },
       "ratedpower": {
@@ -351,8 +351,8 @@
       "gridsts": {
         "name": "Status sieci",
         "state": {
-          "0": "Off-Grid",
-          "1": "On-Grid"
+          "0": "Poza Siecią",
+          "1": "W Sieci"
         }
       },
       "devicegridconn": {
@@ -445,35 +445,35 @@
         "name": "Częstotliwość znamionowa"
       },
       "last_sent_mode": {
-        "name": "Last Sent Mode"
+        "name": "Ostatnio wysłany tryb"
       },
       "em_current_decision": {
-        "name": "EM Decision"
+        "name": "Decyzja EM"
       },
       "em_last_action": {
-        "name": "EM Last Action"
+        "name": "Ostatnia akcja EM"
       },
       "em_battery_energy_available": {
-        "name": "Battery Energy Available"
+        "name": "Dostępna energia baterii"
       },
       "em_hours_until_sunrise": {
-        "name": "Hours Until Sunrise"
+        "name": "Godziny do wschodu słońca"
       },
       "em_hours_until_sunset": {
-        "name": "Hours Until Sunset"
+        "name": "Godziny do zachodu słońca"
       },
       "em_p1_average": {
-        "name": "P1 Average Power"
+        "name": "Średnia moc P1"
       },
       "em_status": {
-        "name": "EM Status"
+        "name": "Status EM"
       },
       "realtime_subscription_status": {
-        "name": "Real-Time Subscription Status",
+        "name": "Status subskrypcji w czasie rzeczywistym",
         "state": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "error": "Error"
+          "active": "Aktywny",
+          "inactive": "Nieaktywny",
+          "error": "Błąd"
         }
       },
       "battmp": {
@@ -483,13 +483,13 @@
         "name": "Moc akumulatora (Raw)"
       },
       "totalent": {
-        "name": "Total Grid Import Energy"
+        "name": "Całkowita energia pobrana z sieci"
       },
       "totalept": {
-        "name": "Total Grid Export Energy"
+        "name": "Całkowita energia oddana do sieci"
       },
       "q": {
-        "name": "Reactive Power"
+        "name": "Moc bierna"
       }
     },
     "number": {
@@ -503,61 +503,61 @@
         "name": "Limit mocy"
       },
       "soc_min": {
-        "name": "SOC Minimum"
+        "name": "Minimalny SOC"
       },
       "soc_max": {
-        "name": "SOC Maximum"
+        "name": "Maksymalny SOC"
       },
       "soc_min_hysteresis_pct": {
-        "name": "SOC Min Hysteresis"
+        "name": "Histereza min. SOC"
       },
       "soc_max_hysteresis_pct": {
-        "name": "SOC Max Hysteresis"
+        "name": "Histereza maks. SOC"
       },
       "em_high_load_threshold": {
-        "name": "High Load Threshold"
+        "name": "Próg wysokiego obciążenia"
       },
       "em_max_charge_power": {
-        "name": "Max Charge Power"
+        "name": "Maks. moc ładowania"
       },
       "em_max_discharge_power": {
-        "name": "Max Discharge Power"
+        "name": "Maks. moc rozładowania"
       },
       "em_min_solar_for_charge": {
-        "name": "Min Solar for Charge"
+        "name": "Min. moc słoneczna do ładowania"
       },
       "em_mode_switch_cooldown": {
-        "name": "Mode Switch Cooldown"
+        "name": "Czas wychłodzenia zmiany trybu"
       },
       "em_power_change_threshold": {
-        "name": "Power Change Threshold"
+        "name": "Próg zmiany mocy"
       },
       "em_power_adjust_cooldown": {
-        "name": "Power Adjust Cooldown"
+        "name": "Czas wychłodzenia regulacji mocy"
       },
       "em_night_buffer_pct": {
-        "name": "Night Buffer"
+        "name": "Bufor nocny"
       },
       "em_avg_night_consumption": {
-        "name": "Avg Night Consumption"
+        "name": "Śr. zużycie nocne"
       },
       "em_charge_margin": {
-        "name": "Charge Margin"
+        "name": "Margines ładowania"
       },
       "em_charge_entry_threshold": {
-        "name": "Charge Entry Threshold"
+        "name": "Próg rozpoczęcia ładowania"
       },
       "em_charge_reentry_delay": {
-        "name": "Charge Re-entry Delay"
+        "name": "Opóźnienie ponownego ładowania"
       },
       "em_bottomout_cooldown": {
-        "name": "Bottom-out Cooldown"
+        "name": "Czas wychłodzenia minimum"
       },
       "em_max_grid_export": {
-        "name": "Max Grid Export"
+        "name": "Maks. eksport do sieci"
       },
       "em_p1_smoothing_period": {
-        "name": "P1 Smoothing Period"
+        "name": "Okres wygładzania P1"
       }
     },
     "switch": {
@@ -568,19 +568,19 @@
         "name": "Zasilanie"
       },
       "em_grid_charge_allowed": {
-        "name": "Grid Charge Allowed"
+        "name": "Dozwolone Ładowanie z Sieci"
       },
       "em_enabled": {
-        "name": "Energy Manager"
+        "name": "Menedżer Energii"
       },
       "em_high_load_battery_assist": {
-        "name": "High Load Battery Assist"
+        "name": "Wsparcie Baterii przy Wysokim Obciążeniu"
       },
       "em_night_mode": {
-        "name": "Night Mode"
+        "name": "Tryb Nocny"
       },
       "em_export_limiting": {
-        "name": "Export Limiting"
+        "name": "Ograniczenie Eksportu"
       }
     },
     "button": {
@@ -618,10 +618,10 @@
         "name": "Wyczyść aktywne alarmy"
       },
       "renew_realtime_subscription": {
-        "name": "Renew Push Subscription"
+        "name": "Odnów subskrypcje push"
       },
       "purge_old_subscriptions": {
-        "name": "Purge Old Subscriptions"
+        "name": "Wyczyść stare subskrypcje"
       }
     }
   },

@@ -121,6 +121,7 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Enable frequency control."""
         client = self.coordinator.client
+        _LOGGER.debug("Switch: enabling frequency control for %s", mask_sn(self._sn))
         try:
             await client.set_frequency_control(self._sn, enabled=True)
             self._attr_is_on = True
@@ -135,6 +136,7 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Disable frequency control."""
         client = self.coordinator.client
+        _LOGGER.debug("Switch: disabling frequency control for %s", mask_sn(self._sn))
         try:
             await client.set_frequency_control(self._sn, enabled=False)
             self._attr_is_on = False
@@ -171,23 +173,31 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on the microinverter."""
         client = self.coordinator.client
+        _LOGGER.debug("Switch: turning on microinverter %s", mask_sn(self._sn))
         try:
             await client.set_micro_power_on(self._sn)
             self._attr_is_on = True
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
+            _LOGGER.error(
+                "Failed to turn on microinverter %s: %s", mask_sn(self._sn), err
+            )
             raise HomeAssistantError(f"Failed to turn on microinverter: {err}") from err
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off the microinverter."""
         client = self.coordinator.client
+        _LOGGER.debug("Switch: turning off microinverter %s", mask_sn(self._sn))
         try:
             await client.set_micro_power_off(self._sn)
             self._attr_is_on = False
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
+            _LOGGER.error(
+                "Failed to turn off microinverter %s: %s", mask_sn(self._sn), err
+            )
             raise HomeAssistantError(
                 f"Failed to turn off microinverter: {err}"
             ) from err

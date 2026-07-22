@@ -38,24 +38,24 @@
           "update_interval": "Intervallo di aggiornamento (1-60 Minuti, Predefinito: 5)",
           "back_discovery": "Abilita il rilevamento tramite allarmi (Avanzato)",
           "enable_battery_control": "Abilita controllo e protezione dispositivo",
-          "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
-          "enable_realtime_push": "Enable Real-Time Webhook Push",
-          "realtime_push_rate": "Push Update Frequency (milliseconds, range: 5000-3600000)",
-          "realtime_push_url": "Custom Callback URL (optional, dynamic default)"
+          "enable_energy_manager": "Abilita Gestore Energia Standalone (Beta)",
+          "enable_realtime_push": "Abilita Push Webhook in Tempo Reale",
+          "realtime_push_rate": "Frequenza di Aggiornamento Push (millisecondi, intervallo: 5000-3600000)",
+          "realtime_push_url": "URL di Callback Personalizzato (opzionale, predefinito dinamico)"
         }
       },
       "energy_manager": {
-        "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data.",
+        "title": "Gestore Energia",
+        "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione.",
         "data": {
-          "em_p1_entity": "P1 Smart Meter (power sensor)",
-          "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
-          "em_forecast_power_entity": "Solar Forecast Current Power (optional)",
-          "em_inverter_sn": "Inverter to Control",
-          "em_battery_capacity_override": "Override Battery Capacity",
-          "em_battery_capacity_wh": "Battery Capacity (Wh)",
-          "em_loop_interval": "Decision Loop Interval (seconds)",
-          "em_dry_run": "Dry-Run Mode (no API calls)"
+          "em_p1_entity": "Smart Meter P1 (sensore di potenza)",
+          "em_forecast_entity": "Previsione Solare Rimanente Oggi (opzionale)",
+          "em_forecast_power_entity": "Previsione Solare Potenza Attuale (opzionale)",
+          "em_inverter_sn": "Inverter da Controllare",
+          "em_battery_capacity_override": "Sovrascrivi Capacità Batteria",
+          "em_battery_capacity_wh": "Capacità Batteria (Wh)",
+          "em_loop_interval": "Intervallo Ciclo Decisionale (secondi)",
+          "em_dry_run": "Modalità Simulazione (nessuna chiamata API)"
         }
       }
     }
@@ -73,16 +73,16 @@
         }
       },
       "em_night_mode_active": {
-        "name": "Night Mode"
+        "name": "Modalità notturna"
       },
       "em_high_load_detected": {
-        "name": "High Load Detected"
+        "name": "Carico elevato rilevato"
       },
       "vpp_dispatch": {
-        "name": "VPP Dispatch",
+        "name": "Dispacciamento VPP",
         "state": {
           "off": "Standby",
-          "on": "Active"
+          "on": "Attivo"
         }
       }
     },
@@ -445,35 +445,35 @@
         "name": "Frequenza nominale"
       },
       "last_sent_mode": {
-        "name": "Last Sent Mode"
+        "name": "Ultima Modalità Inviata"
       },
       "em_current_decision": {
-        "name": "EM Decision"
+        "name": "Decisione EM"
       },
       "em_last_action": {
-        "name": "EM Last Action"
+        "name": "Ultima Azione EM"
       },
       "em_battery_energy_available": {
-        "name": "Battery Energy Available"
+        "name": "Energia Batteria Disponibile"
       },
       "em_hours_until_sunrise": {
-        "name": "Hours Until Sunrise"
+        "name": "Ore al Sorgere del Sole"
       },
       "em_hours_until_sunset": {
-        "name": "Hours Until Sunset"
+        "name": "Ore al Tramonto"
       },
       "em_p1_average": {
-        "name": "P1 Average Power"
+        "name": "Potenza Media P1"
       },
       "em_status": {
-        "name": "EM Status"
+        "name": "Stato EM"
       },
       "realtime_subscription_status": {
-        "name": "Real-Time Subscription Status",
+        "name": "Stato Abbonamento in Tempo Reale",
         "state": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "error": "Error"
+          "active": "Attivo",
+          "inactive": "Inattivo",
+          "error": "Errore"
         }
       },
       "battmp": {
@@ -483,13 +483,13 @@
         "name": "Potenza batteria (Raw)"
       },
       "totalent": {
-        "name": "Total Grid Import Energy"
+        "name": "Energia Totale Importata dalla Rete"
       },
       "totalept": {
-        "name": "Total Grid Export Energy"
+        "name": "Energia Totale Esportata alla Rete"
       },
       "q": {
-        "name": "Reactive Power"
+        "name": "Potenza Reattiva"
       }
     },
     "number": {
@@ -503,61 +503,61 @@
         "name": "Limite di potenza"
       },
       "soc_min": {
-        "name": "SOC Minimum"
+        "name": "SOC Minimo"
       },
       "soc_max": {
-        "name": "SOC Maximum"
+        "name": "SOC Massimo"
       },
       "soc_min_hysteresis_pct": {
-        "name": "SOC Min Hysteresis"
+        "name": "Isteresi SOC Min"
       },
       "soc_max_hysteresis_pct": {
-        "name": "SOC Max Hysteresis"
+        "name": "Isteresi SOC Max"
       },
       "em_high_load_threshold": {
-        "name": "High Load Threshold"
+        "name": "Soglia Carico Elevato"
       },
       "em_max_charge_power": {
-        "name": "Max Charge Power"
+        "name": "Potenza Max Carica"
       },
       "em_max_discharge_power": {
-        "name": "Max Discharge Power"
+        "name": "Potenza Max Scarica"
       },
       "em_min_solar_for_charge": {
-        "name": "Min Solar for Charge"
+        "name": "Solare Min per Carica"
       },
       "em_mode_switch_cooldown": {
-        "name": "Mode Switch Cooldown"
+        "name": "Tempo di Attesa Cambio Modalità"
       },
       "em_power_change_threshold": {
-        "name": "Power Change Threshold"
+        "name": "Soglia Variazione Potenza"
       },
       "em_power_adjust_cooldown": {
-        "name": "Power Adjust Cooldown"
+        "name": "Tempo di Attesa Regolazione Potenza"
       },
       "em_night_buffer_pct": {
-        "name": "Night Buffer"
+        "name": "Buffer Notturno"
       },
       "em_avg_night_consumption": {
-        "name": "Avg Night Consumption"
+        "name": "Consumo Notturno Medio"
       },
       "em_charge_margin": {
-        "name": "Charge Margin"
+        "name": "Margine di Carica"
       },
       "em_charge_entry_threshold": {
-        "name": "Charge Entry Threshold"
+        "name": "Soglia Ingresso Carica"
       },
       "em_charge_reentry_delay": {
-        "name": "Charge Re-entry Delay"
+        "name": "Ritardo Rientro Carica"
       },
       "em_bottomout_cooldown": {
-        "name": "Bottom-out Cooldown"
+        "name": "Tempo di Attesa Minimo"
       },
       "em_max_grid_export": {
-        "name": "Max Grid Export"
+        "name": "Esportazione Max alla Rete"
       },
       "em_p1_smoothing_period": {
-        "name": "P1 Smoothing Period"
+        "name": "Periodo di Livellamento P1"
       }
     },
     "switch": {
@@ -568,19 +568,19 @@
         "name": "Alimentazione"
       },
       "em_grid_charge_allowed": {
-        "name": "Grid Charge Allowed"
+        "name": "Carica da Rete Consentita"
       },
       "em_enabled": {
-        "name": "Energy Manager"
+        "name": "Gestore Energia"
       },
       "em_high_load_battery_assist": {
-        "name": "High Load Battery Assist"
+        "name": "Assistenza Batteria Carico Elevato"
       },
       "em_night_mode": {
-        "name": "Night Mode"
+        "name": "Modalità Notturna"
       },
       "em_export_limiting": {
-        "name": "Export Limiting"
+        "name": "Limitazione Esportazione"
       }
     },
     "button": {
@@ -618,10 +618,10 @@
         "name": "Cancella allarmi attivi"
       },
       "renew_realtime_subscription": {
-        "name": "Renew Push Subscription"
+        "name": "Rinnova Abbonamenti Push"
       },
       "purge_old_subscriptions": {
-        "name": "Purge Old Subscriptions"
+        "name": "Elimina Abbonamenti Vecchi"
       }
     }
   },

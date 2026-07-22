@@ -22,15 +22,6 @@ CONF_PUSH_RATE = "realtime_push_rate"
 CONF_PUSH_URL = "realtime_push_url"
 DEFAULT_PUSH_RATE = 10  # 10 seconds (converted to ms at SDK call site)
 
-TOKEN_ERROR_MESSAGES = (
-    "Authentication failed",
-    "User information not found",
-    "Invalid access token",
-    "Server rejected token",
-    "A0000",
-    "C000006",
-)
-
 NULL_VALUES = {"", "null", "none", "na", "--"}
 
 
@@ -65,7 +56,7 @@ DEVICE_TYPE_KEYS = {
 }
 
 
-def mask_sn(sn: str) -> str:
+def mask_sn(sn: str | None) -> str:
     """Mask a serial number/identifier securely using SHA-256 (first 8 chars) to match API library.
 
     Matches the _mask_id format used in the API library.
@@ -76,6 +67,18 @@ def mask_sn(sn: str) -> str:
         return "****"
     sn_str = str(sn)
     return hashlib.sha256(sn_str.encode("utf-8")).hexdigest()[:8]
+
+
+def mask_subscription_code(code: str | None) -> str:
+    """Mask a HYXI push subscription code securely using SHA-256 (first 8 chars).
+
+    Uses the same approach as mask_sn -- a subscription code is just as
+    much an opaque account-linked identifier and shouldn't appear in
+    cleartext in logs, even though it isn't a device serial number. The
+    "(masked)" suffix makes it obvious this isn't the literal code to copy
+    into the hyxi_cloud.cancel_subscription service or the API library.
+    """
+    return f"{mask_sn(code)} (masked)"
 
 
 def mask_url(url: str | None) -> str:

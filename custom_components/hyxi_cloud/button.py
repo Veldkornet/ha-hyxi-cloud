@@ -28,6 +28,7 @@ from .const import (
     get_raw_device_code,
     is_battery_control_enabled,
     mask_sn,
+    mask_subscription_code,
     normalize_device_type,
 )
 
@@ -411,7 +412,9 @@ def _get_protection_controller(coordinator, sn: str):
 
 
 class HyxiRenewSubscriptionButton(ButtonEntity):
-    """Button to manually renew/force HYXI Real-Time Push subscription."""
+    """Button to force-renew both HYXI push subscriptions (real-time data
+    and alarm), regardless of whether the underlying cancel call succeeds.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = "renew_realtime_subscription"
@@ -430,24 +433,39 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
         }
 
     async def async_press(self) -> None:
-        """Force renew the push subscription callback."""
-        from . import _async_setup_push_subscription, _async_teardown_push_subscription
+        """Force renew both push subscriptions (data + alarm); clears the
+        local code even if the remote cancel fails, since this is an
+        explicit user action and the code stays in known_subscription_codes
+        as a fallback either way."""
+        from . import (
+            _async_setup_alarm_subscription,
+            _async_setup_push_subscription,
+            _async_teardown_alarm_subscription,
+            _async_teardown_push_subscription,
+        )
 
-        _LOGGER.info("Manually triggered HYXI push subscription renewal")
+        _LOGGER.info("Manually triggered HYXI push subscription renewal (data + alarm)")
         try:
-            # Tear down old first
+            # Tear down old subscriptions first, forcing a local reset even
+            # if the remote cancel call fails.
             await _async_teardown_push_subscription(
-                self.hass, self.coordinator, self._entry
+                self.hass, self.coordinator, self._entry, force=True
             )
-            # Re-setup
+            await _async_teardown_alarm_subscription(
+                self.hass, self.coordinator, self._entry, force=True
+            )
+            # Re-setup both
             await _async_setup_push_subscription(
+                self.hass, self._entry, self.coordinator
+            )
+            await _async_setup_alarm_subscription(
                 self.hass, self._entry, self.coordinator
             )
 
             # Notify coordinator entities of change
             self.coordinator.async_update_listeners()
         except Exception as err:
-            _LOGGER.error("Failed to renew HYXI push subscription: %s", err)
+            _LOGGER.error("Failed to renew HYXI push subscriptions: %s", err)
             raise HomeAssistantError(f"Subscription renewal failed: {err}") from err
 
 
@@ -475,6 +493,7 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
         from . import (
             async_cancel_and_unregister_subscription,
             async_get_subscription_codes,
+            async_unregister_subscription_code,
         )
 
         _LOGGER.info("Manually triggered HYXI purge of old subscriptions")
@@ -521,21 +540,41 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
             else:
                 success_count += 1
 
+        remote_failed = 0
         if failed_codes:
             all_known_after = await async_get_subscription_codes(self.hass)
             for code, err in failed_codes:
-                # If the code was successfully unregistered (e.g. because it was already inactive/invalid)
                 if code not in all_known_after:
+                    # Already gone from the registry (e.g. removed by a concurrent path)
                     success_count += 1
-                else:
-                    _LOGGER.warning(
-                        "Failed to purge subscription code %s: %s", code, err
+                    continue
+                # Purge is an explicit user action, so remove the code from
+                # the local registry even though the remote cancel failed --
+                # HYXI has no "not found" response, so a dead code would
+                # otherwise fail here forever and never be purgeable.
+                _LOGGER.warning(
+                    "Could not cancel subscription %s remotely (%s); "
+                    "removing it from the local registry anyway as requested",
+                    mask_subscription_code(code),
+                    err,
+                )
+                try:
+                    await async_unregister_subscription_code(self.hass, code)
+                    success_count += 1
+                    remote_failed += 1
+                except Exception as storage_err:  # pylint: disable=broad-exception-caught
+                    _LOGGER.error(
+                        "Failed to remove subscription code %s from local registry: %s",
+                        mask_subscription_code(code),
+                        storage_err,
                     )
                     failure_count += 1
 
         _LOGGER.info(
-            "Purged old subscriptions complete: %d successfully purged/removed, %d failed",
+            "Purged old subscriptions complete: %d purged/removed "
+            "(%d of those only locally, remote cancel failed), %d failed",
             success_count,
+            remote_failed,
             failure_count,
         )
 

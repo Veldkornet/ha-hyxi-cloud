@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -24,8 +25,11 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     get_raw_device_code,
+    mask_sn,
     normalize_device_type,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
@@ -184,6 +188,7 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
             self._attr_device_info["via_device"] = (DOMAIN, parent_sn)
         self._update_internal_state()
 
+    @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self._update_internal_state()
@@ -194,6 +199,7 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         self._alarms = (self.coordinator.data.get(self.sn) or {}).get("alarms") or []
 
         active_states = ACTIVE_ALARM_STATES
+        old_count = self._active_alarms_count
         self._active_alarms_count = sum(
             1
             for a in self._alarms
@@ -203,6 +209,13 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
             )
             and not (a.get("endTime") or a.get("endtime"))
         )
+        if self._active_alarms_count != old_count:
+            _LOGGER.debug(
+                "Device alarm %s: active_alarms %d -> %d",
+                mask_sn(self.sn),
+                old_count,
+                self._active_alarms_count,
+            )
 
     @property
     def is_on(self) -> bool:
@@ -244,6 +257,21 @@ class HyxiVppDispatchSensor(CoordinatorEntity, BinarySensorEntity):
             "manufacturer": MANUFACTURER,
             "model": dev_data.get("model"),
         }
+        self._last_vpp_mode = self._metrics.get("vppMode")
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator, logging mode transitions."""
+        new_mode = self._metrics.get("vppMode")
+        if new_mode != self._last_vpp_mode:
+            _LOGGER.debug(
+                "VPP dispatch %s: mode %s -> %s",
+                mask_sn(self.sn),
+                self._last_vpp_mode,
+                new_mode,
+            )
+            self._last_vpp_mode = new_mode
+        super()._handle_coordinator_update()
 
     @property
     def _metrics(self) -> dict:

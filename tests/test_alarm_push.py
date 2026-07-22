@@ -118,7 +118,8 @@ async def test_setup_alarm_subscription_no_url(mock_hass, mock_entry, mock_coord
 async def test_setup_alarm_cancels_prior_orphan(
     mock_hass, mock_entry, mock_coordinator
 ):
-    """Prior orphaned subscribe_code is cancelled before new subscription."""
+    """Prior subscribe_code with no matching fingerprint (e.g. different
+    device list/URL/rate) is cancelled before a new subscription is made."""
     mock_entry.data = {"alarm_subscribe_code": "old_code_xyz"}
 
     with patch(
@@ -130,6 +131,60 @@ async def test_setup_alarm_cancels_prior_orphan(
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
 
     mock_coordinator.client.cancel_subscription.assert_awaited_with("old_code_xyz")
+
+
+@pytest.mark.asyncio
+async def test_setup_alarm_reuses_unchanged_subscription(
+    mock_hass, mock_entry, mock_coordinator
+):
+    """A persisted code whose fingerprint still matches current params is
+    reused as-is on reload/restart -- no cancel, no new subscribe call."""
+    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+
+    webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
+    fingerprint = _compute_subscription_fingerprint(webhook_url, ["SN001"], 10000)
+    mock_entry.data = {
+        "alarm_subscribe_code": "old_code_xyz",
+        "alarm_subscribe_fingerprint": fingerprint,
+    }
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        new=AsyncMock(return_value=webhook_url),
+    ):
+        await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
+
+    mock_coordinator.client.cancel_subscription.assert_not_called()
+    mock_coordinator.client.subscribe_alarm.assert_not_called()
+    assert mock_coordinator.alarm_subscribe_code == "old_code_xyz"
+    assert mock_coordinator.alarm_push_status == "active"
+
+
+@pytest.mark.asyncio
+async def test_setup_alarm_recreates_when_device_list_changed(
+    mock_hass, mock_entry, mock_coordinator
+):
+    """A fingerprint computed for a different device list is treated as
+    stale -- the old code is cancelled and a fresh subscription made."""
+    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+
+    webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
+    stale_fingerprint = _compute_subscription_fingerprint(
+        webhook_url, ["SN_OLD_DEVICE"], 10000
+    )
+    mock_entry.data = {
+        "alarm_subscribe_code": "old_code_xyz",
+        "alarm_subscribe_fingerprint": stale_fingerprint,
+    }
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        new=AsyncMock(return_value=webhook_url),
+    ):
+        await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
+
+    mock_coordinator.client.cancel_subscription.assert_awaited_with("old_code_xyz")
+    mock_coordinator.client.subscribe_alarm.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +221,71 @@ async def test_teardown_alarm_subscription_no_entry(mock_hass, mock_coordinator)
         "alarm_code_abc"
     )
     assert mock_coordinator.alarm_subscribe_code is None
+
+
+@pytest.mark.asyncio
+async def test_teardown_alarm_subscription_preserves_code_on_cancel_failure(
+    mock_hass, mock_entry, mock_coordinator
+):
+    """A failed cancel (e.g. transient/network error) must preserve the alarm
+    subscribe code on both the coordinator and the config entry."""
+    mock_coordinator.alarm_subscribe_code = "alarm_code_abc"
+    mock_coordinator.client.cancel_subscription.side_effect = RuntimeError(
+        "temporary network error"
+    )
+    mock_entry.data = {"alarm_subscribe_code": "alarm_code_abc"}
+
+    await _async_teardown_alarm_subscription(mock_hass, mock_coordinator, mock_entry)
+
+    assert mock_coordinator.alarm_subscribe_code == "alarm_code_abc"
+    assert mock_coordinator.alarm_push_status == "inactive"
+    mock_hass.config_entries.async_update_entry.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_teardown_alarm_subscription_no_remote_cancel_on_unload(
+    mock_hass, mock_entry, mock_coordinator
+):
+    """With cancel_remote=False (regular unload), the alarm subscription is
+    left alive and its persisted code untouched."""
+    mock_coordinator.alarm_subscribe_code = "alarm_code_abc"
+    mock_coordinator.alarm_webhook_id = "hyxi_cloud_entry_test_alarm"
+    mock_entry.data = {"alarm_subscribe_code": "alarm_code_abc"}
+
+    await _async_teardown_alarm_subscription(
+        mock_hass, mock_coordinator, mock_entry, cancel_remote=False
+    )
+
+    mock_coordinator.client.cancel_subscription.assert_not_called()
+    mock_hass.config_entries.async_update_entry.assert_not_called()
+    assert mock_coordinator.alarm_push_status == "inactive"
+
+
+@pytest.mark.asyncio
+async def test_teardown_alarm_subscription_force_clears_on_cancel_failure(
+    mock_hass, mock_entry, mock_coordinator
+):
+    """With force=True (the Renew Subscription button), the alarm code is
+    cleared locally even when the remote cancel fails."""
+    mock_coordinator.alarm_subscribe_code = "alarm_code_abc"
+    mock_coordinator.client.cancel_subscription.side_effect = RuntimeError(
+        "temporary network error"
+    )
+    mock_entry.data = {"alarm_subscribe_code": "alarm_code_abc"}
+
+    await _async_teardown_alarm_subscription(
+        mock_hass, mock_coordinator, mock_entry, force=True
+    )
+
+    assert mock_coordinator.alarm_subscribe_code is None
+    mock_hass.config_entries.async_update_entry.assert_called_once_with(
+        mock_entry,
+        data={
+            **mock_entry.data,
+            "alarm_subscribe_code": None,
+            "alarm_subscribe_fingerprint": None,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +435,9 @@ async def test_handle_alarm_webhook_logging_details(
         assert len(debug_log) == 1
         log_msg = debug_log[0]
 
-        # Verify webhook ID and active subscribe code are logged correctly
+        # Verify webhook ID is masked and the subscribe code is never logged
+        # in cleartext -- only its masked (hash + "(masked)") form.
         assert "Webhook ID: hyxi_cloud_***" in log_msg
-        assert "Active Subscribe Code: coord-alarm-sub-code" in log_msg
+        assert "coord-alarm-sub-code" not in log_msg
+        assert "Active Subscribe Code:" in log_msg
+        assert "(masked)" in log_msg

@@ -207,10 +207,17 @@ class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
             try:
                 self._attr_native_value = int(float(last_state.state))
             except ValueError, TypeError:
-                pass  # Ignore invalid restored state
+                _LOGGER.debug(
+                    "Could not restore %s from state %r",
+                    self._attr_unique_id,
+                    last_state.state,
+                )
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the power value."""
+        _LOGGER.debug(
+            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+        )
         self._attr_native_value = int(value)
         self.async_write_ha_state()
 
@@ -252,11 +259,18 @@ class HyxiMicroPowerLimit(CoordinatorEntity, NumberEntity, RestoreEntity):
             try:
                 self._attr_native_value = float(last_state.state)
             except ValueError, TypeError:
-                pass  # Ignore invalid restored state
+                _LOGGER.debug(
+                    "Could not restore %s from state %r",
+                    self._attr_unique_id,
+                    last_state.state,
+                )
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the power limit and send to inverter."""
         client = self.coordinator.client
+        _LOGGER.debug(
+            "Setting micro power limit to %d%% for %s", int(value), mask_sn(self._sn)
+        )
         try:
             await client.set_micro_power_limit(self._sn, int(value))
             self._attr_native_value = value
@@ -332,6 +346,9 @@ class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the protection threshold value."""
+        _LOGGER.debug(
+            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+        )
         self._attr_native_value = int(value)
         self.async_write_ha_state()
         if (
@@ -381,10 +398,16 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
             try:
                 self._attr_native_value = float(last_state.state)
             except ValueError, TypeError:
-                # Ignore invalid restored state on startup
-                pass
+                _LOGGER.debug(
+                    "Could not restore %s from state %r",
+                    self._attr_unique_id,
+                    last_state.state,
+                )
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the parameter value."""
+        _LOGGER.debug(
+            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+        )
         self._attr_native_value = value
         self.async_write_ha_state()

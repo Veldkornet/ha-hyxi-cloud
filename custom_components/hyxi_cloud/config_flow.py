@@ -136,9 +136,15 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             session,
         )
 
+        _LOGGER.debug("Validating HYXI credentials against %s", BASE_URL_DEFAULT)
         try:
-            # Attempt a token refresh to verify AK/SK
+            # Attempt a token refresh to verify AK/SK. The client returns
+            # None for network/connection failures and False for an explicit
+            # credential rejection -- report them differently so a user with
+            # valid keys and a flaky connection isn't told their keys are bad.
             success = await client._refresh_token()
+            if success is None:
+                return "cannot_connect"
             if not success:
                 return "invalid_auth"
 
@@ -152,11 +158,18 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         except (TimeoutError, ClientError) as e:
             _LOGGER.error("Connection error during validation: %s", e)
             return "cannot_connect"
+        except Exception:  # pylint: disable=broad-exception-caught
+            _LOGGER.exception("Unexpected error during HYXI credential validation")
+            return "unknown"
 
         return None
 
     async def async_step_user(self, user_input=None):
         """Handle the initial setup step."""
+        _LOGGER.debug(
+            "Config flow: entering step_user (input provided=%s)",
+            user_input is not None,
+        )
         errors = {}
 
         if user_input is not None:
@@ -185,6 +198,10 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
     async def async_step_reauth(self, entry_data):
         """Trigger reauth flow when authentication fails."""
+        _LOGGER.debug(
+            "Config flow: entering step_reauth for entry %s",
+            self.context.get("entry_id"),
+        )
         self.reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
@@ -192,6 +209,10 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
     async def async_step_reauth_confirm(self, user_input=None):
         """Handle reauth confirmation."""
+        _LOGGER.debug(
+            "Config flow: entering step_reauth_confirm (input provided=%s)",
+            user_input is not None,
+        )
         errors = {}
 
         if user_input is not None:
@@ -394,6 +415,10 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_energy_manager(self, user_input=None):
         """Configure the Energy Manager -- P1 entity, forecast, inverter SN."""
+        _LOGGER.debug(
+            "Config flow: entering step_energy_manager (input provided=%s)",
+            user_input is not None,
+        )
         if user_input is not None:
             self._save_energy_manager_input(user_input)
             return self.async_create_entry(title="", data=self._options)
