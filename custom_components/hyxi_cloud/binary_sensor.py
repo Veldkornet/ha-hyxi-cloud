@@ -32,7 +32,7 @@ from .const import (
 )
 
 if TYPE_CHECKING:
-    from .coordinator import HyxiDataUpdateCoordinator  # noqa: F401
+    from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ class HyxiConnectivitySensor(
     _attr_translation_key = "connectivity"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator, entry):
+    def __init__(self, coordinator: HyxiDataUpdateCoordinator, entry) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_connectivity"

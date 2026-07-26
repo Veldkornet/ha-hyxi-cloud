@@ -1,5 +1,7 @@
 """Base entity for HYXI Cloud."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -7,7 +9,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, MANUFACTURER
 
 if TYPE_CHECKING:
-    from .coordinator import HyxiDataUpdateCoordinator  # noqa: F401
+    from .coordinator import HyxiDataUpdateCoordinator
 
 
 class HyxiEntity(CoordinatorEntity["HyxiDataUpdateCoordinator"]):
@@ -15,7 +17,9 @@ class HyxiEntity(CoordinatorEntity["HyxiDataUpdateCoordinator"]):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+    def __init__(
+        self, coordinator: HyxiDataUpdateCoordinator, sn: str, dev_data: dict
+    ) -> None:
         """Initialize the entity."""
         super().__init__(coordinator)
         self._sn = sn

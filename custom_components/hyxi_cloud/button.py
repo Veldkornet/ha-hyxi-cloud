@@ -7,6 +7,8 @@ that have no readable state: pressing a button fires a command; there is no
 persistent state to become stale or misleading.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import TYPE_CHECKING
@@ -34,7 +36,7 @@ from .const import (
 )
 
 if TYPE_CHECKING:
-    from .coordinator import HyxiDataUpdateCoordinator  # noqa: F401
+    from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -127,7 +129,9 @@ class HyxiClearAlarmsButton(
     _attr_translation_key = "clear_alarms"
     _attr_icon = "mdi:bell-check-outline"
 
-    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+    def __init__(
+        self, coordinator: HyxiDataUpdateCoordinator, sn: str, dev_data: dict
+    ) -> None:
         """Initialize the clear alarms button."""
         super().__init__(coordinator)
         self._sn = sn

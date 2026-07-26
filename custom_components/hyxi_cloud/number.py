@@ -1,5 +1,7 @@
 """Number platform for HYXI Cloud device control power settings."""
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -27,7 +29,7 @@ from .const import (
 )
 
 if TYPE_CHECKING:
-    from .coordinator import HyxiDataUpdateCoordinator  # noqa: F401
+    from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -182,7 +184,7 @@ class HyxiPowerNumber(
 
     def __init__(
         self,
-        coordinator,
+        coordinator: HyxiDataUpdateCoordinator,
         sn: str,
         dev_data: dict,
         direction: str,
@@ -246,7 +248,9 @@ class HyxiMicroPowerLimit(
     _attr_native_value = 100.0
     _attr_icon = "mdi:speedometer"
 
-    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+    def __init__(
+        self, coordinator: HyxiDataUpdateCoordinator, sn: str, dev_data: dict
+    ) -> None:
         """Initialize the micro power limit entity."""
         super().__init__(coordinator)
         self._sn = sn
@@ -315,7 +319,7 @@ class HyxiProtectionNumber(
 
     def __init__(
         self,
-        coordinator,
+        coordinator: HyxiDataUpdateCoordinator,
         sn: str,
         dev_data: dict,
         definition: dict[str, str | int],
@@ -381,7 +385,7 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
 
     def __init__(
         self,
-        coordinator,
+        coordinator: HyxiDataUpdateCoordinator,
         sn: str,
         numdef: EMNumberDef,
     ) -> None:
