@@ -30,6 +30,14 @@ This project uses modern CI/CD to keep the code clean and secure.
    - *Note: PRs containing hardcoded secrets or insecure Python patterns will be blocked.*
 4. **Testing:** If you add a new sensor, ensure it has a `device_class`, `state_class`, and appropriate units.
 
+## 🔖 Releasing (Version Bumps)
+
+`manifest.json`'s `version` field is the only version string you ever edit by hand. Everything else derives from it automatically:
+- `const.py`'s `VERSION` reads `manifest.json` directly at import time.
+- `pyproject.toml`'s `version` is auto-corrected by the `sync-versions` pre-commit hook (`scripts/sync_versions.py`) whenever it drifts from `manifest.json`.
+
+Similarly, `pyproject.toml`'s `dependencies` list is the only runtime-dependency list you edit by hand — `manifest.json`'s `requirements` array is auto-generated from it by the same hook. Just run `pre-commit run --all-files` (or commit and let pre-commit.ci do it) after bumping either file; if it rewrites something, re-stage and commit again.
+
 ## ⚖️ License
 By contributing, you agree that your contributions will be licensed under the project's **MIT License**.
 

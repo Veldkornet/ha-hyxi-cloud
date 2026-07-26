@@ -10,10 +10,19 @@ readme = "README.md"
 authors = [
     { name = "Veldkornet" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.14.2"
 dependencies = [
     "aiohttp>=3.13.5",
+    "voluptuous",
     "hyxi-cloud-api>=1.4.2",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
+    "hypothesis>=6.157.0",
+    "pytest-homeassistant-custom-component>=0.13.346",
 ]
 
 [tool.ruff]
@@ -30,19 +39,10 @@ ignore = ["E501", "N818", "S105", "N999"]
 "tests/**/*.py" = ["S101", "S105", "S106", "N802", "E402"]
 "custom_components/hyxi_cloud/__init__.py" = ["N812"]
 
-[tool.mypy]
-python_version = "3.14"
-show_error_codes = true
-incremental = true
-ignore_missing_imports = true
-check_untyped_defs = true
-# Definitive search path and package lock
-mypy_path = "custom_components:."
-# Exclude development environments to avoid duplicate module discovery
-exclude = ["dev_env/"]
-# Namespace handling
-namespace_packages = false
-explicit_package_bases = false
+[tool.vulture]
+paths = ["custom_components"]
+min_confidence = 80
+ignore_names = ["kwargs", "entry_data"]
 
 [tool.setuptools.packages.find]
 include = ["custom_components*"]

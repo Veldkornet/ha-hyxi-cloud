@@ -1,5 +1,7 @@
 """Constants for the HYXI Cloud integration."""
 
+import json
+from pathlib import Path
 from typing import Any
 
 from homeassistant.const import Platform
@@ -12,7 +14,11 @@ BASE_URL_DEFAULT = "https://open.hyxicloud.com"
 BASE_URL = BASE_URL_DEFAULT
 
 MANUFACTURER = "HYXI Power"
-VERSION = "1.6.5"
+# manifest.json is the single source of truth for the integration version.
+_MANIFEST = json.loads(
+    (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
+)
+VERSION = _MANIFEST["version"]
 
 CONF_BACK_DISCOVERY = "back_discovery"
 

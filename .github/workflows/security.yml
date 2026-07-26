@@ -119,3 +119,15 @@ jobs:
         with:
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 60
+          # pillow==12.2.0 and pyjwt==2.12.1 are exact pins from the latest
+          # homeassistant release (test-only, via pytest-homeassistant-custom-component
+          # in the [test] extra). Never shipped to real integration users, who run
+          # inside their own already-existing HA install. Can't be bumped
+          # independently until homeassistant patches its own pins upstream.
+          allow-ghsas: >-
+            GHSA-9hw9-ch79-4vh6, GHSA-vjc4-5qp5-m44j, GHSA-pg7v-jwj7-p798,
+            GHSA-jjj6-mw9f-p565, GHSA-6r8x-57c9-28j4, GHSA-fj7v-r99m-22gq,
+            GHSA-xj96-63gp-2gmr, GHSA-4x4j-2g7c-83w6, GHSA-phj9-mv4w-65pm,
+            GHSA-45hq-cxwh-f6vc, GHSA-5x94-69rx-g8h2, GHSA-8v84-f9pq-wr9x,
+            GHSA-62p4-gmf7-7g93, GHSA-w7vc-732c-9m39, GHSA-993g-76c3-p5m4,
+            GHSA-xgmm-8j9v-c9wx, GHSA-jq35-7prp-9v3f, GHSA-fhv5-28vv-h8m8
