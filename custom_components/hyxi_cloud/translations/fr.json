@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Réauthentification HYXI Cloud",
-        "description": "Votre clé d'accès ou clé secrète n'est plus valide. Veuillez entrer vos nouveaux identifiants pour reprendre la surveillance solaire. Vous les trouverez sur la [plateforme développeur HYXIPOWER]({link}).",
+        "description": "Votre clé d'accès ou clé secrète n'est plus valide. Veuillez entrer vos nouveaux identifiants pour reprendre la surveillance solaire. Vous les trouverez sur la [plateforme développeur HYXIPOWER]({link}). Si votre compte a été déplacé vers une autre région de serveur, vous pouvez le corriger ci-dessous.",
         "data": {
           "access_key": "Clé d'accès (AK)",
-          "secret_key": "Clé secrète (SK)"
+          "secret_key": "Clé secrète (SK)",
+          "region": "Région du serveur"
         }
       }
     },

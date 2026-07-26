@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Hertoestemming vir HYXI Cloud",
-        "description": "Jou Toegangsleutel of Geheime Sleutel is nie meer geldig nie. Voer asseblief jou nuwe bewysbriewe in om sonkragmonitering te hervat. Jy kan dit vind by die [HYXIPOWER-ontwikkelaarsplatform]({link}).",
+        "description": "Jou Toegangsleutel of Geheime Sleutel is nie meer geldig nie. Voer asseblief jou nuwe bewysbriewe in om sonkragmonitering te hervat. Jy kan dit vind by die [HYXIPOWER-ontwikkelaarsplatform]({link}). As jou rekening na 'n ander streek geskuif is, kan jy dit hieronder regstel.",
         "data": {
           "access_key": "Toegangsleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)"
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Bedienerstreek"
         }
       }
     },

@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Znovu ověřit HYXI Cloud",
-        "description": "Váš přístupový klíč nebo tajný klíč již není platný. Zadejte prosím své nové údaje, abyste mohli pokračovat ve sledování solární elektrárny. Tyto údaje naleznete na [HYXIPOWER Developer Platform]({link}).",
+        "description": "Váš přístupový klíč nebo tajný klíč již není platný. Zadejte prosím své nové údaje, abyste mohli pokračovat ve sledování solární elektrárny. Tyto údaje naleznete na [HYXIPOWER Developer Platform]({link}). Pokud byl váš účet přesunut na jiný region serveru, můžete to níže opravit.",
         "data": {
           "access_key": "Přístupový klíč (AK)",
-          "secret_key": "Tajný klíč (SK)"
+          "secret_key": "Tajný klíč (SK)",
+          "region": "Oblast serveru"
         }
       }
     },

@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "HYXI Cloud opnieuw verifiëren",
-        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer uw nieuwe inloggegevens in om de zonnemonitoring te hervatten. U kunt deze vinden op het [HYXIPOWER Developer Platform]({link}).",
+        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer uw nieuwe inloggegevens in om de zonnemonitoring te hervatten. U kunt deze vinden op het [HYXIPOWER Developer Platform]({link}). Als uw account naar een andere serverregio is verplaatst, kunt u dit hieronder corrigeren.",
         "data": {
           "access_key": "Toegangssleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)"
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Serverregio"
         }
       }
     },

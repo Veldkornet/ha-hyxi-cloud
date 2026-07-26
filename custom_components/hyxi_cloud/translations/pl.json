@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Ponowne uwierzytelnianie HYXI Cloud",
-        "description": "Twój klucz dostępu lub tajny klucz jest już nieważny. Wprowadź nowe poświadczenia, aby wznowić monitorowanie instalacji solarnej. Możesz je znaleźć na [Platformie programistycznej HYXIPOWER]({link}).",
+        "description": "Twój klucz dostępu lub tajny klucz jest już nieważny. Wprowadź nowe poświadczenia, aby wznowić monitorowanie instalacji solarnej. Możesz je znaleźć na [Platformie programistycznej HYXIPOWER]({link}). Jeśli Twoje konto zostało przeniesione do innego regionu serwera, możesz to poprawić poniżej.",
         "data": {
           "access_key": "Klucz dostępu (AK)",
-          "secret_key": "Tajny klucz (SK)"
+          "secret_key": "Tajny klucz (SK)",
+          "region": "Region serwera"
         }
       }
     },

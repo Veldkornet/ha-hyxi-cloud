@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Tunnistaudu uudelleen HYXI Cloudiin",
-        "description": "Access Key -avain tai Secret Key -avain ei ole enää voimassa. Anna uudet tunnisteet jatkaaksesi aurinkosähkön seurantaa. Löydät nämä [HYXIPOWER-kehittäjäalustalta]({link}).",
+        "description": "Access Key -avain tai Secret Key -avain ei ole enää voimassa. Anna uudet tunnisteet jatkaaksesi aurinkosähkön seurantaa. Löydät nämä [HYXIPOWER-kehittäjäalustalta]({link}). Jos tilisi on siirretty toiselle palvelinalueelle, voit korjata sen alla.",
         "data": {
           "access_key": "Käyttöavain (AK)",
-          "secret_key": "Salainen avain (SK)"
+          "secret_key": "Salainen avain (SK)",
+          "region": "Palvelinalue"
         }
       }
     },

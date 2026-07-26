@@ -38,6 +38,21 @@ def resolve_base_url(region: str | None) -> str:
     return REGION_BASE_URLS.get(region or DEFAULT_REGION, BASE_URL_DEFAULT)
 
 
+def region_for_base_url(base_url: str | None) -> str:
+    """Reverse-lookup a region code from a stored base URL.
+
+    Used to preselect the reauth region dropdown for entries created
+    before region selection existed (which only ever stored "base_url",
+    never a "region" key).
+    """
+    if not base_url:
+        return DEFAULT_REGION
+    for region, url in REGION_BASE_URLS.items():
+        if url == base_url:
+            return region
+    return DEFAULT_REGION
+
+
 def default_region_for_country(country: str | None) -> str:
     """Suggest a HYXI server region from a Home Assistant country code.
 

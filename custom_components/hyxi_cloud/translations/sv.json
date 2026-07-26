@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Återautentisera HYXI Cloud",
-        "description": "Din åtkomstnyckel eller hemliga nyckel är inte längre giltig. Ange dina nya uppgifter för att återuppta solcellsövervakningen. Du hittar dessa på [HYXIPOWER Developer Platform]({link}).",
+        "description": "Din åtkomstnyckel eller hemliga nyckel är inte längre giltig. Ange dina nya uppgifter för att återuppta solcellsövervakningen. Du hittar dessa på [HYXIPOWER Developer Platform]({link}). Om ditt konto har flyttats till en annan serverregion kan du rätta det nedan.",
         "data": {
           "access_key": "Åtkomstnyckel (AK)",
-          "secret_key": "Hemlig nyckel (SK)"
+          "secret_key": "Hemlig nyckel (SK)",
+          "region": "Serverregion"
         }
       }
     },

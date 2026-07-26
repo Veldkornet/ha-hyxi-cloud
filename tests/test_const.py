@@ -12,6 +12,7 @@ from custom_components.hyxi_cloud.const import (
     mask_sn,
     mask_url,
     normalize_device_type,
+    region_for_base_url,
     resolve_base_url,
 )
 
@@ -322,6 +323,18 @@ def test_resolve_base_url():
     # Unknown/missing region falls back to the EU default rather than erroring
     assert resolve_base_url(None) == BASE_URL_DEFAULT
     assert resolve_base_url("not_a_region") == BASE_URL_DEFAULT
+
+
+def test_region_for_base_url():
+    """Verify the reverse lookup used to preselect the reauth region dropdown."""
+    assert region_for_base_url(BASE_URL_DEFAULT) == "eu"
+    assert region_for_base_url("https://open-or.hyxicloud.com") == "na"
+    assert region_for_base_url("https://open-cn.hyxicloud.com") == "cn"
+
+    # Entries with no stored base_url (or an unrecognized one) fall back to
+    # the EU default rather than erroring.
+    assert region_for_base_url(None) == "eu"
+    assert region_for_base_url("https://not-a-real-hyxi-server.example") == "eu"
 
 
 def test_default_region_for_country():

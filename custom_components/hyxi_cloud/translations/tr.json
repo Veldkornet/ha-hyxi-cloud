@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "HYXI Cloud Kimliğini Yeniden Doğrula",
-        "description": "Erişim Anahtarınız veya Gizli Anahtarınız artık geçerli değil. Güneş enerjisi izlemeye devam etmek için lütfen yeni kimlik bilgilerinizi girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) adresinde bulabilirsiniz.",
+        "description": "Erişim Anahtarınız veya Gizli Anahtarınız artık geçerli değil. Güneş enerjisi izlemeye devam etmek için lütfen yeni kimlik bilgilerinizi girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) adresinde bulabilirsiniz. Hesabınız farklı bir sunucu bölgesine taşındıysa, aşağıdan düzeltebilirsiniz.",
         "data": {
           "access_key": "Erişim Anahtarı (AK)",
-          "secret_key": "Gizli Anahtar (SK)"
+          "secret_key": "Gizli Anahtar (SK)",
+          "region": "Sunucu Bölgesi"
         }
       }
     },

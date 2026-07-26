@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Gjenautentiser HYXI Cloud",
-        "description": "Tilgangsnøkkelen eller den hemmelige nøkkelen din er ikke lenger gyldig. Vennligst skriv inn din nye legitimasjon for å gjenoppta solovervåking. Du finner disse på [HYXIPOWER Developer Platform]({link}).",
+        "description": "Tilgangsnøkkelen eller den hemmelige nøkkelen din er ikke lenger gyldig. Vennligst skriv inn din nye legitimasjon for å gjenoppta solovervåking. Du finner disse på [HYXIPOWER Developer Platform]({link}). Hvis kontoen din er flyttet til en annen serverregion, kan du rette det nedenfor.",
         "data": {
           "access_key": "Tilgangsnøkkel (AK)",
-          "secret_key": "Hemmelig nøkkel (SK)"
+          "secret_key": "Hemmelig nøkkel (SK)",
+          "region": "Serverregion"
         }
       }
     },

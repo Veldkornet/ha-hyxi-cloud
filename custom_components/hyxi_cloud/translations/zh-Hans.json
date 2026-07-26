@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "重新认证 HYXI Cloud",
-        "description": "您的访问密钥或加密密钥已过期。请输入新的凭据以恢复光伏监控。您可以在 [HYXIPOWER 开发者平台]({link}) 找到这些信息。",
+        "description": "您的访问密钥或加密密钥已过期。请输入新的凭据以恢复光伏监控。您可以在 [HYXIPOWER 开发者平台]({link}) 找到这些信息。 如果您的账户已迁移到其他服务器区域,您可以在下方进行更正。",
         "data": {
           "access_key": "访问密钥 (AK)",
-          "secret_key": "加密密钥 (SK)"
+          "secret_key": "加密密钥 (SK)",
+          "region": "服务器区域"
         }
       }
     },

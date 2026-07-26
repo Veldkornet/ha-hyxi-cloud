@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "HYXI Cloud újrahitelesítése",
-        "description": "A hozzáférési kulcsa vagy a titkos kulcsa már nem érvényes. Kérjük, adja meg az új hitelesítő adatait a napelemes figyelés folytatásához. Ezeket a [HYXIPOWER fejlesztői platformon]({link}) találja meg.",
+        "description": "A hozzáférési kulcsa vagy a titkos kulcsa már nem érvényes. Kérjük, adja meg az új hitelesítő adatait a napelemes figyelés folytatásához. Ezeket a [HYXIPOWER fejlesztői platformon]({link}) találja meg. Ha a fiókját másik szerverrégióba helyezték át, itt lent kijavíthatja.",
         "data": {
           "access_key": "Hozzáférési kulcs (AK)",
-          "secret_key": "Titkos kulcs (SK)"
+          "secret_key": "Titkos kulcs (SK)",
+          "region": "Szerver régiója"
         }
       }
     },

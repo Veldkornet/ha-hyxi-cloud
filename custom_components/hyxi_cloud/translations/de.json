@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "HYXI Cloud erneut authentifizieren",
-        "description": "Ihr Access Key oder Secret Key ist nicht mehr gültig. Bitte geben Sie Ihre neuen Anmeldedaten ein, um die Solarüberwachung fortzusetzen. Sie finden diese auf der [HYXIPOWER Developer Platform]({link}).",
+        "description": "Ihr Access Key oder Secret Key ist nicht mehr gültig. Bitte geben Sie Ihre neuen Anmeldedaten ein, um die Solarüberwachung fortzusetzen. Sie finden diese auf der [HYXIPOWER Developer Platform]({link}). Wenn Ihr Konto in eine andere Serverregion verschoben wurde, können Sie dies unten korrigieren.",
         "data": {
           "access_key": "Zugriffsschlüssel (AK)",
-          "secret_key": "Geheimer Schlüssel (SK)"
+          "secret_key": "Geheimer Schlüssel (SK)",
+          "region": "Serverregion"
         }
       }
     },

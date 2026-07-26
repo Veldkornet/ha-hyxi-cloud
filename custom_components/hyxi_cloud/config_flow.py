@@ -36,6 +36,7 @@ from .const import (
     default_region_for_country,
     get_raw_device_code,
     normalize_device_type,
+    region_for_base_url,
     resolve_base_url,
 )
 
@@ -70,18 +71,6 @@ def _build_user_schema(default_region: str = DEFAULT_REGION) -> vol.Schema:
                     options=REGION_OPTIONS,
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
-            ),
-        }
-    )
-
-
-def _build_reauth_schema() -> vol.Schema:
-    """Build the reauth schema -- credentials only, region is fixed to the existing entry."""
-    return vol.Schema(
-        {
-            vol.Required(CONF_ACCESS_KEY): str,
-            vol.Required(CONF_SECRET_KEY): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
             ),
         }
     )
@@ -249,18 +238,32 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(self, user_input=None):
-        """Handle reauth confirmation."""
+        """Handle reauth confirmation.
+
+        Also lets the user correct the server region -- useful if it was
+        picked wrong at install time, or the account was migrated to a
+        different HYXI regional server. Defaults to the entry's current
+        region so most users can just re-enter credentials unchanged.
+        """
         _LOGGER.debug(
             "Config flow: entering step_reauth_confirm (input provided=%s)",
             user_input is not None,
         )
         errors = {}
+        entry = self.reauth_entry
+        default_region = (
+            (
+                entry.data.get(CONF_REGION)
+                or region_for_base_url(entry.data.get("base_url"))
+            )
+            if entry is not None
+            else DEFAULT_REGION
+        )
 
         if user_input is not None:
-            entry = self.reauth_entry
             if entry is None:
                 raise ValueError("reauth_entry is not set")
-            base_url = entry.data.get("base_url") or BASE_URL_DEFAULT
+            base_url = resolve_base_url(user_input.get(CONF_REGION))
             error = await self._validate_input(user_input, base_url)
             if not error:
                 return self.async_update_reload_and_abort(
@@ -270,7 +273,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=_build_reauth_schema(),
+            data_schema=_build_user_schema(default_region),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
         )

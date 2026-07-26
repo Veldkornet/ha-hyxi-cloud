@@ -12,10 +12,11 @@
       },
       "reauth_confirm": {
         "title": "Gen-godkend HYXI Cloud",
-        "description": "Din adgangsnøgle eller hemmelige nøgle er ikke længere gyldig. Indtast venligst dine nye legitimationsoplysninger for at genoptage solcelle-overvågning. Du kan finde disse på [HYXIPOWER Developer Platform]({link}).",
+        "description": "Din adgangsnøgle eller hemmelige nøgle er ikke længere gyldig. Indtast venligst dine nye legitimationsoplysninger for at genoptage solcelle-overvågning. Du kan finde disse på [HYXIPOWER Developer Platform]({link}). Hvis din konto er blevet flyttet til en anden serverregion, kan du rette det nedenfor.",
         "data": {
           "access_key": "Adgangsnøgle (AK)",
-          "secret_key": "Hemmelig nøgle (SK)"
+          "secret_key": "Hemmelig nøgle (SK)",
+          "region": "Serverregion"
         }
       }
     },
