@@ -988,7 +988,7 @@ wheels = [
 
 [[package]]
 name = "ha-hyxi-cloud"
-version = "1.6.5"
+version = "1.6.6"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -1009,7 +1009,7 @@ test = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.5" },
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.157.0" },
-    { name = "hyxi-cloud-api", specifier = ">=1.4.2" },
+    { name = "hyxi-cloud-api", specifier = ">=1.4.3" },
     { name = "mypy", marker = "extra == 'test'", specifier = ">=2.3.0" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.4.0" },
@@ -1225,14 +1225,14 @@ wheels = [
 
 [[package]]
 name = "hyxi-cloud-api"
-version = "1.4.2"
+version = "1.4.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/6c/50bb634e5a34f5f5f44e80bb607fc9a9d9e4aabbba1eb95d8fbabd875b8f/hyxi_cloud_api-1.4.2.tar.gz", hash = "sha256:beae28d8b03c6408bc8918aa99f5f4ba57428cea711c6f09c9d7908294f58a0d", size = 72631, upload-time = "2026-07-18T17:47:10.036Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/85/d4/860cf304ce25404c43edb47785328b38abc1413d20895b61b41f25de160d/hyxi_cloud_api-1.4.3.tar.gz", hash = "sha256:5d4347dde5927d94cee93cdd84d28bdc4e50af5736b5e699e23afaa1d761d5ab", size = 73814, upload-time = "2026-07-26T12:28:10.403Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/4b/da88c8e96e84f4b6c1082c6f3cad53b161ea3e20cd1bb9713a8229e13330/hyxi_cloud_api-1.4.2-py3-none-any.whl", hash = "sha256:fa9d3fb6c094be3c19c9924a88dc9db2ccb2899b50a8e1802a2672a631c636b7", size = 27040, upload-time = "2026-07-18T17:47:08.983Z" },
+    { url = "https://files.pythonhosted.org/packages/06/62/e512fbfcf8d9c3e4d27ceb2d351febf8fe3513ef058d33f1c674fdf7bc5e/hyxi_cloud_api-1.4.3-py3-none-any.whl", hash = "sha256:dd069c253c3a7db8e55e60bee68d0b87eab84701b9a1ca043f588d5f6fe806dd", size = 27738, upload-time = "2026-07-26T12:28:09.079Z" },
 ]
 
 [[package]]
