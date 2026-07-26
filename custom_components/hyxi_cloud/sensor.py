@@ -1678,6 +1678,7 @@ class HyxiSubscriptionStatusSensor(
                 "subscribe_code": getattr(coord, "alarm_subscribe_code", None),
                 "callback_url": getattr(coord, "alarm_push_url", None),
                 "last_push_received": alarm_last.isoformat() if alarm_last else None,
+                "error": getattr(coord, "alarm_push_error", None),
             },
             "known_subscription_codes": getattr(coord, "known_subscription_codes", []),
         }

@@ -109,6 +109,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.alarm_webhook_id: str | None = None
         self.alarm_push_status: str = "inactive"
         self.alarm_push_url: str | None = None
+        self.alarm_push_error: str | None = None
         self.alarm_last_push_received: datetime | None = None
 
         self.device_store: Store[dict[str, Any]] = Store(

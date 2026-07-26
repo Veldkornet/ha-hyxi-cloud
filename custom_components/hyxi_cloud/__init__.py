@@ -700,7 +700,7 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
         if res.get("success"):
             coordinator.alarm_subscribe_code = res["data"]["subscribeCode"]
             coordinator.alarm_push_status = "active"
-            coordinator.alarm_push_url = webhook_url
+            coordinator.alarm_push_error = None
             fingerprint = _compute_subscription_fingerprint(
                 webhook_url, device_sns, push_rate_ms
             )
@@ -723,10 +723,12 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
         else:
             coordinator.alarm_push_status = "error"
             msg = res.get("msg", "Unknown error")
+            coordinator.alarm_push_error = msg
             _log_push_subscription_failure("HYXI Alarm Push", msg)
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.alarm_push_status = "error"
         err_msg = str(err)
+        coordinator.alarm_push_error = err_msg
         _log_push_subscription_failure("HYXI Alarm Push", err_msg)
 
 
@@ -1053,9 +1055,14 @@ async def _async_setup_alarm_subscription(
             "alarm push disabled (real-time data push may still be active)."
         )
         coordinator.alarm_push_status = "error"
+        coordinator.alarm_push_error = (
+            "Could not resolve external URL — set a Custom Callback URL in options"
+        )
         # Do not touch any existing subscription here -- an unresolved URL
         # doesn't mean the persisted subscription is bad.
         return
+
+    coordinator.alarm_push_url = webhook_url
 
     device_sns = [sn for sn in coordinator.data if sn]
     if not device_sns:
@@ -1073,7 +1080,7 @@ async def _async_setup_alarm_subscription(
     if reused_code:
         coordinator.alarm_subscribe_code = reused_code
         coordinator.alarm_push_status = "active"
-        coordinator.alarm_push_url = webhook_url
+        coordinator.alarm_push_error = None
         _LOGGER.debug(
             "HYXI Alarm Push: Reusing existing subscription (code: %s)",
             mask_subscription_code(reused_code),
@@ -1144,6 +1151,7 @@ async def _async_teardown_alarm_subscription(
                 )
 
     coordinator.alarm_push_status = "inactive"
+    coordinator.alarm_push_url = None
 
 
 async def _async_handle_alarm_webhook(
