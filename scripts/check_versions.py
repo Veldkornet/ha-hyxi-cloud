@@ -67,26 +67,6 @@ def main() -> None:
     )
     const_version = const_version_match.group(1) if const_version_match else None
 
-    # 4. Read requirements.txt
-    req_path = root / "requirements.txt"
-    req_api_version = None
-    if req_path.exists():
-        with req_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip().startswith("hyxi-cloud-api"):
-                    req_api_version = line.strip()
-                    break
-
-    # 5. Read requirements_test.txt
-    req_test_path = root / "requirements_test.txt"
-    req_test_api_version = None
-    if req_test_path.exists():
-        with req_test_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip().startswith("hyxi-cloud-api"):
-                    req_test_api_version = line.strip()
-                    break
-
     errors = []
 
     # Check integration versions
@@ -104,8 +84,6 @@ def main() -> None:
     api_versions = {
         "manifest.json": manifest_api_version,
         "pyproject.toml": pyproject_api_version,
-        "requirements.txt": req_api_version,
-        "requirements_test.txt": req_test_api_version,
     }
 
     # Clean version format comparison

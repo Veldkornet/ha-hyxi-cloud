@@ -43,6 +43,10 @@ repos:
     rev: v4.0.6
     hooks:
       - id: pylint
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.16
+    hooks:
+      - id: vulture
   - repo: local
     hooks:
       - id: check-exception-parentheses

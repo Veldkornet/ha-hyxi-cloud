@@ -10,8 +10,8 @@ updates:
         patterns:
           - "github/codeql-action*"
 
-  # 2. Keep Python dependencies up to date
-  - package-ecosystem: "pip"
+  # 2. Keep Python dependencies (pyproject.toml + uv.lock) up to date
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
