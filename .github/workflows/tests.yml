@@ -28,6 +28,7 @@ jobs:
             objects.githubusercontent.com:443
             open.hyxicloud.com:443
             pypi.org:443
+            raw.githubusercontent.com:443
             rekor.sigstore.dev:443
             tuf-repo-cdn.sigstore.dev:443
             github-releases.s3.amazonaws.com:443
