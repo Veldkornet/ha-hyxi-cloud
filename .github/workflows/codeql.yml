@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: '28 16 * * 1' # Runs once a week to catch new vulnerabilities in dependencies
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

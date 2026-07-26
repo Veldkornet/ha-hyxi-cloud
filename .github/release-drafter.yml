@@ -4,6 +4,8 @@ version-template: '$MAJOR.$MINOR.$PATCH'
 
 change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
 sort-direction: ascending
+exclude-contributors:
+  - "dependabot[bot]"
 
 categories:
   - title: "📚 Documentation"
@@ -18,9 +20,13 @@ categories:
   - title: "🐛 Bug Fixes"
     labels:
       - "bugfix"
+      - "bug" # defensive: catches accidental use of the issue-template label on a PR
   - title: "🎨 Style"
     labels:
       - "style"
+  - title: "🌐 Translations"
+    labels:
+      - "translations"
   - title: "📦 Refactor"
     labels:
       - "refactor"
@@ -90,6 +96,7 @@ version-resolver:
   patch:
     labels:
       - "bugfix"
+      - "bug"
       - "chore"
       - "dependencies"
   default: patch

@@ -3,12 +3,14 @@
   - head-branch: ["^feature/", "^feat/"]
   - title: ["^feat:", "^feature:", "🚀"]
 
-# 🐛 Bug Fixes (Title or Branch matching)
+# 💥 Breaking Changes (conventional-commit "!" marker, e.g. "feat!:" or "fix(api)!:")
+"breaking-change":
+  - title: ["^\\w+(\\(.+\\))?!:"]
+
+# 🐛 Bug Fixes (Title or Branch matching only — file paths can't signal fix-vs-feature intent)
 "bugfix":
   - head-branch: ["^fix/", "^bug/"]
   - title: ["^fix:", "^bug:", "🐛"]
-  - changed-files:
-      - any-glob-to-any-file: "custom_components/hyxi_cloud/*.py"
 
 # 🎨 Style
 "style":
@@ -16,6 +18,12 @@
       - any-glob-to-any-file:
           - "custom_components/hyxi_cloud/static/**/*"
           - "custom_components/hyxi_cloud/brand/**/*"
+
+# 🌐 Translations
+"translations":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/strings.json"
           - "custom_components/hyxi_cloud/translations/**/*"
 
 # 🧪 Tests
@@ -41,7 +49,7 @@
   - changed-files:
       - any-glob-to-any-file:
           - "custom_components/hyxi_cloud/manifest.json"
-          - "custom_components/hyxi_cloud/hacs.json"
+          - "hacs.json" # repo-root HACS manifest — no per-integration copy exists
           - ".gitignore"
 
 # Label for GitHub Actions, Scripts, and Repo Infrastructure
@@ -50,16 +58,68 @@
       - any-glob-to-any-file:
           - ".github/**/*"  # 🚀 Double asterisks catch all subfolders/files
           - "dev_env/**/*"
+          - "scripts/**/*"
+          - "benchmarks/**/*"
+          - ".agent/**/*"   # AI agent workflow instructions
+          - ".agents/**/*"
+          - ".jules/**/*"
           - ".vscode/tasks.json"
           - ".pre-commit-config.yaml"
+          - ".coderabbit.yaml"
+          - ".sourcery.yaml"
+          - ".codespellrc"
+          - ".python-version"
+          - "mypy.ini"
+          - "fix_yaml.py"
 
 # 📚 Documentation
 "documentation":
   - changed-files:
       - any-glob-to-any-file:
-          - "*.md"                                      # Root level markdown files
-          - "LICENSE"                                   # Legal updates
-          - "custom_components/hyxi_cloud/strings.json" # Translation updates
-          - "custom_components/hyxi_cloud/translations/*" # Translation updates
-          - "docs/**/*"                                 # Anything inside a docs folder
-          - ".github/ISSUE_TEMPLATE/*.md"               # Issue template updates
+          - "*.md"                        # Root level markdown files
+          - "LICENSE"                     # Legal updates
+          - "docs/**/*"                   # Anything inside a docs folder
+          - ".github/ISSUE_TEMPLATE/*.md" # Issue template updates
+
+# --- HA area labels (triage/filtering only — not release-drafter categories) ---
+
+# 🧩 Core (entry point, shared constants/base entity, service definitions)
+"core":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/__init__.py"
+          - "custom_components/hyxi_cloud/const.py"
+          - "custom_components/hyxi_cloud/entity.py"
+          - "custom_components/hyxi_cloud/services.yaml"
+
+# 🧭 Config Flow (setup & options UI)
+"config-flow":
+  - changed-files:
+      - any-glob-to-any-file: "custom_components/hyxi_cloud/config_flow.py"
+
+# 📡 Coordinator & Cloud Engine (data fetch/update logic)
+"coordinator":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/coordinator.py"
+          - "custom_components/hyxi_cloud/engine.py"
+
+# 📊 Sensors (readonly entities)
+"sensor":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/sensor.py"
+          - "custom_components/hyxi_cloud/binary_sensor.py"
+
+# 🎛️ Controls (writable entities)
+"controls":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/switch.py"
+          - "custom_components/hyxi_cloud/button.py"
+          - "custom_components/hyxi_cloud/number.py"
+
+# 🛡️ Protection (safety/limit logic)
+"protection":
+  - changed-files:
+      - any-glob-to-any-file: "custom_components/hyxi_cloud/protection.py"
