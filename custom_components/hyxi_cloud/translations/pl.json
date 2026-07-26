@@ -6,15 +6,17 @@
         "description": "Wprowadź swoje **poświadczenia API programisty (AK/SK)**. Możesz je wygenerować na [Platformie programistycznej HYXIPOWER]({link}).\n\n**Uwaga:** Wymagane jest oddzielne konto programisty. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw **Udostępnić swój obiekt (Plant)** z aplikacji na e-mail programisty.",
         "data": {
           "access_key": "Klucz dostępu (AK)",
-          "secret_key": "Tajny klucz (SK)"
+          "secret_key": "Tajny klucz (SK)",
+          "region": "Region serwera"
         }
       },
       "reauth_confirm": {
         "title": "Ponowne uwierzytelnianie HYXI Cloud",
-        "description": "Twój klucz dostępu lub tajny klucz jest już nieważny. Wprowadź nowe poświadczenia, aby wznowić monitorowanie instalacji solarnej. Możesz je znaleźć na [Platformie programistycznej HYXIPOWER]({link}).",
+        "description": "Twój klucz dostępu lub tajny klucz jest już nieważny. Wprowadź nowe poświadczenia, aby wznowić monitorowanie instalacji solarnej. Możesz je znaleźć na [Platformie programistycznej HYXIPOWER]({link}). Jeśli Twoje konto zostało przeniesione do innego regionu serwera, możesz to poprawić poniżej.",
         "data": {
           "access_key": "Klucz dostępu (AK)",
-          "secret_key": "Tajny klucz (SK)"
+          "secret_key": "Tajny klucz (SK)",
+          "region": "Region serwera"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Moc bierna"
+      },
+      "micro_ac_power_total": {
+        "name": "Całkowita moc AC mikrofalowników"
+      },
+      "micro_daily_yield_total": {
+        "name": "Całkowity dzienny uzysk mikrofalowników"
       }
     },
     "number": {

@@ -6,15 +6,17 @@
         "description": "Indtast dine **Developer API-legitimationsoplysninger (AK/SK)**. Du kan generere disse på [HYXIPOWER Developer Platform]({link}).\n\n**Bemærk:** Dette kræver en separat udviklerkonto. Hvis din udvikler-e-mail er forskellig fra din app-e-post, skal du først **Dele dit anlæg** fra appen til udvikler-e-mailen.",
         "data": {
           "access_key": "Adgangsnøgle (AK)",
-          "secret_key": "Hemmelig nøgle (SK)"
+          "secret_key": "Hemmelig nøgle (SK)",
+          "region": "Serverregion"
         }
       },
       "reauth_confirm": {
         "title": "Gen-godkend HYXI Cloud",
-        "description": "Din adgangsnøgle eller hemmelige nøgle er ikke længere gyldig. Indtast venligst dine nye legitimationsoplysninger for at genoptage solcelle-overvågning. Du kan finde disse på [HYXIPOWER Developer Platform]({link}).",
+        "description": "Din adgangsnøgle eller hemmelige nøgle er ikke længere gyldig. Indtast venligst dine nye legitimationsoplysninger for at genoptage solcelle-overvågning. Du kan finde disse på [HYXIPOWER Developer Platform]({link}). Hvis din konto er blevet flyttet til en anden serverregion, kan du rette det nedenfor.",
         "data": {
           "access_key": "Adgangsnøgle (AK)",
-          "secret_key": "Hemmelig nøgle (SK)"
+          "secret_key": "Hemmelig nøgle (SK)",
+          "region": "Serverregion"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Reaktiv Effekt"
+      },
+      "micro_ac_power_total": {
+        "name": "Samlet AC-effekt for mikroinvertere"
+      },
+      "micro_daily_yield_total": {
+        "name": "Samlet daglig ydelse for mikroinvertere"
       }
     },
     "number": {

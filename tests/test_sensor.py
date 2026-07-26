@@ -16,6 +16,9 @@ class FakeBase:
 
 
 class FakeCoordinatorEntity(FakeBase):
+    # Allow CoordinatorEntity[HyxiDataUpdateCoordinator] subscripting in class bases
+    __class_getitem__ = classmethod(lambda cls, item: cls)
+
     def __init__(self, coordinator, **kwargs):
         self.coordinator = coordinator
         self._attr_extra_state_attributes = {}
@@ -202,6 +205,64 @@ async def test_async_setup_entry(mock_coordinator, mock_entry):
     # Check that device sensors are added
     device_sensors = [e for e in entities if isinstance(e, sensor_mod.HyxiSensor)]
     assert len(device_sensors) > 0
+
+    # No microinverters in this plant -- aggregate sensors must not be created
+    micro_sum_sensors = [
+        e for e in entities if isinstance(e, sensor_mod.HyxiMicroinverterSumSensor)
+    ]
+    assert len(micro_sum_sensors) == 0
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_adds_microinverter_summary(mock_entry):
+    """When the plant has microinverters, the two aggregate summary sensors
+    (total AC power, total daily yield) must be created alongside the
+    per-device sensors."""
+    coord = MagicMock()
+    coord.on_unload = MagicMock()
+    coord.data = {
+        "SN_MICRO_1": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "18.0", "eToday": "4.51"},
+        },
+        "SN_MICRO_2": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "22.5", "eToday": "3.29"},
+        },
+    }
+    coord.hyxi_metadata = {"last_success": "2026-03-11T12:00:00Z"}
+    coord.push_status = "active"
+    coord.alarm_push_status = "active"
+    coord.subscribe_code = "SUB123"
+    coord.push_url = "http://test"
+    coord.last_push_received = datetime(2026, 3, 11, 11, 55, 0, tzinfo=UTC)
+    coord.push_error = None
+    coord.entry = MagicMock()
+    coord.entry.options = {"push_rate": 60}
+
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry.entry_id: coord}}
+    async_add_entities = MagicMock()
+
+    with unittest.mock.patch(
+        "custom_components.hyxi_cloud.sensor.is_battery_control_enabled",
+        return_value=False,
+    ):
+        await sensor_mod.async_setup_entry(hass, mock_entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    micro_sum_sensors = {
+        e.entity_description.key: e
+        for e in entities
+        if isinstance(e, sensor_mod.HyxiMicroinverterSumSensor)
+    }
+
+    assert set(micro_sum_sensors) == {
+        "micro_ac_power_total",
+        "micro_daily_yield_total",
+    }
+    assert micro_sum_sensors["micro_ac_power_total"].native_value == 40.5
+    assert micro_sum_sensors["micro_daily_yield_total"].native_value == 7.8
 
 
 def test_process_numeric_value_normal():

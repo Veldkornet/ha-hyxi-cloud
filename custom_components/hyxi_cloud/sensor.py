@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from homeassistant.components.sensor import (
     EntityCategory,
@@ -1092,6 +1092,45 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
     entities.append(HyxiSubscriptionStatusSensor(coordinator, entry))
 
+    # 2b. Microinverter Aggregate Sensors
+    has_micro_inverter = any(
+        normalize_device_type(get_raw_device_code(dev_data)) == "micro_inverter"
+        for dev_data in coordinator.data.values()
+    )
+    if has_micro_inverter:
+        entities.append(
+            HyxiMicroinverterSumSensor(
+                coordinator,
+                entry,
+                metric_key="acP",
+                description=SensorEntityDescription(
+                    key="micro_ac_power_total",
+                    translation_key="micro_ac_power_total",
+                    native_unit_of_measurement="W",
+                    device_class=SensorDeviceClass.POWER,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    icon="mdi:solar-power",
+                    suggested_display_precision=0,
+                ),
+            )
+        )
+        entities.append(
+            HyxiMicroinverterSumSensor(
+                coordinator,
+                entry,
+                metric_key="eToday",
+                description=SensorEntityDescription(
+                    key="micro_daily_yield_total",
+                    translation_key="micro_daily_yield_total",
+                    native_unit_of_measurement="kWh",
+                    device_class=SensorDeviceClass.ENERGY,
+                    state_class=SensorStateClass.TOTAL_INCREASING,
+                    icon="mdi:solar-power-variant",
+                    suggested_display_precision=2,
+                ),
+            )
+        )
+
     # 3. Battery protection telemetry
     if is_battery_control_enabled(entry, coordinator):
         for sn, dev_data in coordinator.data.items():
@@ -1183,15 +1222,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
         async_add_entities(entities)
 
 
-class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
+class HyxiBaseSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity, RestoreEntity
+):
     """Base class for HYXI sensors with shared logic."""
 
     def __init__(self, coordinator):
         """Initialize the base sensor."""
         super().__init__(coordinator)
-        self._last_valid_value = None
-        self._last_valid_time = None
-        self._last_logged_glitch = None
+        self._last_valid_value: float | None = None
+        self._last_valid_time: datetime | None = None
+        self._last_logged_glitch: float | None = None
 
     def _update_native_value(self):
         """Update the cached native value. Should be overridden by subclasses."""
@@ -1253,7 +1294,7 @@ class HyxiBaseSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
 
         # Allow threshold scaling based on time elapsed since the last update
         time_elapsed_hours = 168.0  # Default to 1 week if last update time is unknown
-        if getattr(self, "_last_valid_time", None) is not None:
+        if self._last_valid_time is not None:
             now = dt_util.utcnow()
             time_elapsed_hours = max(
                 0.0, (now - self._last_valid_time).total_seconds() / 3600.0
@@ -1408,8 +1449,11 @@ class HyxiSensor(HyxiBaseSensor):
     @property
     def native_value(self):
         """Return the native value of the sensor."""
-        # Use our safe parser to ensure we handle NA/null/-- effectively
-        val = super().native_value
+        # Use our safe parser to ensure we handle NA/null/-- effectively.
+        # genP/acP/gridP are always numeric power metrics, so the arithmetic
+        # below is safe -- cast narrows super().native_value's broad StateType
+        # for mypy, which can't know that from the base property alone.
+        val = cast("float | None", super().native_value)
 
         # Ensure operands are not None to avoid Mypy operator errors
         if self.entity_description.key == "genP" and val is not None:
@@ -1529,7 +1573,9 @@ class HyxiSensor(HyxiBaseSensor):
             self._attr_native_value = parsed_val
 
 
-class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
+class HyxiLastUpdateSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity
+):
     """Diagnostic sensor for the Integration health."""
 
     _attr_has_entity_name = True
@@ -1559,18 +1605,20 @@ class HyxiLastUpdateSensor(CoordinatorEntity, SensorEntity):
         super()._handle_coordinator_update()
 
 
-class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
+class HyxiSubscriptionStatusSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity
+):
     """Diagnostic sensor for real-time push subscription status (data + alarm)."""
 
     _attr_has_entity_name = True
     _attr_translation_key = "realtime_subscription_status"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_options: ClassVar[list[str]] = ["active", "inactive", "error", "partial"]
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
         self._entry = entry
+        self._attr_options = ["active", "inactive", "error", "partial"]
         self._attr_unique_id = f"{entry.entry_id}_realtime_subscription_status"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
@@ -1630,6 +1678,7 @@ class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
                 "subscribe_code": getattr(coord, "alarm_subscribe_code", None),
                 "callback_url": getattr(coord, "alarm_push_url", None),
                 "last_push_received": alarm_last.isoformat() if alarm_last else None,
+                "error": getattr(coord, "alarm_push_error", None),
             },
             "known_subscription_codes": getattr(coord, "known_subscription_codes", []),
         }
@@ -1641,7 +1690,60 @@ class HyxiSubscriptionStatusSensor(CoordinatorEntity, SensorEntity):
         super()._handle_coordinator_update()
 
 
-class HyxiLastSentModeSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
+class HyxiMicroinverterSumSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity
+):
+    """Aggregate a single metric (AC power, daily yield, etc.) across all microinverters."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        metric_key: str,
+        description: SensorEntityDescription,
+    ) -> None:
+        """Initialize the aggregate sensor."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._metric_key = metric_key
+        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{entry.entry_id}_microinverters_summary")},
+            "name": "Microinverters Summary",
+            "manufacturer": MANUFACTURER,
+            "model": "Aggregated Microinverter Metrics",
+        }
+        self._update_native_value()
+
+    def _update_native_value(self) -> None:
+        """Recompute the sum of the tracked metric across all microinverter devices."""
+        total = 0.0
+        found_any = False
+        for dev_data in self.coordinator.data.values():
+            if normalize_device_type(get_raw_device_code(dev_data)) != "micro_inverter":
+                continue
+            value = (dev_data.get("metrics") or {}).get(self._metric_key)
+            if value is None or is_null_value(value):
+                continue
+            try:
+                total += float(value)
+                found_any = True
+            except ValueError, TypeError:
+                continue
+        self._attr_native_value = round(total, 2) if found_any else None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._update_native_value()
+        super()._handle_coordinator_update()
+
+
+class HyxiLastSentModeSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity, RestoreEntity
+):
     """Sensor exposing the last tracked mode command for a protected inverter."""
 
     _attr_has_entity_name = True

@@ -167,11 +167,11 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     Regular unload keeps subscriptions alive for reuse on the next load, so
     actual deletion of the integration must do the remote cleanup here.
     """
-    codes = [
+    raw_codes = [
         entry.data.get("push_subscribe_code"),
         entry.data.get("alarm_subscribe_code"),
     ]
-    codes = [c for c in codes if c]
+    codes: list[str] = [c for c in raw_codes if c]
     if not codes:
         return
 
@@ -447,15 +447,15 @@ async def _async_resolve_webhook_url(
                 "HYXI Push: Custom webhook URL must use HTTPS. Ignoring unencrypted URL."
             )
             return None
-        resolved = base + webhook.async_generate_path(webhook_id)
+        custom_resolved = base + webhook.async_generate_path(webhook_id)
         _LOGGER.info(
             "HYXI Push: Using custom base URL, callback endpoint: %s",
-            mask_url(resolved),
+            mask_url(custom_resolved),
         )
-        return resolved
+        return custom_resolved
 
     _LOGGER.debug("HYXI Push: Resolving external callback URL automatically...")
-    resolved = None
+    resolved: str | None = None
 
     # Check Nabu Casa first
     import homeassistant.components.cloud as cloud  # pylint: disable=consider-using-from-import
@@ -700,7 +700,7 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
         if res.get("success"):
             coordinator.alarm_subscribe_code = res["data"]["subscribeCode"]
             coordinator.alarm_push_status = "active"
-            coordinator.alarm_push_url = webhook_url
+            coordinator.alarm_push_error = None
             fingerprint = _compute_subscription_fingerprint(
                 webhook_url, device_sns, push_rate_ms
             )
@@ -723,10 +723,12 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
         else:
             coordinator.alarm_push_status = "error"
             msg = res.get("msg", "Unknown error")
+            coordinator.alarm_push_error = msg
             _log_push_subscription_failure("HYXI Alarm Push", msg)
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.alarm_push_status = "error"
         err_msg = str(err)
+        coordinator.alarm_push_error = err_msg
         _log_push_subscription_failure("HYXI Alarm Push", err_msg)
 
 
@@ -1053,9 +1055,14 @@ async def _async_setup_alarm_subscription(
             "alarm push disabled (real-time data push may still be active)."
         )
         coordinator.alarm_push_status = "error"
+        coordinator.alarm_push_error = (
+            "Could not resolve external URL — set a Custom Callback URL in options"
+        )
         # Do not touch any existing subscription here -- an unresolved URL
         # doesn't mean the persisted subscription is bad.
         return
+
+    coordinator.alarm_push_url = webhook_url
 
     device_sns = [sn for sn in coordinator.data if sn]
     if not device_sns:
@@ -1073,7 +1080,7 @@ async def _async_setup_alarm_subscription(
     if reused_code:
         coordinator.alarm_subscribe_code = reused_code
         coordinator.alarm_push_status = "active"
-        coordinator.alarm_push_url = webhook_url
+        coordinator.alarm_push_error = None
         _LOGGER.debug(
             "HYXI Alarm Push: Reusing existing subscription (code: %s)",
             mask_subscription_code(reused_code),
@@ -1144,6 +1151,7 @@ async def _async_teardown_alarm_subscription(
                 )
 
     coordinator.alarm_push_status = "inactive"
+    coordinator.alarm_push_url = None
 
 
 async def _async_handle_alarm_webhook(
@@ -1331,7 +1339,7 @@ async def async_register_subscription_code(hass: HomeAssistant, code: str) -> No
 
     from homeassistant.helpers.storage import Store
 
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     async with _SUBSCRIPTION_STORE_LOCK:
         data = await store.async_load() or {}
         codes = data.setdefault("codes", [])
@@ -1354,7 +1362,7 @@ async def async_unregister_subscription_code(hass: HomeAssistant, code: str) -> 
 
     from homeassistant.helpers.storage import Store
 
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     async with _SUBSCRIPTION_STORE_LOCK:
         data = await store.async_load() or {}
         codes = data.get("codes", [])
@@ -1377,7 +1385,7 @@ async def async_get_subscription_codes(hass: HomeAssistant) -> list[str]:
 
     from homeassistant.helpers.storage import Store
 
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     data = await store.async_load() or {}
     return data.get("codes", [])
 

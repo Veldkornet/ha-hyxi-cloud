@@ -6,15 +6,17 @@
         "description": "Zadejte své **vývojářské API údaje (AK/SK)**. Tyto údaje si můžete vygenerovat na [HYXIPOWER Developer Platform]({link}).\n\n**Poznámka:** Vyžaduje to samostatný vývojářský účet. Pokud se váš vývojářský e-mail liší od e-mailu v aplikaci, musíte nejprve v aplikaci **nasdílet svou elektrárnu (Plant)** na vývojářský e-mail.",
         "data": {
           "access_key": "Přístupový klíč (AK)",
-          "secret_key": "Tajný klíč (SK)"
+          "secret_key": "Tajný klíč (SK)",
+          "region": "Oblast serveru"
         }
       },
       "reauth_confirm": {
         "title": "Znovu ověřit HYXI Cloud",
-        "description": "Váš přístupový klíč nebo tajný klíč již není platný. Zadejte prosím své nové údaje, abyste mohli pokračovat ve sledování solární elektrárny. Tyto údaje naleznete na [HYXIPOWER Developer Platform]({link}).",
+        "description": "Váš přístupový klíč nebo tajný klíč již není platný. Zadejte prosím své nové údaje, abyste mohli pokračovat ve sledování solární elektrárny. Tyto údaje naleznete na [HYXIPOWER Developer Platform]({link}). Pokud byl váš účet přesunut na jiný region serveru, můžete to níže opravit.",
         "data": {
           "access_key": "Přístupový klíč (AK)",
-          "secret_key": "Tajný klíč (SK)"
+          "secret_key": "Tajný klíč (SK)",
+          "region": "Oblast serveru"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Jalový výkon"
+      },
+      "micro_ac_power_total": {
+        "name": "Celkový AC výkon mikroměničů"
+      },
+      "micro_daily_yield_total": {
+        "name": "Celkový denní výnos mikroměničů"
       }
     },
     "number": {

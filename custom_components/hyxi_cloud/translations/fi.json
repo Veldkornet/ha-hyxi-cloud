@@ -6,15 +6,17 @@
         "description": "Kirjoita **kehittäjän API-tunnisteet (AK/SK)**. Voit luoda nämä [HYXIPOWER-kehittäjäalustalla]({link}).\n\n**Huomautus:** Tämä vaatii erillisen kehittäjätilin. Jos kehittäjän sähköpostiosoite eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin **jaettava laitoksesi (Plant)** sovelluksesta kehittäjän sähköpostiosoitteeseen.",
         "data": {
           "access_key": "Käyttöavain (AK)",
-          "secret_key": "Salainen avain (SK)"
+          "secret_key": "Salainen avain (SK)",
+          "region": "Palvelinalue"
         }
       },
       "reauth_confirm": {
         "title": "Tunnistaudu uudelleen HYXI Cloudiin",
-        "description": "Access Key -avain tai Secret Key -avain ei ole enää voimassa. Anna uudet tunnisteet jatkaaksesi aurinkosähkön seurantaa. Löydät nämä [HYXIPOWER-kehittäjäalustalta]({link}).",
+        "description": "Access Key -avain tai Secret Key -avain ei ole enää voimassa. Anna uudet tunnisteet jatkaaksesi aurinkosähkön seurantaa. Löydät nämä [HYXIPOWER-kehittäjäalustalta]({link}). Jos tilisi on siirretty toiselle palvelinalueelle, voit korjata sen alla.",
         "data": {
           "access_key": "Käyttöavain (AK)",
-          "secret_key": "Salainen avain (SK)"
+          "secret_key": "Salainen avain (SK)",
+          "region": "Palvelinalue"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Loisteho"
+      },
+      "micro_ac_power_total": {
+        "name": "Mikroinverttereiden kokonais-AC-teho"
+      },
+      "micro_daily_yield_total": {
+        "name": "Mikroinverttereiden kokonaispäivätuotto"
       }
     },
     "number": {

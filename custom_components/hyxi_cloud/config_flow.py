@@ -1,6 +1,8 @@
 """Config flow for HYXI Cloud integration."""
 
 import logging
+from collections.abc import Mapping
+from typing import Any
 
 import voluptuous as vol
 from aiohttp import ClientError
@@ -26,30 +28,56 @@ from .const import (
     CONF_ENABLE_PUSH,
     CONF_PUSH_RATE,
     CONF_PUSH_URL,
+    CONF_REGION,
     CONF_SECRET_KEY,
     DEFAULT_PUSH_RATE,
+    DEFAULT_REGION,
     DOMAIN,
+    default_region_for_country,
     get_raw_device_code,
     normalize_device_type,
+    region_for_base_url,
+    resolve_base_url,
 )
+
+REGION_OPTIONS: list[selector.SelectOptionDict] = [
+    {"value": "eu", "label": "Europe"},
+    {"value": "na", "label": "North America"},
+    {"value": "cn", "label": "China"},
+]
+
+# Values are seconds (stored as int, displayed as-is); SDK call converts to ms
+PUSH_RATE_OPTIONS: list[selector.SelectOptionDict] = [
+    {"value": "5", "label": "5 seconds"},
+    {"value": "10", "label": "10 seconds"},
+    {"value": "30", "label": "30 seconds"},
+    {"value": "60", "label": "1 minute"},
+    {"value": "300", "label": "5 minutes"},
+]
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def _build_user_schema() -> vol.Schema:
-    """Build the user/reauth schema."""
+def _build_user_schema(default_region: str = DEFAULT_REGION) -> vol.Schema:
+    """Build the initial setup schema, including the server region."""
     return vol.Schema(
         {
             vol.Required(CONF_ACCESS_KEY): str,
             vol.Required(CONF_SECRET_KEY): selector.TextSelector(
                 selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
             ),
+            vol.Required(CONF_REGION, default=default_region): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=REGION_OPTIONS,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
         }
     )
 
 
 def _build_em_schema(
-    options: dict, sn_options: list[str], current_sn: str
+    options: Mapping[str, Any], sn_options: list[str], current_sn: str
 ) -> vol.Schema:
     """Build the Energy Manager schema."""
     return vol.Schema(
@@ -125,18 +153,18 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         """Initialize the flow."""
         self.reauth_entry = None
 
-    async def _validate_input(self, data):
+    async def _validate_input(self, data, base_url: str = BASE_URL_DEFAULT):
         """Validate the user input allows us to connect."""
         session = async_get_clientsession(self.hass)
 
         client = HyxiApiClient(
             data[CONF_ACCESS_KEY],
             data[CONF_SECRET_KEY],
-            BASE_URL_DEFAULT,
+            base_url,
             session,
         )
 
-        _LOGGER.debug("Validating HYXI credentials against %s", BASE_URL_DEFAULT)
+        _LOGGER.debug("Validating HYXI credentials against %s", base_url)
         try:
             # Attempt a token refresh to verify AK/SK. The client returns
             # None for network/connection failures and False for an explicit
@@ -171,19 +199,21 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             user_input is not None,
         )
         errors = {}
+        default_region = default_region_for_country(self.hass.config.country)
 
         if user_input is not None:
             # Prevent duplicate entries by using the Access Key as a Unique ID
             await self.async_set_unique_id(user_input[CONF_ACCESS_KEY])
             self._abort_if_unique_id_configured()
 
-            error = await self._validate_input(user_input)
+            base_url = resolve_base_url(user_input.get(CONF_REGION))
+            error = await self._validate_input(user_input, base_url)
             if not error:
                 return self.async_create_entry(
                     title="HYXI Cloud",
                     data={
                         **user_input,
-                        "base_url": BASE_URL_DEFAULT,
+                        "base_url": base_url,
                     },
                 )
 
@@ -191,7 +221,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_build_user_schema(),
+            data_schema=_build_user_schema(default_region),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
         )
@@ -208,25 +238,42 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(self, user_input=None):
-        """Handle reauth confirmation."""
+        """Handle reauth confirmation.
+
+        Also lets the user correct the server region -- useful if it was
+        picked wrong at install time, or the account was migrated to a
+        different HYXI regional server. Defaults to the entry's current
+        region so most users can just re-enter credentials unchanged.
+        """
         _LOGGER.debug(
             "Config flow: entering step_reauth_confirm (input provided=%s)",
             user_input is not None,
         )
         errors = {}
+        entry = self.reauth_entry
+        default_region = (
+            (
+                entry.data.get(CONF_REGION)
+                or region_for_base_url(entry.data.get("base_url"))
+            )
+            if entry is not None
+            else DEFAULT_REGION
+        )
 
         if user_input is not None:
-            error = await self._validate_input(user_input)
+            if entry is None:
+                raise ValueError("reauth_entry is not set")
+            base_url = resolve_base_url(user_input.get(CONF_REGION))
+            error = await self._validate_input(user_input, base_url)
             if not error:
-                entry = self.reauth_entry
-                if entry is None:
-                    raise ValueError("reauth_entry is not set")
-                return self.async_update_reload_and_abort(entry, data=user_input)
+                return self.async_update_reload_and_abort(
+                    entry, data={**entry.data, **user_input, "base_url": base_url}
+                )
             errors["base"] = error
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=_build_user_schema(),
+            data_schema=_build_user_schema(default_region),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
         )
@@ -356,14 +403,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 )
             ] = selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=[
-                        # Values are seconds (stored as int, displayed as-is); SDK call converts to ms
-                        {"value": "5", "label": "5 seconds"},
-                        {"value": "10", "label": "10 seconds"},
-                        {"value": "30", "label": "30 seconds"},
-                        {"value": "60", "label": "1 minute"},
-                        {"value": "300", "label": "5 minutes"},
-                    ],
+                    options=PUSH_RATE_OPTIONS,
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             )

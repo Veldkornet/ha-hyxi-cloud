@@ -6,15 +6,17 @@
         "description": "Ingrese sus **credenciales de API de desarrollador (AK/SK)**. Puede generarlas en la [Plataforma de desarrolladores de HYXIPOWER]({link}).\n\n**Nota:** Esto requiere una cuenta de desarrollador independiente. Si su correo electrónico de desarrollador es diferente al de su aplicación, primero debe **Compartir su Planta** desde la aplicación al correo electrónico de desarrollador.",
         "data": {
           "access_key": "Clave de acceso (AK)",
-          "secret_key": "Clave secreta (SK)"
+          "secret_key": "Clave secreta (SK)",
+          "region": "Región del servidor"
         }
       },
       "reauth_confirm": {
         "title": "Re-autenticar HYXI Cloud",
-        "description": "Su clave de acceso o clave secreta ya no es válida. Ingrese sus nuevas credenciales para reanudar el monitoreo solar. Puede encontrarlas en la [Plataforma de desarrolladores de HYXIPOWER]({link}).",
+        "description": "Su clave de acceso o clave secreta ya no es válida. Ingrese sus nuevas credenciales para reanudar el monitoreo solar. Puede encontrarlas en la [Plataforma de desarrolladores de HYXIPOWER]({link}). Si su cuenta se trasladó a una región de servidor diferente, puede corregirlo a continuación.",
         "data": {
           "access_key": "Clave de acceso (AK)",
-          "secret_key": "Clave secreta (SK)"
+          "secret_key": "Clave secreta (SK)",
+          "region": "Región del servidor"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Potencia Reactiva"
+      },
+      "micro_ac_power_total": {
+        "name": "Potencia CA total de microinversores"
+      },
+      "micro_daily_yield_total": {
+        "name": "Rendimiento diario total de microinversores"
       }
     },
     "number": {

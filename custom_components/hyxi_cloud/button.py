@@ -7,8 +7,11 @@ that have no readable state: pressing a button fires a command; there is no
 persistent state to become stale or misleading.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
@@ -31,6 +34,9 @@ from .const import (
     mask_subscription_code,
     normalize_device_type,
 )
+
+if TYPE_CHECKING:
+    from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -114,14 +120,18 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HyxiClearAlarmsButton(CoordinatorEntity, ButtonEntity):
+class HyxiClearAlarmsButton(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity
+):
     """Button to clear active alarms for a device."""
 
     _attr_has_entity_name = True
     _attr_translation_key = "clear_alarms"
     _attr_icon = "mdi:bell-check-outline"
 
-    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+    def __init__(
+        self, coordinator: HyxiDataUpdateCoordinator, sn: str, dev_data: dict
+    ) -> None:
         """Initialize the clear alarms button."""
         super().__init__(coordinator)
         self._sn = sn
@@ -179,7 +189,9 @@ class HyxiClearAlarmsButton(CoordinatorEntity, ButtonEntity):
             raise
 
 
-class HyxiMicroRestartButton(CoordinatorEntity, ButtonEntity):
+class HyxiMicroRestartButton(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity
+):
     """Button entity to restart a Microinverter (controlId 3013)."""
 
     _attr_has_entity_name = True
@@ -213,7 +225,7 @@ class HyxiMicroRestartButton(CoordinatorEntity, ButtonEntity):
             raise
 
 
-class HyxiModeButton(CoordinatorEntity, ButtonEntity):
+class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity):
     """Button to send an operating mode command (three-phase, write-only).
 
     One button per mode: Idle, Charge, Discharge, Self-Consumption.
@@ -274,7 +286,9 @@ class HyxiModeButton(CoordinatorEntity, ButtonEntity):
         return super().available
 
 
-class HyxiPeakShavingButton(CoordinatorEntity, ButtonEntity):
+class HyxiPeakShavingButton(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity
+):
     """Button to send a peak shaving command (single-phase, write-only).
 
     One button per action: Close, Charge, Discharge, Stop, Hold.

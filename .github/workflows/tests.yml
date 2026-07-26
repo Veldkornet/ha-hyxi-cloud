@@ -30,6 +30,7 @@ jobs:
             pypi.org:443
             raw.githubusercontent.com:443
             rekor.sigstore.dev:443
+            releases.astral.sh:443
             tuf-repo-cdn.sigstore.dev:443
             github-releases.s3.amazonaws.com:443
             release-assets.githubusercontent.com:443
@@ -50,3 +51,6 @@ jobs:
 
       - name: Run Integration Tests
         run: HYXI_INTEGRATION_TEST="1" uv run pytest tests/integration -v -p no:warnings
+
+      - name: Run mypy
+        run: uv run mypy --config-file mypy.ini

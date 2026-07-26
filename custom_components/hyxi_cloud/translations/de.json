@@ -6,15 +6,17 @@
         "description": "Geben Sie Ihre **Entwickler-API-Zugangsdaten (AK/SK)** ein. Sie können diese auf der [HYXIPOWER Developer Platform]({link}) generieren.\n\n**Hinweis:** Dies erfordert ein separates Entwicklerkonto. Wenn sich Ihre Entwickler-E-Mail von Ihrer App-E-Mail unterscheidet, müssen Sie Ihre Anlage zuerst über die App für die Entwickler-E-Mail **freigeben**.",
         "data": {
           "access_key": "Zugriffsschlüssel (AK)",
-          "secret_key": "Geheimer Schlüssel (SK)"
+          "secret_key": "Geheimer Schlüssel (SK)",
+          "region": "Serverregion"
         }
       },
       "reauth_confirm": {
         "title": "HYXI Cloud erneut authentifizieren",
-        "description": "Ihr Access Key oder Secret Key ist nicht mehr gültig. Bitte geben Sie Ihre neuen Anmeldedaten ein, um die Solarüberwachung fortzusetzen. Sie finden diese auf der [HYXIPOWER Developer Platform]({link}).",
+        "description": "Ihr Access Key oder Secret Key ist nicht mehr gültig. Bitte geben Sie Ihre neuen Anmeldedaten ein, um die Solarüberwachung fortzusetzen. Sie finden diese auf der [HYXIPOWER Developer Platform]({link}). Wenn Ihr Konto in eine andere Serverregion verschoben wurde, können Sie dies unten korrigieren.",
         "data": {
           "access_key": "Zugriffsschlüssel (AK)",
-          "secret_key": "Geheimer Schlüssel (SK)"
+          "secret_key": "Geheimer Schlüssel (SK)",
+          "region": "Serverregion"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Blindleistung"
+      },
+      "micro_ac_power_total": {
+        "name": "Gesamte AC-Leistung der Mikrowechselrichter"
+      },
+      "micro_daily_yield_total": {
+        "name": "Gesamter Tagesertrag der Mikrowechselrichter"
       }
     },
     "number": {

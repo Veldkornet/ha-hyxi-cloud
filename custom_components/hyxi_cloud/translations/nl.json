@@ -6,15 +6,17 @@
         "description": "Voer uw **Developer API-gegevens (AK/SK)** in. U kunt deze genereren op het [HYXIPOWER Developer Platform]({link}).\n\n**Opmerking:** Dit vereist een apart ontwikkelaarsaccount. Als uw e-mailadres voor ontwikkelaars afwijkt van uw app-e-mailadres, moet u eerst uw installatie vanuit de app **delen** met het e-mailadres voor ontwikkelaars.",
         "data": {
           "access_key": "Toegangssleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)"
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Serverregio"
         }
       },
       "reauth_confirm": {
         "title": "HYXI Cloud opnieuw verifiëren",
-        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer uw nieuwe inloggegevens in om de zonnemonitoring te hervatten. U kunt deze vinden op het [HYXIPOWER Developer Platform]({link}).",
+        "description": "Uw Access Key of Secret Key is niet meer geldig. Voer uw nieuwe inloggegevens in om de zonnemonitoring te hervatten. U kunt deze vinden op het [HYXIPOWER Developer Platform]({link}). Als uw account naar een andere serverregio is verplaatst, kunt u dit hieronder corrigeren.",
         "data": {
           "access_key": "Toegangssleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)"
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Serverregio"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Blindvermogen"
+      },
+      "micro_ac_power_total": {
+        "name": "Totaal AC-vermogen microomvormers"
+      },
+      "micro_daily_yield_total": {
+        "name": "Totale dagelijkse opbrengst microomvormers"
       }
     },
     "number": {

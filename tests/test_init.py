@@ -1017,7 +1017,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
 
     import homeassistant.components.cloud as cloud
 
-    cloud.CloudNotAvailable = CustomCloudNotAvailable
+    cloud.CloudNotAvailable = CustomCloudNotAvailable  # type: ignore[assignment,misc]
 
     with patch(
         "homeassistant.components.cloud.async_active_subscription", return_value=True

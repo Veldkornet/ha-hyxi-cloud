@@ -252,6 +252,55 @@ async def test_step_user_success(mock_validate_input, config_flow):
     config_flow.async_set_unique_id.assert_called_once_with("x")
     config_flow._abort_if_unique_id_configured.assert_called_once()
 
+    # No region selected -- defaults to the EU server, matching pre-existing behavior
+    call_kwargs = config_flow.async_create_entry.call_args.kwargs
+    assert call_kwargs["data"]["base_url"] == "https://open.hyxicloud.com"
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
+async def test_step_user_selected_region_resolves_base_url(
+    mock_validate_input, config_flow
+):
+    """The region picked in the form must resolve to that region's server,
+    and that server (not the EU default) is what credentials get validated
+    against -- otherwise a North America/China account would be told its
+    keys are invalid instead of being pointed at the right server."""
+    mock_validate_input.return_value = None
+    config_flow.async_set_unique_id = AsyncMock()
+    config_flow._abort_if_unique_id_configured = MagicMock()
+    config_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+
+    user_input = {"access_key": "x", "secret_key": "y", "region": "na"}
+    result = await config_flow.async_step_user(user_input=user_input)
+
+    assert result["type"] == "create_entry"
+    mock_validate_input.assert_called_once_with(
+        user_input, "https://open-or.hyxicloud.com"
+    )
+    call_kwargs = config_flow.async_create_entry.call_args.kwargs
+    assert call_kwargs["data"]["base_url"] == "https://open-or.hyxicloud.com"
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow._build_user_schema")
+async def test_step_user_show_form_suggests_region_from_country(
+    mock_build_schema, config_flow
+):
+    """The form's default region should follow Home Assistant's configured
+    country so most users never have to touch the dropdown, while still
+    letting them override it. voluptuous itself is mocked out in this test
+    module, so we verify the resolved default is passed to the schema
+    builder rather than inspecting a (mocked) vol.Schema object."""
+    config_flow.hass.config.country = "US"
+    config_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "user", "errors": {}}
+    )
+
+    await config_flow.async_step_user(user_input=None)
+
+    mock_build_schema.assert_called_once_with("na")
+
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
@@ -310,26 +359,126 @@ async def test_step_reauth_confirm_show_form(config_flow):
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
 async def test_step_reauth_confirm_success(mock_validate_input, config_flow):
+    """Resubmitting the same (pre-filled) region on reauth keeps the same base_url."""
     mock_validate_input.return_value = None
-    config_flow.reauth_entry = "mock_entry"
+    mock_entry = MagicMock()
+    mock_entry.data = {
+        "access_key": "old",
+        "secret_key": "old",
+        "base_url": "https://open-or.hyxicloud.com",
+        "region": "na",
+    }
+    config_flow.reauth_entry = mock_entry
     config_flow.async_update_reload_and_abort = MagicMock(
         return_value={"type": "abort", "reason": "reauth_successful"}
     )
 
-    user_input = {"access_key": "x", "secret_key": "y"}
+    user_input = {"access_key": "x", "secret_key": "y", "region": "na"}
     result = await config_flow.async_step_reauth_confirm(user_input=user_input)
 
     assert result["type"] == "abort"
     assert result["reason"] == "reauth_successful"
     config_flow.async_update_reload_and_abort.assert_called_once_with(
-        "mock_entry", data=user_input
+        mock_entry,
+        data={
+            "access_key": "x",
+            "secret_key": "y",
+            "region": "na",
+            "base_url": "https://open-or.hyxicloud.com",
+        },
     )
+    mock_validate_input.assert_called_once_with(
+        user_input, "https://open-or.hyxicloud.com"
+    )
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
+async def test_step_reauth_confirm_region_change(mock_validate_input, config_flow):
+    """Reauth also lets the user correct the region -- e.g. the account was
+    migrated to a different HYXI server, or it was picked wrong at install."""
+    mock_validate_input.return_value = None
+    mock_entry = MagicMock()
+    mock_entry.data = {
+        "access_key": "old",
+        "secret_key": "old",
+        "base_url": "https://open.hyxicloud.com",
+        "region": "eu",
+    }
+    config_flow.reauth_entry = mock_entry
+    config_flow.async_update_reload_and_abort = MagicMock(
+        return_value={"type": "abort", "reason": "reauth_successful"}
+    )
+
+    user_input = {"access_key": "x", "secret_key": "y", "region": "cn"}
+    result = await config_flow.async_step_reauth_confirm(user_input=user_input)
+
+    assert result["type"] == "abort"
+    mock_validate_input.assert_called_once_with(
+        user_input, "https://open-cn.hyxicloud.com"
+    )
+    config_flow.async_update_reload_and_abort.assert_called_once_with(
+        mock_entry,
+        data={
+            "access_key": "x",
+            "secret_key": "y",
+            "region": "cn",
+            "base_url": "https://open-cn.hyxicloud.com",
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_step_reauth_confirm_show_form_preselects_current_region(config_flow):
+    """The reauth form must default the region dropdown to the entry's
+    current region, not always EU -- otherwise resubmitting unchanged would
+    silently move an NA/CN account back to the EU server."""
+    mock_entry = MagicMock()
+    mock_entry.data = {"access_key": "old", "secret_key": "old", "region": "na"}
+    config_flow.reauth_entry = mock_entry
+
+    with patch(
+        "custom_components.hyxi_cloud.config_flow._build_user_schema"
+    ) as mock_build_schema:
+        config_flow.async_show_form = MagicMock(
+            return_value={"type": "form", "step_id": "reauth_confirm", "errors": {}}
+        )
+        await config_flow.async_step_reauth_confirm(user_input=None)
+
+    mock_build_schema.assert_called_once_with("na")
+
+
+@pytest.mark.asyncio
+async def test_step_reauth_confirm_show_form_falls_back_from_base_url(config_flow):
+    """Entries created before region selection existed only have a stored
+    base_url, no "region" key -- the form must still preselect the right
+    region by reverse-mapping the base_url."""
+    mock_entry = MagicMock()
+    mock_entry.data = {
+        "access_key": "old",
+        "secret_key": "old",
+        "base_url": "https://open-cn.hyxicloud.com",
+    }
+    config_flow.reauth_entry = mock_entry
+
+    with patch(
+        "custom_components.hyxi_cloud.config_flow._build_user_schema"
+    ) as mock_build_schema:
+        config_flow.async_show_form = MagicMock(
+            return_value={"type": "form", "step_id": "reauth_confirm", "errors": {}}
+        )
+        await config_flow.async_step_reauth_confirm(user_input=None)
+
+    mock_build_schema.assert_called_once_with("cn")
 
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
 async def test_step_reauth_confirm_validation_error(mock_validate_input, config_flow):
     mock_validate_input.return_value = "invalid_auth"
+    mock_entry = MagicMock()
+    mock_entry.data = {"access_key": "old", "secret_key": "old"}
+    config_flow.reauth_entry = mock_entry
     config_flow.async_show_form = MagicMock(
         return_value={
             "type": "form",

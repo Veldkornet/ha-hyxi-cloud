@@ -1,7 +1,9 @@
 """Number platform for HYXI Cloud device control power settings."""
 
+from __future__ import annotations
+
 import logging
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
@@ -25,6 +27,9 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+
+if TYPE_CHECKING:
+    from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -161,7 +166,9 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
+class HyxiPowerNumber(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], NumberEntity, RestoreEntity
+):
     """Number entity for setting the wattage used by charge/discharge mode commands.
 
     This entity stores the desired power level locally. The value is sent to
@@ -177,7 +184,7 @@ class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
 
     def __init__(
         self,
-        coordinator,
+        coordinator: HyxiDataUpdateCoordinator,
         sn: str,
         dev_data: dict,
         direction: str,
@@ -222,7 +229,9 @@ class HyxiPowerNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
         self.async_write_ha_state()
 
 
-class HyxiMicroPowerLimit(CoordinatorEntity, NumberEntity, RestoreEntity):
+class HyxiMicroPowerLimit(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], NumberEntity, RestoreEntity
+):
     """Number entity for microinverter power limit (controlId 3012).
 
     Sets the maximum power output as a percentage of rated power.
@@ -239,7 +248,9 @@ class HyxiMicroPowerLimit(CoordinatorEntity, NumberEntity, RestoreEntity):
     _attr_native_value = 100.0
     _attr_icon = "mdi:speedometer"
 
-    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+    def __init__(
+        self, coordinator: HyxiDataUpdateCoordinator, sn: str, dev_data: dict
+    ) -> None:
         """Initialize the micro power limit entity."""
         super().__init__(coordinator)
         self._sn = sn
@@ -296,7 +307,9 @@ def _safe_int(val, default: int) -> int:
         return default
 
 
-class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
+class HyxiProtectionNumber(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], NumberEntity, RestoreEntity
+):
     """Locally stored number for battery protection thresholds."""
 
     _attr_has_entity_name = True
@@ -306,7 +319,7 @@ class HyxiProtectionNumber(CoordinatorEntity, NumberEntity, RestoreEntity):
 
     def __init__(
         self,
-        coordinator,
+        coordinator: HyxiDataUpdateCoordinator,
         sn: str,
         dev_data: dict,
         definition: dict[str, str | int],
@@ -372,7 +385,7 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
 
     def __init__(
         self,
-        coordinator,
+        coordinator: HyxiDataUpdateCoordinator,
         sn: str,
         numdef: EMNumberDef,
     ) -> None:

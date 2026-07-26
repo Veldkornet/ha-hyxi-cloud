@@ -88,16 +88,17 @@ async def test_setup_alarm_subscription_success(
     mock_hass, mock_entry, mock_coordinator
 ):
     """Happy path: subscription registered and code persisted."""
+    webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
     with patch(
         "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
-        new=AsyncMock(
-            return_value="https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
-        ),
+        new=AsyncMock(return_value=webhook_url),
     ):
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
 
     assert mock_coordinator.alarm_subscribe_code == "alarm_code_abc"
     assert mock_coordinator.alarm_push_status == "active"
+    assert mock_coordinator.alarm_push_url == webhook_url
+    assert mock_coordinator.alarm_push_error is None
     mock_hass.config_entries.async_update_entry.assert_called()
 
 
@@ -111,7 +112,37 @@ async def test_setup_alarm_subscription_no_url(mock_hass, mock_entry, mock_coord
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
 
     assert mock_coordinator.alarm_push_status == "error"
+    assert mock_coordinator.alarm_push_error
     mock_coordinator.client.subscribe_alarm.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_setup_alarm_subscription_failure_still_sets_url_and_error(
+    mock_hass, mock_entry, mock_coordinator
+):
+    """A failed subscribe call (e.g. the B004002 'subscribed repeatedly' error)
+    must still record the resolved callback URL -- it was already attempted at
+    that address -- and must record the failure message so it's visible on
+    the Subscription Status sensor, not just in the logs. This mirrors what
+    the real-time data push path already does on failure."""
+    webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
+    mock_coordinator.client.subscribe_alarm = AsyncMock(
+        return_value={
+            "success": False,
+            "msg": "request failed (code=B004002): At least one device sn "
+            "has been subscribed to repeatedly.",
+        }
+    )
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        new=AsyncMock(return_value=webhook_url),
+    ):
+        await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
+
+    assert mock_coordinator.alarm_push_status == "error"
+    assert mock_coordinator.alarm_push_url == webhook_url
+    assert "B004002" in mock_coordinator.alarm_push_error
 
 
 @pytest.mark.asyncio
@@ -199,6 +230,9 @@ async def test_teardown_alarm_subscription_cancels_and_clears(
     """Teardown cancels the subscription, unregisters webhook, clears coordinator state."""
     mock_coordinator.alarm_subscribe_code = "alarm_code_abc"
     mock_coordinator.alarm_webhook_id = "hyxi_cloud_entry_test_alarm"
+    mock_coordinator.alarm_push_url = (
+        "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
+    )
 
     await _async_teardown_alarm_subscription(mock_hass, mock_coordinator, mock_entry)
 
@@ -207,6 +241,7 @@ async def test_teardown_alarm_subscription_cancels_and_clears(
     )
     assert mock_coordinator.alarm_subscribe_code is None
     assert mock_coordinator.alarm_push_status == "inactive"
+    assert mock_coordinator.alarm_push_url is None
     mock_hass.config_entries.async_update_entry.assert_called()
 
 

@@ -16,6 +16,9 @@ class FakeBase:
 
 
 class FakeCoordinatorEntity(FakeBase):
+    # Allow CoordinatorEntity[HyxiDataUpdateCoordinator] subscripting in class bases
+    __class_getitem__ = classmethod(lambda cls, item: cls)
+
     def __init__(self, coordinator, **kwargs):
         self.coordinator = coordinator
         self._attr_extra_state_attributes = {}
@@ -116,6 +119,7 @@ def mock_coordinator():
 def mock_entry():
     entry = MagicMock()
     entry.entry_id = "test_entry"
+    entry.data = {"base_url": "https://open.hyxicloud.com"}
     return entry
 
 

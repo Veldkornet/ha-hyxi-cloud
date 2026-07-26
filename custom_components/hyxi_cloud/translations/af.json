@@ -6,15 +6,17 @@
         "description": "Voer jou **Ontwikkelaar API-bewysbriewe (AK/SK)** in. Jy kan dit genereer by die [HYXIPOWER-ontwikkelaarsplatform]({link}).\n\n**Nota:** Dit vereis 'n aparte ontwikkelaarrekening. As jou ontwikkelaar-e-pos verskil van jou app-e-pos, moet jy eers jou **Aanleg Deel** (Share Plant) vanaf die app na die ontwikkelaar-e-pos.",
         "data": {
           "access_key": "Toegangsleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)"
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Bedienerstreek"
         }
       },
       "reauth_confirm": {
         "title": "Hertoestemming vir HYXI Cloud",
-        "description": "Jou Toegangsleutel of Geheime Sleutel is nie meer geldig nie. Voer asseblief jou nuwe bewysbriewe in om sonkragmonitering te hervat. Jy kan dit vind by die [HYXIPOWER-ontwikkelaarsplatform]({link}).",
+        "description": "Jou Toegangsleutel of Geheime Sleutel is nie meer geldig nie. Voer asseblief jou nuwe bewysbriewe in om sonkragmonitering te hervat. Jy kan dit vind by die [HYXIPOWER-ontwikkelaarsplatform]({link}). As jou rekening na 'n ander streek geskuif is, kan jy dit hieronder regstel.",
         "data": {
           "access_key": "Toegangsleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)"
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Bedienerstreek"
         }
       }
     },
@@ -490,6 +492,12 @@
       },
       "q": {
         "name": "Reaktiewe Krag"
+      },
+      "micro_ac_power_total": {
+        "name": "Totale AC-krag van mikro-omskakelaars"
+      },
+      "micro_daily_yield_total": {
+        "name": "Totale daaglikse opbrengs van mikro-omskakelaars"
       }
     },
     "number": {

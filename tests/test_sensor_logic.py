@@ -16,6 +16,9 @@ class FakeBase:
 
 
 class FakeCoordinatorEntity(FakeBase):
+    # Allow CoordinatorEntity[HyxiDataUpdateCoordinator] subscripting in class bases
+    __class_getitem__ = classmethod(lambda cls, item: cls)
+
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
 
@@ -1220,6 +1223,7 @@ def test_hyxi_subscription_status_sensor():
     coordinator.alarm_push_status = "active"
     coordinator.alarm_push_url = "http://alarm.url"
     coordinator.alarm_subscribe_code = "456"
+    coordinator.alarm_push_error = None
     coordinator.alarm_last_push_received = None
 
     entry = MagicMock()
@@ -1258,6 +1262,13 @@ def test_hyxi_subscription_status_sensor():
     assert attrs["data_push"]["last_push_received"] == dt.isoformat()
     assert attrs["alarm_push"]["status"] == "inactive"
     assert attrs["alarm_push"]["last_push_received"] == dt.isoformat()
+    assert attrs["alarm_push"]["error"] is None
+
+    # 6. Alarm push failure surfaces its own error message, independently of
+    # data push -- previously alarm_push had no error key at all.
+    coordinator.alarm_push_error = "request failed (code=B004002): ..."
+    attrs = sensor.extra_state_attributes
+    assert attrs["alarm_push"]["error"] == "request failed (code=B004002): ..."
 
 
 def test_hyxi_sensor_advanced_mappings(base_sensor):
