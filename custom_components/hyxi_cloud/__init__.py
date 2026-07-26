@@ -167,11 +167,11 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     Regular unload keeps subscriptions alive for reuse on the next load, so
     actual deletion of the integration must do the remote cleanup here.
     """
-    codes = [
+    raw_codes = [
         entry.data.get("push_subscribe_code"),
         entry.data.get("alarm_subscribe_code"),
     ]
-    codes = [c for c in codes if c]
+    codes: list[str] = [c for c in raw_codes if c]
     if not codes:
         return
 
@@ -447,15 +447,15 @@ async def _async_resolve_webhook_url(
                 "HYXI Push: Custom webhook URL must use HTTPS. Ignoring unencrypted URL."
             )
             return None
-        resolved = base + webhook.async_generate_path(webhook_id)
+        custom_resolved = base + webhook.async_generate_path(webhook_id)
         _LOGGER.info(
             "HYXI Push: Using custom base URL, callback endpoint: %s",
-            mask_url(resolved),
+            mask_url(custom_resolved),
         )
-        return resolved
+        return custom_resolved
 
     _LOGGER.debug("HYXI Push: Resolving external callback URL automatically...")
-    resolved = None
+    resolved: str | None = None
 
     # Check Nabu Casa first
     import homeassistant.components.cloud as cloud  # pylint: disable=consider-using-from-import
@@ -1331,7 +1331,7 @@ async def async_register_subscription_code(hass: HomeAssistant, code: str) -> No
 
     from homeassistant.helpers.storage import Store
 
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     async with _SUBSCRIPTION_STORE_LOCK:
         data = await store.async_load() or {}
         codes = data.setdefault("codes", [])
@@ -1354,7 +1354,7 @@ async def async_unregister_subscription_code(hass: HomeAssistant, code: str) -> 
 
     from homeassistant.helpers.storage import Store
 
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     async with _SUBSCRIPTION_STORE_LOCK:
         data = await store.async_load() or {}
         codes = data.get("codes", [])
@@ -1377,7 +1377,7 @@ async def async_get_subscription_codes(hass: HomeAssistant) -> list[str]:
 
     from homeassistant.helpers.storage import Store
 
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     data = await store.async_load() or {}
     return data.get("codes", [])
 

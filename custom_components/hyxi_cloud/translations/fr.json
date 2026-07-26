@@ -6,7 +6,8 @@
         "description": "Saisissez vos **identifiants API développeur (AK/SK)**. Vous pouvez les générer sur la [plateforme développeur HYXIPOWER]({link}).\n\n**Remarque :** cela nécessite un compte développeur séparé. Si l'e-mail de votre développeur diffère de l'e-mail de votre application, vous devez d'abord **partager votre installation** de l'application vers l'e-mail du développeur.",
         "data": {
           "access_key": "Clé d'accès (AK)",
-          "secret_key": "Clé secrète (SK)"
+          "secret_key": "Clé secrète (SK)",
+          "region": "Région du serveur"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Puissance réactive"
+      },
+      "micro_ac_power_total": {
+        "name": "Puissance CA totale des micro-onduleurs"
+      },
+      "micro_daily_yield_total": {
+        "name": "Rendement quotidien total des micro-onduleurs"
       }
     },
     "number": {

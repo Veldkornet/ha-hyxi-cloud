@@ -1,11 +1,16 @@
 """Base entity for HYXI Cloud."""
 
+from typing import TYPE_CHECKING
+
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 
+if TYPE_CHECKING:
+    from .coordinator import HyxiDataUpdateCoordinator  # noqa: F401
 
-class HyxiEntity(CoordinatorEntity):
+
+class HyxiEntity(CoordinatorEntity["HyxiDataUpdateCoordinator"]):
     """Base entity for HYXI Cloud."""
 
     _attr_has_entity_name = True

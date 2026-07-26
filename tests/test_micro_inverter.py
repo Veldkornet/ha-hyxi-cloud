@@ -14,8 +14,14 @@ class FakeBase:
 
 
 class FakeCoordinatorEntity(FakeBase):
+    # Allow CoordinatorEntity[HyxiDataUpdateCoordinator] subscripting in class bases
+    __class_getitem__ = classmethod(lambda cls, item: cls)
+
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
+
+    def _handle_coordinator_update(self) -> None:
+        pass
 
 
 class FakeSensorEntity(FakeBase):
@@ -99,12 +105,117 @@ def micro_inverter_coordinator():
                 "pv4v": 38.8,
                 "pv4i": 0.14,
                 "acP": 18.0,
+                "eToday": 4.51,
                 "ppv": 20.1,
                 "deviceState": 1,
             },
         }
     }
     return coordinator
+
+
+@pytest.fixture
+def multi_micro_inverter_coordinator():
+    """Fixture with multiple MICRO_INVERTER devices plus a non-microinverter device."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN_MICRO_1": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": 18.0, "eToday": 4.51},
+        },
+        "SN_MICRO_2": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": 22.5, "eToday": 3.29},
+        },
+        # Null/placeholder metric values must be skipped, not treated as 0
+        "SN_MICRO_3": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "--", "eToday": None},
+        },
+        # A hybrid inverter in the same plant must not be counted in the sum
+        "SN_HYBRID": {
+            "device_type_code": "HYBRID_INVERTER",
+            "metrics": {"acP": 5000.0, "eToday": 12.0},
+        },
+    }
+    return coordinator
+
+
+def test_microinverter_sum_sensor_aggregates_across_devices(
+    multi_micro_inverter_coordinator,
+):
+    """Verify the aggregate sensor sums the metric across microinverters only,
+    skipping non-microinverter devices and null/placeholder readings."""
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        multi_micro_inverter_coordinator, entry, "acP", description
+    )
+
+    assert sensor.native_value == 40.5  # 18.0 + 22.5, SN_MICRO_3/SN_HYBRID excluded
+
+
+def test_microinverter_sum_sensor_daily_yield(multi_micro_inverter_coordinator):
+    """Verify aggregation also works for the daily-yield metric key."""
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+
+    description = MagicMock()
+    description.key = "micro_daily_yield_total"
+
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        multi_micro_inverter_coordinator, entry, "eToday", description
+    )
+
+    assert sensor.native_value == 7.8  # 4.51 + 3.29, rounded
+
+
+def test_microinverter_sum_sensor_no_microinverters_is_none():
+    """If no microinverter devices are present, native_value must be None,
+    not 0 -- 0 would misleadingly imply a real (idle) reading."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN_HYBRID": {
+            "device_type_code": "HYBRID_INVERTER",
+            "metrics": {"acP": 5000.0},
+        }
+    }
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        coordinator, entry, "acP", description
+    )
+
+    assert sensor.native_value is None
+
+
+def test_microinverter_sum_sensor_updates_on_coordinator_refresh(
+    multi_micro_inverter_coordinator,
+):
+    """Verify the aggregate is recomputed when the coordinator pushes new data."""
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        multi_micro_inverter_coordinator, entry, "acP", description
+    )
+    assert sensor.native_value == 40.5
+
+    multi_micro_inverter_coordinator.data["SN_MICRO_1"]["metrics"]["acP"] = 100.0
+    sensor._handle_coordinator_update()
+
+    assert sensor.native_value == 122.5  # 100.0 + 22.5
 
 
 def test_ace_fallback_to_efpv(micro_inverter_coordinator):

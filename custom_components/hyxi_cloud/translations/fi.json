@@ -6,7 +6,8 @@
         "description": "Kirjoita **kehittäjän API-tunnisteet (AK/SK)**. Voit luoda nämä [HYXIPOWER-kehittäjäalustalla]({link}).\n\n**Huomautus:** Tämä vaatii erillisen kehittäjätilin. Jos kehittäjän sähköpostiosoite eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin **jaettava laitoksesi (Plant)** sovelluksesta kehittäjän sähköpostiosoitteeseen.",
         "data": {
           "access_key": "Käyttöavain (AK)",
-          "secret_key": "Salainen avain (SK)"
+          "secret_key": "Salainen avain (SK)",
+          "region": "Palvelinalue"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Loisteho"
+      },
+      "micro_ac_power_total": {
+        "name": "Mikroinverttereiden kokonais-AC-teho"
+      },
+      "micro_daily_yield_total": {
+        "name": "Mikroinverttereiden kokonaispäivätuotto"
       }
     },
     "number": {

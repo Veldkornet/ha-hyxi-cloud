@@ -50,3 +50,6 @@ jobs:
 
       - name: Run Integration Tests
         run: HYXI_INTEGRATION_TEST="1" uv run pytest tests/integration -v -p no:warnings
+
+      - name: Run mypy
+        run: uv run mypy --config-file mypy.ini

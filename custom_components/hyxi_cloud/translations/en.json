@@ -6,7 +6,8 @@
         "description": "Enter your **Developer API credentials (AK/SK)**. You can generate these at the [HYXIPOWER Developer Platform]({link}).\n\n**Note:** This requires a separate developer account. If your developer email differs from your app email, you must **Share your Plant** from the app to the developer email first.",
         "data": {
           "access_key": "Access Key (AK)",
-          "secret_key": "Secret Key (SK)"
+          "secret_key": "Secret Key (SK)",
+          "region": "Server Region"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Reactive Power"
+      },
+      "micro_ac_power_total": {
+        "name": "Microinverters Total AC Power"
+      },
+      "micro_daily_yield_total": {
+        "name": "Microinverters Total Daily Yield"
       }
     },
     "number": {

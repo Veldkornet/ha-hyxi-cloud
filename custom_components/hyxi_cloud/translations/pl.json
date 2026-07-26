@@ -6,7 +6,8 @@
         "description": "Wprowadź swoje **poświadczenia API programisty (AK/SK)**. Możesz je wygenerować na [Platformie programistycznej HYXIPOWER]({link}).\n\n**Uwaga:** Wymagane jest oddzielne konto programisty. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw **Udostępnić swój obiekt (Plant)** z aplikacji na e-mail programisty.",
         "data": {
           "access_key": "Klucz dostępu (AK)",
-          "secret_key": "Tajny klucz (SK)"
+          "secret_key": "Tajny klucz (SK)",
+          "region": "Region serwera"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Moc bierna"
+      },
+      "micro_ac_power_total": {
+        "name": "Całkowita moc AC mikrofalowników"
+      },
+      "micro_daily_yield_total": {
+        "name": "Całkowity dzienny uzysk mikrofalowników"
       }
     },
     "number": {

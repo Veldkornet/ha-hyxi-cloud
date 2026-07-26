@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
+from urllib.parse import urlparse
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -20,6 +21,7 @@ from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import VPP_ACTIVE_MODES
 
 from .const import (
+    BASE_URL_DEFAULT,
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     DOMAIN,
@@ -28,6 +30,9 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+
+if TYPE_CHECKING:
+    from .coordinator import HyxiDataUpdateCoordinator  # noqa: F401
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,7 +77,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
+class HyxiConnectivitySensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], BinarySensorEntity
+):
     """Representation of a HYXI Cloud connectivity sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
@@ -84,6 +91,10 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_connectivity"
+        self._cloud_endpoint = (
+            urlparse(entry.data.get("base_url") or BASE_URL_DEFAULT).netloc
+            or urlparse(BASE_URL_DEFAULT).netloc
+        )
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "HYXI Cloud Service",
@@ -142,7 +153,7 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
             "connection_quality": quality,
             "last_successful_connection": last_success_str,
             "data_freshness": freshness,
-            "cloud_endpoint": "open.hyxicloud.com",
+            "cloud_endpoint": self._cloud_endpoint,
             "last_error": metadata.get("last_error") or "None",
             "cache_active": bool(metadata.get("cache_active", False)),
             "api_status": metadata.get("api_status") or "Starting",
@@ -154,7 +165,9 @@ class HyxiConnectivitySensor(CoordinatorEntity, BinarySensorEntity):
         return True
 
 
-class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
+class HyxiDeviceAlarmSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], BinarySensorEntity
+):
     """Representation of a HYXI Cloud device active alarm sensor."""
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
@@ -231,7 +244,9 @@ class HyxiDeviceAlarmSensor(CoordinatorEntity, BinarySensorEntity):
         }
 
 
-class HyxiVppDispatchSensor(CoordinatorEntity, BinarySensorEntity):
+class HyxiVppDispatchSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], BinarySensorEntity
+):
     """Binary sensor indicating whether a VPP program is actively dispatching to/from this device.
 
     ON  = a VPP dispatch is in progress.

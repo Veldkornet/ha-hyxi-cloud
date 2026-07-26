@@ -6,7 +6,8 @@
         "description": "Voer uw **Developer API-gegevens (AK/SK)** in. U kunt deze genereren op het [HYXIPOWER Developer Platform]({link}).\n\n**Opmerking:** Dit vereist een apart ontwikkelaarsaccount. Als uw e-mailadres voor ontwikkelaars afwijkt van uw app-e-mailadres, moet u eerst uw installatie vanuit de app **delen** met het e-mailadres voor ontwikkelaars.",
         "data": {
           "access_key": "Toegangssleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)"
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Serverregio"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Blindvermogen"
+      },
+      "micro_ac_power_total": {
+        "name": "Totaal AC-vermogen microomvormers"
+      },
+      "micro_daily_yield_total": {
+        "name": "Totale dagelijkse opbrengst microomvormers"
       }
     },
     "number": {

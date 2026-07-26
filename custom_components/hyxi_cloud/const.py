@@ -13,6 +13,44 @@ BASE_URL_DEFAULT = "https://open.hyxicloud.com"
 # Legacy alias kept for any imports that haven't migrated yet
 BASE_URL = BASE_URL_DEFAULT
 
+# HYXI Cloud server regions -- each region is a physically separate server,
+# so the wrong one means the account simply can't be found (not a bad-credentials error).
+CONF_REGION = "region"
+DEFAULT_REGION = "eu"
+REGION_BASE_URLS: dict[str, str] = {
+    "eu": BASE_URL_DEFAULT,
+    "na": "https://open-or.hyxicloud.com",
+    "cn": "https://open-cn.hyxicloud.com",
+}
+
+# ISO 3166-1 alpha-2 country codes mapped to their HYXI server region, used to
+# suggest a default in the config flow from Home Assistant's configured country.
+_COUNTRY_REGION_MAP: dict[str, str] = {
+    "CN": "cn",
+    "US": "na",
+    "CA": "na",
+    "MX": "na",
+}
+
+
+def resolve_base_url(region: str | None) -> str:
+    """Resolve a region code to its HYXI Cloud server base URL."""
+    return REGION_BASE_URLS.get(region or DEFAULT_REGION, BASE_URL_DEFAULT)
+
+
+def default_region_for_country(country: str | None) -> str:
+    """Suggest a HYXI server region from a Home Assistant country code.
+
+    This is only ever a suggestion preselected in the config flow --
+    the user can always override it, since country and account region
+    don't always match (e.g. an expat using a developer account tied to
+    their home region).
+    """
+    if not country:
+        return DEFAULT_REGION
+    return _COUNTRY_REGION_MAP.get(country.upper(), DEFAULT_REGION)
+
+
 MANUFACTURER = "HYXI Power"
 # manifest.json is the single source of truth for the integration version.
 _MANIFEST = json.loads(

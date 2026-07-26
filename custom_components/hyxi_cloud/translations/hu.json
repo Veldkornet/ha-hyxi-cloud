@@ -6,7 +6,8 @@
         "description": "Adja meg **fejlesztői API hitelesítő adatait (AK/SK)**. Ezeket a [HYXIPOWER fejlesztői platformon]({link}) hozhatja létre.\n\n**Megjegyzés:** Ehhez külön fejlesztői fiókra van szükség. Ha a fejlesztői e-mail-címe eltér az alkalmazásban használt e-mail-címétől, először **meg kell osztania az üzemét (Plant)** az alkalmazásból a fejlesztői e-mail-címre.",
         "data": {
           "access_key": "Hozzáférési kulcs (AK)",
-          "secret_key": "Titkos kulcs (SK)"
+          "secret_key": "Titkos kulcs (SK)",
+          "region": "Szerver régiója"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Meddő teljesítmény"
+      },
+      "micro_ac_power_total": {
+        "name": "Mikroinverterek összes AC teljesítménye"
+      },
+      "micro_daily_yield_total": {
+        "name": "Mikroinverterek napi összhozama"
       }
     },
     "number": {

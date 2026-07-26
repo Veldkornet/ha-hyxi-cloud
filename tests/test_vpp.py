@@ -19,6 +19,9 @@ class FakeBase:
 
 
 class FakeCoordinatorEntity(FakeBase):
+    # Allow CoordinatorEntity[HyxiDataUpdateCoordinator] subscripting in class bases
+    __class_getitem__ = classmethod(lambda cls, item: cls)
+
     def __init__(self, coordinator, **kwargs):
         self.coordinator = coordinator
         self._attr_extra_state_attributes = {}

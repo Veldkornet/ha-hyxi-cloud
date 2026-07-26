@@ -6,7 +6,8 @@
         "description": "**Geliştirici API kimlik bilgilerinizi (AK/SK)** girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) üzerinden oluşturabilirsiniz.\n\n**Not:** Bu işlem ayrı bir geliştirici hesabı gerektirir. Geliştirici e-postanız uygulama e-postanızdan farklıysa, önce uygulamadan geliştirici e-postasına **Tesisinizi Paylaşmanız** gerekir.",
         "data": {
           "access_key": "Erişim Anahtarı (AK)",
-          "secret_key": "Gizli Anahtar (SK)"
+          "secret_key": "Gizli Anahtar (SK)",
+          "region": "Sunucu Bölgesi"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Reaktif Güç"
+      },
+      "micro_ac_power_total": {
+        "name": "Mikro İnverterler Toplam AC Gücü"
+      },
+      "micro_daily_yield_total": {
+        "name": "Mikro İnverterler Toplam Günlük Verim"
       }
     },
     "number": {

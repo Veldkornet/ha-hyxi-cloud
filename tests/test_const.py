@@ -1,6 +1,9 @@
 """Tests for the hyxi_cloud const module."""
 
 from custom_components.hyxi_cloud.const import (
+    BASE_URL_DEFAULT,
+    DEFAULT_REGION,
+    default_region_for_country,
     detect_phase_type,
     get_raw_device_code,
     get_software_version,
@@ -9,6 +12,7 @@ from custom_components.hyxi_cloud.const import (
     mask_sn,
     mask_url,
     normalize_device_type,
+    resolve_base_url,
 )
 
 
@@ -307,3 +311,31 @@ def test_mask_sensitive_key_value():
 
     # 6. Check different types of values
     assert mask_sensitive_key_value("sn", 12345) == mask_sn("12345")
+
+
+def test_resolve_base_url():
+    """Verify each region resolves to its documented HYXI Cloud server."""
+    assert resolve_base_url("eu") == BASE_URL_DEFAULT
+    assert resolve_base_url("na") == "https://open-or.hyxicloud.com"
+    assert resolve_base_url("cn") == "https://open-cn.hyxicloud.com"
+
+    # Unknown/missing region falls back to the EU default rather than erroring
+    assert resolve_base_url(None) == BASE_URL_DEFAULT
+    assert resolve_base_url("not_a_region") == BASE_URL_DEFAULT
+
+
+def test_default_region_for_country():
+    """Verify the country -> region suggestion used to preselect the config flow dropdown."""
+    assert default_region_for_country("CN") == "cn"
+    assert default_region_for_country("US") == "na"
+    assert default_region_for_country("CA") == "na"
+    assert default_region_for_country("MX") == "na"
+
+    # Case-insensitive
+    assert default_region_for_country("us") == "na"
+
+    # Everything else (including Europe and unset) defaults to EU
+    assert default_region_for_country("FR") == DEFAULT_REGION
+    assert default_region_for_country("ZA") == DEFAULT_REGION
+    assert default_region_for_country(None) == DEFAULT_REGION
+    assert default_region_for_country("") == DEFAULT_REGION

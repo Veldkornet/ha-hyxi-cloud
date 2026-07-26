@@ -6,7 +6,8 @@
         "description": "Indtast dine **Developer API-legitimationsoplysninger (AK/SK)**. Du kan generere disse på [HYXIPOWER Developer Platform]({link}).\n\n**Bemærk:** Dette kræver en separat udviklerkonto. Hvis din udvikler-e-mail er forskellig fra din app-e-post, skal du først **Dele dit anlæg** fra appen til udvikler-e-mailen.",
         "data": {
           "access_key": "Adgangsnøgle (AK)",
-          "secret_key": "Hemmelig nøgle (SK)"
+          "secret_key": "Hemmelig nøgle (SK)",
+          "region": "Serverregion"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Reaktiv Effekt"
+      },
+      "micro_ac_power_total": {
+        "name": "Samlet AC-effekt for mikroinvertere"
+      },
+      "micro_daily_yield_total": {
+        "name": "Samlet daglig ydelse for mikroinvertere"
       }
     },
     "number": {

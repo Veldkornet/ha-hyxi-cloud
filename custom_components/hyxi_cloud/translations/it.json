@@ -6,7 +6,8 @@
         "description": "Inserisci le tue **credenziali API sviluppatore (AK/SK)**. Puoi generarle sulla [Piattaforma sviluppatori HYXIPOWER]({link}).\n\n**Nota:** È necessario un account sviluppatore separato. Se l'e-mail dello sviluppatore differisce dall'e-mail dell'app, devi prima **Condividere il tuo impianto** dall'app all'e-mail dello sviluppatore.",
         "data": {
           "access_key": "Chiave di accesso (AK)",
-          "secret_key": "Chiave segreta (SK)"
+          "secret_key": "Chiave segreta (SK)",
+          "region": "Regione del server"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Potenza Reattiva"
+      },
+      "micro_ac_power_total": {
+        "name": "Potenza CA totale dei microinverter"
+      },
+      "micro_daily_yield_total": {
+        "name": "Resa giornaliera totale dei microinverter"
       }
     },
     "number": {

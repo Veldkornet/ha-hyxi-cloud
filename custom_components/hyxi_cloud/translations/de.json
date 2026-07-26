@@ -6,7 +6,8 @@
         "description": "Geben Sie Ihre **Entwickler-API-Zugangsdaten (AK/SK)** ein. Sie können diese auf der [HYXIPOWER Developer Platform]({link}) generieren.\n\n**Hinweis:** Dies erfordert ein separates Entwicklerkonto. Wenn sich Ihre Entwickler-E-Mail von Ihrer App-E-Mail unterscheidet, müssen Sie Ihre Anlage zuerst über die App für die Entwickler-E-Mail **freigeben**.",
         "data": {
           "access_key": "Zugriffsschlüssel (AK)",
-          "secret_key": "Geheimer Schlüssel (SK)"
+          "secret_key": "Geheimer Schlüssel (SK)",
+          "region": "Serverregion"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Blindleistung"
+      },
+      "micro_ac_power_total": {
+        "name": "Gesamte AC-Leistung der Mikrowechselrichter"
+      },
+      "micro_daily_yield_total": {
+        "name": "Gesamter Tagesertrag der Mikrowechselrichter"
       }
     },
     "number": {

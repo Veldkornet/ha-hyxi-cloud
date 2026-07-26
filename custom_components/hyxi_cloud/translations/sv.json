@@ -6,7 +6,8 @@
         "description": "Ange dina **API-uppgifter för utvecklare (AK/SK)**. Du kan generera dessa på [HYXIPOWER Developer Platform]({link}).\n\n**Obs:** Detta kräver ett separat utvecklarkonto. Om din utvecklar-e-post skiljer sig från din app-e-post måste du först **Dela din anläggning** från appen till utvecklar-e-posten.",
         "data": {
           "access_key": "Åtkomstnyckel (AK)",
-          "secret_key": "Hemlig nyckel (SK)"
+          "secret_key": "Hemlig nyckel (SK)",
+          "region": "Serverregion"
         }
       },
       "reauth_confirm": {
@@ -490,6 +491,12 @@
       },
       "q": {
         "name": "Reaktiv Effekt"
+      },
+      "micro_ac_power_total": {
+        "name": "Total AC-effekt för mikroväxelriktare"
+      },
+      "micro_daily_yield_total": {
+        "name": "Total daglig avkastning för mikroväxelriktare"
       }
     },
     "number": {
