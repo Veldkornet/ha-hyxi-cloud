@@ -476,19 +476,23 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(step_id="energy_manager", data_schema=schema)
 
-    def _get_controllable_sns(self) -> list[str]:
-        """Get serial numbers of controllable inverters from coordinator data."""
+    def _get_sns_by_device_type(self, allowed_types: tuple[str, ...]) -> list[str]:
+        """Get serial numbers of coordinator devices whose normalized type
+        is one of `allowed_types`."""
         if not hasattr(self, "hass") or self.hass is None:
             return []
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         if not coordinator or not coordinator.data:
             return []
-        sns = []
-        for sn, dev_data in coordinator.data.items():
-            device_type = normalize_device_type(get_raw_device_code(dev_data))
-            if device_type in ("hybrid_inverter", "all_in_one"):
-                sns.append(sn)
-        return sns
+        return [
+            sn
+            for sn, dev_data in coordinator.data.items()
+            if normalize_device_type(get_raw_device_code(dev_data)) in allowed_types
+        ]
+
+    def _get_controllable_sns(self) -> list[str]:
+        """Get serial numbers of EM-eligible inverters (hybrid_inverter/all_in_one)."""
+        return self._get_sns_by_device_type(("hybrid_inverter", "all_in_one"))
 
     def _has_controllable_inverter(self) -> bool:
         """Check if any EM-eligible inverter (hybrid_inverter/all_in_one) exists."""
@@ -500,17 +504,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         Includes EM-eligible inverters plus micro_ess/HALO devices, which
         only support the Power On/Off control (controlId 1011).
         """
-        if not hasattr(self, "hass") or self.hass is None:
-            return []
-        coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
-        if not coordinator or not coordinator.data:
-            return []
-        sns = []
-        for sn, dev_data in coordinator.data.items():
-            device_type = normalize_device_type(get_raw_device_code(dev_data))
-            if device_type in ("hybrid_inverter", "all_in_one", "micro_ess"):
-                sns.append(sn)
-        return sns
+        return self._get_sns_by_device_type(
+            ("hybrid_inverter", "all_in_one", "micro_ess")
+        )
 
     def _has_control_capable_device(self) -> bool:
         """Check if any control-capable device (including micro_ess) exists."""
