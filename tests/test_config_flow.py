@@ -581,6 +581,96 @@ async def test_options_flow_success(mock_ha_environment):
     assert call_kwargs["data"]["update_interval"] == 30
 
 
+def test_control_capable_includes_micro_ess(mock_ha_environment):
+    """A HALO-only install (micro_ess) is control-capable but not EM-eligible."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+    from custom_components.hyxi_cloud.const import DOMAIN
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_id"
+
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
+    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+
+    assert options_flow._get_control_capable_sns() == ["SN_HALO_1"]
+    assert options_flow._has_control_capable_device() is True
+    # Not EM-eligible — micro_ess devices can't run the Energy Manager
+    assert not options_flow._get_controllable_sns()
+    assert options_flow._has_controllable_inverter() is False
+
+
+def test_control_capable_includes_hybrid_inverter(mock_ha_environment):
+    """A hybrid inverter is both control-capable and EM-eligible."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+    from custom_components.hyxi_cloud.const import DOMAIN
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_id"
+
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.data = {"SN_INV_1": {"device_type_code": "HYBRID_INVERTER"}}
+    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+
+    assert options_flow._get_control_capable_sns() == ["SN_INV_1"]
+    assert options_flow._has_control_capable_device() is True
+    assert options_flow._get_controllable_sns() == ["SN_INV_1"]
+    assert options_flow._has_controllable_inverter() is True
+
+
+def test_get_sns_by_device_type_hass_not_set(mock_ha_environment):
+    """Guard returns [] when self.hass was never assigned (fresh flow instance)."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_id"
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+
+    assert not hasattr(options_flow, "hass")
+    assert options_flow._get_control_capable_sns() == []
+    assert options_flow._has_control_capable_device() is False
+    assert options_flow._get_controllable_sns() == []
+    assert options_flow._has_controllable_inverter() is False
+
+
+def test_get_sns_by_device_type_hass_none(mock_ha_environment):
+    """Guard returns [] when self.hass is explicitly None."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_id"
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = None
+
+    assert options_flow._get_control_capable_sns() == []
+    assert options_flow._has_control_capable_device() is False
+
+
+def test_get_sns_by_device_type_missing_coordinator(mock_ha_environment):
+    """Guard returns [] when hass.data has no entry for DOMAIN or entry_id."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+    from custom_components.hyxi_cloud.const import DOMAIN
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_id"
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+
+    # No DOMAIN key at all
+    options_flow.hass = MagicMock()
+    options_flow.hass.data = {}
+    assert options_flow._get_control_capable_sns() == []
+    assert options_flow._has_control_capable_device() is False
+
+    # DOMAIN present but no coordinator for this entry_id
+    options_flow.hass.data = {DOMAIN: {}}
+    assert options_flow._get_control_capable_sns() == []
+    assert options_flow._has_control_capable_device() is False
+
+
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
 async def test_step_user_already_configured(mock_validate_input, config_flow):

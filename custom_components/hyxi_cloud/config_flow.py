@@ -374,7 +374,8 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         options = self._options if self._options else self._config_entry.options
         current_interval = options.get("update_interval", 5)
         em_enabled = options.get(CONF_EM_ENABLED, False)
-        has_controllable = self._has_controllable_inverter()
+        has_em_capable = self._has_controllable_inverter()
+        has_control_capable = self._has_control_capable_device()
 
         schema_dict = {
             # Slider for Interval
@@ -414,8 +415,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 )
             ] = selector.TextSelector()
 
-        # Only show control/EM toggles if controllable inverters exist
-        if has_controllable:
+        # Show the device control toggle for any control-capable device
+        # (hybrid inverter, all-in-one, or micro_ess/HALO)
+        if has_control_capable:
             battery_control_on = options.get("enable_battery_control", False)
             schema_dict[
                 vol.Optional(
@@ -423,8 +425,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                     default=battery_control_on,
                 )
             ] = selector.BooleanSelector()
-            # EM toggle only visible when battery control is already enabled
-            if battery_control_on:
+            # EM toggle only visible when battery control is enabled AND an
+            # EM-eligible inverter (hybrid_inverter/all_in_one) is present
+            if battery_control_on and has_em_capable:
                 schema_dict[
                     vol.Optional("enable_energy_manager", default=em_enabled)
                 ] = selector.BooleanSelector()
@@ -473,20 +476,38 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(step_id="energy_manager", data_schema=schema)
 
-    def _get_controllable_sns(self) -> list[str]:
-        """Get serial numbers of controllable inverters from coordinator data."""
+    def _get_sns_by_device_type(self, allowed_types: tuple[str, ...]) -> list[str]:
+        """Get serial numbers of coordinator devices whose normalized type
+        is one of `allowed_types`."""
         if not hasattr(self, "hass") or self.hass is None:
             return []
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         if not coordinator or not coordinator.data:
             return []
-        sns = []
-        for sn, dev_data in coordinator.data.items():
-            device_type = normalize_device_type(get_raw_device_code(dev_data))
-            if device_type in ("hybrid_inverter", "all_in_one"):
-                sns.append(sn)
-        return sns
+        return [
+            sn
+            for sn, dev_data in coordinator.data.items()
+            if normalize_device_type(get_raw_device_code(dev_data)) in allowed_types
+        ]
+
+    def _get_controllable_sns(self) -> list[str]:
+        """Get serial numbers of EM-eligible inverters (hybrid_inverter/all_in_one)."""
+        return self._get_sns_by_device_type(("hybrid_inverter", "all_in_one"))
 
     def _has_controllable_inverter(self) -> bool:
-        """Check if any controllable inverter exists."""
+        """Check if any EM-eligible inverter (hybrid_inverter/all_in_one) exists."""
         return len(self._get_controllable_sns()) > 0
+
+    def _get_control_capable_sns(self) -> list[str]:
+        """Get serial numbers of any device control (not just EM) supports.
+
+        Includes EM-eligible inverters plus micro_ess/HALO devices, which
+        only support the Power On/Off control (controlId 1011).
+        """
+        return self._get_sns_by_device_type(
+            ("hybrid_inverter", "all_in_one", "micro_ess")
+        )
+
+    def _has_control_capable_device(self) -> bool:
+        """Check if any control-capable device (including micro_ess) exists."""
+        return len(self._get_control_capable_sns()) > 0

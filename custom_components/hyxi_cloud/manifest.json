@@ -16,7 +16,7 @@
   "requirements": [
     "aiohttp>=3.13.5",
     "voluptuous",
-    "hyxi-cloud-api>=1.4.3"
+    "hyxi-cloud-api>=1.4.4"
   ],
   "version": "1.6.6"
 }

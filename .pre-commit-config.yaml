@@ -47,6 +47,10 @@ repos:
     rev: v2.16
     hooks:
       - id: vulture
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.1
+    hooks:
+      - id: uv-lock
   - repo: local
     hooks:
       - id: check-exception-parentheses

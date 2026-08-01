@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Питание"
       },
+      "micro_ess_power": {
+        "name": "Питание"
+      },
       "em_grid_charge_allowed": {
         "name": "Разрешена зарядка от сети"
       },

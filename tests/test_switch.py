@@ -76,8 +76,8 @@ def mock_coordinator_fixture():
     coordinator.data = {}
     coordinator.client = MagicMock()
     coordinator.client.set_frequency_control = AsyncMock()
-    coordinator.client.set_micro_power_on = AsyncMock()
-    coordinator.client.set_micro_power_off = AsyncMock()
+    coordinator.client.set_micro_power = AsyncMock()
+    coordinator.client.set_micro_ess_power = AsyncMock()
     # Ensure async methods are awaitable
     coordinator.async_request_refresh = AsyncMock()
     return coordinator
@@ -276,6 +276,40 @@ async def test_async_setup_entry_micro_inverter(
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_micro_ess(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """Test setup for Micro ESS (HALO)."""
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
+
+    async_add_entities = MagicMock()
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.switch.normalize_device_type",
+            return_value="micro_ess",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.get_raw_device_code",
+            return_value="EMS",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.detect_phase_type",
+            return_value="unknown",
+        ),
+    ):
+        await switch_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+    assert len(entities) == 1
+    assert isinstance(entities[0], switch_mod.HyxiMicroEssPowerSwitch)
+    assert entities[0]._sn == "SN_HALO_1"
+
+
+@pytest.mark.asyncio
 async def test_frequency_control_switch_turn_on(mock_coordinator_fixture):
     """Test turning on the frequency control switch."""
     switch = switch_mod.HyxiFrequencyControlSwitch(
@@ -355,7 +389,9 @@ async def test_micro_power_switch_turn_on(mock_coordinator_fixture):
 
     await switch.async_turn_on()
 
-    mock_coordinator_fixture.client.set_micro_power_on.assert_called_once_with("SN123")
+    mock_coordinator_fixture.client.set_micro_power.assert_called_once_with(
+        "SN123", power_on=True
+    )
     assert switch._attr_is_on is True
     switch.async_write_ha_state.assert_called_once()
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
@@ -369,7 +405,9 @@ async def test_micro_power_switch_turn_off(mock_coordinator_fixture):
 
     await switch.async_turn_off()
 
-    mock_coordinator_fixture.client.set_micro_power_off.assert_called_once_with("SN123")
+    mock_coordinator_fixture.client.set_micro_power.assert_called_once_with(
+        "SN123", power_on=False
+    )
     assert switch._attr_is_on is False
     switch.async_write_ha_state.assert_called_once()
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
@@ -382,7 +420,7 @@ async def test_micro_power_switch_error(mock_coordinator_fixture):
     switch.async_write_ha_state = MagicMock()
 
     err = Exception("Network error")
-    mock_coordinator_fixture.client.set_micro_power_on.side_effect = err
+    mock_coordinator_fixture.client.set_micro_power.side_effect = err
 
     with pytest.raises(
         switch_mod.HomeAssistantError,
@@ -394,11 +432,71 @@ async def test_micro_power_switch_error(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
     assert switch._attr_is_on is None
 
-    mock_coordinator_fixture.client.set_micro_power_off.side_effect = err
+    mock_coordinator_fixture.client.set_micro_power.side_effect = err
 
     with pytest.raises(
         switch_mod.HomeAssistantError,
         match="Failed to turn off microinverter: Network error",
+    ):
+        await switch.async_turn_off()
+
+
+@pytest.mark.asyncio
+async def test_micro_ess_power_switch_turn_on(mock_coordinator_fixture):
+    """Test turning on the Micro ESS power switch."""
+    switch = switch_mod.HyxiMicroEssPowerSwitch(mock_coordinator_fixture, "SN123", {})
+    switch.async_write_ha_state = MagicMock()
+
+    await switch.async_turn_on()
+
+    mock_coordinator_fixture.client.set_micro_ess_power.assert_called_once_with(
+        "SN123", power_on=True
+    )
+    assert switch._attr_is_on is True
+    switch.async_write_ha_state.assert_called_once()
+    mock_coordinator_fixture.async_request_refresh.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_micro_ess_power_switch_turn_off(mock_coordinator_fixture):
+    """Test turning off the Micro ESS power switch."""
+    switch = switch_mod.HyxiMicroEssPowerSwitch(mock_coordinator_fixture, "SN123", {})
+    switch.async_write_ha_state = MagicMock()
+
+    await switch.async_turn_off()
+
+    mock_coordinator_fixture.client.set_micro_ess_power.assert_called_once_with(
+        "SN123", power_on=False
+    )
+    assert switch._attr_is_on is False
+    switch.async_write_ha_state.assert_called_once()
+    mock_coordinator_fixture.async_request_refresh.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_micro_ess_power_switch_error(mock_coordinator_fixture):
+    """Test error handling for Micro ESS power switch."""
+    switch = switch_mod.HyxiMicroEssPowerSwitch(mock_coordinator_fixture, "SN123", {})
+    switch.async_write_ha_state = MagicMock()
+
+    err = Exception("Network error")
+    mock_coordinator_fixture.client.set_micro_ess_power.side_effect = err
+
+    with pytest.raises(
+        switch_mod.HomeAssistantError,
+        match="Failed to turn on Micro ESS: Network error",
+    ):
+        await switch.async_turn_on()
+
+    switch.async_write_ha_state.assert_not_called()
+    mock_coordinator_fixture.async_request_refresh.assert_not_called()
+    assert switch._attr_is_on is None
+
+    mock_coordinator_fixture.client.set_micro_ess_power.side_effect = err
+
+    with pytest.raises(
+        switch_mod.HomeAssistantError,
+        match="Failed to turn off Micro ESS: Network error",
     ):
         await switch.async_turn_off()
 

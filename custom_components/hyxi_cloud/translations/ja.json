@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "電源"
       },
+      "micro_ess_power": {
+        "name": "電源"
+      },
       "em_grid_charge_allowed": {
         "name": "系統充電許可"
       },

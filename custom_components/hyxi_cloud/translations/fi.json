@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Virta"
       },
+      "micro_ess_power": {
+        "name": "Virta"
+      },
       "em_grid_charge_allowed": {
         "name": "Verkkolataus Sallittu"
       },
