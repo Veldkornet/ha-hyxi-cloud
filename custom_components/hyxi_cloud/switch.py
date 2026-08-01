@@ -19,6 +19,7 @@ from .const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     DOMAIN,
+    MICRO_ESS_CONTROL_SUPPORTED,
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
@@ -58,7 +59,9 @@ async def async_setup_entry(
             if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
         elif device_type == "micro_ess":
-            if is_battery_control_enabled(entry, coordinator):
+            if MICRO_ESS_CONTROL_SUPPORTED and is_battery_control_enabled(
+                entry, coordinator
+            ):
                 entities.append(HyxiMicroEssPowerSwitch(coordinator, sn, dev_data))
 
     # EM-only switches — only when EM is enabled for this inverter
