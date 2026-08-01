@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Napájení"
       },
+      "micro_ess_power": {
+        "name": "Napájení"
+      },
       "em_grid_charge_allowed": {
         "name": "Povoleno nabíjení ze sítě"
       },

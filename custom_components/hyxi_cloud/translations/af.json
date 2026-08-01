@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Krag"
       },
+      "micro_ess_power": {
+        "name": "Krag"
+      },
       "em_grid_charge_allowed": {
         "name": "Netlading Toegelaat"
       },

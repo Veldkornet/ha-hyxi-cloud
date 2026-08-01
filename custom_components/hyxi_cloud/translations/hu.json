@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Tápellátás"
       },
+      "micro_ess_power": {
+        "name": "Tápellátás"
+      },
       "em_grid_charge_allowed": {
         "name": "Hálózati Töltés Engedélyezve"
       },

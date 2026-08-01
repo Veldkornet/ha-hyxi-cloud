@@ -335,10 +335,19 @@ The engine fires a `hyxi_em_mode_changed` event on every mode change, usable in 
 | Power Limit (0–100%) | 3012 |
 | Restart | 3013 |
 
+#### Micro ESS (HALO)
+
+| Controls | controlId |
+| :--- | :--- |
+| Power On/Off | 1011 |
+
+> [!NOTE]
+> **Beta:** This control has not been confirmed against live HALO hardware — it's inferred from the HYXI developer portal's device control instructions and the HYX-MS3000AC user manual (which documents an identical physical on/off behavior). It ships as a pre-release; please report back in [GitHub Issues](https://github.com/Veldkornet/ha-hyxi-cloud/issues) if it works (or doesn't) for your unit.
+
 #### Unsupported Device Types
 
 > [!WARNING]
-> **Micro ESS (EMS):** Control entities are **not** enabled for EMS devices. The HYXI API documentation does not list any control endpoints for EMS — the EMS API section only provides read-only data queries.
+> **Micro ESS (HALO) — Operating Mode / Peak Shaving / Frequency Control (controlIds 1020, 1021, 1062–1065):** Not supported. These controls describe PV-battery interplay (e.g. "PV charges the battery first, shortfall from grid") that assumes the controlled device has its own photovoltaic input. AC-coupled Micro ESS units like the HYX-MS3000AC have no PV/DC input at all — only AC in/out and battery terminals — so these controls don't apply regardless of device type.
 
 #### Real-Time Webhook Push Subscriptions
 
@@ -402,7 +411,7 @@ Or alternatively, add the integration with the following:
 Click the **Configure** button on the HYXI integration card to access:
 * **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
 * **Enable Discovery via Alarms:** Proactively discover child devices reporting active alarms (Advanced).
-* **Enable Device Control & Protection:** Opt-in to enable inverter mode buttons, charge/discharge power settings, automatic battery protection thresholds, and micro-inverter power limits or switches. By default, this is disabled to prevent conflicts with external control systems (e.g. energy providers or grid constraints).
+* **Enable Device Control & Protection:** Opt-in to enable inverter mode buttons, charge/discharge power settings, automatic battery protection thresholds, micro-inverter power limits or switches, and the Micro ESS (HALO) power switch. By default, this is disabled to prevent conflicts with external control systems (e.g. energy providers or grid constraints).
 * **Enable Real-Time Telemetry & Alarm Push:** Registers a webhook endpoint in Home Assistant and subscribes to HYXI Cloud push notifications to receive real-time updates and active alarms.
 * **Enable Energy Manager Standalone (Beta):** Automated battery management engine. Only visible after enabling Device Control & Protection. See [Energy Manager Standalone](#energy-manager-standalone-beta) above.
 

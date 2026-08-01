@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Alimentation"
       },
+      "micro_ess_power": {
+        "name": "Alimentation"
+      },
       "em_grid_charge_allowed": {
         "name": "Charge Réseau Autorisée"
       },

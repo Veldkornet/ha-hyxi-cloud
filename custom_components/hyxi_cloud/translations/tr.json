@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Güç"
       },
+      "micro_ess_power": {
+        "name": "Güç"
+      },
       "em_grid_charge_allowed": {
         "name": "Şebeke Şarjına İzin Verildi"
       },

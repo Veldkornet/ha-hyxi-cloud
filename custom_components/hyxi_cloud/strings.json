@@ -576,6 +576,9 @@
       "micro_power": {
         "name": "Power"
       },
+      "micro_ess_power": {
+        "name": "Power"
+      },
       "em_grid_charge_allowed": {
         "name": "Grid Charge Allowed"
       },

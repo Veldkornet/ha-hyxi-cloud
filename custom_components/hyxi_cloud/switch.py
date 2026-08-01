@@ -57,6 +57,9 @@ async def async_setup_entry(
         elif device_type == "micro_inverter":
             if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
+        elif device_type == "micro_ess":
+            if is_battery_control_enabled(entry, coordinator):
+                entities.append(HyxiMicroEssPowerSwitch(coordinator, sn, dev_data))
 
     # EM-only switches — only when EM is enabled for this inverter
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
@@ -175,7 +178,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
         client = self.coordinator.client
         _LOGGER.debug("Switch: turning on microinverter %s", mask_sn(self._sn))
         try:
-            await client.set_micro_power_on(self._sn)
+            await client.set_micro_power(self._sn, power_on=True)
             self._attr_is_on = True
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
@@ -190,7 +193,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
         client = self.coordinator.client
         _LOGGER.debug("Switch: turning off microinverter %s", mask_sn(self._sn))
         try:
-            await client.set_micro_power_off(self._sn)
+            await client.set_micro_power(self._sn, power_on=False)
             self._attr_is_on = False
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
@@ -201,6 +204,49 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             raise HomeAssistantError(
                 f"Failed to turn off microinverter: {err}"
             ) from err
+
+
+class HyxiMicroEssPowerSwitch(HyxiEntity, SwitchEntity):
+    """Switch entity for Micro ESS power on/off (controlId 1011).
+
+    State is tracked internally after successful writes as the API does not
+    return the current power state in polling responses.
+    """
+
+    _attr_translation_key = "micro_ess_power"
+    _attr_icon = "mdi:power"
+    _attr_is_on: bool | None = None
+
+    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+        """Initialize the Micro ESS power switch."""
+        super().__init__(coordinator, sn, dev_data)
+        self._attr_unique_id = f"hyxi_{sn}_micro_ess_power"
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Turn on the Micro ESS."""
+        client = self.coordinator.client
+        _LOGGER.debug("Switch: turning on Micro ESS %s", mask_sn(self._sn))
+        try:
+            await client.set_micro_ess_power(self._sn, power_on=True)
+            self._attr_is_on = True
+            self.async_write_ha_state()
+            await self.coordinator.async_request_refresh()
+        except Exception as err:
+            _LOGGER.error("Failed to turn on Micro ESS %s: %s", mask_sn(self._sn), err)
+            raise HomeAssistantError(f"Failed to turn on Micro ESS: {err}") from err
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn off the Micro ESS."""
+        client = self.coordinator.client
+        _LOGGER.debug("Switch: turning off Micro ESS %s", mask_sn(self._sn))
+        try:
+            await client.set_micro_ess_power(self._sn, power_on=False)
+            self._attr_is_on = False
+            self.async_write_ha_state()
+            await self.coordinator.async_request_refresh()
+        except Exception as err:
+            _LOGGER.error("Failed to turn off Micro ESS %s: %s", mask_sn(self._sn), err)
+            raise HomeAssistantError(f"Failed to turn off Micro ESS: {err}") from err
 
 
 @dataclass

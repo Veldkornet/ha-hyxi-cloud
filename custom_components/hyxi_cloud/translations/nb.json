@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Strøm"
       },
+      "micro_ess_power": {
+        "name": "Strøm"
+      },
       "em_grid_charge_allowed": {
         "name": "Nettlading Tillatt"
       },

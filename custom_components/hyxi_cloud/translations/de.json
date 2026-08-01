@@ -575,6 +575,9 @@
       "micro_power": {
         "name": "Strom"
       },
+      "micro_ess_power": {
+        "name": "Strom"
+      },
       "em_grid_charge_allowed": {
         "name": "Netzladung Erlaubt"
       },
