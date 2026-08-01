@@ -417,7 +417,8 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             ] = selector.TextSelector()
 
         # Show the device control toggle for any control-capable device
-        # (hybrid inverter, all-in-one, or micro_ess/HALO)
+        # (hybrid inverter, all-in-one; also micro_ess/HALO once
+        # MICRO_ESS_CONTROL_SUPPORTED is enabled — see const.py)
         if has_control_capable:
             battery_control_on = options.get("enable_battery_control", False)
             schema_dict[
@@ -511,5 +512,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         return self._get_sns_by_device_type(allowed_types)
 
     def _has_control_capable_device(self) -> bool:
-        """Check if any control-capable device (including micro_ess) exists."""
+        """Check if any control-capable device exists.
+
+        See _get_control_capable_sns — micro_ess only counts when
+        MICRO_ESS_CONTROL_SUPPORTED is enabled.
+        """
         return len(self._get_control_capable_sns()) > 0
