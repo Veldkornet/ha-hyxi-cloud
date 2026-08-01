@@ -276,10 +276,11 @@ async def test_async_setup_entry_micro_inverter(
 
 
 @pytest.mark.asyncio
-async def test_async_setup_entry_micro_ess(
+async def test_async_setup_entry_micro_ess_disabled_by_default(
     mock_coordinator_fixture, mock_entry_fixture
 ):
-    """Test setup for Micro ESS (HALO)."""
+    """Micro ESS control is disabled by default (MICRO_ESS_CONTROL_SUPPORTED=False)
+    pending HYXI granting control API permission — see const.py for details."""
     hass = MagicMock()
     hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
     mock_coordinator_fixture.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
@@ -287,6 +288,38 @@ async def test_async_setup_entry_micro_ess(
     async_add_entities = MagicMock()
 
     with (
+        patch(
+            "custom_components.hyxi_cloud.switch.normalize_device_type",
+            return_value="micro_ess",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.get_raw_device_code",
+            return_value="EMS",
+        ),
+        patch(
+            "custom_components.hyxi_cloud.switch.detect_phase_type",
+            return_value="unknown",
+        ),
+    ):
+        await switch_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    async_add_entities.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_micro_ess_when_supported(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """Wiring still creates HyxiMicroEssPowerSwitch once HYXI grants API access
+    and MICRO_ESS_CONTROL_SUPPORTED is flipped to True."""
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
+
+    async_add_entities = MagicMock()
+
+    with (
+        patch("custom_components.hyxi_cloud.switch.MICRO_ESS_CONTROL_SUPPORTED", True),
         patch(
             "custom_components.hyxi_cloud.switch.normalize_device_type",
             return_value="micro_ess",

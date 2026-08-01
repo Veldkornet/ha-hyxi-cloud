@@ -33,6 +33,7 @@ from .const import (
     DEFAULT_PUSH_RATE,
     DEFAULT_REGION,
     DOMAIN,
+    MICRO_ESS_CONTROL_SUPPORTED,
     default_region_for_country,
     get_raw_device_code,
     normalize_device_type,
@@ -416,7 +417,8 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             ] = selector.TextSelector()
 
         # Show the device control toggle for any control-capable device
-        # (hybrid inverter, all-in-one, or micro_ess/HALO)
+        # (hybrid inverter, all-in-one; also micro_ess/HALO once
+        # MICRO_ESS_CONTROL_SUPPORTED is enabled — see const.py)
         if has_control_capable:
             battery_control_on = options.get("enable_battery_control", False)
             schema_dict[
@@ -501,13 +503,18 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
     def _get_control_capable_sns(self) -> list[str]:
         """Get serial numbers of any device control (not just EM) supports.
 
-        Includes EM-eligible inverters plus micro_ess/HALO devices, which
-        only support the Power On/Off control (controlId 1011).
+        Includes EM-eligible inverters plus, when MICRO_ESS_CONTROL_SUPPORTED
+        is enabled, micro_ess/HALO devices (Power On/Off, controlId 1011).
         """
-        return self._get_sns_by_device_type(
-            ("hybrid_inverter", "all_in_one", "micro_ess")
-        )
+        allowed_types: tuple[str, ...] = ("hybrid_inverter", "all_in_one")
+        if MICRO_ESS_CONTROL_SUPPORTED:
+            allowed_types += ("micro_ess",)
+        return self._get_sns_by_device_type(allowed_types)
 
     def _has_control_capable_device(self) -> bool:
-        """Check if any control-capable device (including micro_ess) exists."""
+        """Check if any control-capable device exists.
+
+        See _get_control_capable_sns — micro_ess only counts when
+        MICRO_ESS_CONTROL_SUPPORTED is enabled.
+        """
         return len(self._get_control_capable_sns()) > 0

@@ -581,8 +581,9 @@ async def test_options_flow_success(mock_ha_environment):
     assert call_kwargs["data"]["update_interval"] == 30
 
 
-def test_control_capable_includes_micro_ess(mock_ha_environment):
-    """A HALO-only install (micro_ess) is control-capable but not EM-eligible."""
+def test_control_capable_excludes_micro_ess_by_default(mock_ha_environment):
+    """Micro ESS is excluded from control-capable SNs by default
+    (MICRO_ESS_CONTROL_SUPPORTED=False) pending HYXI control API permission."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
     from custom_components.hyxi_cloud.const import DOMAIN
 
@@ -595,9 +596,34 @@ def test_control_capable_includes_micro_ess(mock_ha_environment):
     coordinator.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
     options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
 
-    assert options_flow._get_control_capable_sns() == ["SN_HALO_1"]
-    assert options_flow._has_control_capable_device() is True
-    # Not EM-eligible — micro_ess devices can't run the Energy Manager
+    assert not options_flow._get_control_capable_sns()
+    assert options_flow._has_control_capable_device() is False
+    # Not EM-eligible either — micro_ess devices can't run the Energy Manager
+    assert not options_flow._get_controllable_sns()
+    assert options_flow._has_controllable_inverter() is False
+
+
+def test_control_capable_includes_micro_ess_when_supported(mock_ha_environment):
+    """Once HYXI grants control API access and MICRO_ESS_CONTROL_SUPPORTED is
+    flipped to True, a HALO-only install becomes control-capable (but still
+    not EM-eligible)."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+    from custom_components.hyxi_cloud.const import DOMAIN
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_id"
+
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
+    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+
+    with patch(
+        "custom_components.hyxi_cloud.config_flow.MICRO_ESS_CONTROL_SUPPORTED", True
+    ):
+        assert options_flow._get_control_capable_sns() == ["SN_HALO_1"]
+        assert options_flow._has_control_capable_device() is True
     assert not options_flow._get_controllable_sns()
     assert options_flow._has_controllable_inverter() is False
 

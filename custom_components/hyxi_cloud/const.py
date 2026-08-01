@@ -114,6 +114,15 @@ DEVICE_TYPE_KEYS = {
     "MICRO_STORAGE_ALL_IN_ONE": "micro_ess",
 }
 
+# Micro ESS (HALO/HYX-MS3000AC) Power On/Off control (controlId 1011) is
+# fully implemented (HyxiMicroEssPowerSwitch, hyxi_cloud_api.set_micro_ess_power)
+# but disabled here: live community testing confirmed HYXI's API rejects the
+# control write for third-party developer apps with a permission error
+# (code=B003026), and there's no developer portal setting to request access.
+# Flip to True if HYXI ever grants Micro ESS control API access — see
+# README's "Micro ESS (HALO)" section for details.
+MICRO_ESS_CONTROL_SUPPORTED = False
+
 
 def mask_sn(sn: str | None) -> str:
     """Mask a serial number/identifier securely using SHA-256 (first 8 chars) to match API library.
