@@ -21,7 +21,7 @@ dependencies = [
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
-    "hypothesis>=6.157.0",
+    "hypothesis>=6.164.0",
     "pytest-homeassistant-custom-component>=0.13.346",
     "mypy>=2.3.0",
 ]
