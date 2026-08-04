@@ -258,13 +258,22 @@ async def test_async_setup_entry_uses_shared_session_not_owned(mock_hass, mock_e
 
         await async_setup_entry(mock_hass, mock_entry)
 
-        # Client is built from HA's shared session, not a private one.
+        # Client is built from HA's shared session, not a private one --
+        # whether passed positionally or by keyword.
         mock_get_session.assert_called_once_with(mock_hass)
-        assert mock_get_session.return_value in mock_client_cls.call_args.args
+        call = mock_client_cls.call_args
+        assert mock_get_session.return_value in (*call.args, *call.kwargs.values())
 
-        # No HA-stop listener registered -- there's no privately-owned
-        # session/client to close on shutdown.
-        mock_hass.bus.async_listen.assert_not_called()
+        # No listener registered for HA-stop -- there's no privately-owned
+        # session/client to close on shutdown. Scoped to the stop event by
+        # name (not "no async_listen call at all") so this doesn't break if
+        # the integration adds some other, unrelated bus listener later.
+        stop_event_calls = [
+            c
+            for c in mock_hass.bus.async_listen.call_args_list
+            if "homeassistant_stop" in c.args
+        ]
+        assert not stop_event_calls
 
 
 @pytest.mark.asyncio
