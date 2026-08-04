@@ -27,6 +27,7 @@ dist/
 *.swp
 .ruff_cache/
 .venv/
+.cache/
 
 # Home Assistant testing
 .storage/
