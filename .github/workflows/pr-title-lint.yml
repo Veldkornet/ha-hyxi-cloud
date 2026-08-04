@@ -9,8 +9,10 @@ permissions:
 
 jobs:
   lint-title:
-    # pre-commit.ci's autoupdate title isn't conventional-commit and isn't ours to change
-    if: github.actor != 'pre-commit-ci[bot]'
+    # pre-commit.ci's autoupdate title isn't conventional-commit and isn't ours to change.
+    # Check the PR author, not github.actor — a later event (e.g. Sourcery editing the
+    # PR description) fires with a different actor and would otherwise slip past this guard.
+    if: github.event.pull_request.user.login != 'pre-commit-ci[bot]'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
