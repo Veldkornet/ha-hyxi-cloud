@@ -227,6 +227,47 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_uses_shared_session_not_owned(mock_hass, mock_entry):
+    """The integration must never own its aiohttp session.
+
+    It borrows HA's shared per-hass session via async_get_clientsession(),
+    which HA's own aiohttp_client helper creates once and closes once on HA
+    shutdown. A private ClientSession paired with a manual close() on
+    unload/HA-stop is the leak-prone pattern this integration deliberately
+    avoids -- so it must also never register a HA-stop listener to do that
+    closing, since it has nothing of its own to close.
+    """
+    with (
+        patch(
+            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch(
+            "custom_components.hyxi_cloud.__init__.async_get_clientsession"
+        ) as mock_get_session,
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient") as mock_client_cls,
+        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
+        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+    ):
+        mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock()
+        mock_coordinator.engine = None
+        mock_coordinator.data = {}
+        mock_dr_get.return_value = MagicMock()
+
+        await async_setup_entry(mock_hass, mock_entry)
+
+        # Client is built from HA's shared session, not a private one.
+        mock_get_session.assert_called_once_with(mock_hass)
+        assert mock_get_session.return_value in mock_client_cls.call_args.args
+
+        # No HA-stop listener registered -- there's no privately-owned
+        # session/client to close on shutdown.
+        mock_hass.bus.async_listen.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
     """Test successful setup of entry with parentSn relationship."""
     with (
@@ -441,6 +482,26 @@ async def test_async_unload_entry_keeps_subscriptions_alive(mock_hass, mock_entr
 
     mock_coordinator.client.cancel_subscription.assert_not_called()
     mock_hass.config_entries.async_update_entry.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_unload_entry_does_not_close_shared_session(mock_hass, mock_entry):
+    """Regression guard: unload must never call .close()/.session.close().
+
+    The client's session is HA's shared aiohttp session -- owned and closed
+    by HA core itself, not by this integration. Closing it here would break
+    every other integration still using the same shared session.
+    """
+    mock_coordinator = MagicMock()
+    mock_coordinator.protection_controllers = {}
+    mock_coordinator.engine = None
+    mock_hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
+    mock_hass.config_entries.async_unload_platforms.return_value = True
+
+    assert await async_unload_entry(mock_hass, mock_entry) is True
+
+    mock_coordinator.client.close.assert_not_called()
+    mock_coordinator.client.session.close.assert_not_called()
 
 
 @pytest.mark.asyncio
