@@ -414,3 +414,113 @@ async def test_hyxi_protection_number_set_value():
     assert entity._attr_native_value == 25
     entity.async_write_ha_state.assert_called_once()
     entity.hass.async_create_task.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_hyxi_protection_number_restore_state():
+    """Test restoring state for HyxiProtectionNumber."""
+    coordinator = MagicMock()
+    dev_data: dict = {}
+    definition = {
+        "key": "soc_min",
+        "unit": "%",
+        "min": 5,
+        "max": 50,
+        "default": 20,
+        "icon": "mdi:battery-20",
+    }
+    entity = number_mod.HyxiProtectionNumber(coordinator, "SN1", dev_data, definition)
+
+    # Mock valid state
+    mock_state = MagicMock()
+    mock_state.state = "35"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 35
+
+    # Mock invalid state -- should not crash, value remains 35
+    mock_state.state = "invalid"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 35
+
+    # No prior state at all -- should not crash, value remains 35
+    entity.async_get_last_state = AsyncMock(return_value=None)
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 35
+
+
+def test_em_parameter_number_init():
+    """Test initialization of EMParameterNumber pulls fields from its EMNumberDef."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef(
+        "high_load_threshold", "W", 1000, 20000, 500, "mdi:flash-alert"
+    )
+
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+
+    assert entity._attr_unique_id == "hyxi_SN1_em_high_load_threshold"
+    assert entity._attr_translation_key == "em_high_load_threshold"
+    assert entity._attr_native_unit_of_measurement == "W"
+    assert entity._attr_native_min_value == 1000
+    assert entity._attr_native_max_value == 20000
+    assert entity._attr_native_step == 500
+    assert entity._attr_icon == "mdi:flash-alert"
+    # Default native value comes from EM_DEFAULTS, not the EMNumberDef's own min/max
+    assert entity._attr_native_value == number_mod.EM_DEFAULTS["high_load_threshold"]
+    assert entity._attr_device_info == {
+        "identifiers": {(number_mod.DOMAIN, "SN1_energy_manager")},
+    }
+
+
+def test_em_parameter_number_init_unknown_key_defaults_to_zero():
+    """Test EMParameterNumber falls back to 0 when the key has no EM_DEFAULTS entry."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef("unmapped_key", "W", 0, 100, 1, "mdi:help")
+
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+
+    assert entity._attr_native_value == 0.0
+
+
+@pytest.mark.asyncio
+async def test_em_parameter_number_restore_state():
+    """Test restoring state for EMParameterNumber."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef(
+        "avg_night_consumption", "W", 100, 2000, 50, "mdi:weather-night"
+    )
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+
+    # Mock valid state
+    mock_state = MagicMock()
+    mock_state.state = "550.5"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 550.5
+
+    # Mock invalid state -- should not crash, value remains unchanged
+    mock_state.state = "invalid"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 550.5
+
+
+@pytest.mark.asyncio
+async def test_em_parameter_number_set_value():
+    """Test setting value for EMParameterNumber writes state directly (no API call)."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef(
+        "avg_night_consumption", "W", 100, 2000, 50, "mdi:weather-night"
+    )
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+    entity.async_write_ha_state = MagicMock()
+
+    await entity.async_set_native_value(875.0)
+
+    assert entity._attr_native_value == 875.0
+    entity.async_write_ha_state.assert_called_once()

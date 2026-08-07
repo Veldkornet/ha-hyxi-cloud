@@ -384,3 +384,45 @@ def test_subscription_status_sensor(mock_coordinator, mock_entry):
     mock_coordinator.alarm_push_status = "error"
     sensor._update_value()
     assert sensor.native_value == "error"
+
+
+def test_hyxi_sensor_extra_state_attributes():
+    """Test HyxiSensor.extra_state_attributes exposes the coordinator's metadata."""
+    coord = MagicMock()
+    coord.data = {"SN1": {"deviceCode": "1", "metrics": {"batSoc": "50"}}}
+    coord.hyxi_metadata = {"api_status": "Online", "last_attempts": 1}
+
+    desc = MagicMock()
+    desc.key = "batSoc"
+    desc.translation_key = "batsoc"
+    desc.device_class = None
+    desc.state_class = None
+
+    sensor = sensor_mod.HyxiSensor(coord, "SN1", desc)
+
+    assert sensor.extra_state_attributes is coord.hyxi_metadata
+    assert sensor.extra_state_attributes["api_status"] == "Online"
+
+
+def test_health_sensor_handle_coordinator_update(mock_coordinator, mock_entry):
+    """Test HyxiLastUpdateSensor refreshes its cached value on a coordinator update."""
+    sensor = sensor_mod.HyxiLastUpdateSensor(mock_coordinator, mock_entry)
+    assert sensor.native_value == "2026-03-11T12:00:00Z"
+
+    mock_coordinator.hyxi_metadata["last_success"] = "2026-03-11T13:30:00Z"
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == "2026-03-11T13:30:00Z"
+
+
+def test_subscription_status_sensor_handle_coordinator_update(
+    mock_coordinator, mock_entry
+):
+    """Test HyxiSubscriptionStatusSensor refreshes its combined state on a
+    coordinator update (mirrors _update_value, called directly elsewhere)."""
+    sensor = sensor_mod.HyxiSubscriptionStatusSensor(mock_coordinator, mock_entry)
+    assert sensor.native_value == "active"
+
+    mock_coordinator.alarm_push_status = "inactive"
+    mock_coordinator.push_status = "inactive"
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == "inactive"

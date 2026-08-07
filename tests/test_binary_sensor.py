@@ -288,3 +288,150 @@ def test_connectivity_sensor_always_available(mock_coordinator, mock_entry):
     # 3. API Status Error
     mock_coordinator.hyxi_metadata["api_status"] = "error"
     assert sensor.available is True
+
+
+def test_vpp_dispatch_sensor_handle_coordinator_update_logs_transition(
+    mock_coordinator, mock_entry
+):
+    """Test that a VPP mode change is logged and tracked, and no-change is silent."""
+    mock_coordinator.data["SN123"]["metrics"] = {"vppMode": "1"}
+    sensor = bs_mod.HyxiVppDispatchSensor(mock_coordinator, mock_entry, "SN123", {})
+    assert sensor._last_vpp_mode == "1"  # pylint: disable=protected-access
+
+    # Mode changes -> logged and cached value updated.
+    mock_coordinator.data["SN123"]["metrics"] = {"vppMode": "2"}
+    sensor._handle_coordinator_update()  # pylint: disable=protected-access
+    assert sensor._last_vpp_mode == "2"  # pylint: disable=protected-access
+
+    # Same mode again -> no transition, cached value unchanged.
+    sensor._handle_coordinator_update()  # pylint: disable=protected-access
+    assert sensor._last_vpp_mode == "2"  # pylint: disable=protected-access
+
+
+@pytest.fixture
+def mock_engine():
+    """A mock EnergyManagerEngine for EMBinarySensor tests."""
+    engine = MagicMock()
+    engine._is_night.return_value = False
+    engine._get_home_load.return_value = 100.0
+    engine._get_param.return_value = 500.0
+    return engine
+
+
+@pytest.fixture
+def em_device_info():
+    return {
+        "identifiers": {(DOMAIN, "SN123_energy_manager")},
+        "name": "Energy Manager",
+    }
+
+
+def test_em_binary_sensor_init_sets_icon_and_state_func(em_device_info):
+    """Test EMBinarySensor picks the right icon/state func per key."""
+    coordinator = MagicMock()
+    sensor = bs_mod.EMBinarySensor(
+        coordinator, "SN123", "night_mode_active", em_device_info
+    )
+
+    assert sensor._attr_unique_id == "hyxi_SN123_em_night_mode_active"
+    assert sensor._attr_translation_key == "em_night_mode_active"
+    assert sensor._attr_icon == "mdi:weather-night"
+    assert sensor._attr_device_info is em_device_info
+
+
+def test_em_binary_sensor_unknown_key_has_no_icon_or_state_func(em_device_info):
+    """Test EMBinarySensor handles a key with no icon/state func mapping."""
+    coordinator = MagicMock()
+    sensor = bs_mod.EMBinarySensor(coordinator, "SN123", "unmapped_key", em_device_info)
+
+    assert sensor._attr_icon is None
+    assert sensor.is_on is None
+
+
+@pytest.mark.asyncio
+async def test_em_binary_sensor_added_and_removed_from_hass_registers_callback(
+    mock_engine, em_device_info
+):
+    """Test engine callback registration on add/remove lifecycle hooks."""
+    coordinator = MagicMock()
+    coordinator.engine = mock_engine
+    sensor = bs_mod.EMBinarySensor(
+        coordinator, "SN123", "night_mode_active", em_device_info
+    )
+
+    await sensor.async_added_to_hass()
+    mock_engine.register_update_callback.assert_called_once_with(sensor._engine_updated)
+
+    await sensor.async_will_remove_from_hass()
+    mock_engine.unregister_update_callback.assert_called_once_with(
+        sensor._engine_updated
+    )
+
+
+@pytest.mark.asyncio
+async def test_em_binary_sensor_added_to_hass_noop_without_engine(em_device_info):
+    """Test add/remove hooks are no-ops when the engine hasn't started yet."""
+    coordinator = MagicMock()
+    coordinator.engine = None
+    sensor = bs_mod.EMBinarySensor(
+        coordinator, "SN123", "night_mode_active", em_device_info
+    )
+
+    # Should not raise even though there is no engine to register against.
+    await sensor.async_added_to_hass()
+    await sensor.async_will_remove_from_hass()
+
+
+def test_em_binary_sensor_engine_updated_writes_state(em_device_info):
+    """Test the engine-update callback triggers a state write."""
+    coordinator = MagicMock()
+    sensor = bs_mod.EMBinarySensor(
+        coordinator, "SN123", "night_mode_active", em_device_info
+    )
+    sensor.async_write_ha_state = MagicMock()
+
+    sensor._engine_updated()  # pylint: disable=protected-access
+
+    sensor.async_write_ha_state.assert_called_once()
+
+
+def test_em_binary_sensor_is_on_night_mode(mock_engine, em_device_info):
+    """Test is_on delegates to the night-mode state function."""
+    coordinator = MagicMock()
+    coordinator.engine = mock_engine
+    sensor = bs_mod.EMBinarySensor(
+        coordinator, "SN123", "night_mode_active", em_device_info
+    )
+
+    mock_engine._is_night.return_value = True
+    assert sensor.is_on is True
+
+    mock_engine._is_night.return_value = False
+    assert sensor.is_on is False
+
+
+def test_em_binary_sensor_is_on_high_load(mock_engine, em_device_info):
+    """Test is_on delegates to the high-load state function."""
+    coordinator = MagicMock()
+    coordinator.engine = mock_engine
+    sensor = bs_mod.EMBinarySensor(
+        coordinator, "SN123", "high_load_detected", em_device_info
+    )
+
+    mock_engine._get_home_load.return_value = 900.0
+    mock_engine._get_param.return_value = 500.0
+    assert sensor.is_on is True
+
+    mock_engine._get_home_load.return_value = 100.0
+    assert sensor.is_on is False
+
+
+def test_em_binary_sensor_is_on_none_without_engine(em_device_info):
+    """Test is_on returns None when the coordinator has no engine yet."""
+    coordinator = MagicMock()
+    coordinator.engine = None
+    sensor = bs_mod.EMBinarySensor(
+        coordinator, "SN123", "night_mode_active", em_device_info
+    )
+
+    assert sensor.is_on is None

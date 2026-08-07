@@ -3,7 +3,7 @@
 # pylint: disable=missing-module-docstring, wrong-import-position, import-outside-toplevel
 import sys
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -21,6 +21,11 @@ class FakeCoordinatorEntity(FakeBase):
 
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
+
+    @property
+    def available(self) -> bool:
+        """Mirror HA's real CoordinatorEntity.available: tracks last update success."""
+        return getattr(self.coordinator, "last_update_success", True)
 
 
 class FakeButtonEntity(FakeBase):
@@ -521,3 +526,39 @@ def test_note_manual_mode_no_controller():
 
     # Should not raise an exception
     button_mod._note_manual_mode(coordinator, "SN123", "test_mode")
+
+
+def test_mode_button_available_delegates_to_super(mock_coordinator_fixture):
+    """Test HyxiModeButton.available is a pure pass-through to super().available.
+
+    Patches button_mod.CoordinatorEntity directly (the actual base class bound
+    into HyxiModeButton at import time) rather than relying on a particular
+    fake's default behavior, since which fake wins is import-order dependent
+    across this suite's module-level sys.modules mocking.
+    """
+    btn = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")
+
+    with patch.object(
+        button_mod.CoordinatorEntity, "available", new_callable=PropertyMock
+    ) as mock_available:
+        mock_available.return_value = True
+        assert btn.available is True
+
+        mock_available.return_value = False
+        assert btn.available is False
+
+
+def test_peak_shaving_button_available_delegates_to_super(mock_coordinator_fixture):
+    """Test HyxiPeakShavingButton.available is a pure pass-through to super().available."""
+    btn = button_mod.HyxiPeakShavingButton(
+        mock_coordinator_fixture, "SN123", {}, "hold"
+    )
+
+    with patch.object(
+        button_mod.CoordinatorEntity, "available", new_callable=PropertyMock
+    ) as mock_available:
+        mock_available.return_value = True
+        assert btn.available is True
+
+        mock_available.return_value = False
+        assert btn.available is False

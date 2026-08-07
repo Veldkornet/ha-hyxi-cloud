@@ -342,6 +342,23 @@ class EnergyManagerEngine:
             return float(default)
         return self._get_ha_state_float(entity_id, float(default))
 
+    def _set_param(self, key: str, value: float) -> None:
+        """Persist an engine-computed value back to its EM number entity's state.
+
+        Used for adaptive parameters the engine updates itself (e.g. the
+        hourly night-consumption EMA in _update_night_estimate) rather than
+        the user via the UI. Writes straight to the state machine, mirroring
+        how _get_param/_get_ha_state_float read it, so the change is picked
+        up on the very next read.
+        """
+        unique_id = f"hyxi_{self._sn}_em_{key}"
+        entity_id = self._find_entity_id("number", unique_id)
+        if not entity_id:
+            return
+        current = self._hass.states.get(entity_id)
+        attributes = dict(current.attributes) if current else {}
+        self._hass.states.async_set(entity_id, str(value), attributes)
+
     def _has_peak_shaving(self) -> bool:
         """Check if device supports peak shaving (controlId 1021).
 
@@ -1244,6 +1261,7 @@ class EnergyManagerEngine:
             if current_p1 > 0:
                 prev = self._get_param("avg_night_consumption")
                 new_avg = prev * 0.9 + current_p1 * 0.1
+                self._set_param("avg_night_consumption", new_avg)
                 _LOGGER.info(
                     "EM: Night consumption estimate: %.0fW (sample: %.0fW)",
                     new_avg,

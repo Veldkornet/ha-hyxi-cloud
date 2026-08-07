@@ -716,3 +716,270 @@ async def test_engine_status_property(hass: HomeAssistant):
             assert engine.status == "running"
 
     await engine.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_engine_protection_and_forecast_helpers(hass: HomeAssistant):
+    """Test protection controller integration and solar forecast helpers."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+            "em_battery_capacity_override": True,
+            "em_battery_capacity_wh": 2000,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {
+        "SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0", "home_load": "0.0"}}
+    }
+
+    config = EMEntityConfig(
+        sn="SN123", p1_entity="sensor.p1_meter", forecast_entity="sensor.solar_forecast"
+    )
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    # --- _get_protection_controller / _notify_protection ---
+    assert engine._get_protection_controller() is None
+    engine._notify_protection("charge")  # no controller registered -> no-op, no raise
+
+    protection_controller = MagicMock()
+    coordinator.protection_controllers["SN123"] = protection_controller
+    assert engine._get_protection_controller() is protection_controller
+    engine._notify_protection("discharge")
+    protection_controller.note_manual_mode.assert_called_once_with("discharge")
+
+    # --- _get_forecast_remaining_wh ---
+    hass.states.async_set("sensor.solar_forecast", "3.5")  # 3.5 kWh
+    assert engine._get_forecast_remaining_wh() == 3500.0
+    hass.states.async_set("sensor.solar_forecast", "unavailable")
+    assert engine._get_forecast_remaining_wh() == 0.0
+
+    # --- _solar_will_cover_charge ---
+    # Already at/above target SOC -> True without consulting the forecast at all
+    assert engine._solar_will_cover_charge(40) is True
+
+    # Forecast present and sufficient (need 200Wh, forecast usable 6000Wh)
+    hass.states.async_set("sensor.solar_forecast", "10.0")
+    assert engine._solar_will_cover_charge(60) is True
+
+    # Forecast present but insufficient (need 800Wh, forecast usable 6Wh)
+    hass.states.async_set("sensor.solar_forecast", "0.01")
+    assert engine._solar_will_cover_charge(90) is False
+
+    # No forecast -> falls back to current solar output + time-to-sunset estimate
+    hass.states.async_set("sensor.solar_forecast", "unavailable")
+    coordinator.data["SN123"]["metrics"]["ppv"] = "3000.0"
+    with patch(
+        "homeassistant.util.dt.utcnow",
+        return_value=dt_util.parse_datetime("2026-06-02T08:00:00Z"),
+    ):
+        hass.states.async_set(
+            "sun.sun",
+            "above_horizon",
+            {"next_setting": "2026-06-02T18:00:00Z"},  # 10h to sunset
+        )
+        # estimated_solar_wh=(3000/2)*10=15000; avg_night_load default=400;
+        # usable=(15000-400*10)*0.8=8800Wh, well above the 40Wh needed for +2%
+        assert engine._solar_will_cover_charge(52) is True
+
+    # No forecast and no solar currently producing -> cannot estimate -> False
+    coordinator.data["SN123"]["metrics"]["ppv"] = "0.0"
+    assert engine._solar_will_cover_charge(90) is False
+
+
+@pytest.mark.asyncio
+async def test_engine_set_param(hass: HomeAssistant):
+    """Test _set_param writes through to the state machine and preserves any
+    existing attributes on the entity's state, and is a no-op when the
+    target number entity hasn't been registered yet."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={"access_key": "test_ak", "secret_key": "test_sk"}
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    # No matching number entity registered -> no-op, no raise
+    engine._set_param("avg_night_consumption", 500.0)
+
+    registry = er.async_get(hass)
+    em_avg_entry = registry.async_get_or_create(
+        "number",
+        DOMAIN,
+        "hyxi_SN123_em_avg_night_consumption",
+        suggested_object_id="hyxi_SN123_em_avg_night_consumption",
+    )
+    hass.states.async_set(em_avg_entry.entity_id, "400", {"unit_of_measurement": "W"})
+
+    engine._set_param("avg_night_consumption", 420.0)
+
+    state = hass.states.get(em_avg_entry.entity_id)
+    assert state.state == "420.0"
+    # Existing attributes are preserved across the write
+    assert state.attributes["unit_of_measurement"] == "W"
+
+
+@pytest.mark.asyncio
+async def test_engine_on_soc_change_fast_path(hass: HomeAssistant):
+    """Test the low-SOC fast-path callback triggers/suppresses correctly."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {"SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0"}}}
+
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    registry = er.async_get(hass)
+    soc_min_entry = registry.async_get_or_create(
+        "number", DOMAIN, "hyxi_SN123_soc_min", suggested_object_id="hyxi_SN123_soc_min"
+    )
+    hass.states.async_set(soc_min_entry.entity_id, "20")
+
+    with patch.object(engine, "_make_decision", new=AsyncMock()) as mock_decision:
+        # Not started yet -> disabled guard short-circuits even a low-SOC event
+        event = MagicMock()
+        event.data = {"new_state": MagicMock(state="10.0")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        await engine.async_start()
+
+        # Missing new_state -> no-op
+        event.data = {"new_state": None}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # Unavailable state -> no-op
+        event.data = {"new_state": MagicMock(state="unavailable")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # Non-numeric state -> no-op (ValueError swallowed)
+        event.data = {"new_state": MagicMock(state="not-a-number")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # SOC at/above soc_min -> no fast-path trigger needed
+        event.data = {"new_state": MagicMock(state="50.0")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # SOC below soc_min -> triggers the decision fast-path
+        event.data = {"new_state": MagicMock(state="10.0")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_called_once()
+
+        # A second low-SOC event within the 15s cooldown is suppressed
+        mock_decision.reset_mock()
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        await engine.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_engine_update_night_estimate(hass: HomeAssistant):
+    """Test the hourly night-consumption EMA update, including that it now
+    actually persists the new estimate back to its number entity (see
+    engine._set_param — this used to be computed and logged but never
+    written anywhere, so avg_night_consumption never actually adapted)."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {"SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0"}}}
+
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    registry = er.async_get(hass)
+    em_avg_entry = registry.async_get_or_create(
+        "number",
+        DOMAIN,
+        "hyxi_SN123_em_avg_night_consumption",
+        suggested_object_id="hyxi_SN123_em_avg_night_consumption",
+    )
+    hass.states.async_set(em_avg_entry.entity_id, "400")
+
+    # Disabled engine -> no-op regardless of time/P1
+    hass.states.async_set("sensor.p1_meter", "600")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    assert hass.states.get(em_avg_entry.entity_id).state == "400"
+
+    await engine.async_start()
+
+    # Outside the night window (21:00-06:00) -> no-op
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T12:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    assert hass.states.get(em_avg_entry.entity_id).state == "400"
+
+    # Inside the night window but P1 <= 0 (not importing) -> no-op
+    hass.states.async_set("sensor.p1_meter", "0")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    assert hass.states.get(em_avg_entry.entity_id).state == "400"
+
+    # Inside the night window with a positive P1 reading -> EMA updates and
+    # persists back to the number entity's state
+    hass.states.async_set("sensor.p1_meter", "600")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    # new_avg = 400 * 0.9 + 600 * 0.1 = 420
+    assert float(hass.states.get(em_avg_entry.entity_id).state) == 420.0
+
+    # The persisted value feeds back into the next read via _get_param
+    assert engine._get_param("avg_night_consumption") == 420.0
+
+    await engine.async_stop()
