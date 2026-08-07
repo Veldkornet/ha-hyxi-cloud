@@ -51,10 +51,16 @@ jobs:
         run: uv sync --extra test --locked
 
       - name: Run Unit Tests
-        run: uv run pytest tests/ --ignore=tests/integration -v -p no:warnings
+        run: uv run pytest tests/ --ignore=tests/integration -v -p no:warnings --cov --cov-report=
 
       - name: Run Integration Tests
-        run: HYXI_INTEGRATION_TEST="1" uv run pytest tests/integration -v -p no:warnings
+        run: HYXI_INTEGRATION_TEST="1" uv run pytest tests/integration -v -p no:warnings --cov --cov-append --cov-report=
+
+      - name: Check coverage
+        # Combined coverage from both suites above must stay at 100%. This
+        # is a floor, not a target -- if it ever fails, the fix is new
+        # tests for whatever went uncovered, not lowering the threshold.
+        run: uv run coverage report -m --fail-under=100
 
       - name: Run mypy
         run: uv run mypy --config-file mypy.ini

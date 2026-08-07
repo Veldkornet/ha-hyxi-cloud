@@ -564,6 +564,116 @@ async def test_async_remove_entry_survives_cancel_failure(mock_hass, mock_entry)
 
 
 @pytest.mark.asyncio
+async def test_async_remove_entry_no_codes_is_noop(mock_hass, mock_entry):
+    """No stored subscription codes at all -- nothing to cancel, no client built."""
+    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+
+    mock_entry.data = {"access_key": "ak", "secret_key": "sk"}
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__.HyxiApiClient"
+    ) as mock_client_cls:
+        await async_remove_entry(mock_hass, mock_entry)
+
+        mock_client_cls.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_remove_entry_no_credentials_is_noop(mock_hass, mock_entry):
+    """Codes are stored but credentials are missing -- can't build a client
+    to cancel them remotely, so bail out rather than raise."""
+    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+
+    mock_entry.data = {"push_subscribe_code": "sub_code_123"}
+
+    with patch(
+        "custom_components.hyxi_cloud.__init__.HyxiApiClient"
+    ) as mock_client_cls:
+        await async_remove_entry(mock_hass, mock_entry)
+
+        mock_client_cls.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_setup_battery_protection_cleans_up_on_start_failure(
+    mock_hass, mock_entry
+):
+    """If a protection controller fails to start, every controller created
+    in this batch is stopped and removed, and the exception propagates
+    rather than leaving half-started controllers behind."""
+    from custom_components.hyxi_cloud import _async_setup_battery_protection
+    from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
+
+    mock_entry.options = {"enable_battery_control": True}
+    coordinator = MagicMock()
+    coordinator.entry = mock_entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {
+        "SN123": {"device_type_code": "1", "model": "H10K-HT"},  # three-phase hybrid
+    }
+
+    with patch.object(
+        HyxiBatteryProtectionController,
+        "async_start",
+        AsyncMock(side_effect=RuntimeError("listener setup failed")),
+    ):
+        with pytest.raises(RuntimeError, match="listener setup failed"):
+            await _async_setup_battery_protection(mock_hass, coordinator)
+
+
+@pytest.mark.asyncio
+async def test_async_setup_battery_protection_disabled_is_noop(mock_hass, mock_entry):
+    """Battery control disabled by user settings -- no controllers created."""
+    from custom_components.hyxi_cloud import _async_setup_battery_protection
+
+    mock_entry.options = {"enable_battery_control": False}
+    coordinator = MagicMock()
+    coordinator.entry = mock_entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {"SN123": {"device_type_code": "1", "model": "H10K-HT"}}
+
+    await _async_setup_battery_protection(mock_hass, coordinator)
+
+    assert not coordinator.protection_controllers
+
+
+@pytest.mark.asyncio
+async def test_async_setup_battery_protection_cancels_still_pending_tasks(
+    mock_hass, mock_entry
+):
+    """When one controller fails to start while a sibling controller is
+    still starting, the still-running task is explicitly cancelled during
+    cleanup rather than left dangling."""
+    import asyncio
+
+    from custom_components.hyxi_cloud import _async_setup_battery_protection
+    from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
+
+    mock_entry.options = {"enable_battery_control": True}
+    coordinator = MagicMock()
+    coordinator.entry = mock_entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {
+        "SN_FAIL": {"device_type_code": "1", "model": "H10K-HT"},  # three-phase
+        "SN_SLOW": {"device_type_code": "1", "model": "H5K-HS"},  # single-phase
+    }
+
+    async def fake_start(self):
+        if self._sn == "SN_FAIL":  # pylint: disable=protected-access
+            raise RuntimeError("boom")
+        await asyncio.sleep(3600)  # still "starting" when cleanup runs
+
+    with (
+        patch.object(HyxiBatteryProtectionController, "async_start", fake_start),
+        patch.object(HyxiBatteryProtectionController, "async_stop", new=AsyncMock()),
+    ):
+        with pytest.raises(RuntimeError, match="boom"):
+            await _async_setup_battery_protection(mock_hass, coordinator)
+
+    assert not coordinator.protection_controllers
+
+
+@pytest.mark.asyncio
 async def test_async_unload_entry_failure(mock_hass, mock_entry):
     """Test failed unload of a config entry."""
     mock_coordinator = MagicMock()
@@ -920,6 +1030,32 @@ async def test_webhook_handle_invalid_json():
 
     res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
     assert res.status == 400
+
+
+@pytest.mark.asyncio
+async def test_webhook_handle_url_encoded_payload_fallback():
+    """A body that isn't raw JSON but is URL-encoded form data with a
+    'payload' field (as some platforms send) is still parsed successfully."""
+    import json
+    from urllib.parse import urlencode
+
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+    coordinator.data = {"SN123": {}}
+    coordinator.client.process_push_data = MagicMock(
+        return_value={"SN123": {"sn": "SN123", "metrics": {"batSoc": 50}}}
+    )
+
+    inner_payload = json.dumps({"dataList": [{"deviceSn": "SN123", "batSoc": 50}]})
+    body = urlencode({"payload": inner_payload})
+
+    request = MagicMock()
+    request.headers = {"accessKey": "correct_ak"}
+    request.text = AsyncMock(return_value=body)
+
+    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    assert res.status == 200
 
 
 @pytest.mark.asyncio
@@ -1382,6 +1518,62 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                                     assert res_unload is True
                                     mock_engine.async_stop.assert_called_once()
                                     mock_controller.async_stop.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_alarm_webhook_url_encoded_payload_fallback():
+    """A body that isn't raw JSON but is URL-encoded form data with a
+    'payload' field is still parsed successfully (mirrors the same fallback
+    in the data-push webhook handler)."""
+    import json
+    from urllib.parse import urlencode
+
+    from custom_components.hyxi_cloud.__init__ import _async_handle_alarm_webhook
+
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+    coordinator.data = {"SN123": {}}
+    coordinator.client.process_alarm_push_data = MagicMock(return_value={})
+
+    inner_payload = json.dumps({"alarmList": []})
+    body = urlencode({"payload": inner_payload})
+
+    request = MagicMock()
+    request.headers = {"accessKey": "correct_ak"}
+    request.text = AsyncMock(return_value=body)
+
+    res = await _async_handle_alarm_webhook(hass, "alarm_web_id", request, coordinator)
+    assert res.status == 200
+
+
+@pytest.mark.asyncio
+async def test_alarm_webhook_logs_masked_alarm_details_at_debug(caplog):
+    """When debug logging is enabled, merged alarm records are logged with
+    sensitive fields masked."""
+    import logging
+
+    from custom_components.hyxi_cloud.__init__ import _async_handle_alarm_webhook
+
+    hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+    coordinator.data = {"SN123": {"alarms": []}}
+    coordinator.client.process_alarm_push_data = MagicMock(
+        return_value={"SN123": [{"alarmCode": "1", "sn": "SN123_full_serial"}]}
+    )
+
+    request = MagicMock()
+    request.headers = {"accessKey": "correct_ak"}
+    request.text = AsyncMock(return_value='{"alarmList": []}')
+
+    caplog.set_level(logging.DEBUG)
+    res = await _async_handle_alarm_webhook(hass, "alarm_web_id", request, coordinator)
+
+    assert res.status == 200
+    assert any(
+        "HYXI Alarm Push Telemetry Update" in rec.message for rec in caplog.records
+    )
 
 
 @pytest.mark.asyncio

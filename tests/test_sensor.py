@@ -265,6 +265,66 @@ async def test_async_setup_entry_adds_microinverter_summary(mock_entry):
     assert micro_sum_sensors["micro_daily_yield_total"].native_value == 7.8
 
 
+def test_microinverter_sum_sensor_skips_unparseable_values():
+    """Test a non-numeric metric value on one microinverter is skipped rather
+    than aborting the sum for the rest."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN_MICRO_1": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "18.0"},
+        },
+        "SN_MICRO_2": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "not-a-number"},
+        },
+        "SN_MICRO_3": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "12.5"},
+        },
+    }
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        coordinator, entry, "acP", description
+    )
+
+    assert sensor.native_value == 30.5  # 18.0 + 12.5, "not-a-number" skipped
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_skips_last_sent_mode_for_unknown_phase(
+    mock_coordinator, mock_entry
+):
+    """Test a control-capable device whose phase can't be detected does not
+    get a HyxiLastSentModeSensor (there's nowhere to route mode commands)."""
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "deviceCode": "HYBRID_INVERTER",
+            "model": "Unbranded",  # no -HT/-HS suffix
+            "metrics": {},  # no phase-indicating metrics either
+            "alarms": [],
+        }
+    }
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    with unittest.mock.patch(
+        "custom_components.hyxi_cloud.sensor.is_battery_control_enabled",
+        return_value=True,
+    ):
+        await sensor_mod.async_setup_entry(hass, mock_entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, sensor_mod.HyxiLastSentModeSensor) for e in entities)
+
+
 def test_process_numeric_value_normal():
     """Test standard numeric processing."""
 
@@ -330,6 +390,17 @@ def test_anti_spike_filter():
     assert sensor._process_numeric_value("1000.0") == 15.0
 
 
+def test_anti_spike_no_prior_value_returns_none():
+    """Test _check_anti_spike is a guarded no-op with nothing to compare against.
+
+    _process_numeric_value only calls it once _last_valid_value is already
+    set, so this guard is otherwise unreachable through normal use -- call it
+    directly to cover the defensive branch."""
+    sensor = sensor_mod.HyxiBaseSensor(MagicMock())
+    assert sensor._last_valid_value is None
+    assert sensor._check_anti_spike(50.0) is None
+
+
 def test_hyxi_sensor_parsing_int():
     """Test integer parsing for keys inside INT_SENSOR_KEYS."""
     coord = MagicMock()
@@ -384,3 +455,45 @@ def test_subscription_status_sensor(mock_coordinator, mock_entry):
     mock_coordinator.alarm_push_status = "error"
     sensor._update_value()
     assert sensor.native_value == "error"
+
+
+def test_hyxi_sensor_extra_state_attributes():
+    """Test HyxiSensor.extra_state_attributes exposes the coordinator's metadata."""
+    coord = MagicMock()
+    coord.data = {"SN1": {"deviceCode": "1", "metrics": {"batSoc": "50"}}}
+    coord.hyxi_metadata = {"api_status": "Online", "last_attempts": 1}
+
+    desc = MagicMock()
+    desc.key = "batSoc"
+    desc.translation_key = "batsoc"
+    desc.device_class = None
+    desc.state_class = None
+
+    sensor = sensor_mod.HyxiSensor(coord, "SN1", desc)
+
+    assert sensor.extra_state_attributes is coord.hyxi_metadata
+    assert sensor.extra_state_attributes["api_status"] == "Online"
+
+
+def test_health_sensor_handle_coordinator_update(mock_coordinator, mock_entry):
+    """Test HyxiLastUpdateSensor refreshes its cached value on a coordinator update."""
+    sensor = sensor_mod.HyxiLastUpdateSensor(mock_coordinator, mock_entry)
+    assert sensor.native_value == "2026-03-11T12:00:00Z"
+
+    mock_coordinator.hyxi_metadata["last_success"] = "2026-03-11T13:30:00Z"
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == "2026-03-11T13:30:00Z"
+
+
+def test_subscription_status_sensor_handle_coordinator_update(
+    mock_coordinator, mock_entry
+):
+    """Test HyxiSubscriptionStatusSensor refreshes its combined state on a
+    coordinator update (mirrors _update_value, called directly elsewhere)."""
+    sensor = sensor_mod.HyxiSubscriptionStatusSensor(mock_coordinator, mock_entry)
+    assert sensor.native_value == "active"
+
+    mock_coordinator.alarm_push_status = "inactive"
+    mock_coordinator.push_status = "inactive"
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == "inactive"

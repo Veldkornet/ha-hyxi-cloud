@@ -372,3 +372,12 @@ EM_DEFAULTS: dict[str, int | float] = {
     "max_grid_export": 0,
 }
 EM_LOOP_INTERVAL = 15  # seconds
+
+# Bounds for the adaptive avg_night_consumption parameter. Shared between
+# number.py's EM_NUMBER_DEFS entry (the user-facing slider's declared
+# range/step) and engine.py's _update_night_estimate (which clamps and
+# quantizes its own EMA-computed value to the same bounds before writing
+# it directly to the entity, bypassing the UI's normal input validation).
+AVG_NIGHT_CONSUMPTION_MIN = 100
+AVG_NIGHT_CONSUMPTION_MAX = 2000
+AVG_NIGHT_CONSUMPTION_STEP = 50

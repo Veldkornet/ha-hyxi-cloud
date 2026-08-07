@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfPower
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -16,6 +16,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
+    AVG_NIGHT_CONSUMPTION_MAX,
+    AVG_NIGHT_CONSUMPTION_MIN,
+    AVG_NIGHT_CONSUMPTION_STEP,
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     DOMAIN,
@@ -99,7 +102,14 @@ EM_NUMBER_DEFS: list[EMNumberDef] = [
     EMNumberDef("power_change_threshold", "W", 10, 500, 10, "mdi:delta"),
     EMNumberDef("power_adjust_cooldown", "s", 5, 120, 5, "mdi:timer-sand"),
     EMNumberDef("night_buffer_pct", "%", 0, 20, 1, "mdi:shield-half-full"),
-    EMNumberDef("avg_night_consumption", "W", 100, 2000, 50, "mdi:weather-night"),
+    EMNumberDef(
+        "avg_night_consumption",
+        "W",
+        AVG_NIGHT_CONSUMPTION_MIN,
+        AVG_NIGHT_CONSUMPTION_MAX,
+        AVG_NIGHT_CONSUMPTION_STEP,
+        "mdi:weather-night",
+    ),
     EMNumberDef("charge_margin", "W", 0, 500, 25, "mdi:margin"),
     EMNumberDef(
         "charge_entry_threshold", "W", 100, 2000, 50, "mdi:solar-power-variant-outline"
@@ -376,12 +386,25 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
     """Number entity for an Energy Manager parameter.
 
     Stores a tunable value locally (RestoreEntity). The engine reads it
-    each tick via _get_param().
+    each tick via _get_param(), and for a couple of parameters (e.g.
+    avg_night_consumption) writes an adaptive value back via
+    engine._set_param(), which sets the state machine value directly
+    rather than going through this entity's own _attr_native_value.
+
+    _attr_should_poll must stay False: this entity has nothing to poll (no
+    device, no coordinator), but the base Entity default is True. Left at
+    the default, Home Assistant's per-platform scan-interval timer would
+    periodically call async_update_ha_state(force_refresh=True) on it,
+    which re-derives state from the (stale, in-memory) _attr_native_value
+    and silently overwrites engine._set_param()'s direct write within one
+    poll cycle -- confirmed by reproducing it against a real EntityPlatform
+    in a throwaway test before this fix.
     """
 
     _attr_has_entity_name = True
     _attr_mode = NumberMode.BOX
     _attr_entity_category = EntityCategory.CONFIG
+    _attr_should_poll = False
 
     def __init__(
         self,
@@ -422,5 +445,19 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
         _LOGGER.debug(
             "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
         )
+        self._attr_native_value = value
+        self.async_write_ha_state()
+
+    @callback
+    def set_computed_value(self, value: float) -> None:
+        """Update the value from an engine-computed adaptive parameter.
+
+        Used by EnergyManagerEngine._set_param() for parameters the engine
+        tunes itself (e.g. the hourly avg_night_consumption EMA), as
+        opposed to async_set_native_value() which is for direct user edits
+        via the UI. Keeps this entity's own _attr_native_value in sync
+        with the write, so a manually forced update (which bypasses
+        should_poll) can't republish a stale value.
+        """
         self._attr_native_value = value
         self.async_write_ha_state()

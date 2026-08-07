@@ -8,6 +8,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
+from hyxi_cloud_api import HyxiApiClient
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import (
@@ -714,5 +715,1212 @@ async def test_engine_status_property(hass: HomeAssistant):
         ) as mock_dry_run:
             mock_dry_run.return_value = False
             assert engine.status == "running"
+
+    await engine.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_engine_protection_and_forecast_helpers(hass: HomeAssistant):
+    """Test protection controller integration and solar forecast helpers."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+            "em_battery_capacity_override": True,
+            "em_battery_capacity_wh": 2000,
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {
+        "SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0", "home_load": "0.0"}}
+    }
+
+    config = EMEntityConfig(
+        sn="SN123", p1_entity="sensor.p1_meter", forecast_entity="sensor.solar_forecast"
+    )
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    # --- _get_protection_controller / _notify_protection ---
+    assert engine._get_protection_controller() is None
+    engine._notify_protection("charge")  # no controller registered -> no-op, no raise
+
+    protection_controller = MagicMock()
+    coordinator.protection_controllers["SN123"] = protection_controller
+    assert engine._get_protection_controller() is protection_controller
+    engine._notify_protection("discharge")
+    protection_controller.note_manual_mode.assert_called_once_with("discharge")
+
+    # --- _get_forecast_remaining_wh ---
+    hass.states.async_set("sensor.solar_forecast", "3.5")  # 3.5 kWh
+    assert engine._get_forecast_remaining_wh() == 3500.0
+    hass.states.async_set("sensor.solar_forecast", "unavailable")
+    assert engine._get_forecast_remaining_wh() == 0.0
+
+    # --- _solar_will_cover_charge ---
+    # Already at/above target SOC -> True without consulting the forecast at all
+    assert engine._solar_will_cover_charge(40) is True
+
+    # Forecast present and sufficient (need 200Wh, forecast usable 6000Wh)
+    hass.states.async_set("sensor.solar_forecast", "10.0")
+    assert engine._solar_will_cover_charge(60) is True
+
+    # Forecast present but insufficient (need 800Wh, forecast usable 6Wh)
+    hass.states.async_set("sensor.solar_forecast", "0.01")
+    assert engine._solar_will_cover_charge(90) is False
+
+    # No forecast -> falls back to current solar output + time-to-sunset estimate
+    hass.states.async_set("sensor.solar_forecast", "unavailable")
+    coordinator.data["SN123"]["metrics"]["ppv"] = "3000.0"
+    with patch(
+        "homeassistant.util.dt.utcnow",
+        return_value=dt_util.parse_datetime("2026-06-02T08:00:00Z"),
+    ):
+        hass.states.async_set(
+            "sun.sun",
+            "above_horizon",
+            {"next_setting": "2026-06-02T18:00:00Z"},  # 10h to sunset
+        )
+        # estimated_solar_wh=(3000/2)*10=15000; avg_night_load default=400;
+        # usable=(15000-400*10)*0.8=8800Wh, well above the 40Wh needed for +2%
+        assert engine._solar_will_cover_charge(52) is True
+
+    # No forecast and no solar currently producing -> cannot estimate -> False
+    coordinator.data["SN123"]["metrics"]["ppv"] = "0.0"
+    assert engine._solar_will_cover_charge(90) is False
+
+
+@pytest.mark.asyncio
+async def test_engine_set_param(hass: HomeAssistant):
+    """Test _set_param writes through to the state machine and preserves any
+    existing attributes on the entity's state, and is a no-op when the
+    target number entity hasn't been registered yet."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={"access_key": "test_ak", "secret_key": "test_sk"}
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    # No matching number entity registered -> no-op, no raise
+    engine._set_param("avg_night_consumption", 500.0)
+
+    registry = er.async_get(hass)
+    em_avg_entry = registry.async_get_or_create(
+        "number",
+        DOMAIN,
+        "hyxi_SN123_em_avg_night_consumption",
+        suggested_object_id="hyxi_SN123_em_avg_night_consumption",
+    )
+    hass.states.async_set(em_avg_entry.entity_id, "400", {"unit_of_measurement": "W"})
+
+    engine._set_param("avg_night_consumption", 420.0)
+
+    state = hass.states.get(em_avg_entry.entity_id)
+    assert state.state == "420.0"
+    # Existing attributes are preserved across the write
+    assert state.attributes["unit_of_measurement"] == "W"
+
+
+@pytest.mark.asyncio
+async def test_engine_on_soc_change_fast_path(hass: HomeAssistant):
+    """Test the low-SOC fast-path callback triggers/suppresses correctly."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {"SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0"}}}
+
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    registry = er.async_get(hass)
+    soc_min_entry = registry.async_get_or_create(
+        "number", DOMAIN, "hyxi_SN123_soc_min", suggested_object_id="hyxi_SN123_soc_min"
+    )
+    hass.states.async_set(soc_min_entry.entity_id, "20")
+
+    with patch.object(engine, "_make_decision", new=AsyncMock()) as mock_decision:
+        # Not started yet -> disabled guard short-circuits even a low-SOC event
+        event = MagicMock()
+        event.data = {"new_state": MagicMock(state="10.0")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        await engine.async_start()
+
+        # Missing new_state -> no-op
+        event.data = {"new_state": None}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # Unavailable state -> no-op
+        event.data = {"new_state": MagicMock(state="unavailable")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # Non-numeric state -> no-op (ValueError swallowed)
+        event.data = {"new_state": MagicMock(state="not-a-number")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # SOC at/above soc_min -> no fast-path trigger needed
+        event.data = {"new_state": MagicMock(state="50.0")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        # SOC below soc_min -> triggers the decision fast-path
+        event.data = {"new_state": MagicMock(state="10.0")}
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_called_once()
+
+        # A second low-SOC event within the 15s cooldown is suppressed
+        mock_decision.reset_mock()
+        engine._on_soc_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+        await engine.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_engine_update_night_estimate(hass: HomeAssistant):
+    """Test the hourly night-consumption EMA update, including that it now
+    actually persists the new estimate back to its number entity (see
+    engine._set_param — this used to be computed and logged but never
+    written anywhere, so avg_night_consumption never actually adapted)."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {"SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0"}}}
+
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+
+    registry = er.async_get(hass)
+    em_avg_entry = registry.async_get_or_create(
+        "number",
+        DOMAIN,
+        "hyxi_SN123_em_avg_night_consumption",
+        suggested_object_id="hyxi_SN123_em_avg_night_consumption",
+    )
+    hass.states.async_set(em_avg_entry.entity_id, "400")
+
+    # Disabled engine -> no-op regardless of time/P1
+    hass.states.async_set("sensor.p1_meter", "600")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    assert hass.states.get(em_avg_entry.entity_id).state == "400"
+
+    await engine.async_start()
+
+    # Outside the night window (21:00-06:00) -> no-op
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T12:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    assert hass.states.get(em_avg_entry.entity_id).state == "400"
+
+    # Inside the night window but P1 <= 0 (not importing) -> no-op
+    hass.states.async_set("sensor.p1_meter", "0")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    assert hass.states.get(em_avg_entry.entity_id).state == "400"
+
+    # Inside the night window with a positive P1 reading -> EMA updates and
+    # persists back to the number entity's state
+    hass.states.async_set("sensor.p1_meter", "700")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    # raw new_avg = 400 * 0.9 + 700 * 0.1 = 430, quantized to the nearest
+    # AVG_NIGHT_CONSUMPTION_STEP (50) -> 450
+    assert float(hass.states.get(em_avg_entry.entity_id).state) == 450.0
+
+    # The persisted value feeds back into the next read via _get_param
+    assert engine._get_param("avg_night_consumption") == 450.0
+
+    # A large P1 import spike must not push the persisted estimate above
+    # AVG_NIGHT_CONSUMPTION_MAX (2000) -- the entity's own declared max.
+    hass.states.async_set(em_avg_entry.entity_id, "2000")
+    hass.states.async_set("sensor.p1_meter", "20000")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    # raw = 2000 * 0.9 + 20000 * 0.1 = 3800, well above the 2000 ceiling
+    assert float(hass.states.get(em_avg_entry.entity_id).state) == 2000.0
+
+    # A stored value below AVG_NIGHT_CONSUMPTION_MIN (100) -- e.g. forced
+    # in externally -- must not be allowed to drift lower still.
+    hass.states.async_set(em_avg_entry.entity_id, "50")
+    hass.states.async_set("sensor.p1_meter", "1")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    # raw = 50 * 0.9 + 1 * 0.1 = 45.1, below the 100 floor
+    assert float(hass.states.get(em_avg_entry.entity_id).state) == 100.0
+
+    await engine.async_stop()
+
+
+def _make_engine(hass: HomeAssistant, *, options=None, metrics=None, model="H10K-HT"):
+    """Build a real EnergyManagerEngine with a minimal coordinator/entry,
+    for tests that only need engine helper methods, not the full setup flow.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+            **(options or {}),
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "model": model,
+            "device_type_code": "1",
+            "metrics": {
+                "batSoc": "50.0",
+                "ppv": "0.0",
+                "home_load": "0.0",
+                **(metrics or {}),
+            },
+        }
+    }
+
+    config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    engine = EnergyManagerEngine(hass, coordinator, config)
+    return engine, coordinator, entry
+
+
+@pytest.mark.asyncio
+async def test_engine_lifecycle_edge_cases(hass: HomeAssistant):
+    """Test async_start/async_stop idempotency and the SOC-listener branch."""
+    engine, _coordinator, _entry = _make_engine(hass)
+    registry = er.async_get(hass)
+
+    # Register the batSoc sensor entity so async_start's SOC-listener branch
+    # (only taken when the entity actually exists) gets exercised.
+    soc_entry = registry.async_get_or_create(
+        "sensor", DOMAIN, "hyxi_SN123_batsoc", suggested_object_id="hyxi_sn123_batsoc"
+    )
+    hass.states.async_set(soc_entry.entity_id, "50.0")
+
+    await engine.async_start()
+    assert engine.enabled is True
+
+    # Calling async_start again while already enabled is a no-op
+    await engine.async_start()
+    assert engine.enabled is True
+
+    await engine.async_stop()
+    assert engine.enabled is False
+
+    # Calling async_stop again while already stopped is a no-op
+    await engine.async_stop()
+    assert engine.enabled is False
+
+
+@pytest.mark.asyncio
+async def test_engine_state_reading_edge_cases(hass: HomeAssistant):
+    """Test defensive fallback branches across the state-reading helpers."""
+    engine, coordinator, entry = _make_engine(hass)
+
+    # _get_coordinator_metric: no coordinator data at all
+    coordinator.data = None
+    assert engine._get_coordinator_metric("batSoc", 42.0) == 42.0
+
+    # _get_coordinator_metric: data present but nothing for this SN
+    coordinator.data = {"OTHER_SN": {"metrics": {}}}
+    assert engine._get_coordinator_metric("batSoc", 42.0) == 42.0
+
+    # _get_ha_state_bool: no entity_id at all
+    assert engine._get_ha_state_bool(None, True) is True
+
+    # _get_battery_capacity: override enabled but the stored value can't be
+    # converted to float -- falls through to the API metric instead
+    coordinator.data = {"SN123": {"metrics": {"batCap": "5.0"}}}
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            **entry.options,
+            "em_battery_capacity_override": True,
+            "em_battery_capacity_wh": "not-a-number",
+        },
+    )
+    assert engine._get_battery_capacity() == 5000.0  # batCap 5.0 kWh -> 5000 Wh
+
+    # _get_protection_param: no matching number entity registered
+    assert engine._get_protection_param("soc_min", 17.0) == 17.0
+
+    # _hours_until_sunrise: sun.sun exists but next_rising fails to parse
+    hass.states.async_set(
+        "sun.sun", "above_horizon", {"next_rising": "not-a-timestamp"}
+    )
+    assert engine._hours_until_sunrise() == 12.0
+
+    # _hours_until_sunset: no sun.sun entity registered at all
+    hass.states.async_remove("sun.sun")
+    assert engine._hours_until_sunset() == 12.0
+
+    # _hours_until_sunset: sun.sun exists but next_setting fails to parse
+    hass.states.async_set(
+        "sun.sun", "above_horizon", {"next_setting": "not-a-timestamp"}
+    )
+    assert engine._hours_until_sunset() == 12.0
+
+    # _soc_needed_for_night: non-positive capacity falls back to 10000 Wh
+    with patch.object(engine, "_get_param", return_value=0.0):
+        # avg_night_consumption=0 and battery_capacity_wh=0 via the same
+        # patched _get_param -- wh_needed comes out to 0, but capacity's
+        # <= 0 branch must still be taken rather than dividing by zero.
+        result = engine._soc_needed_for_night()
+    assert result is not None  # didn't raise ZeroDivisionError
+
+
+@pytest.mark.asyncio
+async def test_engine_control_methods_live_mode(hass: HomeAssistant):
+    """Test _set_mode/_adjust_power/_set_peak_shaving in live (non-dry-run)
+    mode, and their cooldown/threshold guard branches."""
+    engine, coordinator, _entry = _make_engine(hass, options={"em_dry_run": False})
+    client = AsyncMock()
+    coordinator.client = client
+
+    # --- _set_mode: live dispatch for each mode ---
+    engine._last_mode_switch = -999999.0
+    assert await engine._set_mode("idle") is True
+    client.set_mode_idle.assert_called_once_with("SN123")
+
+    engine._last_mode_switch = -999999.0
+    assert await engine._set_mode("charge", 500) is True
+    client.set_mode_charge.assert_called_once_with("SN123", 500)
+    assert engine._last_sent_power["charge"] == 500
+
+    engine._last_mode_switch = -999999.0
+    assert await engine._set_mode("discharge", 400) is True
+    client.set_mode_discharge.assert_called_once_with("SN123", 400)
+
+    # Unknown mode -> logged and rejected, no API call
+    engine._last_mode_switch = -999999.0
+    assert await engine._set_mode("not_a_real_mode") is False
+
+    # --- _set_mode: live dispatch, API raises ---
+    client.set_mode_idle.side_effect = HyxiApiClient.ControlError("nope")
+    engine._last_mode_switch = -999999.0
+    assert await engine._set_mode("idle") is False
+    client.set_mode_idle.side_effect = None
+
+    # --- _adjust_power: cooldown guard ---
+    engine._last_power_adjust = time.monotonic()
+    assert await engine._adjust_power("charge", 600) is False
+
+    # --- _adjust_power: threshold-not-exceeded guard ---
+    engine._last_power_adjust = -999999.0
+    engine._last_sent_power["charge"] = 500
+    with patch.object(engine, "_get_param", return_value=100.0):
+        # target (550) within threshold (100) of current (500) -> no-op
+        assert await engine._adjust_power("charge", 550) is False
+
+    # --- _adjust_power: live dispatch ---
+    engine._last_power_adjust = -999999.0
+    engine._last_sent_power["charge"] = 0
+    assert await engine._adjust_power("charge", 700) is True
+    client.set_mode_charge.assert_called_with("SN123", 700)
+
+    engine._last_power_adjust = -999999.0
+    engine._last_sent_power["discharge"] = 0
+    assert await engine._adjust_power("discharge", 300) is True
+    client.set_mode_discharge.assert_called_with("SN123", 300)
+
+    # --- _adjust_power: live dispatch, API raises ---
+    client.set_mode_charge.side_effect = HyxiApiClient.ControlError("nope")
+    engine._last_power_adjust = -999999.0
+    engine._last_sent_power["charge"] = 0
+    assert await engine._adjust_power("charge", 700) is False
+    client.set_mode_charge.side_effect = None
+
+    # --- _set_peak_shaving: cooldown guard ---
+    engine._last_pv_curtail_toggle = time.monotonic()
+    assert await engine._set_peak_shaving("hold") is False
+
+    # --- _set_peak_shaving: live dispatch ---
+    engine._last_pv_curtail_toggle = -999999.0
+    assert await engine._set_peak_shaving("stop") is True
+    client.set_peak_shaving.assert_called_once_with("SN123", "stop")
+    assert engine._pv_curtailed is True
+
+    # --- _set_peak_shaving: live dispatch, API raises ---
+    client.set_peak_shaving.side_effect = HyxiApiClient.ControlError("nope")
+    engine._last_pv_curtail_toggle = -999999.0
+    assert await engine._set_peak_shaving("hold") is False
+
+    # --- _release_pv_curtailment: no-op when not curtailed ---
+    engine._pv_curtailed = False
+    await engine._release_pv_curtailment()  # must not raise / not call the API
+
+    # --- _get_current_power_setting: tracked value takes priority ---
+    engine._last_sent_power["charge"] = 999
+    assert engine._get_current_power_setting("charge") == 999
+
+    # --- _get_current_power_setting: falls back to the number entity ---
+    engine._last_sent_power["discharge"] = 0
+    registry = er.async_get(hass)
+    power_entry = registry.async_get_or_create(
+        "number",
+        DOMAIN,
+        "hyxi_SN123_discharge_power",
+        suggested_object_id="hyxi_sn123_discharge_power",
+    )
+    hass.states.async_set(power_entry.entity_id, "321")
+    assert engine._get_current_power_setting("discharge") == 321.0
+
+
+@pytest.mark.asyncio
+async def test_engine_make_decision_guards(hass: HomeAssistant):
+    """Test the concurrent-run guard and the default-fallback branch."""
+    engine, coordinator, _entry = _make_engine(hass, options={"em_dry_run": True})
+    registry = er.async_get(hass)
+
+    # Concurrent-run guard: a decision already in progress is skipped
+    engine._in_decision = True
+    await engine._make_decision()  # returns immediately, no state read attempted
+    assert engine.decision == ""  # never got past the guard to set a decision
+
+    # Default fallback: nothing (solar/night/high-load/export) applies, and
+    # the engine is currently mid charge -> forced back to self_consume.
+    engine._in_decision = False
+    engine._current_mode = "charge"
+    coordinator.data["SN123"]["metrics"]["ppv"] = "0.0"  # not solar-producing
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "50.0"  # well within limits
+    hass.states.async_set("sensor.p1_meter", "0")
+    hass.states.async_set(
+        "sun.sun", "above_horizon", {"elevation": 10.0}
+    )  # daytime, not night
+    for key in ("soc_min", "soc_max"):
+        registry.async_get_or_create(
+            "number",
+            DOMAIN,
+            f"hyxi_SN123_{key}",
+            suggested_object_id=f"hyxi_sn123_{key}",
+        )
+    hass.states.async_set(
+        registry.async_get_entity_id("number", DOMAIN, "hyxi_SN123_soc_min"), "20"
+    )
+    hass.states.async_set(
+        registry.async_get_entity_id("number", DOMAIN, "hyxi_SN123_soc_max"), "90"
+    )
+
+    await engine._make_decision()
+
+    assert engine.decision == "idle_default"
+
+
+def _set_soc_limits(hass, registry, soc_min="20", soc_max="90"):
+    """Register and set the soc_min/soc_max protection number entities."""
+    for key, val in (("soc_min", soc_min), ("soc_max", soc_max)):
+        entry = registry.async_get_or_create(
+            "number",
+            DOMAIN,
+            f"hyxi_SN123_{key}",
+            suggested_object_id=f"hyxi_sn123_{key}",
+        )
+        hass.states.async_set(entry.entity_id, val)
+
+
+@pytest.mark.asyncio
+async def test_engine_check_soc_limits_mode_transitions(hass: HomeAssistant):
+    """Test the 'already in the target mode -> adjust instead of switch'
+    branches for all three _check_soc_limits outcomes."""
+    engine, _coordinator, _entry = _make_engine(
+        hass,
+        options={
+            "em_dry_run": True,
+            "em_battery_capacity_override": True,
+            "em_battery_capacity_wh": 2000,
+        },
+    )
+    registry = er.async_get(hass)
+    _set_soc_limits(hass, registry)
+
+    s_kwargs = {
+        "home_load": 0,
+        "max_charge": 2000,
+        "max_discharge": 2000,
+        "is_night": False,
+        "night_soc_target": 30,
+    }
+    from custom_components.hyxi_cloud.engine import DecisionState
+
+    # emergency_solar_charge while already charging -> adjust_power branch
+    engine._current_mode = "charge"
+    s = DecisionState(
+        soc=15,
+        solar=1000,
+        p1=-100,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        **s_kwargs,
+    )
+    assert await engine._check_soc_limits(s) is True
+    assert engine.decision == "emergency_solar_charge"
+
+    # grid_charge_emergency while NOT already charging -> set_mode branch
+    sw_entry = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        "hyxi_SN123_em_grid_charge_allowed",
+        suggested_object_id="hyxi_sn123_em_grid_charge_allowed",
+    )
+    hass.states.async_set(sw_entry.entity_id, "on")
+    engine._current_mode = "idle"
+    engine._last_mode_switch = -999999.0
+    s = DecisionState(
+        soc=15,
+        solar=0,
+        p1=100,
+        solar_producing=False,
+        soc_min=20,
+        soc_max=90,
+        **s_kwargs,
+    )
+    assert await engine._check_soc_limits(s) is True
+    assert engine.decision == "grid_charge_emergency"
+    assert engine.current_mode == "charge"
+
+    # forced_discharge_over_max while already discharging -> adjust_power branch
+    engine._current_mode = "discharge"
+    s = DecisionState(
+        soc=95,
+        solar=0,
+        p1=500,
+        solar_producing=False,
+        soc_min=20,
+        soc_max=90,
+        **s_kwargs,
+    )
+    assert await engine._check_soc_limits(s) is True
+    assert engine.decision == "forced_discharge_over_max"
+
+
+@pytest.mark.asyncio
+async def test_engine_check_export_limit_branches(hass: HomeAssistant):
+    """Test every branch of the single-phase export-limiting priority check."""
+    from custom_components.hyxi_cloud.engine import DecisionState
+
+    engine, coordinator, _entry = _make_engine(
+        hass,
+        options={"em_dry_run": True},
+        model="H5K-LS",  # single-phase
+    )
+    registry = er.async_get(hass)
+    s_kwargs = {
+        "home_load": 0,
+        "max_charge": 2000,
+        "max_discharge": 2000,
+        "is_night": False,
+        "night_soc_target": 30,
+    }
+
+    # Not single-phase / no peak shaving support -> always False
+    coordinator.data["SN123"]["model"] = "H10K-HT"  # three-phase
+    s = DecisionState(
+        soc=50, solar=0, p1=0, solar_producing=False, soc_min=20, soc_max=90, **s_kwargs
+    )
+    assert await engine._check_export_limit(s) is False
+    coordinator.data["SN123"]["model"] = "H5K-LS"  # restore single-phase
+
+    # Export limiting switch off, and not currently curtailed -> False, no release
+    assert await engine._check_export_limit(s) is False
+
+    # Export limiting switch off but WAS curtailed -> releases curtailment
+    sw_export = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        "hyxi_SN123_em_export_limiting",
+        suggested_object_id="hyxi_sn123_em_export_limiting",
+    )
+    hass.states.async_set(sw_export.entity_id, "off")
+    engine._pv_curtailed = True
+    with patch.object(
+        engine, "_set_peak_shaving", new=AsyncMock(return_value=True)
+    ) as mock_shave:
+        assert await engine._check_export_limit(s) is False
+        mock_shave.assert_called_once_with("hold")
+    engine._pv_curtailed = False
+
+    # Export limiting on, but max_grid_export configured as 0 (disabled) and
+    # currently curtailed -> releases curtailment
+    hass.states.async_set(sw_export.entity_id, "on")
+    engine._pv_curtailed = True
+    with patch.object(engine, "_get_param", return_value=0.0):
+        with patch.object(
+            engine, "_set_peak_shaving", new=AsyncMock(return_value=True)
+        ) as mock_shave:
+            assert await engine._check_export_limit(s) is False
+            mock_shave.assert_called_once_with("hold")
+    engine._pv_curtailed = False
+
+    # Exporting beyond the limit, battery has room -> charge to absorb (new
+    # mode), also releasing any prior curtailment since we're charging again
+    with patch.object(engine, "_get_param", return_value=500.0):
+        s = DecisionState(
+            soc=50,
+            solar=1000,
+            p1=-2000,
+            solar_producing=True,
+            soc_min=20,
+            soc_max=90,
+            **s_kwargs,
+        )
+        engine._current_mode = "idle"
+        engine._last_mode_switch = -999999.0
+        engine._pv_curtailed = True
+        with patch.object(
+            engine, "_release_pv_curtailment", new=AsyncMock()
+        ) as mock_release:
+            assert await engine._check_export_limit(s) is True
+            mock_release.assert_called_once()
+        assert engine.decision == "export_limit_charge"
+        engine._pv_curtailed = False
+
+        # Same, but already charging -> adjust_power branch
+        engine._current_mode = "charge"
+        engine._last_power_adjust = -999999.0
+        assert await engine._check_export_limit(s) is True
+        assert engine.decision == "export_limit_charge"
+
+        # Exporting beyond the limit, battery full -> curtail via peak shaving
+        s = DecisionState(
+            soc=95,
+            solar=1000,
+            p1=-2000,
+            solar_producing=True,
+            soc_min=20,
+            soc_max=90,
+            **s_kwargs,
+        )
+        engine._pv_curtailed = False
+        engine._last_pv_curtail_toggle = -999999.0
+        assert await engine._check_export_limit(s) is True
+        assert engine.decision == "export_limit_pv_curtail"
+
+        # Export within limit while previously charging for export -> revert
+        # to self_consume
+        engine._current_mode = "charge"
+        engine._pv_curtailed = False
+        engine._set_decision("export_limit_charge")
+        s = DecisionState(
+            soc=50,
+            solar=200,
+            p1=100,
+            solar_producing=False,
+            soc_min=20,
+            soc_max=90,
+            **s_kwargs,
+        )
+        assert await engine._check_export_limit(s) is True
+        assert engine.decision == "export_limit_ok"
+
+        # Export within limit and nothing special going on -> False
+        engine._current_mode = "self_consume"
+        engine._set_decision("idle")
+        assert await engine._check_export_limit(s) is False
+
+
+@pytest.mark.asyncio
+async def test_engine_check_high_load_disabled(hass: HomeAssistant):
+    """Test _check_high_load returns False when the assist switch is off."""
+    from custom_components.hyxi_cloud.engine import DecisionState
+
+    engine, _coordinator, _entry = _make_engine(hass)
+    s = DecisionState(
+        soc=50,
+        solar=0,
+        p1=0,
+        home_load=9999,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=False,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    assert await engine._check_high_load(s) is False
+
+
+@pytest.mark.asyncio
+async def test_engine_check_high_load_below_threshold(hass: HomeAssistant):
+    """Test _check_high_load returns False when the assist switch is on but
+    home load hasn't actually exceeded the threshold."""
+    from custom_components.hyxi_cloud.engine import DecisionState
+
+    engine, _coordinator, _entry = _make_engine(hass)
+    registry = er.async_get(hass)
+    sw_assist = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        "hyxi_SN123_em_high_load_battery_assist",
+        suggested_object_id="hyxi_sn123_em_high_load_battery_assist",
+    )
+    hass.states.async_set(sw_assist.entity_id, "on")
+
+    with patch.object(engine, "_get_param", return_value=6500.0):  # threshold
+        s = DecisionState(
+            soc=50,
+            solar=0,
+            p1=0,
+            home_load=100,  # well under the threshold
+            max_charge=2000,
+            max_discharge=2000,
+            is_night=False,
+            solar_producing=False,
+            soc_min=20,
+            soc_max=90,
+            night_soc_target=30,
+        )
+        assert await engine._check_high_load(s) is False
+
+
+@pytest.mark.asyncio
+async def test_engine_check_night_daytime_preservation(hass: HomeAssistant):
+    """Test the daytime night-reserve-preservation branch of _check_night."""
+    from custom_components.hyxi_cloud.engine import DecisionState
+
+    engine, _coordinator, _entry = _make_engine(hass, options={"em_dry_run": True})
+    registry = er.async_get(hass)
+    sw_night = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        "hyxi_SN123_em_night_mode",
+        suggested_object_id="hyxi_sn123_em_night_mode",
+    )
+    hass.states.async_set(sw_night.entity_id, "on")
+
+    # Feed a positive rolling P1 average so p1_avg > 0
+    engine._p1_buffer.append((time.monotonic(), 500.0))
+
+    with patch.object(engine, "_solar_will_cover_charge", return_value=False):
+        s = DecisionState(
+            soc=25,
+            solar=0,
+            p1=200,
+            home_load=0,
+            max_charge=2000,
+            max_discharge=2000,
+            is_night=False,
+            solar_producing=False,
+            soc_min=20,
+            soc_max=90,
+            night_soc_target=30,  # soc(25) <= night_soc_target(30)
+        )
+        engine._current_mode = "self_consume"
+        assert await engine._check_night(s) is True
+        assert engine.decision == "night_preserve_idle"
+
+
+@pytest.mark.asyncio
+async def test_engine_check_night_returns_false_when_nothing_applies(
+    hass: HomeAssistant,
+):
+    """Test _check_night falls through to False when night mode is on but
+    neither the nighttime nor the daytime-preservation condition is met."""
+    from custom_components.hyxi_cloud.engine import DecisionState
+
+    engine, _coordinator, _entry = _make_engine(hass)
+    registry = er.async_get(hass)
+    sw_night = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        "hyxi_SN123_em_night_mode",
+        suggested_object_id="hyxi_sn123_em_night_mode",
+    )
+    hass.states.async_set(sw_night.entity_id, "on")
+
+    s = DecisionState(
+        soc=80,  # well above night_soc_target -- no preservation needed
+        solar=1000,
+        p1=0,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,  # daytime -- nighttime branch doesn't apply either
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    assert await engine._check_night(s) is False
+
+
+@pytest.mark.asyncio
+async def test_engine_check_solar_branches(hass: HomeAssistant):
+    """Test _check_solar's battery-full branch, bottomout-cooldown doubling,
+    and sunset-urgency adjustment."""
+    from custom_components.hyxi_cloud.engine import DecisionState
+
+    engine, _coordinator, _entry = _make_engine(hass, options={"em_dry_run": True})
+
+    # solar_battery_full: producing solar but SOC already at/above max
+    s = DecisionState(
+        soc=90,
+        solar=1000,
+        p1=0,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    engine._current_mode = "charge"
+    assert await engine._check_solar(s) is True
+    assert engine.decision == "solar_battery_full"
+
+    # Bottomout-cooldown doubling + sunset urgency both flow through
+    # _solar_charge_logic -> _solar_entry_logic; just confirm no crash and
+    # that a decision gets set via the sunset-urgent path.
+    engine._last_bottomout_exit = time.monotonic()  # inside bottomout_cooldown
+    with (
+        patch.object(engine, "_hours_until_sunset", return_value=2.0),  # < 4h
+        patch.object(engine, "_solar_will_cover_charge", return_value=False),
+    ):
+        s = DecisionState(
+            soc=50,
+            solar=50,  # below min_solar_for_charge -> solar_self_consume path
+            p1=0,
+            home_load=0,
+            max_charge=2000,
+            max_discharge=2000,
+            is_night=False,
+            solar_producing=True,
+            soc_min=20,
+            soc_max=90,
+            night_soc_target=60,  # soc(50) < night_soc_target(60)
+        )
+        engine._current_mode = "idle"
+        assert await engine._check_solar(s) is True
+        assert engine.decision == "solar_self_consume"
+
+
+@pytest.mark.asyncio
+async def test_engine_solar_entry_and_tune_logic(hass: HomeAssistant):
+    """Test the low-solar entry branch and the tune-logic exit/balanced branches."""
+    from custom_components.hyxi_cloud.engine import DecisionState, SolarConfig
+
+    engine, _coordinator, _entry = _make_engine(hass, options={"em_dry_run": True})
+
+    s = DecisionState(
+        soc=50,
+        solar=50,
+        p1=0,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    sc = SolarConfig(
+        min_solar_for_charge=1000,
+        charge_margin=150,
+        charge_entry_threshold=500,
+        readings_needed=2,
+        sunset_urgent=False,
+    )
+
+    # solar below threshold -> solar_self_consume, mode switches away from
+    # a non-idle/self_consume mode (e.g. was discharging)
+    engine._current_mode = "discharge"
+    engine._charge_entry_export_count = 5
+    await engine._solar_entry_logic(s, sc)
+    assert engine.decision == "solar_self_consume"
+    assert engine._charge_entry_export_count == 0
+    assert engine.current_mode == "self_consume"
+
+    # solar above threshold and P1 not exporting past the entry threshold
+    # (neither low-solar nor sustained-export) -> falls to the else branch
+    engine._current_mode = "discharge"
+    engine._last_mode_switch = -999999.0  # avoid cooldown from the call above
+    s_else = DecisionState(
+        soc=50,
+        solar=1500,
+        p1=0,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    engine._charge_entry_export_count = 3
+    await engine._solar_entry_logic(s_else, sc)
+    assert engine.decision == "solar_self_consume"
+    assert engine._charge_entry_export_count == 0
+    assert engine.current_mode == "self_consume"
+
+    # solar_export_waiting: current_mode not in (self_consume, idle) forces a switch
+    engine._current_mode = "discharge"
+    engine._last_mode_switch = -999999.0
+    s2 = DecisionState(
+        soc=50,
+        solar=1500,
+        p1=-600,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    engine._charge_entry_export_count = 0
+    await engine._solar_entry_logic(s2, sc)
+    assert engine.decision == "solar_export_waiting"
+    assert engine.current_mode == "self_consume"
+
+    # _solar_tune_logic: solar has dropped well below threshold while
+    # charging -> exit to self_consume
+    engine._current_mode = "charge"
+    s3 = DecisionState(
+        soc=50,
+        solar=100,
+        p1=0,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    await engine._solar_tune_logic(s3, sc)
+    assert engine.decision == "solar_self_consume"
+
+    # _solar_tune_logic: P1 within the balanced range -> stays on solar_charge
+    # without calling adjust_power
+    engine._current_mode = "charge"
+    engine._charge_bottomout_count = 3
+    s4 = DecisionState(
+        soc=50,
+        solar=1500,
+        p1=0,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    with patch.object(engine, "_adjust_power", new=AsyncMock()) as mock_adjust:
+        await engine._solar_tune_logic(s4, sc)
+        mock_adjust.assert_not_called()
+    assert engine.decision == "solar_charge"
+    assert engine._charge_bottomout_count == 2
+
+    # _solar_reduce_charge: normal reduction (charge_target stays > 100) --
+    # reached via _solar_tune_logic when importing (p1 > charge_margin)
+    engine._current_mode = "charge"
+    engine._charge_bottomout_count = 3
+    engine._last_sent_power["charge"] = 1000
+    s5 = DecisionState(
+        soc=50,
+        solar=1500,
+        p1=200,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    with patch.object(engine, "_adjust_power", new=AsyncMock()) as mock_adjust:
+        await engine._solar_tune_logic(s5, sc)
+        mock_adjust.assert_called_once()
+    assert engine.decision == "solar_charge"
+    assert engine._charge_bottomout_count == 0
+
+    # _solar_reduce_charge: repeated deep imports push charge_target to the
+    # 100W floor -- once bottomout_count reaches 5, exit to self_consume
+    engine._current_mode = "charge"
+    engine._last_mode_switch = -999999.0  # avoid cooldown from earlier calls
+    engine._charge_bottomout_count = 4
+    engine._last_sent_power["charge"] = 150
+    s6 = DecisionState(
+        soc=50,
+        solar=1500,
+        p1=500,
+        home_load=0,
+        max_charge=2000,
+        max_discharge=2000,
+        is_night=False,
+        solar_producing=True,
+        soc_min=20,
+        soc_max=90,
+        night_soc_target=30,
+    )
+    await engine._solar_tune_logic(s6, sc)
+    assert engine.decision == "solar_self_consume"
+    assert engine._charge_bottomout_count == 0
+    assert engine.current_mode == "self_consume"
+
+
+@pytest.mark.asyncio
+async def test_engine_loop_tick_edge_cases(hass: HomeAssistant):
+    """Test _loop_tick's disabled guard and its exception-fallback branches."""
+    engine, coordinator, _entry = _make_engine(hass, options={"em_dry_run": False})
+    coordinator.hyxi_metadata = {"last_success": dt_util.utcnow()}
+    client = AsyncMock()
+    coordinator.client = client
+
+    # Disabled engine -> immediate no-op
+    await engine._loop_tick(None)
+
+    await engine.async_start()
+
+    # em_enabled switch off while mid-charge: self_consume fails too, but
+    # the exception is swallowed rather than propagating. _set_mode itself
+    # already catches ControlError from the API call internally, so to
+    # exercise _loop_tick's OWN except clause here we need the failure to
+    # come from somewhere _set_mode doesn't wrap -- patch it directly.
+    sw_em = er.async_get(hass).async_get_or_create(
+        "switch",
+        DOMAIN,
+        "hyxi_SN123_em_enabled",
+        suggested_object_id="hyxi_sn123_em_enabled",
+    )
+    hass.states.async_set(sw_em.entity_id, "off")
+    engine._current_mode = "charge"
+    with patch.object(
+        engine, "_set_mode", new=AsyncMock(side_effect=ValueError("api down"))
+    ):
+        await engine._loop_tick(None)
+    assert engine.decision == "disabled"
+
+    # Decision loop raises, and the fallback self_consume ALSO raises --
+    # both exceptions are swallowed, not propagated to the caller.
+    hass.states.async_set(sw_em.entity_id, "on")
+    with (
+        patch.object(engine, "_get_soc", side_effect=ValueError("boom")),
+        patch.object(
+            engine,
+            "_set_mode",
+            new=AsyncMock(side_effect=HyxiApiClient.ControlError("also boom")),
+        ),
+    ):
+        await engine._loop_tick(None)  # must not raise
+    assert engine.decision == "error"
+
+    await engine.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_engine_on_p1_change_edge_cases(hass: HomeAssistant):
+    """Test _on_p1_change's guard branches, buffer trimming, and fast-path
+    trigger for sustained high load."""
+    engine, coordinator, _entry = _make_engine(hass)
+
+    # Missing/placeholder new_state -> no-op, nothing buffered
+    event = MagicMock()
+    event.data = {"new_state": None}
+    engine._on_p1_change(event)
+    assert len(engine._p1_buffer) == 0
+
+    event.data = {"new_state": MagicMock(state="unavailable")}
+    engine._on_p1_change(event)
+    assert len(engine._p1_buffer) == 0
+
+    # A stale reading outside the smoothing window gets trimmed
+    with patch.object(engine, "_get_param", return_value=60):
+        engine._p1_buffer.append((time.monotonic() - 999, 100.0))
+        event.data = {"new_state": MagicMock(state="250.0")}
+        engine._on_p1_change(event)
+    assert all(v == 250.0 for _, v in engine._p1_buffer)  # the stale entry is gone
+
+    # Engine not enabled -> stops right after buffering, no fast-path trigger
+    coordinator.data["SN123"]["metrics"]["home_load"] = "9999.0"
+    with patch.object(engine, "_make_decision", new=AsyncMock()) as mock_decision:
+        event.data = {"new_state": MagicMock(state="300.0")}
+        engine._on_p1_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_not_called()
+
+    # Engine enabled + home_load over threshold -> triggers the fast-path
+    await engine.async_start()
+    with patch.object(engine, "_make_decision", new=AsyncMock()) as mock_decision:
+        engine._last_fast_path_trigger = 0
+        event.data = {"new_state": MagicMock(state="300.0")}
+        engine._on_p1_change(event)
+        await hass.async_block_till_done()
+        mock_decision.assert_called_once()
 
     await engine.async_stop()

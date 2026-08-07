@@ -249,6 +249,97 @@ async def test_async_setup_entry_no_protection():
     async_add_entities.assert_not_called()
 
 
+@pytest.mark.asyncio
+async def test_async_setup_entry_no_coordinator_data():
+    """Test setup returns early (adds nothing) when the coordinator has no data yet."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {"enable_battery_control": True}
+
+    coordinator = MagicMock()
+    coordinator.data = {}
+
+    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    async_add_entities = MagicMock()
+
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    async_add_entities.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_adds_em_numbers():
+    """Test EM parameter numbers are added when the Energy Manager is enabled,
+    and that max_grid_export is skipped for a three-phase EM inverter."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {
+        "enable_battery_control": False,
+        number_mod.CONF_EM_ENABLED: True,
+        number_mod.CONF_EM_INVERTER_SN: "SN1",
+    }
+
+    dev_data_3phase: dict[str, str | dict[str, str]] = {
+        "deviceCode": "HYBRID_INVERTER",
+        "model": "HYXI-HT",
+        "metrics": {"phaseType": "3", "acPhase": "3"},
+    }
+
+    coordinator = MagicMock()
+    coordinator.data = {"SN1": dev_data_3phase}
+
+    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    async_add_entities = MagicMock()
+
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+    em_entities = [e for e in entities if isinstance(e, number_mod.EMParameterNumber)]
+    em_keys = {e._attr_translation_key for e in em_entities}
+
+    # One EMParameterNumber per EM_NUMBER_DEFS entry, except max_grid_export
+    # which is single-phase only and this device is three-phase.
+    assert "em_max_grid_export" not in em_keys
+    assert len(em_entities) == len(number_mod.EM_NUMBER_DEFS) - 1
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_adds_em_numbers_single_phase_includes_export():
+    """Test max_grid_export IS included for a single-phase EM inverter."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {
+        "enable_battery_control": False,
+        number_mod.CONF_EM_ENABLED: True,
+        number_mod.CONF_EM_INVERTER_SN: "SN1",
+    }
+
+    dev_data_1phase: dict[str, str | dict[str, str]] = {
+        "deviceCode": "HYBRID_INVERTER",
+        "model": "HYXI-HS",
+        "metrics": {"phaseType": "1", "acPhase": "1"},
+    }
+
+    coordinator = MagicMock()
+    coordinator.data = {"SN1": dev_data_1phase}
+
+    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    async_add_entities = MagicMock()
+
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    em_entities = [e for e in entities if isinstance(e, number_mod.EMParameterNumber)]
+    em_keys = {e._attr_translation_key for e in em_entities}
+
+    assert "em_max_grid_export" in em_keys
+    assert len(em_entities) == len(number_mod.EM_NUMBER_DEFS)
+
+
 def test_hyxi_power_number_init():
     """Test initialization of HyxiPowerNumber."""
     coordinator = MagicMock()
@@ -414,3 +505,113 @@ async def test_hyxi_protection_number_set_value():
     assert entity._attr_native_value == 25
     entity.async_write_ha_state.assert_called_once()
     entity.hass.async_create_task.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_hyxi_protection_number_restore_state():
+    """Test restoring state for HyxiProtectionNumber."""
+    coordinator = MagicMock()
+    dev_data: dict = {}
+    definition = {
+        "key": "soc_min",
+        "unit": "%",
+        "min": 5,
+        "max": 50,
+        "default": 20,
+        "icon": "mdi:battery-20",
+    }
+    entity = number_mod.HyxiProtectionNumber(coordinator, "SN1", dev_data, definition)
+
+    # Mock valid state
+    mock_state = MagicMock()
+    mock_state.state = "35"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 35
+
+    # Mock invalid state -- should not crash, value remains 35
+    mock_state.state = "invalid"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 35
+
+    # No prior state at all -- should not crash, value remains 35
+    entity.async_get_last_state = AsyncMock(return_value=None)
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 35
+
+
+def test_em_parameter_number_init():
+    """Test initialization of EMParameterNumber pulls fields from its EMNumberDef."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef(
+        "high_load_threshold", "W", 1000, 20000, 500, "mdi:flash-alert"
+    )
+
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+
+    assert entity._attr_unique_id == "hyxi_SN1_em_high_load_threshold"
+    assert entity._attr_translation_key == "em_high_load_threshold"
+    assert entity._attr_native_unit_of_measurement == "W"
+    assert entity._attr_native_min_value == 1000
+    assert entity._attr_native_max_value == 20000
+    assert entity._attr_native_step == 500
+    assert entity._attr_icon == "mdi:flash-alert"
+    # Default native value comes from EM_DEFAULTS, not the EMNumberDef's own min/max
+    assert entity._attr_native_value == number_mod.EM_DEFAULTS["high_load_threshold"]
+    assert entity._attr_device_info == {
+        "identifiers": {(number_mod.DOMAIN, "SN1_energy_manager")},
+    }
+
+
+def test_em_parameter_number_init_unknown_key_defaults_to_zero():
+    """Test EMParameterNumber falls back to 0 when the key has no EM_DEFAULTS entry."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef("unmapped_key", "W", 0, 100, 1, "mdi:help")
+
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+
+    assert entity._attr_native_value == 0.0
+
+
+@pytest.mark.asyncio
+async def test_em_parameter_number_restore_state():
+    """Test restoring state for EMParameterNumber."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef(
+        "avg_night_consumption", "W", 100, 2000, 50, "mdi:weather-night"
+    )
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+
+    # Mock valid state
+    mock_state = MagicMock()
+    mock_state.state = "550.5"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 550.5
+
+    # Mock invalid state -- should not crash, value remains unchanged
+    mock_state.state = "invalid"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 550.5
+
+
+@pytest.mark.asyncio
+async def test_em_parameter_number_set_value():
+    """Test setting value for EMParameterNumber writes state directly (no API call)."""
+    coordinator = MagicMock()
+    numdef = number_mod.EMNumberDef(
+        "avg_night_consumption", "W", 100, 2000, 50, "mdi:weather-night"
+    )
+    entity = number_mod.EMParameterNumber(coordinator, "SN1", numdef)
+    entity.async_write_ha_state = MagicMock()
+
+    await entity.async_set_native_value(875.0)
+
+    assert entity._attr_native_value == 875.0
+    entity.async_write_ha_state.assert_called_once()

@@ -3,6 +3,7 @@
 
 import importlib
 import sys
+from datetime import timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -401,3 +402,233 @@ async def test_async_update_data_merge_existing_metrics():
         },
         "1",
     )
+
+
+def test_is_cache_expired_none():
+    """A missing cache payload is treated as expired."""
+    assert hc_coord._is_cache_expired(None) is True  # pylint: disable=protected-access
+
+
+def test_is_cache_expired_old_format():
+    """A bare device dict (old cache format, no 'cached_at') is treated as expired."""
+    raw: dict[str, Any] = {"SN123": {"metrics": {}}}
+    assert hc_coord._is_cache_expired(raw) is True  # pylint: disable=protected-access
+
+
+def test_is_cache_expired_fresh():
+    """A recently-cached payload is not expired."""
+    raw = {"cached_at": hc_coord.dt_util.utcnow().isoformat(), "devices": {}}
+    assert hc_coord._is_cache_expired(raw) is False  # pylint: disable=protected-access
+
+
+def test_is_cache_expired_stale():
+    """A payload older than CACHE_MAX_AGE is expired."""
+    stale_time = hc_coord.dt_util.utcnow() - hc_coord.CACHE_MAX_AGE - timedelta(days=1)
+    raw = {"cached_at": stale_time.isoformat(), "devices": {}}
+    assert hc_coord._is_cache_expired(raw) is True  # pylint: disable=protected-access
+
+
+def test_is_cache_expired_unparseable_timestamp():
+    """A malformed 'cached_at' value is treated as expired rather than raising."""
+    raw = {"cached_at": "not-a-timestamp", "devices": {}}
+    assert hc_coord._is_cache_expired(raw) is True  # pylint: disable=protected-access
+
+
+def test_extract_cached_devices_new_format():
+    """New-format cache payloads unwrap to the inner 'devices' dict."""
+    devices: dict[str, Any] = {"SN123": {"metrics": {}}}
+    raw = {"cached_at": "2026-01-01T00:00:00+00:00", "devices": devices}
+    assert hc_coord._extract_cached_devices(raw) is devices  # pylint: disable=protected-access
+
+
+def test_extract_cached_devices_old_format():
+    """Old-format cache payloads (bare device dict) pass through unchanged."""
+    raw: dict[str, Any] = {"SN123": {"metrics": {}}}
+    assert hc_coord._extract_cached_devices(raw) is raw  # pylint: disable=protected-access
+
+
+def test_extract_cached_devices_none():
+    """A missing cache payload extracts to None."""
+    assert hc_coord._extract_cached_devices(None) is None  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_async_preload_cache_seeds_data_when_fresh():
+    """A fresh cache pre-seeds coordinator.data before the first API call."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+
+    devices = {"SN123": {"metrics": {"tinv": "45.0"}}}
+    raw = {"cached_at": hc_coord.dt_util.utcnow().isoformat(), "devices": devices}
+    coordinator.device_store.async_load = AsyncMock(return_value=raw)
+
+    await coordinator.async_preload_cache()
+
+    assert coordinator.data == devices
+    assert coordinator.hyxi_metadata["api_status"] == "Starting (cached)"
+    assert coordinator.hyxi_metadata["cache_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_async_preload_cache_skips_when_expired():
+    """An expired cache does not pre-seed coordinator.data."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+
+    stale_time = hc_coord.dt_util.utcnow() - hc_coord.CACHE_MAX_AGE - timedelta(days=1)
+    raw = {
+        "cached_at": stale_time.isoformat(),
+        "devices": {"SN123": {"metrics": {}}},
+    }
+    coordinator.device_store.async_load = AsyncMock(return_value=raw)
+
+    await coordinator.async_preload_cache()
+
+    assert coordinator.hyxi_metadata["cache_active"] is False
+    assert coordinator.hyxi_metadata["api_status"] == "Starting"
+
+
+@pytest.mark.asyncio
+async def test_async_preload_cache_skips_when_empty():
+    """No cache on disk leaves the coordinator in its default starting state."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+    coordinator.device_store.async_load = AsyncMock(return_value=None)
+
+    await coordinator.async_preload_cache()
+
+    assert coordinator.hyxi_metadata["cache_active"] is False
+    assert coordinator.data == {}
+
+
+@pytest.mark.asyncio
+async def test_async_preload_cache_handles_load_failure():
+    """A storage read failure is swallowed and leaves cache_active False."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+    coordinator.device_store.async_load = AsyncMock(side_effect=OSError("disk error"))
+
+    await coordinator.async_preload_cache()
+
+    assert coordinator.hyxi_metadata["cache_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_falls_back_to_fresh_cache_on_error():
+    """A fetch failure falls back to a fresh on-disk cache instead of raising."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(side_effect=TimeoutError("boom"))
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+    cached_devices = {"SN123": {"metrics": {"tinv": "1.0"}}}
+    raw = {
+        "cached_at": hc_coord.dt_util.utcnow().isoformat(),
+        "devices": cached_devices,
+    }
+    coordinator.device_store.async_load = AsyncMock(return_value=raw)
+
+    result = await coordinator._async_update_data()
+
+    assert result == cached_devices
+    assert coordinator.hyxi_metadata["api_status"] == "Offline"
+    assert coordinator.hyxi_metadata["cache_active"] is True
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_ignores_expired_cache_on_error():
+    """A fetch failure with only an expired cache still raises, not masking the error."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(side_effect=TimeoutError("boom"))
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+    stale_time = hc_coord.dt_util.utcnow() - hc_coord.CACHE_MAX_AGE - timedelta(days=1)
+    raw = {
+        "cached_at": stale_time.isoformat(),
+        "devices": {"SN123": {"metrics": {}}},
+    }
+    coordinator.device_store.async_load = AsyncMock(return_value=raw)
+
+    with pytest.raises(hc_coord.UpdateFailed):
+        await coordinator._async_update_data()
+
+    assert coordinator.hyxi_metadata["cache_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_cache_fallback_read_itself_fails():
+    """If reading the cache during fallback also raises, the original error still propagates."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(side_effect=TimeoutError("boom"))
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+    coordinator.device_store.async_load = AsyncMock(side_effect=OSError("disk error"))
+
+    with pytest.raises(hc_coord.UpdateFailed):
+        await coordinator._async_update_data()
+
+    assert coordinator.hyxi_metadata["cache_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_unhandled_exception_type():
+    """An exception type outside ClientError/TimeoutError/UpdateFailed hits the generic branch."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(side_effect=ValueError("weird failure"))
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+
+    with pytest.raises(hc_coord.UpdateFailed) as excinfo:
+        await coordinator._async_update_data()
+
+    assert "Unhandled exception: weird failure" in str(excinfo.value)
+    assert coordinator.hyxi_metadata["last_attempts"] == 1
+    assert coordinator.hyxi_metadata["api_status"] == "Error"
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_save_failure_still_returns_devices():
+    """A cache-write failure is logged but does not prevent returning fresh devices."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.get_all_device_data = AsyncMock(
+        return_value={"data": {"SN123": {"metrics": {"tinv": "45.0"}}}, "attempts": 1}
+    )
+
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+    coordinator.device_store.async_save = AsyncMock(side_effect=OSError("disk full"))
+
+    result = await coordinator._async_update_data()
+
+    assert result["SN123"]["metrics"] == {"tinv": "45.0"}
+    assert coordinator.hyxi_metadata["api_status"] == "Online"

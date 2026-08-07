@@ -148,6 +148,102 @@ async def test_setup_entry_and_sensors(hass: HomeAssistant):
 
 
 @pytest.mark.asyncio
+async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
+    """Regression test: EMParameterNumber values written by the real
+    engine._set_param() (e.g. the adaptive avg_night_consumption estimate)
+    must survive Home Assistant's normal per-platform poll cycle AND a
+    manually forced entity update.
+
+    EMParameterNumber has nothing to poll (no device, no coordinator), but
+    without an explicit should_poll=False it inherits Entity's default of
+    True -- and even with should_poll=False, a manually forced update
+    (e.g. the homeassistant.update_entity service, exercised here via the
+    same _async_update_entity_states path with force_refresh=True) would
+    still re-derive state from the entity's own in-memory
+    _attr_native_value and revert the write, unless _set_param() also
+    keeps that in-memory value in sync via the entity's
+    set_computed_value(). This drives the real _set_param() call and the
+    real poll handler, not mocks of either.
+    """
+    from custom_components.hyxi_cloud.const import (
+        CONF_EM_ENABLED,
+        CONF_EM_INVERTER_SN,
+        CONF_EM_P1_ENTITY,
+    )
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ACCESS_KEY: "test_access_key", CONF_SECRET_KEY: "test_secret_key"},
+        options={
+            "update_interval": 30,
+            "enable_battery_control": True,
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+        unique_id="test_access_key",
+    )
+    entry.add_to_hass(hass)
+
+    mock_data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "model": "HYX-H10K-HT",
+            "device_type": 1,
+            "metrics": {"batSoc": "50"},
+        }
+    }
+
+    with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client._refresh_token.return_value = True
+        mock_client.get_all_device_data.return_value = {
+            "data": mock_data,
+            "attempts": 1,
+        }
+        mock_client_class.return_value = mock_client
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert entry.state == ConfigEntryState.LOADED
+
+        entity_id = "number.energy_manager_avg_night_consumption"
+        state = hass.states.get(entity_id)
+        assert state is not None
+
+        # Call the real engine._set_param(), exactly as
+        # _update_night_estimate does for its adaptive EMA.
+        coordinator = hass.data[DOMAIN][entry.entry_id]
+        engine = coordinator.engine
+        assert engine is not None
+        engine._set_param("avg_night_consumption", 999.0)  # pylint: disable=protected-access
+        assert hass.states.get(entity_id).state == "999.0"
+
+        number_platform = next(
+            p for p in hass.data["entity_platform"][DOMAIN] if p.domain == "number"
+        )
+        entity = number_platform.entities[entity_id]
+        assert entity.should_poll is False
+        # The entity's own in-memory value must be in sync too, not just
+        # the state machine -- otherwise a forced update re-derives state
+        # from this and reverts the write regardless of should_poll.
+        assert entity.native_value == 999.0
+
+        # Drive the actual per-platform poll handler that HA's
+        # scan-interval timer calls automatically in production.
+        await number_platform._async_update_entity_states()  # pylint: disable=protected-access
+        await hass.async_block_till_done()
+        assert hass.states.get(entity_id).state == "999.0"
+
+        # A manually forced update (force_refresh=True, e.g. the
+        # homeassistant.update_entity service) bypasses should_poll
+        # entirely -- must still not revert the value.
+        await entity.async_update_ha_state(force_refresh=True)
+        await hass.async_block_till_done()
+        assert hass.states.get(entity_id).state == "999.0"
+
+
+@pytest.mark.asyncio
 async def test_config_flow_no_devices(hass: HomeAssistant):
     """Test config flow failure when no plants or devices are found."""
     result = await hass.config_entries.flow.async_init(
