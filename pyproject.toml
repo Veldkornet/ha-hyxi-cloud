@@ -23,7 +23,7 @@ test = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "hypothesis>=6.164.0",
-    "pytest-homeassistant-custom-component>=0.13.346",
+    "pytest-homeassistant-custom-component>=0.13.354",
     "mypy>=2.3.0",
 ]
 
