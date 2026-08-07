@@ -148,6 +148,86 @@ async def test_setup_entry_and_sensors(hass: HomeAssistant):
 
 
 @pytest.mark.asyncio
+async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
+    """Regression test: EMParameterNumber values written directly to the
+    state machine by engine._set_param() (e.g. the adaptive
+    avg_night_consumption estimate) must survive Home Assistant's normal
+    per-platform poll cycle.
+
+    EMParameterNumber has nothing to poll (no device, no coordinator), but
+    without an explicit should_poll=False it inherits Entity's default of
+    True. Left at the default, the platform's scan-interval timer would
+    periodically call async_update_ha_state(force_refresh=True), which
+    re-derives state from the entity's own (stale) in-memory
+    _attr_native_value and silently reverts _set_param()'s direct write --
+    this test invokes that exact real poll path, not a mock of it.
+    """
+    from custom_components.hyxi_cloud.const import (
+        CONF_EM_ENABLED,
+        CONF_EM_INVERTER_SN,
+        CONF_EM_P1_ENTITY,
+    )
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ACCESS_KEY: "test_access_key", CONF_SECRET_KEY: "test_secret_key"},
+        options={
+            "update_interval": 30,
+            "enable_battery_control": True,
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+        unique_id="test_access_key",
+    )
+    entry.add_to_hass(hass)
+
+    mock_data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "model": "HYX-H10K-HT",
+            "device_type": 1,
+            "metrics": {"batSoc": "50"},
+        }
+    }
+
+    with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client._refresh_token.return_value = True
+        mock_client.get_all_device_data.return_value = {
+            "data": mock_data,
+            "attempts": 1,
+        }
+        mock_client_class.return_value = mock_client
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert entry.state == ConfigEntryState.LOADED
+
+        entity_id = "number.energy_manager_avg_night_consumption"
+        state = hass.states.get(entity_id)
+        assert state is not None
+
+        # Mirrors what engine._set_param() does: write straight to the
+        # state machine, bypassing the entity's own _attr_native_value.
+        hass.states.async_set(entity_id, "999.0", state.attributes)
+        assert hass.states.get(entity_id).state == "999.0"
+
+        # Drive the actual per-platform poll handler that HA's
+        # scan-interval timer calls automatically in production.
+        number_platform = next(
+            p for p in hass.data["entity_platform"][DOMAIN] if p.domain == "number"
+        )
+        entity = number_platform.entities[entity_id]
+        assert entity.should_poll is False
+
+        await number_platform._async_update_entity_states()  # pylint: disable=protected-access
+        await hass.async_block_till_done()
+
+        assert hass.states.get(entity_id).state == "999.0"
+
+
+@pytest.mark.asyncio
 async def test_config_flow_no_devices(hass: HomeAssistant):
     """Test config flow failure when no plants or devices are found."""
     result = await hass.config_entries.flow.async_init(

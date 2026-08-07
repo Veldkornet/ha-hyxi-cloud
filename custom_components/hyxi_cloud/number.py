@@ -376,12 +376,25 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
     """Number entity for an Energy Manager parameter.
 
     Stores a tunable value locally (RestoreEntity). The engine reads it
-    each tick via _get_param().
+    each tick via _get_param(), and for a couple of parameters (e.g.
+    avg_night_consumption) writes an adaptive value back via
+    engine._set_param(), which sets the state machine value directly
+    rather than going through this entity's own _attr_native_value.
+
+    _attr_should_poll must stay False: this entity has nothing to poll (no
+    device, no coordinator), but the base Entity default is True. Left at
+    the default, Home Assistant's per-platform scan-interval timer would
+    periodically call async_update_ha_state(force_refresh=True) on it,
+    which re-derives state from the (stale, in-memory) _attr_native_value
+    and silently overwrites engine._set_param()'s direct write within one
+    poll cycle -- confirmed by reproducing it against a real EntityPlatform
+    in a throwaway test before this fix.
     """
 
     _attr_has_entity_name = True
     _attr_mode = NumberMode.BOX
     _attr_entity_category = EntityCategory.CONFIG
+    _attr_should_poll = False
 
     def __init__(
         self,
