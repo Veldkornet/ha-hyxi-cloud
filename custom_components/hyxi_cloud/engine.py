@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components import persistent_notification
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import (
     async_track_state_change_event,
@@ -34,6 +35,9 @@ from homeassistant.helpers.event import (
 from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
+    AVG_NIGHT_CONSUMPTION_MAX,
+    AVG_NIGHT_CONSUMPTION_MIN,
+    AVG_NIGHT_CONSUMPTION_STEP,
     CONF_EM_LOOP_INTERVAL,
     DOMAIN,
     EM_DEFAULTS,
@@ -343,18 +347,32 @@ class EnergyManagerEngine:
         return self._get_ha_state_float(entity_id, float(default))
 
     def _set_param(self, key: str, value: float) -> None:
-        """Persist an engine-computed value back to its EM number entity's state.
+        """Persist an engine-computed value back to its EM number entity.
 
         Used for adaptive parameters the engine updates itself (e.g. the
         hourly night-consumption EMA in _update_night_estimate) rather than
-        the user via the UI. Writes straight to the state machine, mirroring
-        how _get_param/_get_ha_state_float read it, so the change is picked
-        up on the very next read.
+        the user via the UI. Prefers the live entity object's own
+        set_computed_value() when it's already added to hass, which keeps
+        its _attr_native_value in sync with the write -- should_poll=False
+        stops *automatic* polling from reverting a raw state-machine write,
+        but a manually forced update (e.g. the homeassistant.update_entity
+        service) bypasses should_poll and would still republish the
+        entity's stale in-memory value otherwise. Falls back to a direct
+        state-machine write, mirroring how _get_param/_get_ha_state_float
+        read it, if the entity object can't be found (e.g. not yet added).
         """
         unique_id = f"hyxi_{self._sn}_em_{key}"
         entity_id = self._find_entity_id("number", unique_id)
         if not entity_id:
             return
+
+        for platform in entity_platform.async_get_platforms(self._hass, DOMAIN):
+            entity = platform.entities.get(entity_id)
+            set_computed_value = getattr(entity, "set_computed_value", None)
+            if callable(set_computed_value):
+                set_computed_value(value)
+                return
+
         current = self._hass.states.get(entity_id)
         attributes = dict(current.attributes) if current else {}
         self._hass.states.async_set(entity_id, str(value), attributes)
@@ -1261,6 +1279,16 @@ class EnergyManagerEngine:
             if current_p1 > 0:
                 prev = self._get_param("avg_night_consumption")
                 new_avg = prev * 0.9 + current_p1 * 0.1
+                # Clamp to and quantize onto the entity's own declared
+                # range/step -- an unbounded P1 spike (e.g. a large
+                # appliance) shouldn't push the stored estimate outside
+                # what the number entity's slider (and a human editing it)
+                # could ever produce.
+                new_avg = round(new_avg / AVG_NIGHT_CONSUMPTION_STEP)
+                new_avg *= AVG_NIGHT_CONSUMPTION_STEP
+                new_avg = max(
+                    AVG_NIGHT_CONSUMPTION_MIN, min(new_avg, AVG_NIGHT_CONSUMPTION_MAX)
+                )
                 self._set_param("avg_night_consumption", new_avg)
                 _LOGGER.info(
                     "EM: Night consumption estimate: %.0fW (sample: %.0fW)",

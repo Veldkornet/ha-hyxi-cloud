@@ -971,17 +971,42 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
 
     # Inside the night window with a positive P1 reading -> EMA updates and
     # persists back to the number entity's state
-    hass.states.async_set("sensor.p1_meter", "600")
+    hass.states.async_set("sensor.p1_meter", "700")
     with patch(
         "homeassistant.util.dt.now",
         return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
     ):
         await engine._update_night_estimate(None)
-    # new_avg = 400 * 0.9 + 600 * 0.1 = 420
-    assert float(hass.states.get(em_avg_entry.entity_id).state) == 420.0
+    # raw new_avg = 400 * 0.9 + 700 * 0.1 = 430, quantized to the nearest
+    # AVG_NIGHT_CONSUMPTION_STEP (50) -> 450
+    assert float(hass.states.get(em_avg_entry.entity_id).state) == 450.0
 
     # The persisted value feeds back into the next read via _get_param
-    assert engine._get_param("avg_night_consumption") == 420.0
+    assert engine._get_param("avg_night_consumption") == 450.0
+
+    # A large P1 import spike must not push the persisted estimate above
+    # AVG_NIGHT_CONSUMPTION_MAX (2000) -- the entity's own declared max.
+    hass.states.async_set(em_avg_entry.entity_id, "2000")
+    hass.states.async_set("sensor.p1_meter", "20000")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    # raw = 2000 * 0.9 + 20000 * 0.1 = 3800, well above the 2000 ceiling
+    assert float(hass.states.get(em_avg_entry.entity_id).state) == 2000.0
+
+    # A stored value below AVG_NIGHT_CONSUMPTION_MIN (100) -- e.g. forced
+    # in externally -- must not be allowed to drift lower still.
+    hass.states.async_set(em_avg_entry.entity_id, "50")
+    hass.states.async_set("sensor.p1_meter", "1")
+    with patch(
+        "homeassistant.util.dt.now",
+        return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
+    ):
+        await engine._update_night_estimate(None)
+    # raw = 50 * 0.9 + 1 * 0.1 = 45.1, below the 100 floor
+    assert float(hass.states.get(em_avg_entry.entity_id).state) == 100.0
 
     await engine.async_stop()
 

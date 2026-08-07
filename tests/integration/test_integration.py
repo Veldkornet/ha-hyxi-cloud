@@ -149,18 +149,21 @@ async def test_setup_entry_and_sensors(hass: HomeAssistant):
 
 @pytest.mark.asyncio
 async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
-    """Regression test: EMParameterNumber values written directly to the
-    state machine by engine._set_param() (e.g. the adaptive
-    avg_night_consumption estimate) must survive Home Assistant's normal
-    per-platform poll cycle.
+    """Regression test: EMParameterNumber values written by the real
+    engine._set_param() (e.g. the adaptive avg_night_consumption estimate)
+    must survive Home Assistant's normal per-platform poll cycle AND a
+    manually forced entity update.
 
     EMParameterNumber has nothing to poll (no device, no coordinator), but
     without an explicit should_poll=False it inherits Entity's default of
-    True. Left at the default, the platform's scan-interval timer would
-    periodically call async_update_ha_state(force_refresh=True), which
-    re-derives state from the entity's own (stale) in-memory
-    _attr_native_value and silently reverts _set_param()'s direct write --
-    this test invokes that exact real poll path, not a mock of it.
+    True -- and even with should_poll=False, a manually forced update
+    (e.g. the homeassistant.update_entity service, exercised here via the
+    same _async_update_entity_states path with force_refresh=True) would
+    still re-derive state from the entity's own in-memory
+    _attr_native_value and revert the write, unless _set_param() also
+    keeps that in-memory value in sync via the entity's
+    set_computed_value(). This drives the real _set_param() call and the
+    real poll handler, not mocks of either.
     """
     from custom_components.hyxi_cloud.const import (
         CONF_EM_ENABLED,
@@ -208,22 +211,35 @@ async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
         state = hass.states.get(entity_id)
         assert state is not None
 
-        # Mirrors what engine._set_param() does: write straight to the
-        # state machine, bypassing the entity's own _attr_native_value.
-        hass.states.async_set(entity_id, "999.0", state.attributes)
+        # Call the real engine._set_param(), exactly as
+        # _update_night_estimate does for its adaptive EMA.
+        coordinator = hass.data[DOMAIN][entry.entry_id]
+        engine = coordinator.engine
+        assert engine is not None
+        engine._set_param("avg_night_consumption", 999.0)  # pylint: disable=protected-access
         assert hass.states.get(entity_id).state == "999.0"
 
-        # Drive the actual per-platform poll handler that HA's
-        # scan-interval timer calls automatically in production.
         number_platform = next(
             p for p in hass.data["entity_platform"][DOMAIN] if p.domain == "number"
         )
         entity = number_platform.entities[entity_id]
         assert entity.should_poll is False
+        # The entity's own in-memory value must be in sync too, not just
+        # the state machine -- otherwise a forced update re-derives state
+        # from this and reverts the write regardless of should_poll.
+        assert entity.native_value == 999.0
 
+        # Drive the actual per-platform poll handler that HA's
+        # scan-interval timer calls automatically in production.
         await number_platform._async_update_entity_states()  # pylint: disable=protected-access
         await hass.async_block_till_done()
+        assert hass.states.get(entity_id).state == "999.0"
 
+        # A manually forced update (force_refresh=True, e.g. the
+        # homeassistant.update_entity service) bypasses should_poll
+        # entirely -- must still not revert the value.
+        await entity.async_update_ha_state(force_refresh=True)
+        await hass.async_block_till_done()
         assert hass.states.get(entity_id).state == "999.0"
 
 
