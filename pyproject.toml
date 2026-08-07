@@ -21,6 +21,7 @@ dependencies = [
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
     "hypothesis>=6.164.0",
     "pytest-homeassistant-custom-component>=0.13.346",
     "mypy>=2.3.0",
@@ -53,6 +54,22 @@ pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "--ignore=tests/integration"
+
+[tool.coverage.run]
+source = ["custom_components/hyxi_cloud"]
+
+[tool.coverage.report]
+show_missing = true
+# NOTE: fail_under is intentionally NOT set here. This config is read by
+# both the unit and integration pytest-cov runs individually (each only
+# partially covers the codebase -- e.g. engine.py needs both suites
+# combined to reach 100%), and a fail_under here would apply to each of
+# those partial runs too, failing CI long before the two get combined.
+# The 100% floor is instead enforced by .github/workflows/tests.yml's
+# "Check coverage" step, via `coverage report --fail-under=100`, run once
+# after both suites have written into the same --cov-append'd .coverage
+# file. If you need this locally, run the same two pytest invocations
+# from that workflow before `coverage report --fail-under=100`.
 
 [tool.pylint.similarities]
 min-similarity-lines = 100
