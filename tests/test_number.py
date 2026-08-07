@@ -249,6 +249,97 @@ async def test_async_setup_entry_no_protection():
     async_add_entities.assert_not_called()
 
 
+@pytest.mark.asyncio
+async def test_async_setup_entry_no_coordinator_data():
+    """Test setup returns early (adds nothing) when the coordinator has no data yet."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {"enable_battery_control": True}
+
+    coordinator = MagicMock()
+    coordinator.data = {}
+
+    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    async_add_entities = MagicMock()
+
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    async_add_entities.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_adds_em_numbers():
+    """Test EM parameter numbers are added when the Energy Manager is enabled,
+    and that max_grid_export is skipped for a three-phase EM inverter."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {
+        "enable_battery_control": False,
+        number_mod.CONF_EM_ENABLED: True,
+        number_mod.CONF_EM_INVERTER_SN: "SN1",
+    }
+
+    dev_data_3phase: dict[str, str | dict[str, str]] = {
+        "deviceCode": "HYBRID_INVERTER",
+        "model": "HYXI-HT",
+        "metrics": {"phaseType": "3", "acPhase": "3"},
+    }
+
+    coordinator = MagicMock()
+    coordinator.data = {"SN1": dev_data_3phase}
+
+    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    async_add_entities = MagicMock()
+
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+    em_entities = [e for e in entities if isinstance(e, number_mod.EMParameterNumber)]
+    em_keys = {e._attr_translation_key for e in em_entities}
+
+    # One EMParameterNumber per EM_NUMBER_DEFS entry, except max_grid_export
+    # which is single-phase only and this device is three-phase.
+    assert "em_max_grid_export" not in em_keys
+    assert len(em_entities) == len(number_mod.EM_NUMBER_DEFS) - 1
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_adds_em_numbers_single_phase_includes_export():
+    """Test max_grid_export IS included for a single-phase EM inverter."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.options = {
+        "enable_battery_control": False,
+        number_mod.CONF_EM_ENABLED: True,
+        number_mod.CONF_EM_INVERTER_SN: "SN1",
+    }
+
+    dev_data_1phase: dict[str, str | dict[str, str]] = {
+        "deviceCode": "HYBRID_INVERTER",
+        "model": "HYXI-HS",
+        "metrics": {"phaseType": "1", "acPhase": "1"},
+    }
+
+    coordinator = MagicMock()
+    coordinator.data = {"SN1": dev_data_1phase}
+
+    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    async_add_entities = MagicMock()
+
+    await number_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    em_entities = [e for e in entities if isinstance(e, number_mod.EMParameterNumber)]
+    em_keys = {e._attr_translation_key for e in em_entities}
+
+    assert "em_max_grid_export" in em_keys
+    assert len(em_entities) == len(number_mod.EM_NUMBER_DEFS)
+
+
 def test_hyxi_power_number_init():
     """Test initialization of HyxiPowerNumber."""
     coordinator = MagicMock()

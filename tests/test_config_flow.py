@@ -495,6 +495,165 @@ async def test_step_reauth_confirm_validation_error(mock_validate_input, config_
     assert result["errors"] == {"base": "invalid_auth"}
 
 
+@pytest.mark.asyncio
+async def test_step_reauth_confirm_raises_when_reauth_entry_unset(config_flow):
+    """Defensive guard: submitting input to reauth_confirm without a
+    reauth_entry already set (i.e. async_step_reauth wasn't run first) is a
+    programming error, not a recoverable user-facing state."""
+    assert config_flow.reauth_entry is None
+    with pytest.raises(ValueError, match="reauth_entry is not set"):
+        await config_flow.async_step_reauth_confirm(user_input={"access_key": "x"})
+
+
+@pytest.mark.asyncio
+async def test_options_flow_updates_push_settings(mock_ha_environment):
+    """Test push rate/URL are saved (rate coerced to int) when push stays on."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {config_flow_mod.CONF_ENABLE_PUSH: True}  # already on
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+
+    user_input = {
+        "update_interval": 10,
+        config_flow_mod.CONF_ENABLE_PUSH: True,
+        config_flow_mod.CONF_PUSH_RATE: "30",
+        config_flow_mod.CONF_PUSH_URL: "https://example.com/webhook",
+    }
+    result = await options_flow.async_step_init(user_input=user_input)
+
+    assert result["type"] == "create_entry"
+    saved = options_flow.async_create_entry.call_args.kwargs["data"]
+    assert saved[config_flow_mod.CONF_ENABLE_PUSH] is True
+    assert saved[config_flow_mod.CONF_PUSH_RATE] == 30  # coerced from str to int
+    assert saved[config_flow_mod.CONF_PUSH_URL] == "https://example.com/webhook"
+
+
+@pytest.mark.asyncio
+async def test_options_flow_enabling_em_auto_enables_battery_control(
+    mock_ha_environment,
+):
+    """Test toggling 'enable_energy_manager' on auto-enables battery control
+    (EM requires it) and routes straight to the energy_manager step."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {}
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.async_step_energy_manager = AsyncMock(
+        return_value={"type": "form", "step_id": "energy_manager"}
+    )
+
+    user_input = {"update_interval": 5, "enable_energy_manager": True}
+    result = await options_flow.async_step_init(user_input=user_input)
+
+    assert result["step_id"] == "energy_manager"
+    assert options_flow._options["enable_battery_control"] is True
+    assert options_flow._options[config_flow_mod.CONF_EM_ENABLED] is True
+    options_flow.async_step_energy_manager.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_options_flow_reloads_step_when_battery_control_just_enabled(
+    mock_ha_environment,
+):
+    """Test turning on battery control (without also deciding on EM in the
+    same submit) reloads the init step so the EM toggle can appear."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {}
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+    options_flow.hass.data = {}
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+
+    with patch.object(options_flow, "_has_controllable_inverter", return_value=True):
+        user_input = {"update_interval": 5, "enable_battery_control": True}
+        result = await options_flow.async_step_init(user_input=user_input)
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "init"
+    options_flow.async_show_form.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_options_flow_reloads_step_when_push_just_enabled(mock_ha_environment):
+    """Test turning on push reloads the init step so the rate/URL fields appear."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {}
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+    options_flow.hass.data = {}
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+
+    user_input = {"update_interval": 5, config_flow_mod.CONF_ENABLE_PUSH: True}
+    result = await options_flow.async_step_init(user_input=user_input)
+
+    assert result["type"] == "form"
+    options_flow.async_show_form.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_options_flow_show_form_includes_push_fields_when_enabled(
+    mock_ha_environment,
+):
+    """Test the rate/URL fields are added to the schema once push is on."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+
+    config_entry = MagicMock()
+    config_entry.options = {
+        config_flow_mod.CONF_ENABLE_PUSH: True,
+        config_flow_mod.CONF_PUSH_RATE: 30,
+    }
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+    options_flow.hass.data = {}
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+
+    await options_flow.async_step_init(user_input=None)
+
+    call_kwargs = options_flow.async_show_form.call_args.kwargs
+    assert "data_schema" in call_kwargs
+
+
+@pytest.mark.asyncio
+async def test_options_flow_show_form_includes_em_toggle_when_eligible(
+    mock_ha_environment,
+):
+    """Test the EM toggle field is added when battery control is already on
+    and an EM-eligible (hybrid_inverter/all_in_one) device is present."""
+    import custom_components.hyxi_cloud.config_flow as config_flow_mod
+    from custom_components.hyxi_cloud.const import DOMAIN
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_id"
+    config_entry.options = {"enable_battery_control": True}
+    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
+    coordinator = MagicMock()
+    coordinator.data = {"SN_INV_1": {"device_type_code": "HYBRID_INVERTER"}}
+    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    options_flow.async_show_form = MagicMock(
+        return_value={"type": "form", "step_id": "init"}
+    )
+
+    await options_flow.async_step_init(user_input=None)
+
+    options_flow.async_show_form.assert_called_once()
+    call_kwargs = options_flow.async_show_form.call_args.kwargs
+    assert "data_schema" in call_kwargs
+
+
 def test_get_options_flow(mock_ha_environment):
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
 

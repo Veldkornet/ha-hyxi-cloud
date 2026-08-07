@@ -1167,7 +1167,19 @@ async def test_em_sensor_lifecycle():
     mock_engine.status = "running"
     assert sensor.native_value == "running"
 
-    # 8. Will remove from HASS
+    # 8. Native value lookup: key with no entry in _VALUE_GETTERS
+    sensor._key = "not_a_real_key"
+    assert sensor.native_value is None
+
+    # 9. Native value lookup: getter maps to a callable (method), not a plain
+    # attribute -- e.g. battery_energy_available_wh() is a method on the real
+    # engine, unlike decision/status/p1_avg which are properties.
+    sensor._key = "battery_energy_available"
+    mock_engine.battery_energy_available_wh = MagicMock(return_value=456.78)
+    assert sensor.native_value == 456.8
+    mock_engine.battery_energy_available_wh.assert_called_once()
+
+    # 10. Will remove from HASS
     await sensor.async_will_remove_from_hass()
     mock_engine.unregister_update_callback.assert_called_once_with(
         sensor._engine_updated
@@ -1188,6 +1200,18 @@ async def test_hyxi_last_sent_mode_sensor_lifecycle():
     # 2. Added to HASS: no state to restore
     sensor.async_get_last_state = AsyncMock(return_value=None)
     await sensor.async_added_to_hass()
+
+    # 2b. Added to HASS: restored state is a placeholder (unknown/unavailable/
+    # empty), not a real mode -- must not be replayed to the controller.
+    coordinator.protection_controllers = {"SN123": MagicMock()}
+    for placeholder in ("unknown", "unavailable", ""):
+        placeholder_state = MagicMock()
+        placeholder_state.state = placeholder
+        sensor.async_get_last_state = AsyncMock(return_value=placeholder_state)
+        await sensor.async_added_to_hass()
+        coordinator.protection_controllers[
+            "SN123"
+        ].restore_last_sent_mode.assert_not_called()
 
     # 3. Added to HASS: restore state, no controller
     last_state = MagicMock()

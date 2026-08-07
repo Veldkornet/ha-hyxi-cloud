@@ -265,6 +265,66 @@ async def test_async_setup_entry_adds_microinverter_summary(mock_entry):
     assert micro_sum_sensors["micro_daily_yield_total"].native_value == 7.8
 
 
+def test_microinverter_sum_sensor_skips_unparseable_values():
+    """Test a non-numeric metric value on one microinverter is skipped rather
+    than aborting the sum for the rest."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN_MICRO_1": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "18.0"},
+        },
+        "SN_MICRO_2": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "not-a-number"},
+        },
+        "SN_MICRO_3": {
+            "device_type_code": "MICRO_INVERTER",
+            "metrics": {"acP": "12.5"},
+        },
+    }
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        coordinator, entry, "acP", description
+    )
+
+    assert sensor.native_value == 30.5  # 18.0 + 12.5, "not-a-number" skipped
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_skips_last_sent_mode_for_unknown_phase(
+    mock_coordinator, mock_entry
+):
+    """Test a control-capable device whose phase can't be detected does not
+    get a HyxiLastSentModeSensor (there's nowhere to route mode commands)."""
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "deviceCode": "HYBRID_INVERTER",
+            "model": "Unbranded",  # no -HT/-HS suffix
+            "metrics": {},  # no phase-indicating metrics either
+            "alarms": [],
+        }
+    }
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    with unittest.mock.patch(
+        "custom_components.hyxi_cloud.sensor.is_battery_control_enabled",
+        return_value=True,
+    ):
+        await sensor_mod.async_setup_entry(hass, mock_entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, sensor_mod.HyxiLastSentModeSensor) for e in entities)
+
+
 def test_process_numeric_value_normal():
     """Test standard numeric processing."""
 
@@ -328,6 +388,17 @@ def test_anti_spike_filter():
     # The default formula: 100 + (50 * elapsed_hours)
     # 5 mins = 0.0833 hrs -> threshold ~ 104.16
     assert sensor._process_numeric_value("1000.0") == 15.0
+
+
+def test_anti_spike_no_prior_value_returns_none():
+    """Test _check_anti_spike is a guarded no-op with nothing to compare against.
+
+    _process_numeric_value only calls it once _last_valid_value is already
+    set, so this guard is otherwise unreachable through normal use -- call it
+    directly to cover the defensive branch."""
+    sensor = sensor_mod.HyxiBaseSensor(MagicMock())
+    assert sensor._last_valid_value is None
+    assert sensor._check_anti_spike(50.0) is None
 
 
 def test_hyxi_sensor_parsing_int():

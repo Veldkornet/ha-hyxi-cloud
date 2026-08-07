@@ -1,5 +1,6 @@
 """Integration tests for HYXI webhook push subscription and callback processing."""
 
+import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,6 +13,7 @@ if "homeassistant.components.cloud" not in sys.modules:
 
 # These imports must follow sys.modules patching above — pylint: disable=wrong-import-position
 
+import custom_components.hyxi_cloud.button as button_mod
 from custom_components.hyxi_cloud.__init__ import (
     _async_handle_webhook,
     _async_setup_push_subscription,
@@ -541,6 +543,19 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
 
 
 @pytest.mark.asyncio
+async def test_async_cancel_and_unregister_subscription_empty_code(hass):
+    """Test a blank/whitespace-only code is a no-op -- nothing to cancel."""
+    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+
+    client = MagicMock()
+    client.cancel_subscription = AsyncMock()
+
+    await async_cancel_and_unregister_subscription(hass, client, "   ")
+
+    client.cancel_subscription.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_async_cancel_and_unregister_subscription_success(hass):
     """Test successful unregistration."""
     from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
@@ -601,6 +616,161 @@ async def test_async_cancel_and_unregister_subscription_transient_error(hass):
         with pytest.raises(DummySubscriptionError, match="Authentication failed"):
             await async_cancel_and_unregister_subscription(hass, client, "test-code")
         mock_unregister.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_button_press_renew_error(mock_coordinator, mock_entry):
+    """Test a failure during renewal is wrapped in a HomeAssistantError."""
+    hass = MagicMock()
+    with patch("custom_components.hyxi_cloud.button.DOMAIN", DOMAIN):
+        button = HyxiRenewSubscriptionButton(mock_coordinator, mock_entry)
+        button.hass = hass
+
+        with patch(
+            "custom_components.hyxi_cloud._async_teardown_push_subscription",
+            side_effect=RuntimeError("teardown blew up"),
+        ):
+            with pytest.raises(
+                button_mod.HomeAssistantError, match="Subscription renewal failed"
+            ):
+                await button.async_press()
+
+
+@pytest.mark.asyncio
+async def test_button_press_purge_no_codes_to_purge(mock_coordinator, mock_entry):
+    """Test the purge button is a no-op when every stored code is still active."""
+    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
+
+    hass = MagicMock()
+    mock_coordinator.subscribe_code = "active-1"
+    mock_coordinator.alarm_subscribe_code = None
+    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
+
+    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
+    button.hass = hass
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.async_get_subscription_codes",
+            new_callable=AsyncMock,
+            return_value=["active-1"],
+        ),
+        patch(
+            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
+            new_callable=AsyncMock,
+        ) as mock_cancel_helper,
+    ):
+        await button.async_press()
+
+        mock_cancel_helper.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_button_press_purge_reraises_cancelled_error(
+    mock_coordinator, mock_entry
+):
+    """Test a CancelledError from a purge task is re-raised, not swallowed as
+    a regular failure -- task cancellation must propagate."""
+    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
+
+    hass = MagicMock()
+    mock_coordinator.subscribe_code = None
+    mock_coordinator.alarm_subscribe_code = None
+    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
+
+    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
+    button.hass = hass
+
+    async def _cancelled(*_args, **_kwargs):
+        raise asyncio.CancelledError
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.async_get_subscription_codes",
+            new_callable=AsyncMock,
+            return_value=["dead-code"],
+        ),
+        patch(
+            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
+            new=_cancelled,
+        ),
+        pytest.raises(asyncio.CancelledError),
+    ):
+        await button.async_press()
+
+
+@pytest.mark.asyncio
+async def test_button_press_purge_code_already_removed_concurrently(
+    mock_coordinator, mock_entry
+):
+    """Test a code whose remote cancel failed but that's already gone from
+    the registry by the time we check (e.g. removed by a concurrent purge)
+    still counts as purged, without a redundant local unregister call."""
+    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
+
+    hass = MagicMock()
+    mock_coordinator.subscribe_code = None
+    mock_coordinator.alarm_subscribe_code = None
+    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
+
+    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
+    button.hass = hass
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.async_get_subscription_codes",
+            new_callable=AsyncMock,
+            # First call (initial list) has the code; second call (recheck
+            # after the failed remote cancel) shows it's already gone.
+            side_effect=[["dead-code"], []],
+        ),
+        patch(
+            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
+            new=AsyncMock(side_effect=RuntimeError("subscription request failed")),
+        ),
+        patch(
+            "custom_components.hyxi_cloud.async_unregister_subscription_code",
+            new_callable=AsyncMock,
+        ) as mock_unregister,
+    ):
+        await button.async_press()
+
+        mock_unregister.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_button_press_purge_raises_when_local_removal_also_fails(
+    mock_coordinator, mock_entry
+):
+    """Test that if BOTH the remote cancel and the local registry removal
+    fail, the button surfaces a HomeAssistantError to the user."""
+    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
+
+    hass = MagicMock()
+    mock_coordinator.subscribe_code = None
+    mock_coordinator.alarm_subscribe_code = None
+    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
+
+    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
+    button.hass = hass
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.async_get_subscription_codes",
+            new_callable=AsyncMock,
+            side_effect=[["dead-code"], ["dead-code"]],
+        ),
+        patch(
+            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
+            new=AsyncMock(side_effect=RuntimeError("subscription request failed")),
+        ),
+        patch(
+            "custom_components.hyxi_cloud.async_unregister_subscription_code",
+            new=AsyncMock(side_effect=OSError("storage unavailable")),
+        ),
+    ):
+        with pytest.raises(button_mod.HomeAssistantError, match="1 failed"):
+            await button.async_press()
 
 
 @pytest.mark.asyncio

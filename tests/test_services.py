@@ -165,6 +165,31 @@ async def test_service_call_api_exception(hass, mock_coordinator):
 
 
 @pytest.mark.asyncio
+async def test_service_call_api_exception_with_parenthesized_code(
+    hass, mock_coordinator
+):
+    """Test the parenthesized-code branch of the 'subscription request
+    failed' error path is exercised (real SDK errors sometimes prefix the
+    message with an API error code in parentheses)."""
+    mock_coordinator.client.cancel_subscription.side_effect = RuntimeError(
+        "subscription request failed: (C000001) Invalid subscribe code"
+    )
+    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    await async_setup_services(hass)
+
+    with pytest.raises(
+        HomeAssistantError,
+        match=r"Failed to cancel subscription: \(C000001\) Invalid subscribe code",
+    ):
+        await hass.services.async_call(
+            DOMAIN,
+            "cancel_subscription",
+            {"subscribe_code": "bad-code"},
+            blocking=True,
+        )
+
+
+@pytest.mark.asyncio
 async def test_subscription_code_persistence(hass, mock_coordinator):
     """Test that subscription codes are successfully written to, loaded from, and removed from the Store."""
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}

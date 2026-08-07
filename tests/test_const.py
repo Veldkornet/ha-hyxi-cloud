@@ -104,6 +104,10 @@ def test_normalize_device_type():
     assert normalize_device_type("MY_INVERTER") == "hybrid_inverter"
     assert normalize_device_type("HALO_DEVICE") == "micro_ess"
     assert normalize_device_type("ESS_DEVICE") == "micro_ess"
+    # Substring match for all-in-one devices not present as an exact
+    # DEVICE_TYPE_KEYS entry (unlike "ALL_IN_ONE" itself, which is exact).
+    assert normalize_device_type("SOME_ALL_IN_ONE_DEVICE") == "all_in_one"
+    assert normalize_device_type("MY-ALL-IN-ONE-UNIT") == "all_in_one"
 
     # 7. Case insensitivity and whitespace handling
     assert normalize_device_type(" EMS ") == "micro_ess"
@@ -273,6 +277,12 @@ def test_mask_url():
     # 3. None or empty
     assert mask_url("") == ""
     assert mask_url(None) == ""
+
+    # 4. Malformed URL that makes urlparse raise -- falls back to a generic
+    # masked placeholder rather than leaking the unparseable original.
+    assert (
+        mask_url("http://[::1") == "https://[MASKED_DOMAIN]/api/webhook/hyxi_cloud_***"
+    )
 
 
 def test_mask_sensitive_key_value():
