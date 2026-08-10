@@ -12,18 +12,13 @@ rules:
   - id: enforce-pep-758-exception-grouping
     description: "PEP 758: Always use comma-separated exceptions without parentheses when not using an 'as' clause."
     language: python
-    # This matches an except or except* block with parentheses around the exceptions
-    patterns:
-      - |
-        except (${exceptions}):
-            ${statements+}
-      - |
-        except* (${exceptions}):
-            ${statements+}
+    pattern: |
+      except (${exceptions}):
+          ${statements+}
     # Ensure it only flags it if it does not contain the 'as' keyword structurally
     # and is structurally a Tuple of multiple exceptions
-    condition: not exceptions.matches_regex(r"\bas\b") and exceptions.node_type == "Tuple"
-    explanation: |
+    condition: &pep758-exception-grouping-condition not exceptions.matches_regex(r"\bas\b") and exceptions.node_type == "Tuple"
+    explanation: &pep758-exception-grouping-explanation |
       This project enforces the modern PEP 758 standard.
       Multiple exceptions must be comma-separated without surrounding parentheses unless an `as` clause is present.
     tests:
@@ -31,11 +26,6 @@ rules:
           try:
               pass
           except (ValueError, TypeError):
-              pass
-      - match: |
-          try:
-              pass
-          except* (ValueError, TypeError):
               pass
       - no-match: |
           try:
@@ -56,4 +46,41 @@ rules:
           try:
               pass
           except factory(ValueError, TypeError):
+              pass
+
+  - id: enforce-pep-758-exception-grouping-star
+    description: "PEP 758: Always use comma-separated exceptions without parentheses when not using an 'as' clause in exception groups."
+    language: python
+    pattern: |
+      except* (${exceptions}):
+          ${statements+}
+    # Ensure it only flags it if it does not contain the 'as' keyword structurally
+    # and is structurally a Tuple of multiple exceptions
+    condition: *pep758-exception-grouping-condition
+    explanation: *pep758-exception-grouping-explanation
+    tests:
+      - match: |
+          try:
+              pass
+          except* (ValueError, TypeError):
+              pass
+      - no-match: |
+          try:
+              pass
+          except* ValueError, TypeError:
+              pass
+      - no-match: |
+          try:
+              pass
+          except* (ValueError):
+              pass
+      - no-match: |
+          try:
+              pass
+          except* (ValueError, TypeError) as e:
+              pass
+      - no-match: |
+          try:
+              pass
+          except* factory(ValueError, TypeError):
               pass
