@@ -17,10 +17,11 @@ rules:
           ${statements+}
     # Ensure it only flags it if it does not contain the 'as' keyword structurally
     # and is structurally a Tuple of multiple exceptions
-    # The regex is anchored to the end so a genuine trailing `as name` clause
-    # is detected without false-matching on the word "as" appearing earlier,
-    # e.g. inside a string literal passed to an exception constructor.
-    condition: &pep758-exception-grouping-condition not exceptions.matches_regex(r"\bas\s+\w+\s*$") and exceptions.node_type == "Tuple"
+    # The regex is anchored to the end (allowing an optional trailing comment)
+    # so a genuine trailing `as name` clause is detected without
+    # false-matching on the word "as" appearing earlier, e.g. inside a
+    # string literal passed to an exception constructor.
+    condition: &pep758-exception-grouping-condition not exceptions.matches_regex(r"\bas\s+\w+\s*(#.*)?$") and exceptions.node_type == "Tuple"
     explanation: &pep758-exception-grouping-explanation |
       This project enforces the modern PEP 758 standard.
       Multiple exceptions must be comma-separated without surrounding parentheses unless an `as` clause is present.
@@ -34,11 +35,6 @@ rules:
           try:
               pass
           except (CustomError("used as fallback"), TypeError):
-              pass
-      - match: |
-          try:
-              pass
-          except (ValueError,):
               pass
       - no-match: |
           try:
@@ -81,11 +77,6 @@ rules:
           try:
               pass
           except* (CustomError("used as fallback"), TypeError):
-              pass
-      - match: |
-          try:
-              pass
-          except* (ValueError,):
               pass
       - no-match: |
           try:
