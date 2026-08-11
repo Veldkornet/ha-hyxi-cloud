@@ -1600,6 +1600,10 @@ class HyxiSensor(HyxiBaseSensor):
                 )
                 self._attr_native_value = None
             else:
+                # Clear the dedup marker on a valid reading so a bad value
+                # that recurs later (even the same one) warns again instead
+                # of staying silenced by the first occurrence.
+                self._last_logged_glitch = None
                 self._attr_native_value = str_val
         else:
             self._attr_native_value = parsed_val

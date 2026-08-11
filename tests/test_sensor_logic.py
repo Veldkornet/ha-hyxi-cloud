@@ -805,6 +805,87 @@ def test_log_glitch_once(base_sensor):
         assert sensor._last_logged_glitch == "9"
 
 
+@pytest.fixture
+def enum_status_sensor():
+    """Fixture to create an ENUM-classed sensor for testing the
+    out-of-range guard in _update_native_value."""
+    coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"status": "2"}}}
+    description = MagicMock()
+    description.key = "status"
+    description.native_unit_of_measurement = None
+    description.device_class = sensor_mod.SensorDeviceClass.ENUM
+    description.options = ["0", "1", "2"]
+
+    sensor = sensor_mod.HyxiSensor(coordinator, "SN123", description)
+    sensor.hass = None
+    return sensor, coordinator
+
+
+def test_enum_value_in_options_passes_through(enum_status_sensor):
+    """A value present in `options` is reported as-is, without logging."""
+    sensor, coordinator = enum_status_sensor
+    coordinator.data["SN123"]["metrics"]["status"] = "1"
+
+    with patch.object(sensor, "_log_glitch_once") as mock_log_once:
+        sensor._handle_coordinator_update()
+
+    assert sensor.native_value == "1"
+    mock_log_once.assert_not_called()
+
+
+def test_enum_value_out_of_range_reports_unknown(enum_status_sensor):
+    """A value outside `options` is reported as None (unknown) and logged
+    once at WARNING, instead of being passed through to a state HA's real
+    SensorEntity.state would reject."""
+    sensor, coordinator = enum_status_sensor
+    coordinator.data["SN123"]["metrics"]["status"] = "9"
+
+    with patch.object(sensor, "_log_glitch_once") as mock_log_once:
+        sensor._handle_coordinator_update()
+
+    assert sensor.native_value is None
+    mock_log_once.assert_called_once()
+    args, kwargs = mock_log_once.call_args
+    assert args[0] == "9"
+    assert kwargs.get("level") == logging.WARNING
+
+
+def test_enum_out_of_range_warns_again_after_a_valid_reading(enum_status_sensor):
+    """A bad value that recurs after a valid reading in between must warn
+    again, not stay silenced by the dedup marker from its first occurrence."""
+    sensor, coordinator = enum_status_sensor
+
+    coordinator.data["SN123"]["metrics"]["status"] = "9"
+    with patch.object(sensor, "_log_glitch_once") as mock_log_once:
+        sensor._handle_coordinator_update()
+    mock_log_once.assert_called_once()
+
+    coordinator.data["SN123"]["metrics"]["status"] = "2"
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == "2"
+
+    coordinator.data["SN123"]["metrics"]["status"] = "9"
+    with patch.object(sensor, "_log_glitch_once") as mock_log_once:
+        sensor._handle_coordinator_update()
+    mock_log_once.assert_called_once()
+
+
+def test_enum_empty_options_accepts_any_value(enum_status_sensor):
+    """`options=[]` means no constraint, matching the truthiness check HA's
+    own SensorEntity.state uses (`if options and value not in options`) --
+    regression test for using `if options` rather than `is not None`."""
+    sensor, coordinator = enum_status_sensor
+    sensor.entity_description.options = []
+    coordinator.data["SN123"]["metrics"]["status"] = "anything"
+
+    with patch.object(sensor, "_log_glitch_once") as mock_log_once:
+        sensor._handle_coordinator_update()
+
+    assert sensor.native_value == "anything"
+    mock_log_once.assert_not_called()
+
+
 @pytest.mark.asyncio
 async def test_base_sensor_added_to_hass_invalid_restoration():
     """Verify that HyxiBaseSensor handles TypeError and fallback to entity_id."""
