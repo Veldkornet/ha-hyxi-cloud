@@ -1232,7 +1232,7 @@ class HyxiBaseSensor(
         super().__init__(coordinator)
         self._last_valid_value: float | None = None
         self._last_valid_time: datetime | None = None
-        self._last_logged_glitch: float | None = None
+        self._last_logged_glitch: float | str | None = None
 
     def _update_native_value(self):
         """Update the cached native value. Should be overridden by subclasses."""
@@ -1258,11 +1258,17 @@ class HyxiBaseSensor(
                         else self.entity_id,
                     )
 
-    def _log_glitch_once(self, num_value: float, message: str, *args) -> None:
-        """Helper to log glitch prevention only once per glitch value."""
-        if self._last_logged_glitch != num_value:
-            _LOGGER.debug(message, *args)
-            self._last_logged_glitch = num_value
+    def _log_glitch_once(
+        self,
+        value: float | str,
+        message: str,
+        *args,
+        level: int = logging.DEBUG,
+    ) -> None:
+        """Helper to log a message only once per distinct value."""
+        if self._last_logged_glitch != value:
+            _LOGGER.log(level, message, *args)
+            self._last_logged_glitch = value
 
     def _check_anti_dip(self, num_value: float) -> float | None:
         """Check for and prevent invalid value drops."""
@@ -1568,7 +1574,37 @@ class HyxiSensor(HyxiBaseSensor):
             parsed_val is not None
             and self.entity_description.device_class == SensorDeviceClass.ENUM
         ):
-            self._attr_native_value = str(parsed_val)
+            str_val = str(parsed_val)
+            options = self.entity_description.options
+            # Mirrors the truthiness check HA's own SensorEntity.state uses
+            # (an empty options list means "no enum validation", same as
+            # None) rather than an `is not None` check that would reject
+            # every value for that hypothetical case.
+            if options and str_val not in options:
+                # HA's SensorEntity.state raises if the value isn't in the
+                # declared options. That raise is caught per-listener by
+                # DataUpdateCoordinator.async_update_listeners() (logged,
+                # not re-raised), so it doesn't take other sensors down --
+                # but this one silently freezes at its last valid state and
+                # logs a full traceback on every refresh for as long as the
+                # bad value persists. Report unknown instead.
+                self._log_glitch_once(
+                    str_val,
+                    "HYXI: %s reported enum value %r outside declared "
+                    "options %s; reporting as unknown instead of a state "
+                    "HA would reject",
+                    self.entity_description.key,
+                    str_val,
+                    options,
+                    level=logging.WARNING,
+                )
+                self._attr_native_value = None
+            else:
+                # Clear the dedup marker on a valid reading so a bad value
+                # that recurs later (even the same one) warns again instead
+                # of staying silenced by the first occurrence.
+                self._last_logged_glitch = None
+                self._attr_native_value = str_val
         else:
             self._attr_native_value = parsed_val
 

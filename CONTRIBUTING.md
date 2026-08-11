@@ -38,6 +38,16 @@ This project uses modern CI/CD to keep the code clean and secure.
 
 Similarly, `pyproject.toml`'s `dependencies` list is the only runtime-dependency list you edit by hand — `manifest.json`'s `requirements` array is auto-generated from it by the same hook. Just run `pre-commit run --all-files` (or commit and let pre-commit.ci do it) after bumping either file; if it rewrites something, re-stage and commit again.
 
+### Choosing a version bump size
+
+[Release Drafter](.github/release-drafter.yml) keeps a draft release up to date on every push to `main`, resolving the next version number from your PR's label — see the `version-resolver` block in that file for the current label-to-bump mapping.
+
+**Label your PR accordingly**, especially `new-feature` for anything adding real functionality — without it, the draft silently falls back to a patch bump regardless of what the PR actually does. When you bump `manifest.json` by hand, match the draft's `$RESOLVED_VERSION` — but strip any `-beta.N` suffix first if you're cutting a stable release (see below); the draft defaults to prerelease, so `$RESOLVED_VERSION` usually has one.
+
+### Beta releases
+
+The draft is a **pre-release by default** (tagged `vX.Y.Z-beta.N`), so publishing it as-is ships a beta to HACS users who've opted into the beta channel — see the README's Installation section. The beta counter only advances relative to the last *published* prerelease (`beta.1` -> `beta.2` after that `beta.1` is actually published), not on every push to `main` — the draft keeps proposing the same `beta.N` until you publish it. To ship a stable release instead: untick "Set as a pre-release", drop the `-beta.N` suffix from the tag, and tick "Set as the latest release" (it starts unticked on every draft, `latest: false` applies regardless of pre-release status).
+
 ## ⚖️ License
 By contributing, you agree that your contributions will be licensed under the project's **MIT License**.
 
