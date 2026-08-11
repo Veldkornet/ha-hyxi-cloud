@@ -1,6 +1,6 @@
 """Integration tests for the HYXI Cloud integration using pytest-homeassistant-custom-component."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant import config_entries, data_entry_flow
@@ -269,3 +269,75 @@ async def test_config_flow_no_devices(hass: HomeAssistant):
 
         assert result2["type"] == data_entry_flow.FlowResultType.FORM
         assert result2["errors"] == {"base": "no_devices"}
+
+
+@pytest.mark.asyncio
+async def test_enum_sensor_survives_out_of_range_api_value(hass: HomeAssistant):
+    """Regression test for the out-of-range-enum guard in sensor.py.
+
+    Drives a real coordinator refresh through the entity's actual `.state`
+    property (via `hass.states`), not a hand-rolled check of
+    `_attr_native_value`, since that's the only path that goes through HA's
+    options validation and would have caught the original bug.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ACCESS_KEY: "test_access_key", CONF_SECRET_KEY: "test_secret_key"},
+        options={"update_interval": 30},
+        unique_id="test_access_key",
+    )
+    entry.add_to_hass(hass)
+
+    def make_data(inv_sts: str) -> dict:
+        return {
+            "SN123": {
+                "device_name": "Test Inverter",
+                "model": "HYX-H10K-HT",
+                "device_type": 1,
+                "metrics": {"invSts": inv_sts, "totalE": "100.5"},
+            }
+        }
+
+    with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client._refresh_token.return_value = True
+        mock_client.get_all_device_data.return_value = {
+            "data": make_data("2"),
+            "attempts": 1,
+        }
+        # compute_derived_metrics is synchronous on the real client (only
+        # invoked by the coordinator's merge path from the second refresh
+        # onward); a bare AsyncMock() mocks it as async too, which returns
+        # an unawaited coroutine that then blows up as "not iterable" --
+        # unrelated to what this test is regression-testing.
+        mock_client.compute_derived_metrics = MagicMock(return_value={})
+        mock_client_class.return_value = mock_client
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert entry.state == ConfigEntryState.LOADED
+
+        entity_id = "sensor.hyxi_sn123_invsts"
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == "2"
+
+        # The API reports a status code outside the hardcoded options list --
+        # e.g. new firmware. Unfixed, this doesn't crash the test process
+        # (HA's coordinator catches it per-listener) but the sensor freezes
+        # at its last valid state and HA logs a full traceback every single
+        # refresh; the sibling sensor on the same device must keep working.
+        mock_client.get_all_device_data.return_value = {
+            "data": make_data("9"),
+            "attempts": 1,
+        }
+        await hass.data[DOMAIN][entry.entry_id].async_refresh()
+        await hass.async_block_till_done()
+
+        state = hass.states.get(entity_id)
+        assert state is not None
+        assert state.state == "unknown"
+
+        total_e_state = hass.states.get("sensor.hyxi_sn123_totale")
+        assert total_e_state is not None
+        assert total_e_state.state == "100.5"

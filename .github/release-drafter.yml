@@ -1,6 +1,20 @@
 name-template: '$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
-version-template: '$MAJOR.$MINOR.$PATCH'
+# $PRERELEASE renders as e.g. "-beta.3" (empty when there's no prerelease
+# identifier on the resolved version) -- version-template only substitutes
+# placeholders that are actually present in the string, so this must be
+# listed explicitly or the -beta.N suffix silently never appears.
+version-template: '$MAJOR.$MINOR.$PATCH$PRERELEASE'
+
+# Draft accumulates automatically on every push to main, same as before.
+# It now defaults to a pre-release (v$MAJOR.$MINOR.$PATCH-beta.N) so hitting
+# "Publish release" as-is ships a beta. To ship stable instead: untick
+# "Set as a pre-release", drop the -beta.N suffix from the tag, and tick
+# "Set as the latest release" (latest: false below means that box starts
+# unticked on every draft, pre-release or not).
+prerelease: true
+prerelease-identifier: 'beta'
+latest: false
 
 change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
 sort-direction: ascending

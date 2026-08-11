@@ -2,6 +2,7 @@
 
 # pylint: disable=missing-module-docstring, wrong-import-position, import-outside-toplevel, too-many-lines
 import importlib
+import logging
 import sys
 from datetime import datetime
 from typing import Any
@@ -775,25 +776,33 @@ def test_hyxi_base_sensor_conversion_errors(base_sensor):
 
 
 def test_log_glitch_once(base_sensor):
-    """Verify that _log_glitch_once logs a glitch value only once."""
+    """Verify that _log_glitch_once logs a value only once per distinct value,
+    defaulting to DEBUG level (callers like the enum out-of-range guard can
+    override via `level=`)."""
     sensor, _ = base_sensor
 
-    with patch("custom_components.hyxi_cloud.sensor._LOGGER.debug") as mock_debug:
+    with patch("custom_components.hyxi_cloud.sensor._LOGGER.log") as mock_log:
         # First time with value 123.4
         sensor._log_glitch_once(123.4, "Test glitch %s", 123.4)
-        mock_debug.assert_called_once_with("Test glitch %s", 123.4)
+        mock_log.assert_called_once_with(logging.DEBUG, "Test glitch %s", 123.4)
         assert sensor._last_logged_glitch == 123.4
-        mock_debug.reset_mock()
+        mock_log.reset_mock()
 
         # Second time with same value 123.4 - should NOT log
         sensor._log_glitch_once(123.4, "Test glitch %s", 123.4)
-        mock_debug.assert_not_called()
+        mock_log.assert_not_called()
         assert sensor._last_logged_glitch == 123.4
 
         # Third time with a DIFFERENT value 123.5 - should log again
         sensor._log_glitch_once(123.5, "Test glitch %s", 123.5)
-        mock_debug.assert_called_once_with("Test glitch %s", 123.5)
+        mock_log.assert_called_once_with(logging.DEBUG, "Test glitch %s", 123.5)
         assert sensor._last_logged_glitch == 123.5
+
+        # A non-default level (e.g. WARNING) is passed straight through.
+        mock_log.reset_mock()
+        sensor._log_glitch_once("9", "Test warning %s", "9", level=logging.WARNING)
+        mock_log.assert_called_once_with(logging.WARNING, "Test warning %s", "9")
+        assert sensor._last_logged_glitch == "9"
 
 
 @pytest.mark.asyncio

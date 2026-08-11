@@ -46,6 +46,13 @@
 1. Copy the `hyxi_cloud` folder to your `/config/custom_components/` directory.
 2. Restart Home Assistant.
 
+### Trying Upcoming Features (Beta Channel)
+New releases are drafted as pre-releases (`vX.Y.Z-beta.N`) before being promoted to stable. To get them early:
+1. In HACS, open **HYXI** > the three-dot menu > **Redownload**.
+2. Enable **Show beta versions**, then select a `-beta` version.
+
+Beta releases get the same testing as any other release, but haven't accumulated real-world usage yet — stick to stable if you'd rather wait for that.
+
 ## 🔌 Supported Devices
 
 > [!TIP]
