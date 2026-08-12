@@ -48,7 +48,7 @@
 
 ### Trying Upcoming Features (Beta Channel)
 
-New releases are drafted as pre-releases (`vX.Y.Z-beta.N`) before being promoted to stable. To get them early:
+New features are sometimes available in pre-releases (`vX.Y.Z-beta.N`) before they reach stable. To get them early:
 1. In HACS, open **HYXI** > the three-dot menu > **Redownload**.
 2. Under **Need a different version?**, select a `-beta` version.
 3. Restart Home Assistant.

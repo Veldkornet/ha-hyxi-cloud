@@ -6,12 +6,12 @@ tag-template: 'v$RESOLVED_VERSION'
 # listed explicitly or the -beta.N suffix silently never appears.
 version-template: '$MAJOR.$MINOR.$PATCH$PRERELEASE'
 
-# Draft accumulates automatically on every push to main, same as before.
-# It now defaults to a pre-release (v$MAJOR.$MINOR.$PATCH-beta.N) so hitting
-# "Publish release" as-is ships a beta. To ship stable instead: untick
-# "Set as a pre-release", drop the -beta.N suffix from the tag, and tick
-# "Set as the latest release" (latest: false below means that box starts
-# unticked on every draft, pre-release or not).
+# These settings apply as-is to this file's default (beta) invocation in
+# release-drafter.yml (the workflow). That workflow runs this same config
+# a second time with prerelease/latest action-input overrides to also
+# maintain a separate stable draft -- see the "Update Stable Draft" step
+# there, and CONTRIBUTING.md's "Two release drafts" section, for how the
+# two tracks divide up.
 prerelease: true
 prerelease-identifier: 'beta'
 latest: false

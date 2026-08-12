@@ -42,11 +42,16 @@ Similarly, `pyproject.toml`'s `dependencies` list is the only runtime-dependency
 
 [Release Drafter](.github/release-drafter.yml) keeps a draft release up to date on every push to `main`, resolving the next version number from your PR's label — see the `version-resolver` block in that file for the current label-to-bump mapping.
 
-**Label your PR accordingly**, especially `new-feature` for anything adding real functionality — without it, the draft silently falls back to a patch bump regardless of what the PR actually does. When you bump `manifest.json` by hand, match the draft's `$RESOLVED_VERSION` — but strip any `-beta.N` suffix first if you're cutting a stable release (see below); the draft defaults to prerelease, so `$RESOLVED_VERSION` usually has one.
+**Label your PR accordingly**, especially `new-feature` for anything adding real functionality — without it, both drafts below silently fall back to a patch bump regardless of what the PR actually does. When you bump `manifest.json` by hand, match whichever draft's `$RESOLVED_VERSION` you're about to publish (see below) — no suffix-stripping needed, each draft already resolves the version correctly for its own track.
 
-### Beta releases
+### Two release drafts: beta and stable
 
-The draft is a **pre-release by default** (tagged `vX.Y.Z-beta.N`), so publishing it as-is ships a beta to HACS users who've opted into the beta channel — see the README's Installation section. The beta counter only advances relative to the last *published* prerelease (`beta.1` -> `beta.2` after that `beta.1` is actually published), not on every push to `main` — the draft keeps proposing the same `beta.N` until you publish it. To ship a stable release instead: untick "Set as a pre-release", drop the `-beta.N` suffix from the tag, and tick "Set as the latest release" (it starts unticked on every draft, `latest: false` applies regardless of pre-release status).
+The [Release Drafter workflow](.github/workflows/release-drafter.yml) maintains **two separate drafts** on every push to `main`, both from the same [config](.github/release-drafter.yml):
+
+- **Update Beta Draft** — a pre-release (tagged `vX.Y.Z-beta.N`), since whatever was last *published* (beta or stable). Publishing it as-is ships a beta to HACS users who've opted into the beta channel — see the README's Installation section. The draft keeps proposing the same version until you publish it, not on every push. Once published, the *next* draft either bumps `beta.N` to `beta.N+1` (if the last published release was itself a beta) or starts a fresh `beta.0` on the next version (if the last published release was stable).
+- **Update Stable Draft** — a regular release (no suffix), since the last *stable* release specifically, accumulating across however many betas happened in between. Publishing it ships to everyone and marks it "latest". Its version and changelog are already correct for a clean stable cut — no editing needed, just publish.
+
+Both are always live as separate drafts in the repo's Releases page; which one you publish depends on whether you're shipping a beta or a stable release.
 
 ## ⚖️ License
 By contributing, you agree that your contributions will be licensed under the project's **MIT License**.
