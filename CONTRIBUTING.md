@@ -46,7 +46,7 @@ Similarly, `pyproject.toml`'s `dependencies` list is the only runtime-dependency
 
 ### Two release drafts: beta and stable
 
-The [Release Drafter workflow](.github/workflows/release-drafter.yml) maintains **two separate drafts** on every push to `main`, both from the same [config](.github/release-drafter.yml):
+The [Release Drafter workflow](.github/workflows/release-drafter.yml) maintains **two separate drafts** on every push to `main` (and refreshes both again whenever either one is published, so the one you didn't publish doesn't sit showing stale content), both from the same [config](.github/release-drafter.yml):
 
 - **Update Beta Draft** — a pre-release (tagged `vX.Y.Z-beta.N`), since whatever was last *published* (beta or stable). Publishing it as-is ships a beta to HACS users who've opted into the beta channel — see the README's Installation section. The draft keeps proposing the same version until you publish it, not on every push. Once published, the *next* draft either bumps `beta.N` to `beta.N+1` (if the last published release was itself a beta) or starts a fresh `beta.0` on the next version (if the last published release was stable).
 - **Update Stable Draft** — a regular release (no suffix), since the last *stable* release specifically, accumulating across however many betas happened in between. Publishing it ships to everyone and marks it "latest". Its version and changelog are already correct for a clean stable cut — no editing needed, just publish.
