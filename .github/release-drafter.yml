@@ -110,11 +110,12 @@ categories:
     labels:
       - "build"
     exclusive: true
-  - title: "⚙️ CI"
-    labels:
-      - "ci"
-    exclusive: true
-    collapse-after: 3
+  # No visible "CI" category: a PR whose only label is "ci" already
+  # matches pre-exclude above and is hidden as housekeeping. Removing
+  # this means a PR carrying "ci" plus something not covered by any
+  # other category is now also omitted entirely, rather than surfacing
+  # under a CI heading -- "ci" stays in pre-exclude's set either way, it
+  # just no longer has its own visible section.
   - title: "♻️ Chore"
     labels:
       - "chore"
