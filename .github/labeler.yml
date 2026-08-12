@@ -1,16 +1,23 @@
+# NOTE: process-pr.yml pins actions/labeler@v7.0.0, which only supports
+# changed-files/base-branch/head-branch matchers -- "title" and "author"
+# (used pre-v7 to key new-feature/breaking-change/bugfix/refactor off
+# conventional-commit prefixes, and dependencies off the dependabot author)
+# are silently invalid and were observed to also suppress a label's other,
+# valid match entries, not just themselves. Where a head-branch convention
+# exists it's kept below as the only signal; where it doesn't
+# (breaking-change), there's no automatic matcher left -- label by hand.
+
 # 🚀 New Features (Logic changes)
 "new-feature":
   - head-branch: ["^feature/", "^feat/"]
-  - title: ["^feat:", "^feature:", "🚀"]
 
 # 💥 Breaking Changes (conventional-commit "!" marker, e.g. "feat!:" or "fix(api)!:")
-"breaking-change":
-  - title: ["^\\w+(\\(.+\\))?!:"]
+"breaking-change": []
 
-# 🐛 Bug Fixes (Title or Branch matching only — file paths can't signal fix-vs-feature intent)
+# 🐛 Bug Fixes (file paths can't signal fix-vs-feature intent either, so
+# branch name is the only matcher available)
 "bugfix":
   - head-branch: ["^fix/", "^bug/"]
-  - title: ["^fix:", "^bug:", "🐛"]
 
 # 🎨 Style
 "style":
@@ -34,11 +41,13 @@
 # 📦 Refactor
 "refactor":
   - head-branch: ["^refactor/"]
-  - title: ["^refactor:"]
 
 # ⬆️ Dependency Updates
+# Dependabot applies its own "dependencies" label to every PR it opens
+# natively (independent of this file), and sync-labels: false means
+# actions/labeler never strips it -- this changed-files rule is only a
+# fallback for anything that reaches this label some other way.
 "dependencies":
-  - author: ["dependabot[bot]"]
   - changed-files:
       - any-glob-to-any-file:
           - "pyproject.toml"
