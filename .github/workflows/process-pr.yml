@@ -125,12 +125,31 @@ jobs:
                 const requirementsChanged =
                   JSON.stringify([...baseRequirements].sort()) !==
                   JSON.stringify([...headRequirements].sort());
-                if (requirementsChanged) {
+                const hasDependenciesLabel = labels.some((l) => l.name === "dependencies");
+
+                if (requirementsChanged && !hasDependenciesLabel) {
                   const { data: updatedLabels } = await github.rest.issues.addLabels({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: prNumber,
                     labels: ["dependencies"],
+                  });
+                  labels = updatedLabels;
+                } else if (!requirementsChanged && hasDependenciesLabel) {
+                  // Requirements no longer differ from base (e.g. a
+                  // follow-up commit reverted the dependency bump this
+                  // label was added for) -- drop it so release-drafter
+                  // doesn't categorize the PR under "Dependency Updates"
+                  // for something it no longer does. The only label this
+                  // workflow ever removes, since it's derived from a
+                  // precise, re-checkable fact rather than a path glob
+                  // that intentionally tolerates staleness (see
+                  // sync-labels: false on the Apply Labels step above).
+                  const { data: updatedLabels } = await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    name: "dependencies",
                   });
                   labels = updatedLabels;
                 }
