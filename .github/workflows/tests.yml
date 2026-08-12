@@ -17,6 +17,12 @@ jobs:
   test:
     # This gives you a fresh Linux machine for the Antigravity/GitHub runner
     runs-on: ubuntu-latest
+    env:
+      # uv reads this on every `uv run`/`uv sync` invocation below, so it's
+      # set once here rather than repeating `--locked` on each `run:` line --
+      # fail fast on lockfile drift instead of silently resolving/installing
+      # an unlocked version.
+      UV_LOCKED: "1"
 
     steps:
       - name: Harden the runner
@@ -48,7 +54,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --extra test --locked
+        run: uv sync --extra test
 
       - name: Run Unit Tests
         run: uv run pytest tests/ --ignore=tests/integration -v -p no:warnings --cov --cov-report=
