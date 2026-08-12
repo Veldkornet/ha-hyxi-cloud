@@ -29,3 +29,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Overrides the default "dependencies" label, same as the github-actions
+    # block above -- see process-pr.yml's "Verify & Enforce Labels" step for
+    # why a changed-files/label match can't distinguish a real dependency
+    # bump from a version-only or test-only one.
+    labels:
+      - "chore"
