@@ -33,6 +33,17 @@ categories:
     labels:
       - "bugfix"
       - "bug" # defensive: catches accidental use of the issue-template label on a PR
+  # Ordered before CI/Chore/Style/etc and marked exclusive: a version-bump
+  # PR (dependabot, or pre-commit autoupdate) commonly also carries one of
+  # those file-path-based labels (e.g. touching .github/**/* also matches
+  # "ci"), and by default release-drafter lists a PR under *every* matching
+  # category rather than just the first -- without `exclusive`, the same
+  # PR would show up duplicated under both "Dependency Updates" and "CI".
+  - title: "⬆️ Dependency Updates"
+    labels:
+      - "dependencies"
+    exclusive: true
+    collapse-after: 3
   - title: "🎨 Style"
     labels:
       - "style"
@@ -61,10 +72,6 @@ categories:
   - title: "🗑️ Revert"
     labels:
       - "revert"
-  - title: "⬆️ Dependency Updates"
-    labels:
-      - "dependencies"
-    collapse-after: 3
 
 template: |
   # HYXI $RESOLVED_VERSION ⚡🔋☀️

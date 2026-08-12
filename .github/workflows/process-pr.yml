@@ -53,6 +53,33 @@ jobs:
           pr-number: ${{ env.PR_NUMBER }}
           sync-labels: false
 
+      - name: Label Pre-commit Autoupdate PRs as Dependencies
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER, 10);
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            // actions/labeler v7 dropped "author" as a matcher (see
+            // labeler.yml), so unlike dependabot -- which self-labels its
+            // own PRs -- pre-commit.ci's autoupdate PRs never pick up
+            // "dependencies" from that file. Path alone can't stand in for
+            // it: .pre-commit-config.yaml also changes for non-version-bump
+            // reasons (adding/removing a hook, changing args), so this
+            // checks author identity instead of extending that glob.
+            if (pullRequest.user?.login === "pre-commit-ci[bot]") {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: ["dependencies"],
+              });
+            }
+
       - name: Verify & Enforce Labels
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
