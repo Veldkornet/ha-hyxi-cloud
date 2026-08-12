@@ -42,7 +42,7 @@ Similarly, `pyproject.toml`'s `dependencies` list is the only runtime-dependency
 
 [Release Drafter](.github/release-drafter.yml) keeps a draft release up to date on every push to `main`, resolving the next version number from your PR's label — see the `version-resolver` block in that file for the current label-to-bump mapping.
 
-**Label your PR accordingly**, especially `new-feature` for anything adding real functionality — without it, both drafts below silently fall back to a patch bump regardless of what the PR actually does. When you bump `manifest.json` by hand, match whichever draft's `$RESOLVED_VERSION` you're about to publish (see below) — no suffix-stripping needed, each draft already resolves the version correctly for its own track.
+`new-feature`, `bugfix`, `refactor`, `breaking-change`, `performance`, `build`, and `revert` are all applied automatically from your PR title's Conventional Commits type (`feat:`, `fix:`, `refactor:`, `perf:`, `build:`, `revert:`) and `!` breaking marker (e.g. `feat!:`) — the format `pr-title-lint.yml` already requires. **Get the type right, especially `feat!`/`fix!` for anything that needs a major bump** — without it, both drafts below silently fall back to a patch bump regardless of what the PR actually does. If you need a label this can't infer from the title (or want to correct one), add it by hand -- this only ever adds what the title implies, it never removes a label you set yourself. When you bump `manifest.json` by hand, match whichever draft's `$RESOLVED_VERSION` you're about to publish (see below) — no suffix-stripping needed, each draft already resolves the version correctly for its own track.
 
 ### Two release drafts: beta and stable
 

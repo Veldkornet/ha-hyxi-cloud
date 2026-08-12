@@ -1,23 +1,19 @@
 # NOTE: process-pr.yml pins actions/labeler@v7.0.0, which only supports
 # changed-files/base-branch/head-branch matchers -- "title" and "author"
-# (used pre-v7 to key new-feature/breaking-change/bugfix/refactor off
-# conventional-commit prefixes, and dependencies off the dependabot author)
 # are silently invalid and were observed to also suppress a label's other,
-# valid match entries, not just themselves. Where a head-branch convention
-# exists it's kept below as the only signal; where it doesn't
-# (breaking-change), there's no automatic matcher left -- label by hand.
-
-# 🚀 New Features (Logic changes)
-"new-feature":
-  - head-branch: ["^feature/", "^feat/"]
-
-# 💥 Breaking Changes (conventional-commit "!" marker, e.g. "feat!:" or "fix(api)!:")
-"breaking-change": []
-
-# 🐛 Bug Fixes (file paths can't signal fix-vs-feature intent either, so
-# branch name is the only matcher available)
-"bugfix":
-  - head-branch: ["^fix/", "^bug/"]
+# valid match entries, not just themselves.
+#
+# new-feature/bugfix/refactor/breaking-change/performance/build/revert
+# aren't listed below at all -- process-pr.yml's "Verify & Enforce Labels"
+# step applies them instead, parsed from the PR title's Conventional
+# Commits type (feat/fix/refactor/etc.) and "!" breaking marker. That's a
+# more reliable signal than either matcher this file *can* use: file paths
+# can't signal fix-vs-feature intent, and branch-name conventions
+# (previously used here for new-feature/bugfix/refactor) trust the author
+# to name their branch correctly with nothing checking a mismatch --
+# whereas pr-title-lint.yml already enforces every PR title's format via
+# actively-run CI, so a malformed one fails visibly instead of silently
+# mislabeling. See that step for the full mapping.
 
 # 🎨 Style
 "style":
@@ -37,10 +33,6 @@
 "test":
   - changed-files:
       - any-glob-to-any-file: "tests/**/*"
-
-# 📦 Refactor
-"refactor":
-  - head-branch: ["^refactor/"]
 
 # ⬆️ Dependency Updates
 # Deliberately NOT a changed-files rule here: see process-pr.yml's "Verify

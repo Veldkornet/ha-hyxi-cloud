@@ -75,6 +75,64 @@ jobs:
 
               let labels = pullRequest.labels;
 
+              // new-feature/bugfix/refactor/breaking-change/performance/
+              // build/revert can't be file-path-matched (a path can't signal
+              // fix-vs-feature intent) and actions/labeler v7 dropped title
+              // matching entirely (see labeler.yml's note), so this
+              // replicates it here instead -- parsing the PR title's
+              // Conventional Commits type and "!" breaking marker.
+              // pr-title-lint.yml already enforces this format via CI on
+              // every PR except pre-commit.ci's, so it's a more reliable
+              // signal than the branch-name convention this used to run on:
+              // a malformed title fails that check visibly, instead of a
+              // mismatched branch name just silently mislabeling with
+              // nothing to catch it.
+              //
+              // Add-only, unlike "runtime-deps" below -- deliberately not
+              // symmetric. These seven are subjective judgment calls, not a
+              // re-checkable fact: a maintainer might correctly decide a
+              // "fix:"-titled PR is actually a breaking change and label it
+              // by hand without retitling. Stripping labels this mechanism
+              // didn't add itself would silently undo that the next time
+              // anything re-triggers this workflow, so it only ever adds
+              // what the title implies and leaves everything else alone --
+              // matching every other label in this repo (sync-labels: false
+              // on the Apply Labels step has the same "never strip" intent).
+              //
+              // A Map, not a plain object: a title type that collides with
+              // an Object.prototype property name (e.g. "constructor:")
+              // would otherwise resolve through the prototype chain to a
+              // built-in function instead of undefined.
+              const TITLE_TYPE_LABELS = new Map([
+                ["feat", "new-feature"],
+                ["fix", "bugfix"],
+                ["refactor", "refactor"],
+                ["perf", "performance"],
+                ["build", "build"],
+                ["revert", "revert"],
+              ]);
+
+              const titleMatch = pullRequest.title.match(/^(\w+)(?:\([^)]*\))?(!)?:\s/);
+              if (titleMatch) {
+                const [, type, breaking] = titleMatch;
+                const desired = new Set();
+                if (TITLE_TYPE_LABELS.has(type)) desired.add(TITLE_TYPE_LABELS.get(type));
+                if (breaking) desired.add("breaking-change");
+
+                const toAdd = [...desired].filter(
+                  (name) => !labels.some((l) => l.name === name)
+                );
+                if (toAdd.length > 0) {
+                  const { data: updatedLabels } = await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    labels: toAdd,
+                  });
+                  labels = updatedLabels;
+                }
+              }
+
               // "Does this PR change a real, shipped dependency" isn't path-
               // or author-matchable: pyproject.toml touches on every version
               // bump too (manifest.json's version is the source of truth,
