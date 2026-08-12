@@ -47,6 +47,12 @@
 # natively (independent of this file), and sync-labels: false means
 # actions/labeler never strips it -- this changed-files rule is only a
 # fallback for anything that reaches this label some other way.
+# pre-commit.ci's autoupdate PRs get "dependencies" too, but via an
+# author check in process-pr.yml rather than a changed-files glob on
+# .pre-commit-config.yaml -- that file is also edited for non-version-bump
+# reasons (adding/removing hooks, changing args), and path alone can't
+# tell those apart from an automated version bump the way author identity
+# can.
 "dependencies":
   - changed-files:
       - any-glob-to-any-file:
