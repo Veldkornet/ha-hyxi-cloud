@@ -53,33 +53,6 @@ jobs:
           pr-number: ${{ env.PR_NUMBER }}
           sync-labels: false
 
-      - name: Label Pre-commit Autoupdate PRs as Dependencies
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const prNumber = parseInt(process.env.PR_NUMBER, 10);
-            const { data: pullRequest } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-
-            // actions/labeler v7 dropped "author" as a matcher (see
-            // labeler.yml), so unlike dependabot -- which self-labels its
-            // own PRs -- pre-commit.ci's autoupdate PRs never pick up
-            // "dependencies" from that file. Path alone can't stand in for
-            // it: .pre-commit-config.yaml also changes for non-version-bump
-            // reasons (adding/removing a hook, changing args), so this
-            // checks author identity instead of extending that glob.
-            if (pullRequest.user?.login === "pre-commit-ci[bot]") {
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                labels: ["dependencies"],
-              });
-            }
-
       - name: Verify & Enforce Labels
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
@@ -87,35 +60,79 @@ jobs:
             const prNumber = parseInt(process.env.PR_NUMBER, 10);
             const prSha = process.env.PR_SHA;
 
-            // Fetch the newly applied labels
-            const { data: pullRequest } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-
-            const labels = pullRequest.labels;
-            const hasLabels = labels.length > 0;
-
-            // 1. Update the PR's visual status check (Green Check or Red X)
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: prSha,
-              state: hasLabels ? 'success' : 'error',
-              context: 'Label Enforcement',
-              description: hasLabels ? `Found ${labels.length} label(s)` : 'No labels found. Please add one.',
-            });
-
-            // 2. Add a helpful comment if it failed
-            if (!hasLabels) {
-              await github.rest.issues.createComment({
+            // Wrapped so any API call failing here (fetch, addLabels,
+            // createCommitStatus itself) still leaves a status posted --
+            // otherwise the job just stops and "Label Enforcement" is left
+            // pending forever instead of failing visibly.
+            try {
+              // Fetch the labels Apply Labels just set
+              const { data: pullRequest } = await github.rest.pulls.get({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: prNumber,
-                body: "❌ **Label Check Failed:** I couldn't automatically label this PR, and no manual labels were added. Please add a label (e.g., `bugfix`, `new-feature`) so the Release Drafter can categorize it!"
+                pull_number: prNumber,
               });
-              core.setFailed("No labels found.");
-            } else {
-              console.log(`✅ PR is labeled with: ${labels.map(l => l.name).join(", ")}`);
+
+              let labels = pullRequest.labels;
+
+              // actions/labeler v7 dropped "author" as a matcher (see
+              // labeler.yml), so unlike dependabot -- which self-labels its
+              // own PRs -- pre-commit.ci's autoupdate PRs never pick up
+              // "dependencies" from that file. Path alone can't stand in for
+              // it: .pre-commit-config.yaml also changes for non-version-bump
+              // reasons (adding/removing a hook, changing args), so this
+              // checks author identity instead of extending that glob. Reuses
+              // the PR already fetched above rather than a second API call.
+              if (pullRequest.user?.login === "pre-commit-ci[bot]") {
+                const { data: updatedLabels } = await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  labels: ["dependencies"],
+                });
+                labels = updatedLabels;
+              } else if (!pullRequest.user) {
+                // Ghost/deleted author (e.g. an account got renamed or
+                // removed) -- there's no login to compare against
+                // "pre-commit-ci[bot]", so whether this PR should have
+                // gotten the dependencies label is unknown, not skipped
+                // because it definitely wasn't a match. Logged so that
+                // stays visible instead of silently no-op'ing.
+                core.warning(`PR #${prNumber} has no author on record; could not check whether it should get the pre-commit.ci "dependencies" label.`);
+              }
+
+              const hasLabels = labels.length > 0;
+
+              // 1. Update the PR's visual status check (Green Check or Red X)
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: prSha,
+                state: hasLabels ? 'success' : 'error',
+                context: 'Label Enforcement',
+                description: hasLabels ? `Found ${labels.length} label(s)` : 'No labels found. Please add one.',
+              });
+
+              // 2. Add a helpful comment if it failed
+              if (!hasLabels) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: "❌ **Label Check Failed:** I couldn't automatically label this PR, and no manual labels were added. Please add a label (e.g., `bugfix`, `new-feature`) so the Release Drafter can categorize it!"
+                });
+                core.setFailed("No labels found.");
+              } else {
+                console.log(`✅ PR is labeled with: ${labels.map(l => l.name).join(", ")}`);
+              }
+            } catch (error) {
+              core.warning(`Label verification failed: ${error.message}`);
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: prSha,
+                state: 'error',
+                context: 'Label Enforcement',
+                description: 'Label check errored -- see workflow run logs.',
+              });
+              core.setFailed(`Label verification failed: ${error.message}`);
             }

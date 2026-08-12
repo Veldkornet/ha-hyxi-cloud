@@ -20,19 +20,54 @@ change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
 sort-direction: ascending
 
 categories:
-  - title: "📚 Documentation"
-    labels:
-      - "documentation"
+  # Drops PRs that are pure internal housekeeping (every label they carry
+  # is one of these four) from the changelog entirely -- users deciding
+  # whether to update don't need to see "bumped a GitHub Action" or
+  # "relocated the mypy cache". labels-mode: only means this only excludes
+  # a PR when ALL of its labels are in this set; a PR that also carries a
+  # real label (bugfix, new-feature, ...) alongside one of these still shows
+  # up normally under that category -- a plain label match here would have
+  # silently dropped those PRs from the changelog instead of just moving
+  # them, since a real bugfix/feature PR commonly also carries "test" from
+  # its own test coverage.
+  #
+  # "chore" here is separate from -- and not kept in sync with --
+  # version-resolver's own "chore" patch-bump entry below: this list
+  # controls changelog visibility, that one controls version bumps, and a
+  # chore-only PR is deliberately hidden from the former while still
+  # counted by the latter.
+  - type: "pre-exclude"
+    when:
+      labels: ["ci", "test", "build", "chore"]
+      labels-mode: "only"
+  # Every category below is exclusive: true, so with all of them now
+  # exclusive, declaration order = priority -- the first match wins and the
+  # PR is never checked against the rest. A PR can legitimately carry more
+  # than one label (a breaking-change PR that also updates a .md file picks
+  # up "documentation" too), so what matters most to a user reading the
+  # release notes needs to be listed first, or it'd get buried under a
+  # less important category instead. Documentation/Style/Translations/etc
+  # are ordered after the categories that actually signal user impact.
   - title: "💥 Breaking Changes"
     labels:
       - "breaking-change"
+    exclusive: true
+  # Ranked above Bug Fixes: a revert is notable in its own right (something
+  # previously shipped got undone), so a PR manually labeled both "bugfix"
+  # and "revert" should read as a revert, not get buried under Bug Fixes.
+  - title: "🗑️ Revert"
+    labels:
+      - "revert"
+    exclusive: true
   - title: "✨ New Features"
     labels:
       - "new-feature"
+    exclusive: true
   - title: "🐛 Bug Fixes"
     labels:
       - "bugfix"
       - "bug" # defensive: catches accidental use of the issue-template label on a PR
+    exclusive: true
   # Ordered before CI/Chore/Style/etc and marked exclusive: a version-bump
   # PR (dependabot, or pre-commit autoupdate) commonly also carries one of
   # those file-path-based labels (e.g. touching .github/**/* also matches
@@ -44,34 +79,43 @@ categories:
       - "dependencies"
     exclusive: true
     collapse-after: 3
-  - title: "🎨 Style"
+  - title: "📚 Documentation"
     labels:
-      - "style"
+      - "documentation"
+    exclusive: true
   - title: "🌐 Translations"
     labels:
       - "translations"
+    exclusive: true
+  - title: "🎨 Style"
+    labels:
+      - "style"
+    exclusive: true
   - title: "📦 Refactor"
     labels:
       - "refactor"
+    exclusive: true
   - title: "🚀 Performance"
     labels:
       - "performance"
+    exclusive: true
   - title: "🧪 Test"
     labels:
       - "test"
+    exclusive: true
   - title: "🛠️ Build"
     labels:
       - "build"
+    exclusive: true
   - title: "⚙️ CI"
     labels:
       - "ci"
+    exclusive: true
     collapse-after: 3
   - title: "♻️ Chore"
     labels:
       - "chore"
-  - title: "🗑️ Revert"
-    labels:
-      - "revert"
+    exclusive: true
 
 template: |
   # HYXI $RESOLVED_VERSION ⚡🔋☀️

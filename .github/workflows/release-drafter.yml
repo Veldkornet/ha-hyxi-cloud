@@ -7,6 +7,13 @@ on:
   pull_request_target:
     # 🚀 Added 'edited' so renaming a PR updates the draft immediately
     types: [opened, reopened, synchronize, labeled, edited]
+  release:
+    # Publishing either draft (beta or stable) doesn't touch main or any PR,
+    # so without this the *other* draft would sit showing stale pre-publish
+    # content until the next push/PR event happened to trigger a refresh.
+    # committish is hardcoded to main below regardless of trigger, so this
+    # is safe to fire on any release event.
+    types: [published]
 
 concurrency:
   group: release-drafter
