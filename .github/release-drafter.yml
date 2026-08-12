@@ -20,25 +20,27 @@ change-template: "- $TITLE (#$NUMBER) @$AUTHOR"
 sort-direction: ascending
 
 categories:
-  # Drops PRs that are pure internal housekeeping (every label they carry
-  # is one of these four) from the changelog entirely -- users deciding
-  # whether to update don't need to see "bumped a GitHub Action" or
-  # "relocated the mypy cache". labels-mode: only means this only excludes
-  # a PR when ALL of its labels are in this set; a PR that also carries a
-  # real label (bugfix, new-feature, ...) alongside one of these still shows
-  # up normally under that category -- a plain label match here would have
-  # silently dropped those PRs from the changelog instead of just moving
-  # them, since a real bugfix/feature PR commonly also carries "test" from
-  # its own test coverage.
-  #
-  # "chore" here is separate from -- and not kept in sync with --
-  # version-resolver's own "chore" patch-bump entry below: this list
-  # controls changelog visibility, that one controls version bumps, and a
-  # chore-only PR is deliberately hidden from the former while still
-  # counted by the latter.
+  # Hides pure housekeeping (labels-mode: only -- ALL labels must be in
+  # this set). IMPORTANT: a PR matching neither this nor any category
+  # below is NOT hidden -- release-drafter dumps unmatched PRs untitled
+  # above every real section instead. dependabot's native "dependencies"
+  # label + ecosystem tags (github_actions/python/python:uv) are included
+  # here for exactly that reason (dev/test-only bumps have no other
+  # label); a genuine "runtime-deps" change is unaffected since that
+  # label is never in this set.
   - type: "pre-exclude"
     when:
-      labels: ["ci", "test", "build", "chore"]
+      labels:
+        [
+          "ci",
+          "test",
+          "build",
+          "chore",
+          "dependencies",
+          "github_actions",
+          "python",
+          "python:uv",
+        ]
       labels-mode: "only"
   # Every category below is exclusive: true, so with all of them now
   # exclusive, declaration order = priority -- the first match wins and the
@@ -49,24 +51,25 @@ categories:
   # less important category instead. Documentation/Style/Translations/etc
   # are ordered after the categories that actually signal user impact.
   - title: "💥 Breaking Changes"
-    labels:
-      - "breaking-change"
+    when:
+      labels: ["breaking-change"]
     exclusive: true
   # Ranked above Bug Fixes: a revert is notable in its own right (something
   # previously shipped got undone), so a PR manually labeled both "bugfix"
   # and "revert" should read as a revert, not get buried under Bug Fixes.
   - title: "🗑️ Revert"
-    labels:
-      - "revert"
+    when:
+      labels: ["revert"]
     exclusive: true
   - title: "✨ New Features"
-    labels:
-      - "new-feature"
+    when:
+      labels: ["new-feature"]
     exclusive: true
   - title: "🐛 Bug Fixes"
-    labels:
-      - "bugfix"
-      - "bug" # defensive: catches accidental use of the issue-template label on a PR
+    when:
+      # "bug" is defensive: catches accidental use of the issue-template
+      # label on a PR.
+      labels: ["bugfix", "bug"]
     exclusive: true
   # "runtime-deps" is applied by process-pr.yml's "Verify & Enforce Labels"
   # step, not dependabot's own native "dependencies" (left untouched, but
@@ -78,47 +81,43 @@ categories:
   # something else (rare, but not impossible for a manual edit) would
   # otherwise show up duplicated.
   - title: "⬆️ Dependency Updates"
-    labels:
-      - "runtime-deps"
+    when:
+      labels: ["runtime-deps"]
     exclusive: true
     collapse-after: 3
   - title: "📚 Documentation"
-    labels:
-      - "documentation"
+    when:
+      labels: ["documentation"]
     exclusive: true
   - title: "🌐 Translations"
-    labels:
-      - "translations"
+    when:
+      labels: ["translations"]
     exclusive: true
   - title: "🎨 Style"
-    labels:
-      - "style"
+    when:
+      labels: ["style"]
     exclusive: true
   - title: "📦 Refactor"
-    labels:
-      - "refactor"
+    when:
+      labels: ["refactor"]
     exclusive: true
   - title: "🚀 Performance"
-    labels:
-      - "performance"
+    when:
+      labels: ["performance"]
     exclusive: true
   - title: "🧪 Test"
-    labels:
-      - "test"
+    when:
+      labels: ["test"]
     exclusive: true
   - title: "🛠️ Build"
-    labels:
-      - "build"
+    when:
+      labels: ["build"]
     exclusive: true
-  # No visible "CI" category: a PR whose only label is "ci" already
-  # matches pre-exclude above and is hidden as housekeeping. Removing
-  # this means a PR carrying "ci" plus something not covered by any
-  # other category is now also omitted entirely, rather than surfacing
-  # under a CI heading -- "ci" stays in pre-exclude's set either way, it
-  # just no longer has its own visible section.
+  # No visible "CI" category: "ci"-only PRs are already hidden via
+  # pre-exclude above.
   - title: "♻️ Chore"
-    labels:
-      - "chore"
+    when:
+      labels: ["chore"]
     exclusive: true
 
 template: |
