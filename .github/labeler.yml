@@ -44,10 +44,13 @@
 
 # ⬆️ Dependency Updates
 # Deliberately NOT a changed-files rule here: see process-pr.yml's "Verify
-# & Enforce Labels" step, which applies "dependencies" by diffing
-# manifest.json's requirements array instead -- a path glob on
+# & Enforce Labels" step, which applies a dedicated "runtime-deps" label
+# by diffing manifest.json's requirements array instead -- a path glob on
 # pyproject.toml/uv.lock can't tell a real dependency bump apart from a
-# plain version bump (both touch those files).
+# plain version bump (both touch those files), and dependabot's own
+# native "dependencies" label isn't precise enough either (it's applied
+# to every uv-ecosystem PR regardless of whether the bump is a runtime
+# dependency or a test/dev-only one).
 
 # ♻️ Chore (Metadata & Housekeeping)
 "chore":

@@ -75,19 +75,30 @@ jobs:
 
               let labels = pullRequest.labels;
 
-              // "dependencies" isn't path- or author-matchable: pyproject.toml
-              // touches on every version bump too (manifest.json's version is
-              // the source of truth, synced into pyproject.toml by
-              // scripts/sync_versions.py), and dependabot/pre-commit.ci both
-              // produce PRs that may or may not actually touch a runtime
-              // dependency. What's unambiguous is manifest.json's requirements
-              // array -- sync_versions.py only rewrites it when a *runtime*
-              // dependency in pyproject.toml changed, never for a version-only
-              // bump or a test/dev-only dependency (those live in
-              // [project.optional-dependencies], which isn't mirrored there).
-              // So: fetch that array at the PR's base and head, and label
-              // "dependencies" only if it actually differs. Author-agnostic --
-              // applies the same to dependabot, pre-commit.ci, and manual edits.
+              // "Does this PR change a real, shipped dependency" isn't path-
+              // or author-matchable: pyproject.toml touches on every version
+              // bump too (manifest.json's version is the source of truth,
+              // synced into pyproject.toml by scripts/sync_versions.py), and
+              // dependabot/pre-commit.ci both produce PRs that may or may not
+              // actually touch a runtime dependency. What's unambiguous is
+              // manifest.json's requirements array -- sync_versions.py only
+              // rewrites it when a *runtime* dependency in pyproject.toml
+              // changed, never for a version-only bump or a test/dev-only
+              // dependency (those live in [project.optional-dependencies],
+              // which isn't mirrored there). So: fetch that array at the
+              // PR's base and head, and apply a dedicated "runtime-deps"
+              // label only if it actually differs. Author-agnostic --
+              // applies the same to dependabot, pre-commit.ci, and manual
+              // edits.
+              //
+              // Deliberately a separate label from dependabot's own native
+              // "dependencies" (left untouched -- it's an accurate
+              // description of what dependabot did, just not a precise
+              // enough one for the changelog to filter on) rather than
+              // repurposing it: this label's lifecycle is fully owned by
+              // this check, so both directions (add and remove below) are
+              // unambiguous -- there's no risk of stripping a label some
+              // other tool or a human applied for a different reason.
               const MANIFEST_PATH = "custom_components/hyxi_cloud/manifest.json";
 
               async function getRequirements(ref) {
@@ -125,31 +136,30 @@ jobs:
                 const requirementsChanged =
                   JSON.stringify([...baseRequirements].sort()) !==
                   JSON.stringify([...headRequirements].sort());
-                const hasDependenciesLabel = labels.some((l) => l.name === "dependencies");
+                const hasRuntimeDepsLabel = labels.some((l) => l.name === "runtime-deps");
 
-                if (requirementsChanged && !hasDependenciesLabel) {
+                if (requirementsChanged && !hasRuntimeDepsLabel) {
                   const { data: updatedLabels } = await github.rest.issues.addLabels({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: prNumber,
-                    labels: ["dependencies"],
+                    labels: ["runtime-deps"],
                   });
                   labels = updatedLabels;
-                } else if (!requirementsChanged && hasDependenciesLabel) {
+                } else if (!requirementsChanged && hasRuntimeDepsLabel) {
                   // Requirements no longer differ from base (e.g. a
                   // follow-up commit reverted the dependency bump this
                   // label was added for) -- drop it so release-drafter
                   // doesn't categorize the PR under "Dependency Updates"
-                  // for something it no longer does. The only label this
-                  // workflow ever removes, since it's derived from a
-                  // precise, re-checkable fact rather than a path glob
-                  // that intentionally tolerates staleness (see
-                  // sync-labels: false on the Apply Labels step above).
+                  // for something it no longer does. Safe to remove
+                  // unconditionally (unlike dependabot's native
+                  // "dependencies") since this workflow is the only thing
+                  // that ever applies "runtime-deps" in the first place.
                   const { data: updatedLabels } = await github.rest.issues.removeLabel({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: prNumber,
-                    name: "dependencies",
+                    name: "runtime-deps",
                   });
                   labels = updatedLabels;
                 }

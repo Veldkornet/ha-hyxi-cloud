@@ -5,6 +5,23 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Overrides dependabot's default "dependencies" label (rather than
+    # adding to it). Unlike the uv block below, this one is still needed:
+    # labeler.yml's "ci" rule matches .github/**/* independently of
+    # anything dependency-related, so these PRs always carry "ci" too --
+    # and "ci" isn't just part of pre-exclude's housekeeping subset check,
+    # it's also release-drafter.yml's own "⚙️ CI" category, matched
+    # inclusively. A PR carrying {dependencies, ci} fails the pre-exclude
+    # subset check (labels-mode: only, and "dependencies" isn't in that
+    # set) but still matches "⚙️ CI" -- so instead of being hidden, it
+    # surfaces under CI in the changelog. Labeling these "ci" only avoids
+    # that: dependabot's `labels:` replaces its defaults rather than
+    # adding to them, so this becomes the PR's only label, which cleanly
+    # satisfies pre-exclude. Doesn't change version-resolver's bump size:
+    # with no explicit label match it falls through to `default: patch`,
+    # same as "dependencies"/"runtime-deps" would.
+    labels:
+      - "ci"
     groups:
       codeql:
         patterns:
