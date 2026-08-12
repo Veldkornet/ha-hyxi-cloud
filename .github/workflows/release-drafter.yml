@@ -32,9 +32,36 @@ jobs:
             api.github.com:443
             github.com:443
 
-      - name: Update Release Draft
+      # Beta track: since whatever was last *published* (beta or stable),
+      # auto-incrementing the beta counter -- see release-drafter.yml's
+      # own prerelease/prerelease-identifier/latest settings.
+      - name: Update Beta Draft
         uses: release-drafter/release-drafter@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7.7.0
         with:
           committish: main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Stable track: same config, but these action inputs override
+      # prerelease/latest for this run only. findPreviousReleases() then
+      # skips betas when picking the "last release" baseline, so this
+      # draft accumulates every change since the last real stable release,
+      # however many betas happened in between -- publishing it is a
+      # single click with the version and changelog already correct, no
+      # manual tag/prerelease-checkbox editing needed.
+      - name: Update Stable Draft
+        uses: release-drafter/release-drafter@34d80673e067bdc0c24568d3af899c216adcfaa9 # v7.7.0
+        with:
+          committish: main
+          # prerelease: false is the only override that matters here --
+          # it's a boolean input (checked by type, not truthiness) so it
+          # reliably overrides the config's prerelease: true. An empty-string
+          # prerelease-identifier override was tried too, but release-drafter
+          # treats '' as "no input given" (falsy) and keeps the config's
+          # 'beta', so it's omitted rather than left in as dead config; it's
+          # inert today since prerelease: false already gates every place
+          # the identifier would show up in $RESOLVED_VERSION.
+          prerelease: 'false'
+          latest: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
