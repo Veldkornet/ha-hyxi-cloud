@@ -61,6 +61,11 @@ jobs:
         with:
           python-version: '3.14'
           enable-cache: true
+          # cache-python defaults to false -- without it, every run
+          # re-downloads the full CPython interpreter tarball from GitHub's
+          # release CDN, which is a large, single point of flaky-network
+          # failure repeated on every job instead of paid for once.
+          cache-python: true
 
       - name: Install dependencies
         run: uv sync --extra test
