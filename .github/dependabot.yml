@@ -5,20 +5,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # Overrides dependabot's default "dependencies" label (rather than
-    # adding to it). Without this, these PRs carry both "dependencies" and
-    # "ci" (the latter from labeler.yml's path match on .github/**/*), and
-    # "dependencies" alone is enough to escape release-drafter.yml's
-    # pre-exclude housekeeping bucket -- which only fires when a PR's
-    # *entire* label set is ci/test/build/chore -- so a plain version bump
-    # like "bump release-drafter/release-drafter" was still showing up
-    # under the user-facing "Dependency Updates" changelog section instead
-    # of being hidden as internal housekeeping. Labeling these "ci" only
-    # keeps them in that bucket. Doesn't change their version-resolver bump
-    # size: with no explicit label match they still fall through to
-    # version-resolver's `default: patch`, same as "dependencies" did.
-    labels:
-      - "ci"
     groups:
       codeql:
         patterns:
@@ -29,9 +15,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # Overrides the default "dependencies" label, same as the github-actions
-    # block above -- see process-pr.yml's "Verify & Enforce Labels" step for
-    # why a changed-files/label match can't distinguish a real dependency
-    # bump from a version-only or test-only one.
-    labels:
-      - "chore"
