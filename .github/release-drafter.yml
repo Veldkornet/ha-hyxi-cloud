@@ -68,15 +68,18 @@ categories:
       - "bugfix"
       - "bug" # defensive: catches accidental use of the issue-template label on a PR
     exclusive: true
-  # Ordered before CI/Chore/Style/etc and marked exclusive: a version-bump
-  # PR (dependabot, or pre-commit autoupdate) commonly also carries one of
-  # those file-path-based labels (e.g. touching .github/**/* also matches
-  # "ci"), and by default release-drafter lists a PR under *every* matching
-  # category rather than just the first -- without `exclusive`, the same
-  # PR would show up duplicated under both "Dependency Updates" and "CI".
+  # "runtime-deps" is applied by process-pr.yml's "Verify & Enforce Labels"
+  # step, not dependabot's own native "dependencies" (left untouched, but
+  # not curated enough to filter the changelog on -- see that step and
+  # labeler.yml for the full reasoning). Ordered before CI/Chore/Style/etc
+  # and marked exclusive like every other category here: by default
+  # release-drafter lists a PR under *every* matching category rather than
+  # just the first, so a PR that both bumps a dependency and touches
+  # something else (rare, but not impossible for a manual edit) would
+  # otherwise show up duplicated.
   - title: "⬆️ Dependency Updates"
     labels:
-      - "dependencies"
+      - "runtime-deps"
     exclusive: true
     collapse-after: 3
   - title: "📚 Documentation"
@@ -140,5 +143,5 @@ version-resolver:
       - "bugfix"
       - "bug"
       - "chore"
-      - "dependencies"
+      - "runtime-deps"
   default: patch
