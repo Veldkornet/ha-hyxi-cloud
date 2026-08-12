@@ -20,6 +20,7 @@ jobs:
       statuses: write      # To create the Green Check/Red X on the commit
       issues: write        # To comment on the PR if labels are missing
       actions: read        # Required to download artifacts from the 'workflow_run' source
+      contents: read       # To read manifest.json at base/head via getContent
 
     steps:
       - name: Harden Runner
@@ -74,30 +75,65 @@ jobs:
 
               let labels = pullRequest.labels;
 
-              // actions/labeler v7 dropped "author" as a matcher (see
-              // labeler.yml), so unlike dependabot -- which self-labels its
-              // own PRs -- pre-commit.ci's autoupdate PRs never pick up
-              // "dependencies" from that file. Path alone can't stand in for
-              // it: .pre-commit-config.yaml also changes for non-version-bump
-              // reasons (adding/removing a hook, changing args), so this
-              // checks author identity instead of extending that glob. Reuses
-              // the PR already fetched above rather than a second API call.
-              if (pullRequest.user?.login === "pre-commit-ci[bot]") {
-                const { data: updatedLabels } = await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: prNumber,
-                  labels: ["dependencies"],
-                });
-                labels = updatedLabels;
-              } else if (!pullRequest.user) {
-                // Ghost/deleted author (e.g. an account got renamed or
-                // removed) -- there's no login to compare against
-                // "pre-commit-ci[bot]", so whether this PR should have
-                // gotten the dependencies label is unknown, not skipped
-                // because it definitely wasn't a match. Logged so that
-                // stays visible instead of silently no-op'ing.
-                core.warning(`PR #${prNumber} has no author on record; could not check whether it should get the pre-commit.ci "dependencies" label.`);
+              // "dependencies" isn't path- or author-matchable: pyproject.toml
+              // touches on every version bump too (manifest.json's version is
+              // the source of truth, synced into pyproject.toml by
+              // scripts/sync_versions.py), and dependabot/pre-commit.ci both
+              // produce PRs that may or may not actually touch a runtime
+              // dependency. What's unambiguous is manifest.json's requirements
+              // array -- sync_versions.py only rewrites it when a *runtime*
+              // dependency in pyproject.toml changed, never for a version-only
+              // bump or a test/dev-only dependency (those live in
+              // [project.optional-dependencies], which isn't mirrored there).
+              // So: fetch that array at the PR's base and head, and label
+              // "dependencies" only if it actually differs. Author-agnostic --
+              // applies the same to dependabot, pre-commit.ci, and manual edits.
+              const MANIFEST_PATH = "custom_components/hyxi_cloud/manifest.json";
+
+              async function getRequirements(ref) {
+                try {
+                  const { data } = await github.rest.repos.getContent({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    path: MANIFEST_PATH,
+                    ref,
+                  });
+                  const content = Buffer.from(data.content, "base64").toString("utf-8");
+                  return JSON.parse(content).requirements ?? [];
+                } catch (error) {
+                  core.warning(`Could not read ${MANIFEST_PATH} at ${ref}: ${error.message}`);
+                  return null;
+                }
+              }
+
+              const [baseRequirements, headRequirements] = await Promise.all([
+                getRequirements(pullRequest.base.sha),
+                getRequirements(pullRequest.head.sha),
+              ]);
+
+              // Only compare when both reads succeeded -- if either fetch
+              // failed (API hiccup, or the file genuinely doesn't exist on
+              // one side), skip silently rather than risk a false label
+              // either way.
+              if (baseRequirements !== null && headRequirements !== null) {
+                // Sorted, not positional: pip (and Home Assistant, which just
+                // hands this array to pip) doesn't care about requirements
+                // order, so a pure reorder in pyproject.toml -- which
+                // sync_versions.py's own order-sensitive `!=` check would
+                // still rewrite manifest.json for -- shouldn't count as a
+                // real dependency change here.
+                const requirementsChanged =
+                  JSON.stringify([...baseRequirements].sort()) !==
+                  JSON.stringify([...headRequirements].sort());
+                if (requirementsChanged) {
+                  const { data: updatedLabels } = await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    labels: ["dependencies"],
+                  });
+                  labels = updatedLabels;
+                }
               }
 
               const hasLabels = labels.length > 0;

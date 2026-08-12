@@ -43,19 +43,11 @@
   - head-branch: ["^refactor/"]
 
 # ⬆️ Dependency Updates
-# Dependabot applies its own "dependencies" label to every PR it opens
-# natively (independent of this file), and sync-labels: false means
-# actions/labeler never strips it -- this changed-files rule is only a
-# fallback for anything that reaches this label some other way.
-# pre-commit.ci's autoupdate PRs get "dependencies" too, via an author
-# check in process-pr.yml's "Verify & Enforce Labels" step (path alone
-# can't distinguish an automated version bump from a manual edit to
-# .pre-commit-config.yaml the way author identity can).
-"dependencies":
-  - changed-files:
-      - any-glob-to-any-file:
-          - "pyproject.toml"
-          - "uv.lock"
+# Deliberately NOT a changed-files rule here: see process-pr.yml's "Verify
+# & Enforce Labels" step, which applies "dependencies" by diffing
+# manifest.json's requirements array instead -- a path glob on
+# pyproject.toml/uv.lock can't tell a real dependency bump apart from a
+# plain version bump (both touch those files).
 
 # ♻️ Chore (Metadata & Housekeeping)
 "chore":
