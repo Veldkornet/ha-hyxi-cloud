@@ -23,6 +23,15 @@ jobs:
       # fail fast on lockfile drift instead of silently resolving/installing
       # an unlocked version.
       UV_LOCKED: "1"
+      # uv.lock records this project as editable, so installing it invokes
+      # its setuptools.build_meta backend, which can execute arbitrary
+      # checkout code. Tests don't need it installed -- pyproject.toml's
+      # `pythonpath = ["."]` already puts the repo root on sys.path -- so
+      # skip that install rather than run our own build backend for no
+      # reason. (Third-party deps still get built normally: --no-build
+      # can't be added on top of this, since the test extra pulls in
+      # mock-open, which only ships as a source distribution on PyPI.)
+      UV_NO_INSTALL_PROJECT: "1"
 
     steps:
       - name: Harden the runner
