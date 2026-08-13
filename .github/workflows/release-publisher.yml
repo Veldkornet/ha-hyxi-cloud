@@ -11,10 +11,11 @@ permissions:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
-    # ✅ 2. Explicitly grant 'write' ONLY for release publishing and PR creation
+    # ✅ 2. Explicitly grant 'write' ONLY for release publishing, PR creation, and labeling
     permissions:
       contents: write # To read the code, upload asset, and push version bump branch
       pull-requests: write # To open the pull request for manifest version update
+      issues: write # Required by create-pull-request to add labels to the PR
 
     steps:
       - name: Harden the runner
@@ -37,17 +38,19 @@ jobs:
           echo "CLEAN_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
 
           echo "Injecting version $CLEAN_VERSION into manifest..."
-          jq ".version = \"$CLEAN_VERSION\"" custom_components/hyxi_cloud/manifest.json > tmp.json
+          jq --arg ver "$CLEAN_VERSION" '.version = $ver' custom_components/hyxi_cloud/manifest.json > tmp.json
           mv tmp.json custom_components/hyxi_cloud/manifest.json
 
           echo "Injecting version $CLEAN_VERSION into pyproject.toml..."
           python3 -c "
-          import re, pathlib
+          import os, re, pathlib
+          ver = os.environ['CLEAN_VERSION']
           p = pathlib.Path('pyproject.toml')
           text = p.read_text(encoding='utf-8')
-          new_text = re.sub(r'(?m)^version\s*=\s*\"[^\"]+\"', f'version = \"${CLEAN_VERSION}\"', text)
+          new_text = re.sub(r'(?m)^version\s*=\s*\"[^\"]+\"', f'version = \"{ver}\"', text)
           p.write_text(new_text, encoding='utf-8')
           "
+
 
       - name: 📦 Create Zip Archive
         run: |
