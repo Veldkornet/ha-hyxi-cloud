@@ -5,7 +5,11 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Pinned rather than the bare .../uv/install.sh (always "latest"): a fixed
+# version means what's installed here is the version this setup was last
+# validated against, not whatever astral happens to be serving the moment
+# someone opens the devcontainer. Bump deliberately, like a lockfile.
+curl --proto '=https' --tlsv1.2 -LsSf https://astral.sh/uv/0.12.3/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 
 # The .venv named volume (see docker-compose.yml) is created root-owned by

@@ -15,6 +15,23 @@
 # empty directory.
 set -euo pipefail
 
+# Fail with a clear, specific message rather than whatever raw error the
+# first `docker`/`git` call below would otherwise surface -- this runs
+# before either container exists, so it's the first thing that can go
+# wrong in a fresh environment.
+if ! command -v docker >/dev/null 2>&1; then
+  echo "error: docker is not installed (or not on PATH) -- the dev container needs Docker to build and run." >&2
+  exit 1
+fi
+if ! docker info >/dev/null 2>&1; then
+  echo "error: docker is installed but not reachable -- is the Docker daemon (Docker Desktop, colima, etc.) running?" >&2
+  exit 1
+fi
+if ! command -v git >/dev/null 2>&1; then
+  echo "error: git is not installed (or not on PATH) -- needed to clone the hyxi-cloud-api sibling checkout below." >&2
+  exit 1
+fi
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 sibling="$(dirname "$repo_root")/hyxi-cloud-api"
 
