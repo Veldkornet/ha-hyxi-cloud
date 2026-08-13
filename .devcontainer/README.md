@@ -37,9 +37,14 @@ Home Assistant instance for manual testing.
   Locally that's a no-op if you already keep both repos side by side (e.g.
   under `~/Git/`); in a fresh Codespace it clones a read-only copy so the
   mount isn't silently empty. Unlike `manage.sh`'s `start` action, nothing
-  here runs `pip install -e` on that checkout inside the HA container —
-  the mount plus `PYTHONPATH` already make it importable, and its only
-  runtime dependency (`aiohttp`) ships with the HA base image.
+  here runs `pip install -e` on that checkout inside the HA container. The
+  mount plus `PYTHONPATH` already make `hyxi_cloud_api` importable, and its
+  only runtime dependency (`aiohttp`) ships with the HA base image, so this
+  has been verified to behave the same as `manage.sh start` without that
+  step. If a future `hyxi-cloud-api` change adds a dependency `aiohttp`
+  doesn't cover, or you want the checkout's packaging metadata/entry points
+  to exist too, run `docker exec ha_dev_hyxi pip install -e
+  /workspaces/hyxi-cloud-api` manually to match `manage.sh` exactly.
 - **`postCreate.sh`** runs once inside the `devcontainer` service: installs
   `uv`, runs `uv sync --extra test`, and installs the repo's `pre-commit`
   hooks. `devcontainer.json`'s `remoteEnv` sets the same `UV_LOCKED=1` /

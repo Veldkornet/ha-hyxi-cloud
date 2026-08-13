@@ -11,6 +11,12 @@
 # dev_env/ and .devcontainer/ happen to sit at the same depth. `include:`
 # avoids relying on that coincidence, verified empirically, not assumed.)
 #
+# `include:` requires Docker Compose v2.20+ (bundled with Docker Desktop
+# 4.22+, or the standalone `docker-compose-plugin` v2.20+ on Linux) -- an
+# older Compose will fail to parse this file. VS Code's own bundled Compose
+# (used for "Reopen in Container") already meets this, but check
+# `docker compose version` first if you drive this file directly.
+#
 # `name:` pins the Compose project to `dev_env` explicitly. Without it,
 # the project name defaults to this file's own directory (`devcontainer`)
 # instead of matching dev_env/manage.sh's plain `docker compose up -d`

@@ -14,8 +14,13 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # The .venv named volume (see docker-compose.yml) is created root-owned by
 # Docker on first use; postCreateCommand runs as the non-root `vscode` user,
-# so hand the mount point over before `uv sync` tries to write into it.
-sudo chown -R "$(id -u):$(id -g)" .venv
+# so hand the mount point over before `uv sync` tries to write into it. Only
+# the mount point itself is ever root-owned -- everything created inside it
+# afterwards is already owned by this user -- so check before recursing:
+# unconditional -R would re-walk an ever-growing venv on every rebuild.
+if [[ "$(stat -c '%u' .venv)" != "$(id -u)" ]]; then
+  sudo chown "$(id -u):$(id -g)" .venv
+fi
 
 # UV_LOCKED and UV_NO_INSTALL_PROJECT (same two flags tests.yml sets at the
 # job level, so `uv sync` behaves like CI's rather than uv's looser

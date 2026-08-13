@@ -41,13 +41,13 @@ sibling="$(dirname "$repo_root")/hyxi-cloud-api"
 # stack can't run at the same time -- whichever comes up second would hit a
 # raw "container name already in use" / "port is already allocated" error
 # from Docker. Catch it here with a clearer message instead.
-if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx ha_dev_hyxi; then
+if docker ps --format '{{.Names}}' | grep -qx ha_dev_hyxi; then
   echo "error: a container named ha_dev_hyxi is already running (started via dev_env/manage.sh?)." >&2
   echo "       Stop it first: ./dev_env/manage.sh stop" >&2
   exit 1
 fi
 
-if [ -d "$sibling" ]; then
+if [[ -d "$sibling" ]]; then
   exit 0
 fi
 
