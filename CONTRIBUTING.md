@@ -25,10 +25,11 @@ If you own hardware marked as `⚠️ Untested` in the README, we need your data
 This project uses modern CI/CD to keep the code clean and secure.
 
 1. **Fork and Clone:** Create a branch from `main`.
-2. **Coding Standards:** We use [Ruff](https://github.com/astral-sh/ruff) for linting and formatting.
-3. **Security:** Every Pull Request is scanned by **CodeQL**, **Gitleaks**, and **Bandit**.
+2. **Environment:** Open the repo in the [dev container](.devcontainer/) (VS Code "Reopen in Container", or GitHub Codespaces) for a ready-to-go Python 3.14 + `uv` + `pre-commit` setup alongside a live Home Assistant instance for manual testing — see `.devcontainer/README.md` for details. Not required: `uv sync --extra test` on your own machine works just as well.
+3. **Coding Standards:** We use [Ruff](https://github.com/astral-sh/ruff) for linting and formatting.
+4. **Security:** Every Pull Request is scanned by **CodeQL**, **Gitleaks**, and **Bandit**.
    - *Note: PRs containing hardcoded secrets or insecure Python patterns will be blocked.*
-4. **Testing:** If you add a new sensor, ensure it has a `device_class`, `state_class`, and appropriate units.
+5. **Testing:** If you add a new sensor, ensure it has a `device_class`, `state_class`, and appropriate units.
 
 ## 🔖 Releasing (Version Bumps)
 
