@@ -1,0 +1,45 @@
+# `include:` (rather than listing both files in devcontainer.json's
+# `dockerComposeFile`) is deliberate: Compose resolves an *included* file's
+# relative paths against that file's own directory, so ../dev_env/'s paths
+# keep meaning what they mean to dev_env/manage.sh, and this file's own
+# paths below resolve against .devcontainer/ -- each independently, with no
+# dependency on which directory happens to come first or how deep either
+# one is nested. (Merging via multiple `-f` flags -- i.e. listing both
+# files directly in `dockerComposeFile` -- does NOT have this property:
+# Compose would then resolve *every* file's relative paths against the
+# *first* file's directory, only coincidentally correct here today because
+# dev_env/ and .devcontainer/ happen to sit at the same depth. `include:`
+# avoids relying on that coincidence, verified empirically, not assumed.)
+#
+# `name:` pins the Compose project to `dev_env` explicitly. Without it,
+# the project name defaults to this file's own directory (`devcontainer`)
+# instead of matching dev_env/manage.sh's plain `docker compose up -d`
+# (project `dev_env`, from its cwd) -- two different project names for the
+# same `homeassistant`/`ha_dev_hyxi` service would mean `manage.sh stop`
+# (project-scoped `docker compose down`) can't find or stop a container
+# this devcontainer started, and vice versa.
+name: dev_env
+include:
+  - ../dev_env/docker-compose.yml
+
+services:
+  # The workspace container VS Code / Codespaces actually attaches to: a
+  # plain Python dev shell with this repo mounted. It has no HA-specific
+  # logic of its own -- the live Home Assistant instance is the included
+  # `homeassistant` service above.
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/base:bookworm
+    volumes:
+      - ..:/workspaces/ha-hyxi-cloud:cached
+      # .venv lives inside the repo, which is otherwise bind-mounted
+      # straight from the host -- without this, `uv sync` running in this
+      # (Linux) container would overwrite your host's (e.g. macOS) venv
+      # with Linux binaries, breaking it for any use outside the
+      # container. This named volume shadows just that one subpath so the
+      # container gets its own persistent venv without touching the
+      # host's.
+      - devcontainer-venv:/workspaces/ha-hyxi-cloud/.venv
+    command: sleep infinity
+
+volumes:
+  devcontainer-venv:

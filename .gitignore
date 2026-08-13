@@ -20,9 +20,11 @@ dist/
 .pixi/
 
 # IDEs and Editors
-# Ignore VSCode personal settings, but keep the tasks
+# Ignore VSCode personal settings, but keep the tasks and the (personal-data-
+# free) extension recommendations
 .vscode/*
 !.vscode/tasks.json
+!.vscode/extensions.json
 .idea/
 *.swp
 .ruff_cache/

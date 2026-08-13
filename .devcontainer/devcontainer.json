@@ -1,0 +1,64 @@
+{
+  "name": "ha-hyxi-cloud",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces/ha-hyxi-cloud",
+  "runServices": ["homeassistant"],
+  "shutdownAction": "stopCompose",
+
+  "initializeCommand": "bash .devcontainer/initialize.sh",
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.14"
+    }
+  },
+
+  "forwardPorts": [8123, 5678],
+  "portsAttributes": {
+    "8123": { "label": "Home Assistant UI", "onAutoForward": "notify" },
+    "5678": { "label": "debugpy (homeassistant container)", "onAutoForward": "silent" }
+  },
+
+  "remoteEnv": {
+    "TZ": "Europe/Amsterdam",
+    "UV_LOCKED": "1",
+    "UV_NO_INSTALL_PROJECT": "1"
+  },
+
+  "remoteUser": "vscode",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-python.pylint",
+        "ms-python.mypy-type-checker",
+        "ryanluker.vscode-coverage-gutters",
+        "github.vscode-pull-request-github",
+        "SonarSource.sonarlint-vscode",
+        "snyk-security.snyk-vulnerability-scanner",
+        "sourcery.sourcery",
+        "CodeRabbit.coderabbit-vscode"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/ha-hyxi-cloud/.venv/bin/python",
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        "editor.tabSize": 4,
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": false,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "[markdown]": {
+          "files.trimTrailingWhitespace": false
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  }
+}

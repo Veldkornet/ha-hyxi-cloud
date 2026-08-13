@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "ms-python.pylint",
+    "ms-python.mypy-type-checker",
+    "ryanluker.vscode-coverage-gutters",
+    "github.vscode-pull-request-github",
+    "SonarSource.sonarlint-vscode",
+    "snyk-security.snyk-vulnerability-scanner",
+    "sourcery.sourcery",
+    "CodeRabbit.coderabbit-vscode"
+  ]
+}
