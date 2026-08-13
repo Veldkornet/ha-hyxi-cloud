@@ -37,19 +37,26 @@ jobs:
           CLEAN_VERSION="${TAG_NAME#v}"
           echo "CLEAN_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
 
-          echo "Injecting version $CLEAN_VERSION into manifest..."
-          jq --arg ver "$CLEAN_VERSION" '.version = $ver' custom_components/hyxi_cloud/manifest.json > tmp.json
-          mv tmp.json custom_components/hyxi_cloud/manifest.json
-
-          echo "Injecting version $CLEAN_VERSION into pyproject.toml..."
+          echo "Checking/Injecting version $CLEAN_VERSION into manifest and pyproject.toml..."
           python3 -c "
-          import os, re, pathlib
-          ver = os.environ['CLEAN_VERSION']
-          p = pathlib.Path('pyproject.toml')
-          text = p.read_text(encoding='utf-8')
-          new_text = re.sub(r'(?m)^version\s*=\s*\"[^\"]+\"', f'version = \"{ver}\"', text)
-          p.write_text(new_text, encoding='utf-8')
+          import os, re, pathlib, json
+          clean_ver = os.environ['CLEAN_VERSION']
+
+          manifest_path = pathlib.Path('custom_components/hyxi_cloud/manifest.json')
+          manifest_text = manifest_path.read_text(encoding='utf-8')
+          manifest_data = json.loads(manifest_text)
+          if manifest_data.get('version') != clean_ver:
+              new_manifest_text = re.sub(r'\"version\":\s*\"[^\"]+\"', f'\"version\": \"{clean_ver}\"', manifest_text)
+              manifest_path.write_text(new_manifest_text, encoding='utf-8')
+
+          pyproject_path = pathlib.Path('pyproject.toml')
+          pyproject_text = pyproject_path.read_text(encoding='utf-8')
+          version_match = re.search(r'(?m)^version\s*=\s*\"([^\"]+)\"', pyproject_text)
+          if version_match and version_match.group(1) != clean_ver:
+              new_pyproject_text = re.sub(r'(?m)^version\s*=\s*\"[^\"]+\"', f'version = \"{clean_ver}\"', pyproject_text)
+              pyproject_path.write_text(new_pyproject_text, encoding='utf-8')
           "
+
 
 
       - name: 📦 Create Zip Archive
