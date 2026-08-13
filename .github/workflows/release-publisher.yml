@@ -11,9 +11,11 @@ permissions:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
-    # ✅ 2. Explicitly grant 'write' ONLY for this specific release task
+    # ✅ 2. Explicitly grant 'write' ONLY for release publishing, PR creation, and labeling
     permissions:
-      contents: write # To read the code and upload the asset
+      contents: write # To read the code, upload asset, and push version bump branch
+      pull-requests: write # To open the pull request for manifest version update
+      issues: write # Required by create-pull-request to add labels to the PR
 
     steps:
       - name: Harden the runner
@@ -28,15 +30,34 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: 📝 Inject Version into Manifest
+      - name: 📝 Inject Version into Manifest and pyproject.toml
         run: |
           # Grab the release tag (e.g., v1.3.0) and strip the 'v'
           TAG_NAME="${{ github.event.release.tag_name }}"
           CLEAN_VERSION="${TAG_NAME#v}"
+          echo "CLEAN_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
 
-          echo "Injecting version $CLEAN_VERSION into manifest..."
-          jq ".version = \"$CLEAN_VERSION\"" custom_components/hyxi_cloud/manifest.json > tmp.json
-          mv tmp.json custom_components/hyxi_cloud/manifest.json
+          echo "Checking/Injecting version $CLEAN_VERSION into manifest and pyproject.toml..."
+          python3 -c "
+          import os, re, pathlib, json
+          clean_ver = os.environ['CLEAN_VERSION']
+
+          manifest_path = pathlib.Path('custom_components/hyxi_cloud/manifest.json')
+          manifest_text = manifest_path.read_text(encoding='utf-8')
+          manifest_data = json.loads(manifest_text)
+          if manifest_data.get('version') != clean_ver:
+              new_manifest_text = re.sub(r'\"version\":\s*\"[^\"]+\"', f'\"version\": \"{clean_ver}\"', manifest_text)
+              manifest_path.write_text(new_manifest_text, encoding='utf-8')
+
+          pyproject_path = pathlib.Path('pyproject.toml')
+          pyproject_text = pyproject_path.read_text(encoding='utf-8')
+          version_match = re.search(r'(?m)^version\s*=\s*\"([^\"]+)\"', pyproject_text)
+          if version_match and version_match.group(1) != clean_ver:
+              new_pyproject_text = re.sub(r'(?m)^version\s*=\s*\"[^\"]+\"', f'version = \"{clean_ver}\"', pyproject_text)
+              pyproject_path.write_text(new_pyproject_text, encoding='utf-8')
+          "
+
+
 
       - name: 📦 Create Zip Archive
         run: |
@@ -52,3 +73,29 @@ jobs:
           files: hyxi_cloud.zip
           tag_name: ${{ github.event.release.tag_name }}
           overwrite_files: true
+
+      - name: 🔄 Verify Version Parity
+        run: |
+          python3 scripts/sync_versions.py
+
+      - name: 🔀 Create Pull Request for Version Bump
+        uses: peter-evans/create-pull-request@dd2324fc52d5d43c699a5636bcf19fceaa70c284 # v7.0.7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(release): bump manifest and pyproject version to ${{ env.CLEAN_VERSION }}"
+          title: "chore(release): bump manifest and pyproject version to ${{ env.CLEAN_VERSION }}"
+          branch: "chore/bump-version-${{ env.CLEAN_VERSION }}"
+          branch-suffix: "timestamp"
+          delete-branch: true
+          base: main
+          labels: "chore"
+          body: |
+            ## Summary
+            Automated pull request triggered by release publishing to synchronize `manifest.json` and `pyproject.toml` in `main`.
+
+            ## Key Changes
+            - Updated `custom_components/hyxi_cloud/manifest.json` version to `${{ env.CLEAN_VERSION }}`.
+            - Synced `pyproject.toml` version to `${{ env.CLEAN_VERSION }}`.
+
+            ## Why this is needed
+            Maintains source-of-truth version parity across `manifest.json`, `pyproject.toml`, and GitHub Releases after a release is published.
