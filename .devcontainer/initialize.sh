@@ -48,14 +48,31 @@ if docker ps --format '{{.Names}}' | grep -qx ha_dev_hyxi; then
 fi
 
 if [[ -d "$sibling" ]]; then
-  exit 0
+  if git -C "$sibling" rev-parse --git-dir >/dev/null 2>&1; then
+    exit 0
+  fi
+  # Not a git checkout. If it's non-empty, it's not ours to touch -- bail
+  # rather than silently skipping the clone or overwriting something. If
+  # it's empty, it's almost certainly the placeholder Docker's short-syntax
+  # bind mount auto-creates on the host when its source doesn't exist yet
+  # (e.g. after a previous clone attempt below failed) -- `git clone` below
+  # can target an existing empty directory directly, no removal needed.
+  if [[ -n "$(ls -A "$sibling" 2>/dev/null)" ]]; then
+    echo "error: $sibling exists but isn't a hyxi-cloud-api git checkout, and isn't empty -- remove or fix it manually, then reopen the dev container." >&2
+    exit 1
+  fi
+  # Confirmed empty above -- remove it so the clone-to-tmp-then-move below
+  # can place the checkout directly at $sibling. (`mv` onto an *existing*
+  # empty directory nests the source inside it instead of replacing it, so
+  # leaving the placeholder in place would silently misplace the clone.)
+  rmdir "$sibling"
 fi
 
 echo "hyxi-cloud-api not found at $sibling -- cloning a read-only copy for dev_env's live-HA testing mount..."
 # Clone to a temp dir and move it into place only on success, so an
 # interrupted clone (killed session, dropped network) can't leave a
-# half-cloned directory at $sibling that the `-d` check above would then
-# treat as "already there" on every future run.
+# half-cloned, non-empty, non-git directory at $sibling that the guard
+# above would then refuse to touch on every future run.
 tmp="${sibling}.partial-$$"
 rm -rf "$tmp"
 if git clone --depth 1 https://github.com/Veldkornet/hyxi-cloud-api.git "$tmp"; then

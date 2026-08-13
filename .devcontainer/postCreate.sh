@@ -9,7 +9,18 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 # version means what's installed here is the version this setup was last
 # validated against, not whatever astral happens to be serving the moment
 # someone opens the devcontainer. Bump deliberately, like a lockfile.
-curl --proto '=https' --tlsv1.2 -LsSf https://astral.sh/uv/0.12.3/install.sh | sh
+#
+# Downloaded to a temp file and checksummed before execution, rather than
+# piped straight into `sh`, so a compromised or corrupted download is caught
+# before anything runs. Recompute UV_INSTALL_SHA256 whenever
+# UV_INSTALL_VERSION is bumped: `curl ... -o f && sha256sum f`.
+UV_INSTALL_VERSION="0.12.3"
+UV_INSTALL_SHA256="a7e3924ea1cd06bf1518c577d635c624ae2e2db030e0fc8ff8cf426224384e17"
+uv_install_script="$(mktemp)"
+trap 'rm -f "$uv_install_script"' EXIT
+curl --proto '=https' --tlsv1.2 -LsSf "https://astral.sh/uv/${UV_INSTALL_VERSION}/install.sh" -o "$uv_install_script"
+echo "${UV_INSTALL_SHA256}  ${uv_install_script}" | sha256sum -c -
+sh "$uv_install_script"
 export PATH="$HOME/.local/bin:$PATH"
 
 # The .venv named volume (see docker-compose.yml) is created root-owned by
