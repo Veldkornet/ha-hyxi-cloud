@@ -11,9 +11,10 @@ permissions:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
-    # ✅ 2. Explicitly grant 'write' ONLY for this specific release task
+    # ✅ 2. Explicitly grant 'write' ONLY for release publishing and PR creation
     permissions:
-      contents: write # To read the code and upload the asset
+      contents: write # To read the code, upload asset, and push version bump branch
+      pull-requests: write # To open the pull request for manifest version update
 
     steps:
       - name: Harden the runner
@@ -33,6 +34,7 @@ jobs:
           # Grab the release tag (e.g., v1.3.0) and strip the 'v'
           TAG_NAME="${{ github.event.release.tag_name }}"
           CLEAN_VERSION="${TAG_NAME#v}"
+          echo "CLEAN_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
 
           echo "Injecting version $CLEAN_VERSION into manifest..."
           jq ".version = \"$CLEAN_VERSION\"" custom_components/hyxi_cloud/manifest.json > tmp.json
@@ -52,3 +54,27 @@ jobs:
           files: hyxi_cloud.zip
           tag_name: ${{ github.event.release.tag_name }}
           overwrite_files: true
+
+      - name: 🔄 Sync pyproject.toml Version
+        run: |
+          python3 scripts/sync_versions.py || true
+
+      - name: 🔀 Create Pull Request for Version Bump
+        uses: peter-evans/create-pull-request@dd2324fc52d5d43c699a5636bcf19fceaa70c284 # v7.0.7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(release): bump manifest and pyproject version to ${{ env.CLEAN_VERSION }}"
+          title: "chore(release): bump manifest and pyproject version to ${{ env.CLEAN_VERSION }}"
+          branch: "chore/bump-version-${{ env.CLEAN_VERSION }}"
+          base: main
+          labels: "chore"
+          body: |
+            ## Summary
+            Automated pull request triggered by release publishing to synchronize `manifest.json` and `pyproject.toml` in `main`.
+
+            ## Key Changes
+            - Updated `custom_components/hyxi_cloud/manifest.json` version to `${{ env.CLEAN_VERSION }}`.
+            - Synced `pyproject.toml` version to `${{ env.CLEAN_VERSION }}`.
+
+            ## Why this is needed
+            Maintains source-of-truth version parity across `manifest.json`, `pyproject.toml`, and GitHub Releases after a release is published.
