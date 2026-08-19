@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from homeassistant.components.sensor import (
     EntityCategory,
@@ -32,6 +32,7 @@ from .const import (
     get_software_version,
     is_battery_control_enabled,
     is_null_value,
+    is_zero_value,
     mask_sn,
     normalize_device_type,
 )
@@ -1452,46 +1453,21 @@ class HyxiSensor(HyxiBaseSensor):
 
         return info
 
-    @property
-    def native_value(self):
-        """Return the native value of the sensor."""
-        # Use our safe parser to ensure we handle NA/null/-- effectively.
-        # genP/acP/gridP are always numeric power metrics, so the arithmetic
-        # below is safe -- cast narrows super().native_value's broad StateType
-        # for mypy, which can't know that from the base property alone.
-        val = cast("float | None", super().native_value)
-
-        # Ensure operands are not None to avoid Mypy operator errors
-        if self.entity_description.key == "genP" and val is not None:
-            ac_l = self._get_metric_float("acl")
-            if ac_l is not None and val >= ac_l:
-                val = val - ac_l
-            val = val * 2.0
-        elif self.entity_description.key == "acP" and val is not None:
-            ac_l = self._get_metric_float("acl")
-            if ac_l is not None:
-                val = val - ac_l
-            val = val * 0.96
-        elif (
-            self.entity_description.key == "gridP"
-            and val is not None
-            and (ac_l := self._get_metric_float("acl")) is not None
-        ):
-            val = val - ac_l
-
-        return val
-
-    def _get_metric_float(self, key: str) -> float | None:
-        """Safely extract a metric value as a float."""
-        val = self._metrics.get(key)
-
-        if val is None or is_null_value(val):
-            return None
-
-        try:
-            return float(val)
-        except ValueError, TypeError:
-            return None
+    # native_value used to be overridden here to adjust acP/genP/gridP by
+    # subtracting a raw "acl" metric and applying fixed multipliers
+    # (0.96 / 2.0). That adjustment was removed: across every real device
+    # dump checked (live hybrid-inverter poll + push payloads covering 168
+    # raw keys, plus hyxi-cloud-api's bundled hybrid/micro-inverter example
+    # data), HYXI never sends an "acl" field, and no SensorEntityDescription
+    # for "genP" exists, so that branch could never even instantiate a
+    # sensor. The multipliers had no cited source (vendor doc, issue, or
+    # commit rationale) -- they landed in an unrelated lint/tooling PR
+    # (#309) -- and were silently under-reporting acP by 4% with nothing
+    # behind the correction. If a real per-device "acl"-style
+    # self-consumption correction is ever confirmed for some model, add it
+    # back with a citation (issue link or vendor doc) rather than a bare
+    # constant -- and inherited native_value (SensorEntity's, via
+    # HyxiBaseSensor) is enough on its own until then.
 
     def _parse_device_type(self, dev_data, value):
         return normalize_device_type(get_raw_device_code(dev_data))
@@ -1546,14 +1522,25 @@ class HyxiSensor(HyxiBaseSensor):
 
         device_type = getattr(self, "_device_type", None)
 
-        # Fallback Logic for Inverters (acE -> efpv, gridF -> f)
+        # Same-quantity fallbacks: unlike the acP/genP/gridP adjustment
+        # removed from native_value() above, each of these substitutes one
+        # raw field for another that carries the *same* physical quantity
+        # on models that don't populate the primary key -- no scaling
+        # factor, no unverified constant.
+        #
+        # acE -> efpv: PR #312. Field reports (incl. HYX-M2000-SW) showed
+        # MICRO_INVERTER devices report acE as 0.0 and carry the real
+        # daily-energy figure in efpv (Daily PV Yield) instead.
         if (
             key == "acE"
-            and (value is None or is_null_value(value) or str(value) == "0.0")
+            and (value is None or is_null_value(value) or is_zero_value(value))
             and device_type in ("grid_connected_inverter", "micro_inverter")
         ):
             value = metrics.get("efpv")
 
+        # gridF -> f: PR #556. Some grid-connected/micro-inverter models
+        # send grid frequency under "f" rather than "gridF", leaving the
+        # pre-registered gridF sensor stuck at "unknown".
         if (
             key == "gridF"
             and (value is None or is_null_value(value))
@@ -1561,7 +1548,9 @@ class HyxiSensor(HyxiBaseSensor):
         ):
             value = metrics.get("f")
 
-        # 🚀 Fallback Logic for Battery Temperature (batTmp -> batTch)
+        # batTmp -> batTch: PR #556. When a hybrid/all-in-one device omits
+        # batTmp, batTch (max cell temperature) is used as a safe,
+        # conservative stand-in for battery-protection purposes.
         if (
             key == "batTmp"
             and (value is None or is_null_value(value))
@@ -1751,16 +1740,21 @@ class HyxiMicroinverterSumSensor(
             "manufacturer": MANUFACTURER,
             "model": "Aggregated Microinverter Metrics",
         }
+        self._logged_no_data = False
         self._update_native_value()
 
     def _update_native_value(self) -> None:
         """Recompute the sum of the tracked metric across all microinverter devices."""
+        debug_enabled = _LOGGER.isEnabledFor(logging.DEBUG)
         total = 0.0
         found_any = False
-        for dev_data in self.coordinator.data.values():
+        raw_values: dict[str, Any] = {}
+        for sn, dev_data in self.coordinator.data.items():
             if normalize_device_type(get_raw_device_code(dev_data)) != "micro_inverter":
                 continue
             value = (dev_data.get("metrics") or {}).get(self._metric_key)
+            if debug_enabled:
+                raw_values[mask_sn(sn)] = value
             if value is None or is_null_value(value):
                 continue
             try:
@@ -1769,6 +1763,34 @@ class HyxiMicroinverterSumSensor(
             except ValueError, TypeError:
                 continue
         self._attr_native_value = round(total, 2) if found_any else None
+        self._log_no_usable_value(found_any, raw_values, debug_enabled)
+
+    def _log_no_usable_value(
+        self, found_any: bool, raw_values: dict[str, Any], debug_enabled: bool
+    ) -> None:
+        """Debug-log once (not every poll) when no device yielded a usable value.
+
+        The dedup latch is only ever set inside the `debug_enabled` branch,
+        right after actually logging. If DEBUG is off, we skip without
+        touching the latch, so turning DEBUG on later while still stuck
+        logs immediately instead of finding the latch already tripped from
+        a period when nothing could have been logged.
+        """
+        if found_any:
+            self._logged_no_data = False
+            return
+        if not debug_enabled:
+            return
+        if not self._logged_no_data:
+            _LOGGER.debug(
+                "%s: no usable '%s' value across %d micro_inverter device(s); "
+                "raw values were: %s",
+                self.entity_description.key,
+                self._metric_key,
+                len(raw_values),
+                raw_values,
+            )
+            self._logged_no_data = True
 
     @callback
     def _handle_coordinator_update(self) -> None:

@@ -1026,45 +1026,6 @@ async def test_async_setup_entry_null_string_filtering():
     assert "gridSts" not in registered_keys
 
 
-def test_get_metric_float_method():
-    """Test the _get_metric_float method safely extracts floats from metrics."""
-    from unittest.mock import MagicMock
-
-    from custom_components.hyxi_cloud.sensor import HyxiSensor
-
-    coordinator = MagicMock()
-    coordinator.data = {
-        "sn_123": {
-            "metrics": {
-                "valid": "5.5",
-                "int": "10",
-                "empty": "",
-                "null_str": "null",
-                "invalid": "abc",
-                "none": None,
-                "type_error": {"key": "value"},
-                "list_error": [1, 2],
-            }
-        }
-    }
-
-    sensor = HyxiSensor.__new__(HyxiSensor)  # pylint: disable=no-value-for-parameter
-    sensor.coordinator = coordinator
-    sensor._sn = "sn_123"
-    sensor._dev_data = coordinator.data.get("sn_123") or {}
-    sensor._metrics = sensor._dev_data.get("metrics") or {}
-
-    assert sensor._get_metric_float("valid") == 5.5
-    assert sensor._get_metric_float("int") == 10.0
-    assert sensor._get_metric_float("empty") is None
-    assert sensor._get_metric_float("null_str") is None
-    assert sensor._get_metric_float("invalid") is None
-    assert sensor._get_metric_float("none") is None
-    assert sensor._get_metric_float("missing") is None
-    assert sensor._get_metric_float("type_error") is None
-    assert sensor._get_metric_float("list_error") is None
-
-
 @pytest.mark.asyncio
 async def test_new_telemetry_keys_registration_and_parsing():
     """Verify that all 29 new telemetry/Micro ESS sensors are registered and cast correctly."""
@@ -1386,7 +1347,13 @@ def test_hyxi_subscription_status_sensor():
 
 
 def test_hyxi_sensor_advanced_mappings(base_sensor):
-    """Verify advanced key mappings, subtraction logic, and fallback in HyxiSensor."""
+    """Verify via_device linkage and fallback in HyxiSensor.
+
+    acP is asserted to pass through unmodified: it used to be adjusted by
+    subtracting an "acl" metric and scaling by 0.96, but that had no
+    verifiable basis (see the comment above _parse_device_type in
+    sensor.py) and was removed.
+    """
     sensor, coordinator = base_sensor
 
     # Setup inverter with extra metrics
@@ -1395,43 +1362,26 @@ def test_hyxi_sensor_advanced_mappings(base_sensor):
             "device_name": "Test Inverter",
             "model": "H5K-HT",
             "metrics": {
-                "acl": 50.0,
-                "genP": 200.0,
                 "acP": 150.0,
-                "gridP": 120.0,
                 "parentSn": "COLLECTOR_123",
             },
         }
     }
 
     # 1. Parent Sn via_device link
-    sensor.entity_description.key = "genP"
+    sensor.entity_description.key = "acP"
     sensor._sn = "INV123"
     sensor._dev_data = coordinator.data["INV123"]
     sensor._metrics = sensor._dev_data["metrics"]
 
     assert sensor.device_info["via_device"] == ("hyxi_cloud", "COLLECTOR_123")
 
-    # 2. genP mapping: (val - acl) * 2.0 -> (200.0 - 50.0) * 2.0 = 300.0
-    sensor._attr_native_value = 200.0
-    assert sensor.native_value == 300.0
-
-    # 3. acP mapping: (val - acl) * 0.96 -> (150.0 - 50.0) * 0.96 = 96.0
-    sensor.entity_description.key = "acP"
-    sensor._attr_native_value = 150.0
-    assert sensor.native_value == 96.0
-
-    # 4. gridP mapping: val - acl -> 120.0 - 50.0 = 70.0
-    sensor.entity_description.key = "gridP"
-    sensor._attr_native_value = 120.0
-    assert sensor.native_value == 70.0
-
-    # 5. Micro Inverter fallback: acE is None or 0.0 -> uses efpv
+    # 2. Micro Inverter fallback: acE is None or 0.0 -> uses efpv
     sensor.entity_description.key = "acE"
     sensor._device_type = "micro_inverter"
     sensor._parser_func = sensor._parse_default
 
-    # 5a. acE is 0.0, efpv is 12.34
+    # acE is 0.0, efpv is 12.34
     sensor._metrics["acE"] = 0.0
     sensor._metrics["efpv"] = 12.34
     sensor._last_valid_value = None  # Reset baseline
