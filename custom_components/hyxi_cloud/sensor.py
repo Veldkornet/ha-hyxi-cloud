@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
 from homeassistant.components.sensor import (
     EntityCategory,
@@ -1357,6 +1357,21 @@ class HyxiBaseSensor(
             return value
 
 
+class _SameQuantityFallback(NamedTuple):
+    """One same-quantity substitution: primary key -> fallback key.
+
+    Each entry substitutes one raw metric for another that carries the
+    *same* physical quantity, for device types where the primary key is
+    known not to be populated -- no scaling factor, no unverified
+    constant (unlike the acP/genP/gridP adjustment removed from
+    native_value(); see the comment above _parse_device_type for why).
+    """
+
+    fallback_key: str
+    device_types: tuple[str, ...]
+    treat_zero_as_null: bool = False
+
+
 class HyxiSensor(HyxiBaseSensor):
     """Representation of a Physical HYXI Sensor."""
 
@@ -1368,6 +1383,26 @@ class HyxiSensor(HyxiBaseSensor):
         "swverslave": "_parse_sw_ver",
         "collecttime": "_parse_collect_time",
         "last_seen": "_parse_last_seen",
+    }
+    _SAME_QUANTITY_FALLBACKS: ClassVar[dict[str, _SameQuantityFallback]] = {
+        # acE -> efpv: PR #312. Field reports (incl. HYX-M2000-SW) showed
+        # MICRO_INVERTER devices report acE as 0.0 and carry the real
+        # daily-energy figure in efpv (Daily PV Yield) instead.
+        "acE": _SameQuantityFallback(
+            "efpv",
+            ("grid_connected_inverter", "micro_inverter"),
+            treat_zero_as_null=True,
+        ),
+        # gridF -> f: PR #556. Some grid-connected/micro-inverter models
+        # send grid frequency under "f" rather than "gridF", leaving the
+        # pre-registered gridF sensor stuck at "unknown".
+        "gridF": _SameQuantityFallback(
+            "f", ("grid_connected_inverter", "micro_inverter")
+        ),
+        # batTmp -> batTch: PR #556. When a hybrid/all-in-one device omits
+        # batTmp, batTch (max cell temperature) is used as a safe,
+        # conservative stand-in for battery-protection purposes.
+        "batTmp": _SameQuantityFallback("batTch", ("hybrid_inverter", "all_in_one")),
     }
 
     def __init__(self, coordinator: Any, sn: str, description: Any) -> None:
@@ -1522,41 +1557,14 @@ class HyxiSensor(HyxiBaseSensor):
 
         device_type = getattr(self, "_device_type", None)
 
-        # Same-quantity fallbacks: unlike the acP/genP/gridP adjustment
-        # removed from native_value() above, each of these substitutes one
-        # raw field for another that carries the *same* physical quantity
-        # on models that don't populate the primary key -- no scaling
-        # factor, no unverified constant.
-        #
-        # acE -> efpv: PR #312. Field reports (incl. HYX-M2000-SW) showed
-        # MICRO_INVERTER devices report acE as 0.0 and carry the real
-        # daily-energy figure in efpv (Daily PV Yield) instead.
-        if (
-            key == "acE"
-            and (value is None or is_null_value(value) or is_zero_value(value))
-            and device_type in ("grid_connected_inverter", "micro_inverter")
-        ):
-            value = metrics.get("efpv")
-
-        # gridF -> f: PR #556. Some grid-connected/micro-inverter models
-        # send grid frequency under "f" rather than "gridF", leaving the
-        # pre-registered gridF sensor stuck at "unknown".
-        if (
-            key == "gridF"
-            and (value is None or is_null_value(value))
-            and device_type in ("grid_connected_inverter", "micro_inverter")
-        ):
-            value = metrics.get("f")
-
-        # batTmp -> batTch: PR #556. When a hybrid/all-in-one device omits
-        # batTmp, batTch (max cell temperature) is used as a safe,
-        # conservative stand-in for battery-protection purposes.
-        if (
-            key == "batTmp"
-            and (value is None or is_null_value(value))
-            and device_type in ("hybrid_inverter", "all_in_one")
-        ):
-            value = metrics.get("batTch")
+        # See _SAME_QUANTITY_FALLBACKS for what maps to what, and why.
+        fallback = self._SAME_QUANTITY_FALLBACKS.get(key)
+        if fallback and device_type in fallback.device_types:
+            is_missing = value is None or is_null_value(value)
+            if not is_missing and fallback.treat_zero_as_null:
+                is_missing = is_zero_value(value)
+            if is_missing:
+                value = metrics.get(fallback.fallback_key)
 
         parsed_val = self._parser_func(dev_data, value)
         if (

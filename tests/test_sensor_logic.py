@@ -1389,6 +1389,47 @@ def test_hyxi_sensor_advanced_mappings(base_sensor):
     assert sensor.native_value == 12.34
 
 
+def test_same_quantity_fallback_table(base_sensor):
+    """Verify the _SAME_QUANTITY_FALLBACKS-driven substitutions for gridF
+    and batTmp: fires only when the primary key is missing/null and only
+    on the intended device types, and -- unlike acE -- does *not* treat
+    0.0 as missing (gridF/batTmp entries leave treat_zero_as_null unset).
+    """
+    sensor, coordinator = base_sensor
+    sensor._parser_func = sensor._parse_default
+    sensor._sn = "INV123"
+    coordinator.data = {"INV123": {"device_name": "Test Inverter", "metrics": {}}}
+    metrics = coordinator.data["INV123"]["metrics"]
+
+    def set_and_read(key, device_type, values):
+        sensor.entity_description.key = key
+        sensor._device_type = device_type
+        metrics.clear()
+        metrics.update(values)
+        sensor._last_valid_value = None  # Reset anti-dip/spike baseline
+        sensor._handle_coordinator_update()
+        return sensor.native_value
+
+    # gridF missing -> falls back to "f", but only on the intended device
+    # types (grid_connected_inverter/micro_inverter).
+    assert set_and_read("gridF", "micro_inverter", {"f": 50.02}) == 50.02
+    assert set_and_read("gridF", "hybrid_inverter", {"f": 50.02}) is None
+
+    # gridF present as 0.0 -> NOT treated as missing (unlike acE).
+    assert set_and_read("gridF", "micro_inverter", {"gridF": 0.0, "f": 50.02}) == 0.0
+
+    # batTmp missing -> falls back to "batTch", but only on the intended
+    # device types (hybrid_inverter/all_in_one).
+    assert set_and_read("batTmp", "hybrid_inverter", {"batTch": 28.5}) == 28.5
+    assert set_and_read("batTmp", "micro_inverter", {"batTch": 28.5}) is None
+
+    # batTmp present as 0.0 -> NOT treated as missing (unlike acE).
+    assert (
+        set_and_read("batTmp", "hybrid_inverter", {"batTmp": 0.0, "batTch": 28.5})
+        == 0.0
+    )
+
+
 @pytest.mark.asyncio
 async def test_async_setup_entry_em_and_battery_options():
     """Verify async_setup_entry registers EM and last_sent_mode sensors when enabled."""
