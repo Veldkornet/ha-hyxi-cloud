@@ -8,6 +8,7 @@ from custom_components.hyxi_cloud.const import (
     get_raw_device_code,
     get_software_version,
     is_null_value,
+    is_zero_value,
     mask_sensitive_key_value,
     mask_sn,
     mask_url,
@@ -51,6 +52,34 @@ def test_is_null_value():
     assert is_null_value(False) is False
     assert is_null_value([]) is False
     assert is_null_value({}) is False
+
+
+def test_is_zero_value():
+    """Verify is_zero_value matches numeric zero in any string/type form,
+    and treats non-numeric/unparseable values (including ones too large
+    for a float) as not-zero rather than raising."""
+    # 1. Numeric zero in various forms
+    assert is_zero_value(0) is True
+    assert is_zero_value(0.0) is True
+    assert is_zero_value(-0.0) is True
+    assert is_zero_value("0") is True
+    assert is_zero_value("0.0") is True
+    assert is_zero_value("0.00") is True
+    assert is_zero_value("-0.0") is True
+
+    # 2. Non-zero numbers
+    assert is_zero_value(1) is False
+    assert is_zero_value(-1.5) is False
+    assert is_zero_value("0.01") is False
+
+    # 3. TypeError path: unparseable/non-numeric types
+    assert is_zero_value(None) is False
+    assert is_zero_value("abc") is False
+    assert is_zero_value([]) is False
+    assert is_zero_value({}) is False
+
+    # 4. OverflowError path: too large to convert to a float
+    assert is_zero_value(10**10000) is False
 
 
 def test_mask_sn():

@@ -1,6 +1,7 @@
 """Tests for MICRO_INVERTER specific logic and sensors."""
 
 # pylint: disable=missing-module-docstring, wrong-import-position, import-outside-toplevel
+import logging
 import sys
 from typing import Any
 from unittest.mock import MagicMock
@@ -267,3 +268,119 @@ def test_new_micro_inverter_sensors(micro_inverter_coordinator):
         micro_inverter_coordinator, "SN_MICRO", desc_pv3v
     )
     assert sensor_pv3v.native_value == 40.6
+
+
+def _no_usable_value_coordinator():
+    """Coordinator with only microinverters whose acP is null/placeholder,
+    so HyxiMicroinverterSumSensor's found_any is always False for "acP"."""
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN_MICRO_1": {"device_type_code": "MICRO_INVERTER", "metrics": {"acP": "--"}},
+        "SN_MICRO_2": {"device_type_code": "MICRO_INVERTER", "metrics": {"acP": None}},
+    }
+    return coordinator
+
+
+def test_microinverter_sum_sensor_debug_log_once_when_no_usable_value(caplog):
+    """The "no usable value" debug log fires once, not on every refresh,
+    while the sensor stays stuck without a usable value."""
+    caplog.set_level(logging.DEBUG)
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    coordinator = _no_usable_value_coordinator()
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        coordinator, entry, "acP", description
+    )
+    assert sensor.native_value is None
+
+    def no_usable_records():
+        return [
+            r
+            for r in caplog.records
+            if r.levelno == logging.DEBUG and "no usable" in r.getMessage()
+        ]
+
+    # __init__ already called _update_native_value() once -- exactly one log.
+    assert len(no_usable_records()) == 1
+
+    # Still stuck with no usable value: the latch suppresses a second log.
+    caplog.clear()
+    sensor._handle_coordinator_update()
+    assert sensor.native_value is None
+    assert len(no_usable_records()) == 0
+
+
+def test_microinverter_sum_sensor_no_debug_log_when_debug_disabled(caplog):
+    """No "no usable value" log is emitted (or even built) when DEBUG
+    logging is disabled."""
+    caplog.set_level(logging.INFO)
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    coordinator = _no_usable_value_coordinator()
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        coordinator, entry, "acP", description
+    )
+    assert sensor.native_value is None
+    assert not any("no usable" in r.getMessage() for r in caplog.records)
+
+
+def test_microinverter_sum_sensor_debug_log_latch_resets(caplog):
+    """The dedup latch resets once a usable value appears, so logging
+    resumes if the sensor later goes back to having no usable value."""
+    caplog.set_level(logging.DEBUG)
+    entry = MagicMock()
+    entry.entry_id = "entry123"
+    description = MagicMock()
+    description.key = "micro_ac_power_total"
+
+    metrics: dict[str, float | None] = {"acP": 18.0}
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN_MICRO_1": {"device_type_code": "MICRO_INVERTER", "metrics": metrics},
+    }
+    sensor = sensor_mod.HyxiMicroinverterSumSensor(
+        coordinator, entry, "acP", description
+    )
+    assert sensor.native_value == 18.0
+
+    def no_usable_records():
+        return [
+            r
+            for r in caplog.records
+            if r.levelno == logging.DEBUG and "no usable" in r.getMessage()
+        ]
+
+    # A usable value at construction time: no "no usable" log.
+    assert len(no_usable_records()) == 0
+
+    # Value goes missing: logs once.
+    caplog.clear()
+    metrics["acP"] = None
+    sensor._handle_coordinator_update()
+    assert sensor.native_value is None
+    assert len(no_usable_records()) == 1
+
+    # Still missing: latch suppresses a repeat.
+    caplog.clear()
+    sensor._handle_coordinator_update()
+    assert len(no_usable_records()) == 0
+
+    # A usable value reappears: resets the latch, no log.
+    caplog.clear()
+    metrics["acP"] = 22.5
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == 22.5
+    assert len(no_usable_records()) == 0
+
+    # Missing again: the reset latch lets it log once more.
+    caplog.clear()
+    metrics["acP"] = None
+    sensor._handle_coordinator_update()
+    assert sensor.native_value is None
+    assert len(no_usable_records()) == 1

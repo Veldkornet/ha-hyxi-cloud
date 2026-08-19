@@ -91,6 +91,19 @@ def is_null_value(value: Any) -> bool:
     )
 
 
+def is_zero_value(value: Any) -> bool:
+    """Check if a value is numerically zero, regardless of its exact string/type form.
+
+    Unlike a literal `str(value) == "0.0"` check, this matches ints, "0",
+    "0.00", "-0.0", etc. Non-numeric/unparseable values are treated as
+    not-zero rather than raising.
+    """
+    try:
+        return not float(value)
+    except TypeError, ValueError, OverflowError:
+        return False
+
+
 # Helper to map device codes to translation keys for HA sensor states
 DEVICE_TYPE_KEYS = {
     "1": "hybrid_inverter",
