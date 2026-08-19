@@ -100,7 +100,7 @@ def is_zero_value(value: Any) -> bool:
     """
     try:
         return not float(value)
-    except TypeError, ValueError:
+    except TypeError, ValueError, OverflowError:
         return False
 
 

@@ -1376,6 +1376,14 @@ def test_hyxi_sensor_advanced_mappings(base_sensor):
 
     assert sensor.device_info["via_device"] == ("hyxi_cloud", "COLLECTOR_123")
 
+    # 1a. acP actually passes through unmodified -- via _handle_coordinator_update
+    # so _parser_func/native_value are recomputed the same way a real
+    # coordinator refresh would, not just via_device's dict lookup above.
+    sensor._parser_func = sensor._parse_default
+    sensor._last_valid_value = None  # Reset baseline
+    sensor._handle_coordinator_update()
+    assert sensor.native_value == 150.0
+
     # 2. Micro Inverter fallback: acE is None or 0.0 -> uses efpv
     sensor.entity_description.key = "acE"
     sensor._device_type = "micro_inverter"
