@@ -335,11 +335,38 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                 )
                 try:
                     await read(address, 1)
-                except ModbusExceptionError:
+                except ModbusExceptionError as err:
+                    # A rejection is still an answer: the device is on the
+                    # bus and speaking Modbus at this slave address.
+                    _LOGGER.debug(
+                        "Modbus probe: unit %s rejected %s register %s (%s) "
+                        "-- device is present",
+                        unit_id,
+                        space,
+                        address,
+                        type(err).__name__,
+                    )
                     return None
                 except ModbusTimeoutError:
+                    _LOGGER.debug(
+                        "Modbus probe: no answer from unit %s at %s register %s",
+                        unit_id,
+                        space,
+                        address,
+                    )
                     continue
+                _LOGGER.debug(
+                    "Modbus probe: unit %s returned a value for %s register %s",
+                    unit_id,
+                    space,
+                    address,
+                )
                 return None
+            _LOGGER.debug(
+                "Modbus probe: unit %s answered none of %d probe points",
+                unit_id,
+                len(MODBUS_PROBE_POINTS),
+            )
             return "no_device"
         except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.exception("Could not reach the Modbus device")
@@ -352,6 +379,11 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         from modbus_connection import ModbusSerialParams, ModbusTcpParams
 
         unit_id = int(user_input[CONF_MODBUS_UNIT])
+        _LOGGER.debug(
+            "Config flow: validating %s Modbus connection, unit %s",
+            self._modbus_type,
+            unit_id,
+        )
         if self._modbus_type == MODBUS_TYPE_SERIAL:
             device = user_input[CONF_MODBUS_DEVICE]
             baudrate = int(user_input[CONF_MODBUS_BAUDRATE])

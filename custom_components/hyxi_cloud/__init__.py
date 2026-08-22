@@ -32,16 +32,29 @@ from .const import (
     CONF_EM_INVERTER_SN,
     CONF_EM_P1_ENTITY,
     CONF_ENABLE_PUSH,
+    CONF_MODBUS_BAUDRATE,
+    CONF_MODBUS_DEVICE,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_TYPE,
+    CONF_MODBUS_UNIT,
     CONF_PUSH_RATE,
     CONF_PUSH_URL,
     CONF_SECRET_KEY,
+    DEFAULT_MODBUS_BAUDRATE,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DOMAIN,
     MANUFACTURER,
+    MODBUS_MESSAGE_SPACING,
+    MODBUS_TIMEOUT,
+    MODBUS_TYPE_SERIAL,
     PLATFORMS,
     VERSION,
     detect_phase_type,
     get_raw_device_code,
+    is_modbus_entry,
     mask_sensitive_key_value,
     mask_sn,
     mask_subscription_code,
@@ -54,6 +67,49 @@ from .protection import HyxiBatteryProtectionController
 _LOGGER = logging.getLogger(__name__)
 
 
+async def _async_build_modbus_coordinator(hass: HomeAssistant, entry: ConfigEntry):
+    """Build a coordinator that reaches the device over local RS485."""
+    from modbus_connection import ModbusSerialParams, ModbusTcpParams
+    from modbus_connection.tmodbus import ModbusConnection
+
+    from .modbus.client import HyxiModbusClient
+    from .modbus_coordinator import HyxiModbusCoordinator
+
+    unit_id = int(entry.data.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT))
+
+    if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
+        params = ModbusSerialParams(
+            device=entry.data[CONF_MODBUS_DEVICE],
+            baudrate=int(entry.data.get(CONF_MODBUS_BAUDRATE, DEFAULT_MODBUS_BAUDRATE)),
+            bytesize=8,
+            parity="N",
+            stopbits=1,
+        )
+    else:
+        params = ModbusTcpParams(
+            host=entry.data[CONF_MODBUS_HOST],
+            port=int(entry.data.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)),
+            # RS485-to-Ethernet gateways tunnel RTU frames rather than
+            # speaking native Modbus TCP framing.
+            framer="rtu",
+        )
+
+    _LOGGER.debug(
+        "Building Modbus connection for entry %s: %s, unit %s, "
+        "timeout %ss, message spacing %ss",
+        entry.entry_id,
+        params,
+        unit_id,
+        MODBUS_TIMEOUT,
+        MODBUS_MESSAGE_SPACING,
+    )
+    connection = ModbusConnection(
+        params, timeout=MODBUS_TIMEOUT, message_spacing=MODBUS_MESSAGE_SPACING
+    )
+    client = HyxiModbusClient(connection, unit_id)
+    return HyxiModbusCoordinator(hass, client, entry)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HYXI Cloud from a config entry."""
     _LOGGER.debug(
@@ -62,29 +118,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         API_VERSION,
     )
 
-    access_key = entry.data.get(CONF_ACCESS_KEY)
-    secret_key = entry.data.get(CONF_SECRET_KEY)
+    modbus = is_modbus_entry(entry)
+    _LOGGER.debug(
+        "Entry %s uses the %s transport",
+        entry.entry_id,
+        "local Modbus" if modbus else "HYXI Cloud",
+    )
 
-    if not access_key or not secret_key:
-        _LOGGER.error("HYXI Integration could not find Access/Secret keys.")
-        return False
+    if modbus:
+        coordinator = await _async_build_modbus_coordinator(hass, entry)
+    else:
+        access_key = entry.data.get(CONF_ACCESS_KEY)
+        secret_key = entry.data.get(CONF_SECRET_KEY)
 
-    # Base URL always defaults to global OpenAPI.
-    base_url = entry.data.get("base_url") or BASE_URL_DEFAULT
+        if not access_key or not secret_key:
+            _LOGGER.error("HYXI Integration could not find Access/Secret keys.")
+            return False
 
-    session = async_get_clientsession(hass)
-    client = HyxiApiClient(access_key, secret_key, base_url, session)
+        # Base URL always defaults to global OpenAPI.
+        base_url = entry.data.get("base_url") or BASE_URL_DEFAULT
 
-    coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
-    coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
+        session = async_get_clientsession(hass)
+        client = HyxiApiClient(access_key, secret_key, base_url, session)
+
+        coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
+        coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
 
     # Pre-seed coordinator.data from persistent cache so that if the API is slow
     # or unreachable at startup, data is immediately available and the fallback
     # in _async_update_data requires no additional disk read.
     await coordinator.async_preload_cache()
 
+    refreshed = False
     try:
         await coordinator.async_config_entry_first_refresh()
+        refreshed = True
     except ConfigEntryAuthFailed:
         _LOGGER.error("Authentication failed during setup")
         raise
@@ -93,15 +161,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ClientError,
         TimeoutError,
     ) as err:
-        _LOGGER.warning("HYXI Cloud not ready: %s", err)
+        _LOGGER.warning("HYXI not ready: %s", err)
         raise ConfigEntryNotReady(f"Connection error: {err}") from err
+    finally:
+        # Release the bus on any failed setup. A flag rather than an except
+        # clause because the coordinator's own first-refresh handling raises
+        # ConfigEntryNotReady, which no clause above catches -- so a serial
+        # port would stay held through every retry.
+        if modbus and not refreshed:
+            await coordinator.client.async_close()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    # Set up real-time push subscription (handles enablement checks and cleanup of orphaned codes)
-    await _async_setup_push_subscription(hass, entry, coordinator)
-    # Set up alarm push subscription (handles enablement checks and cleanup of orphaned codes)
-    await _async_setup_alarm_subscription(hass, entry, coordinator)
+    # Push subscriptions register a webhook with HYXI's servers so the cloud
+    # can call back. RS485 has no such channel -- it is polled -- so a Modbus
+    # entry skips both entirely rather than subscribing on a device it does
+    # not reach through the cloud at all.
+    if not modbus:
+        # Both handle enablement checks and cleanup of orphaned codes.
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
 
     _async_register_devices(hass, entry, coordinator)
 
@@ -140,17 +219,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await coordinator.engine.async_stop()
         for controller in coordinator.protection_controllers.values():
             await controller.async_stop()
-        # Leave the subscriptions alive on the server (cancel_remote=False):
-        # the persisted code + fingerprint let the next setup reuse them,
-        # avoiding a cancel/resubscribe cycle on every restart and reload.
-        # Permanent cleanup happens in async_remove_entry when the entry is
-        # actually deleted.
-        await _async_teardown_push_subscription(
-            hass, coordinator, entry, cancel_remote=False
-        )
-        await _async_teardown_alarm_subscription(
-            hass, coordinator, entry, cancel_remote=False
-        )
+        if is_modbus_entry(entry):
+            # Release the serial port or socket, or a reload leaves the bus
+            # held and the next setup cannot open it.
+            await coordinator.client.async_close()
+        else:
+            # Leave the subscriptions alive on the server (cancel_remote=False):
+            # the persisted code + fingerprint let the next setup reuse them,
+            # avoiding a cancel/resubscribe cycle on every restart and reload.
+            # Permanent cleanup happens in async_remove_entry when the entry is
+            # actually deleted.
+            await _async_teardown_push_subscription(
+                hass, coordinator, entry, cancel_remote=False
+            )
+            await _async_teardown_alarm_subscription(
+                hass, coordinator, entry, cancel_remote=False
+            )
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)

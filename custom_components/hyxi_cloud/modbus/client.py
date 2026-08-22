@@ -1,0 +1,379 @@
+"""A local Modbus client shaped like the cloud client.
+
+The integration's entity platforms, battery protection controller and Energy
+Manager all reach their device through a handful of methods on
+``coordinator.client``. Nothing in that surface mentions HTTP. Implementing
+the same method names here, and emitting the same ``metrics`` vocabulary,
+means sensor, binary_sensor, number, button, switch, protection and engine
+work over RS485 without modification.
+
+Two details make the substitution actually transparent:
+
+Failures raise ``HyxiApiClient.ControlError``, because that is the class the
+platforms catch by name. Raising anything else would surface as an unhandled
+exception rather than a friendly "command failed".
+
+Derived metrics come from ``HyxiApiClient.compute_derived_metrics``, the same
+function the cloud coordinator uses, so ``home_load``, ``grid_import``,
+``grid_export``, ``bat_charging`` and ``bat_discharging`` are computed
+identically on both transports rather than reimplemented and drifting.
+
+Deliberately free of Home Assistant imports: a candidate for extraction into
+hyxi_cloud_api once a register map is hardware-confirmed.
+
+Provenance and the list of what is still unverified: docs/modbus-provenance.md.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import logging
+import time
+from typing import Any
+
+from hyxi_cloud_api import HyxiApiClient
+from modbus_connection.model import Component
+
+from .registers import (
+    TELEMETRY_COMPONENTS,
+    HaloBackup,
+    HaloBattery,
+    HaloEnergy,
+    HaloFaults,
+    HaloGrid,
+    HaloIdentity,
+    HaloSettings,
+    HaloStatus,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+# The device type the HALO reports over the cloud API. Reused verbatim so
+# normalize_device_type() resolves it to "micro_ess" on both transports and
+# the entity platforms make the same decisions either way.
+MICRO_ESS_DEVICE_CODE = "MICRO_STORAGE_ALL_IN_ONE"
+
+# VPP dispatch mode 2, register 4147.
+VPP_IDLE = 0
+VPP_CHARGE = 1
+VPP_DISCHARGE = 2
+VPP_SELF_USE = 3
+
+
+def _mask(value: Any) -> str:
+    """Mask a serial number for logs, matching the cloud path's format.
+
+    Debug logs from this integration get pasted into GitHub issues, and a
+    device serial identifies a specific installation.
+
+    Produces the same digest as const.mask_sn, so one serial reads
+    identically everywhere the integration logs it. Not the same as the API
+    library's _mask_id, which salts per run -- that is deliberate there, and
+    matching it would make correlation within our own logs impossible.
+
+    Reimplemented rather than imported to keep this module free of Home
+    Assistant, which const.py pulls in.
+    """
+    if value is None or str(value) == "None":
+        return "****"
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()[:8]
+
+
+def _hex_identifier(value: int | None) -> str | None:
+    """Render an H64/H32 register as the identifier the device prints.
+
+    The document specifies these as hexadecimal display values, so
+    0x0010201234567810 is the serial number "10201234567810" rather than the
+    decimal reading of those bytes.
+    """
+    if value is None:
+        return None
+    return f"{value:X}".lstrip("0") or "0"
+
+
+def _to_watts(kilowatts: float | None) -> float | None:
+    """Convert a kW-scaled register to the watts the metric vocabulary uses."""
+    return None if kilowatts is None else round(kilowatts * 1000, 3)
+
+
+class HyxiModbusClient:
+    """Talks to one HYXI device over Modbus, presenting the cloud client's API."""
+
+    #: Re-exported so callers can catch failures without importing the cloud
+    #: client, matching how HyxiApiClient exposes it.
+    ControlError = HyxiApiClient.ControlError
+
+    #: The coordinator recomputes derived metrics after merging cached and
+    #: fresh values, and reaches them through the client. Exposing the same
+    #: staticmethod lets the shared merge logic work on either transport.
+    compute_derived_metrics = staticmethod(HyxiApiClient.compute_derived_metrics)
+
+    def __init__(self, connection: Any, unit_id: int) -> None:
+        """Bind to one unit on an already-constructed connection."""
+        self._connection = connection
+        self._unit_id = unit_id
+        unit = connection.for_unit(unit_id)
+        self._unit = unit
+
+        self.identity = HaloIdentity(unit)
+        self.status = HaloStatus(unit)
+        self.grid = HaloGrid(unit)
+        self.backup = HaloBackup(unit)
+        self.energy = HaloEnergy(unit)
+        self.faults = HaloFaults(unit)
+        self.battery = HaloBattery(unit)
+        self.settings = HaloSettings(unit)
+
+        self._components: dict[type[Component], Component] = {
+            HaloStatus: self.status,
+            HaloGrid: self.grid,
+            HaloBackup: self.backup,
+            HaloEnergy: self.energy,
+            HaloFaults: self.faults,
+            HaloBattery: self.battery,
+        }
+        self._serial: str | None = None
+        self._identity_read = False
+
+    @property
+    def serial_number(self) -> str:
+        """The device serial, or a stable fallback if identity is unreadable.
+
+        A device that answers telemetry but not its own identity registers
+        still needs a stable key, or every poll would create new entities.
+        """
+        return self._serial or f"modbus_{self._unit_id}"
+
+    async def async_close(self) -> None:
+        """Release the underlying connection."""
+        await self._connection.close()
+
+    async def async_read_identity(self) -> None:
+        """Read the static identity block once, tolerating its absence.
+
+        Identity is a convenience, not a precondition: a device that serves
+        telemetry but rejects the identity block still has usable sensors,
+        and serial_number falls back to a stable per-unit key. Failing the
+        whole poll here would trade every metric for a model string.
+        """
+        if self._identity_read:
+            return
+        try:
+            await self.identity.async_update()
+            self._serial = _hex_identifier(self.identity.serial_number)
+            _LOGGER.debug(
+                "Modbus identity on unit %s: serial=%s model=%s arm=%s dsp=%s "
+                "hw=%s rated=%sW/%sHz/%sV",
+                self._unit_id,
+                _mask(self._serial),
+                _hex_identifier(self.identity.model_low),
+                _hex_identifier(self.identity.arm_version),
+                _hex_identifier(self.identity.dsp_version),
+                _hex_identifier(self.identity.hardware_version),
+                self.identity.rated_power,
+                self.identity.rated_frequency,
+                self.identity.rated_voltage,
+            )
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.warning(
+                "Modbus identity block unreadable, falling back to unit id "
+                "for this device's key: %s",
+                err,
+            )
+        self._identity_read = True
+
+    async def async_read_all(self) -> dict[str, dict]:
+        """Poll the device and return it in the coordinator's data shape.
+
+        Components are read one at a time so a device that does not carry a
+        block -- the off-grid registers on a unit with no backup port, say --
+        loses only that block rather than the whole poll.
+        """
+        await self.async_read_identity()
+
+        failed: list[str] = []
+        started = time.monotonic()
+        for component_type in TELEMETRY_COMPONENTS:
+            component = self._components[component_type]
+            block_started = time.monotonic()
+            try:
+                await component.async_update()
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                failed.append(component_type.__name__)
+                _LOGGER.debug(
+                    "Modbus block %s failed after %.0fms: %s (%s)",
+                    component_type.__name__,
+                    (time.monotonic() - block_started) * 1000,
+                    err,
+                    type(err).__name__,
+                )
+            else:
+                _LOGGER.debug(
+                    "Modbus block %s read in %.0fms",
+                    component_type.__name__,
+                    (time.monotonic() - block_started) * 1000,
+                )
+
+        _LOGGER.debug(
+            "Modbus poll of unit %s finished in %.0fms: %d/%d blocks read",
+            self._unit_id,
+            (time.monotonic() - started) * 1000,
+            len(TELEMETRY_COMPONENTS) - len(failed),
+            len(TELEMETRY_COMPONENTS),
+        )
+
+        if len(failed) == len(TELEMETRY_COMPONENTS):
+            raise self.ControlError(
+                "No Modbus register block could be read from the device"
+            )
+        if failed:
+            _LOGGER.warning(
+                "Modbus poll incomplete, these blocks did not answer: %s",
+                ", ".join(failed),
+            )
+
+        return {self.serial_number: self._build_device()}
+
+    def _build_device(self) -> dict:
+        """Assemble one device entry in the shape the coordinator publishes."""
+        metrics = self._build_metrics()
+        derived = HyxiApiClient.compute_derived_metrics(metrics, MICRO_ESS_DEVICE_CODE)
+        metrics.update(derived)
+
+        return {
+            "sn": self.serial_number,
+            "device_name": "HYXI HALO",
+            "model": _hex_identifier(self.identity.model_low) or "HYX-MS3000AC",
+            "device_type_code": MICRO_ESS_DEVICE_CODE,
+            "sw_version": _hex_identifier(self.identity.arm_version),
+            "hw_version": _hex_identifier(self.identity.hardware_version),
+            "metrics": metrics,
+        }
+
+    def _build_metrics(self) -> dict:
+        """Translate register fields into the cloud client's metric keys.
+
+        Only unambiguous mappings are made. Where the register map has no
+        clear cloud counterpart the value is left out rather than guessed --
+        an absent sensor is recoverable, a wrong one silently poisons
+        history and automations.
+
+        Note the units: gridP is kilowatts because compute_derived_metrics
+        requires that for Micro ESS devices, while every other power metric
+        is watts, matching what the cloud path stores.
+        """
+        raw: dict[str, Any] = {
+            # Status
+            "invSts": self.status.work_state,
+            # Passed through raw. The cloud path's own workMode values are an
+            # unconfirmed APK inference that the vendor document contradicts,
+            # so no translation is applied in either direction here.
+            # See docs/modbus-provenance.md, rule 1.
+            "workMode": self.status.work_mode,
+            "gridSts": self.status.grid_state,
+            "deviceSwitchStatus": self.status.switch_status,
+            "vbus": self.status.bus_voltage,
+            "tinv": self.status.ac_temperature,
+            # Grid side. gridP stays in kW -- see the docstring.
+            "gridP": self.grid.active_power,
+            "f": self.grid.frequency,
+            "gridF": self.grid.frequency,
+            "ph1v": self.grid.voltage,
+            "ph1i": self.grid.current,
+            "ph1p": _to_watts(self.grid.phase_power),
+            # Off-grid side feeds the backup load sensor.
+            "ph1Loadp": _to_watts(self.backup.phase_power),
+            # Energy counters
+            "eToday": self.energy.output_today,
+            "totalE": self.energy.output_total,
+            "totalEnt": self.energy.input_total,
+            "totalEchg": self.energy.battery_charged_total,
+            "totalEdchg": self.energy.battery_discharged_total,
+            "batCharge": self.energy.battery_charged_total,
+            "batDisCharge": self.energy.battery_discharged_total,
+            # Battery
+            "batSn": _hex_identifier(self.identity.battery_serial_number),
+            "packNum": self.battery.pack_count,
+            "batSoc": self.battery.soc,
+            "batSoh": self.battery.soh,
+            "batTmp": self.battery.temperature,
+            "batP": _to_watts(self.battery.power),
+            "pbat": _to_watts(self.battery.power),
+            "batVch": self.battery.cell_voltage_max,
+            "batVcl": self.battery.cell_voltage_min,
+            "batTch": self.battery.cell_temperature_max,
+            "batTcl": self.battery.cell_temperature_min,
+            "maxChargePower": _to_watts(self.battery.max_charge_power),
+            "maxDischargePower": _to_watts(self.battery.max_discharge_power),
+        }
+        return {key: value for key, value in raw.items() if value is not None}
+
+    # --- Control surface, matching HyxiApiClient method for method ---------
+
+    async def _write_vpp(self, mode: int, watts: int | None = None) -> dict:
+        """Drive the VPP dispatch block, enabling it first.
+
+        Register 4147 is only consulted while 4146 enables dispatch mode 2,
+        so the enable is written on every command rather than assumed. That
+        also recovers automatically if something else cleared it.
+        """
+        try:
+            await self.settings.write("vpp_enable", 1)
+            if watts is not None:
+                field = (
+                    "vpp_charge_power" if mode == VPP_CHARGE else "vpp_discharge_power"
+                )
+                await self.settings.write(field, int(watts))
+            await self.settings.write("vpp_mode", mode)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus VPP write failed on unit %s (mode=%s, power=%s): %s",
+                self._unit_id,
+                mode,
+                watts,
+                err,
+            )
+            raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug(
+            "Modbus VPP write ok on unit %s: 4146=1, 4147=%s, power=%s",
+            self._unit_id,
+            mode,
+            watts,
+        )
+        return {"code": "0", "msg": "ok"}
+
+    async def set_mode_idle(self, device_sn: str) -> dict:
+        """Hold the battery: no charge, no discharge."""
+        _LOGGER.debug("Modbus: set idle on %s", _mask(device_sn))
+        return await self._write_vpp(VPP_IDLE)
+
+    async def set_mode_charge(self, device_sn: str, watts: int) -> dict:
+        """Charge at a fixed power."""
+        _LOGGER.debug("Modbus: charge %sW on %s", watts, _mask(device_sn))
+        return await self._write_vpp(VPP_CHARGE, watts)
+
+    async def set_mode_discharge(self, device_sn: str, watts: int) -> dict:
+        """Discharge at a fixed power."""
+        _LOGGER.debug("Modbus: discharge %sW on %s", watts, _mask(device_sn))
+        return await self._write_vpp(VPP_DISCHARGE, watts)
+
+    async def set_mode_self_consume(self, device_sn: str) -> dict:
+        """Return the device to self-consumption."""
+        _LOGGER.debug("Modbus: self-consume on %s", _mask(device_sn))
+        return await self._write_vpp(VPP_SELF_USE)
+
+    async def set_peak_shaving(self, device_sn: str, action: str) -> dict:
+        """Limit or release export.
+
+        The cloud implements this through a peak-shaving control; locally
+        there is a real export limit register, so "on" closes the feed-in
+        switch outright rather than approximating it.
+        """
+        _LOGGER.debug("Modbus: peak shaving %s on %s", action, _mask(device_sn))
+        try:
+            await self.settings.write(
+                "feed_in_enable", 0 if action in ("on", "enable", "start") else 1
+            )
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            raise self.ControlError(f"Modbus write failed: {err}") from err
+        return {"code": "0", "msg": "ok"}

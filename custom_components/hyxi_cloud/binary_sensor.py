@@ -18,6 +18,11 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
+
+# NOTE: these values are inferred from the HYXI phone app's APK and have
+# never been confirmed against a device. HYXI's Micro Storage RS485 document
+# gives a different enumeration for the same field. Do not reconcile the two
+# by editing either -- see docs/modbus-provenance.md, rule 1.
 from hyxi_cloud_api import VPP_ACTIVE_MODES
 
 from .const import (

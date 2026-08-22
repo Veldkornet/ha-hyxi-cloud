@@ -378,7 +378,7 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
 
             assert "Connection error: Timeout" in str(exc.value)
             mock_logger.assert_called_with(
-                "HYXI Cloud not ready: %s",
+                "HYXI not ready: %s",
                 mock_coordinator.async_config_entry_first_refresh.side_effect,
             )
 
@@ -409,7 +409,7 @@ async def test_async_setup_entry_client_error(mock_hass, mock_entry):
 
             assert "Connection error: API connection error" in str(exc.value)
             mock_logger.assert_called_with(
-                "HYXI Cloud not ready: %s",
+                "HYXI not ready: %s",
                 mock_coordinator.async_config_entry_first_refresh.side_effect,
             )
 
@@ -438,7 +438,7 @@ async def test_async_setup_entry_timeout_error(mock_hass, mock_entry):
 
             assert "Connection error: Connection timed out" in str(exc.value)
             mock_logger.assert_called_with(
-                "HYXI Cloud not ready: %s",
+                "HYXI not ready: %s",
                 mock_coordinator.async_config_entry_first_refresh.side_effect,
             )
 

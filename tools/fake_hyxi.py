@@ -69,14 +69,25 @@ def encode(kind: str, value: int) -> list[int]:
     """
     if kind in ("u16", "i16"):
         return [value & 0xFFFF]
-    raw = value & 0xFFFFFFFF
-    return [raw & 0xFFFF, (raw >> 16) & 0xFFFF]
+    words = 4 if kind in ("u64", "i64") else 2
+    raw = value & ((1 << (16 * words)) - 1)
+    return [(raw >> (16 * i)) & 0xFFFF for i in range(words)]
 
 
 # --- HALO / HYX-MS3000AC, from the Micro Storage RS485 document V1.0 -------
 # Values are a plausible steady state: 78% charged, importing 811 W, running
 # in self-consumption. Read with function code 0x04.
 HALO_INPUT: tuple[Reg, ...] = (
+    # Identity. The document renders H32/H64 values as hexadecimal, so the
+    # serial below reads back as "10201234567810" -- its own worked example.
+    Reg(4002, "u64", 0x48595849_4D533330),  # model name, low half
+    Reg(4018, "u64", 0x00102012_34567810),  # device serial number
+    Reg(4026, "u32", 0x02030021),  # ARM software version
+    Reg(4028, "u32", 0x02030014),  # main DSP software version
+    Reg(4034, "u32", 0x00000101),  # ARM hardware version
+    Reg(4046, "i32", 3000),  # rated power, W
+    Reg(4048, "i16", 5000),  # rated frequency, 2dp -> 50.00 Hz
+    Reg(4049, "u16", 23000),  # rated voltage, 2dp -> 230.00 V
     Reg(4100, "u16", 1),  # power on/off state: 1 = on
     Reg(4101, "u16", 6),  # work state: 6 = running
     Reg(4102, "u16", 1),  # grid-tie work mode: 1 = self-consumption
@@ -94,6 +105,9 @@ HALO_INPUT: tuple[Reg, ...] = (
     Reg(4163, "i32", 805),  # phase A active power, 3dp kW -> 805 W
     Reg(4200, "i16", 5000),  # off-grid frequency, 2dp -> 50.00 Hz
     Reg(4201, "i32", 0),  # off-grid active power
+    Reg(4210, "u16", 23005),  # off-grid phase A voltage, 2dp -> 230.05 V
+    Reg(4211, "i16", 12),  # off-grid phase A current, 1dp -> 1.2 A
+    Reg(4212, "i32", 276),  # off-grid phase A active power, 3dp kW -> 276 W
     Reg(4500, "u32", 4820),  # inverter output today, 3dp kWh -> 4.820
     Reg(4502, "u32", 1263400),  # inverter output total -> 1263.400 kWh
     Reg(4506, "u32", 843200),  # battery charged total -> 843.200 kWh
@@ -105,6 +119,7 @@ HALO_INPUT: tuple[Reg, ...] = (
     Reg(4852, "u16", 0),  # DSP software fault word 2
     Reg(4853, "u16", 0),  # DSP software fault word 3
     Reg(4857, "u16", 0),  # system software alarm word 1
+    Reg(4962, "u64", 0x00000042_13571357),  # BMS serial number
     Reg(4978, "u16", 1),  # BMS pack count
     Reg(4979, "u16", 5),  # BMS work state: 5 = high-voltage discharge
     Reg(4980, "u16", 780),  # BMS SOC, 1dp -> 78.0 %
@@ -173,22 +188,26 @@ def words_from_snapshot(path: Path, space: str) -> dict[int, int]:
     return {int(k): v for k, v in snapshot["registers"].get(space, {}).items()}
 
 
-def to_simdata(words: dict[int, int]) -> list[SimData]:
-    """Turn sparse address -> word pairs into contiguous SimData blocks.
+# Real inverters serve a contiguous register file and return zero for the
+# addresses the protocol leaves undefined, so a client that pools
+# neighbouring fields into one block read succeeds even across documented
+# gaps. Holes narrower than this are filled with zeros to match. Wider ones
+# stay absent, so whole unimplemented regions remain genuinely unreadable and
+# a probe sweep still finds real boundaries to bisect.
+GAP_FILL = 64
 
-    SimData describes a run of registers, so neighbouring addresses are
-    coalesced. Everything the device does not define is simply absent, which
-    is what makes the fake useful: a probe sweep against it produces real
-    gaps to bisect, the same as against hardware.
-    """
+
+def to_simdata(words: dict[int, int]) -> list[SimData]:
+    """Turn sparse address -> word pairs into SimData blocks."""
     if not words:
         return []
     blocks: list[SimData] = []
-    run_start = run_prev = min(words)
+    addresses = sorted(words)
+    run_start = run_prev = addresses[0]
     run: list[int] = [words[run_start]]
-    for address in sorted(words)[1:]:
-        if address == run_prev + 1:
-            run.append(words[address])
+    for address in addresses[1:]:
+        if address - run_prev - 1 <= GAP_FILL:
+            run.extend(words.get(a, 0) for a in range(run_prev + 1, address + 1))
         else:
             blocks.append(SimData(run_start, values=run, datatype=DataType.REGISTERS))
             run_start, run = address, [words[address]]

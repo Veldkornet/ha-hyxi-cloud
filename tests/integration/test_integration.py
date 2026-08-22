@@ -389,9 +389,15 @@ async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
     )
     assert result["step_id"] == "modbus_tcp"
 
-    with patch(
-        "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._probe_modbus",
-        return_value=None,
+    # async_setup_entry is stubbed as well as the probe: creating the entry
+    # makes Home Assistant set it up, which would open a real socket to the
+    # gateway. This test is about the flow, not the transport.
+    with (
+        patch(
+            "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._probe_modbus",
+            return_value=None,
+        ),
+        patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
