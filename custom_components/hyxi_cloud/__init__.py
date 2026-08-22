@@ -57,6 +57,7 @@ from .const import (
     VERSION,
     detect_phase_type,
     get_raw_device_code,
+    is_control_capable_device_type,
     is_modbus_entry,
     mask_sensitive_key_value,
     mask_sn,
@@ -509,19 +510,30 @@ async def _async_setup_battery_protection(
     tasks = []
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
-        if device_type not in ("hybrid_inverter", "all_in_one"):
+        if not is_control_capable_device_type(coordinator.entry, device_type):
             _LOGGER.debug(
                 "Skipping protection for %s: device_type=%s not controllable",
                 mask_sn(sn),
                 device_type,
             )
             continue
-        phase = detect_phase_type(dev_data)
-        if phase not in ("three_phase", "single_phase"):
-            _LOGGER.debug(
-                "Skipping protection for %s: unrecognized phase=%s", mask_sn(sn), phase
-            )
-            continue
+
+        # Local Modbus always resolves to the mode-control surface
+        # (protection.py's _uses_mode_control), independent of phase --
+        # HALO has no phase 2/3 registers at all and would otherwise never
+        # pass the phase check below. Cloud entries keep the original
+        # phase-based gate: an unrecognized phase there means the cloud
+        # phase-specific controlId to use can't be determined, so no
+        # controller is started (safety-first).
+        if not is_modbus_entry(coordinator.entry):
+            phase = detect_phase_type(dev_data)
+            if phase not in ("three_phase", "single_phase"):
+                _LOGGER.debug(
+                    "Skipping protection for %s: unrecognized phase=%s",
+                    mask_sn(sn),
+                    phase,
+                )
+                continue
 
         controller = HyxiBatteryProtectionController(hass, coordinator, sn)
         coordinator.protection_controllers[sn] = controller

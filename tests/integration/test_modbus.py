@@ -13,6 +13,7 @@ import pytest
 from modbus_connection import IllegalDataAddressError
 from modbus_connection.pytest_plugin import MockModbusConnection
 
+from custom_components.hyxi_cloud.const import DOMAIN
 from custom_components.hyxi_cloud.modbus.client import HyxiModbusClient
 from custom_components.hyxi_cloud.modbus.registers import HaloBattery, HaloGrid
 
@@ -334,7 +335,7 @@ def test_register_model_declares_the_right_spaces():
 # --- Coordinator and setup wiring -----------------------------------------
 
 
-def _modbus_entry(hass, **overrides):
+def _modbus_entry(hass, *, options=None, **overrides):
     """A config entry describing a local Modbus device."""
     from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -348,7 +349,7 @@ def _modbus_entry(hass, **overrides):
         "modbus_unit": 1,
     }
     data.update(overrides)
-    entry = MockConfigEntry(domain=DOMAIN, data=data, options={})
+    entry = MockConfigEntry(domain=DOMAIN, data=data, options=options or {})
     entry.add_to_hass(hass)
     return entry
 
@@ -582,3 +583,142 @@ def test_mask_never_returns_the_raw_value():
     assert _mask(None) == "****"
     assert _mask("10201234567810") == "a3eb0d55"
     assert "10201234567810" not in _mask("10201234567810")
+
+
+# --- HALO control entities: the fix that lets set_mode_* actually be
+# reached, since a HALO has no phase 2/3 registers and was previously
+# unreachable through button.py/number.py/protection.py's phase-based
+# routing regardless of how well the client itself worked. -----------------
+
+
+def _entity_id(hass, platform: str, sn: str, key: str) -> str | None:
+    """Look up an entity by its unique_id, the same way _get_power_value
+    does in production -- entity_id is slugified from the device name, not
+    derived from the serial number, so guessing the string directly is
+    fragile."""
+    from homeassistant.helpers import entity_registry as er
+
+    return er.async_get(hass).async_get_entity_id(platform, DOMAIN, f"hyxi_{sn}_{key}")
+
+
+@pytest.mark.asyncio
+async def test_halo_control_entities_appear_when_control_is_enabled(hass):
+    """HALO (micro_ess) gets the same four mode buttons a three-phase cloud
+    device gets, plus the power numbers they read their wattage from --
+    despite detect_phase_type never resolving past "unknown" for it, since
+    the HALO document has no phase 2/3 registers at all to detect."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    for key in ("mode_idle", "mode_charge", "mode_discharge", "mode_self_consume"):
+        assert _entity_id(hass, "button", sn, key) is not None, key
+
+    # The mode buttons read their wattage from these; without them a charge
+    # command would silently fall back to a hardcoded 100W.
+    assert _entity_id(hass, "number", sn, "charge_power") is not None
+    assert _entity_id(hass, "number", sn, "discharge_power") is not None
+
+    # No local equivalent of the cloud's 5-state peak-shaving surface --
+    # HALO must never get those buttons.
+    assert _entity_id(hass, "button", sn, "peak_shaving_hold") is None
+
+
+@pytest.mark.asyncio
+async def test_halo_mode_button_press_calls_the_modbus_client(hass):
+    """Pressing a mode button on a HALO entry must reach the real Modbus
+    client's set_mode_* methods, not silently do nothing."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    entity_id = _entity_id(hass, "button", sn, "mode_idle")
+    assert entity_id is not None
+
+    with patch.object(
+        coordinator.client, "set_mode_idle", wraps=coordinator.client.set_mode_idle
+    ) as spy:
+        await hass.services.async_call(
+            "button", "press", {"entity_id": entity_id}, blocking=True
+        )
+    spy.assert_awaited_once_with(sn)
+
+
+@pytest.mark.asyncio
+async def test_halo_protection_controller_starts(hass):
+    """The automatic protection controller must actually start for a HALO
+    entry -- __init__.py's setup previously required a recognized phase,
+    which a HALO never has."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    assert coordinator.protection_controllers, "no protection controller started"
+
+
+@pytest.mark.asyncio
+async def test_hybrid_control_entities_still_appear_unaffected(hass):
+    """The three-phase hybrid path this already worked for must be
+    unaffected by routing HALO differently."""
+    from custom_components.hyxi_cloud.modbus.client_hybrid import (
+        HYBRID_DEVICE_CODE,
+    )
+
+    entry = _modbus_entry(
+        hass, modbus_family="hybrid", options={"enable_battery_control": True}
+    )
+
+    connection = MockModbusConnection()
+    unit = connection.for_unit(1)
+    from tests.integration.test_modbus_hybrid import (
+        HOLDING_REGISTERS as HYBRID_HOLDING_REGISTERS,
+    )
+    from tests.integration.test_modbus_hybrid import (
+        INPUT_REGISTERS as HYBRID_INPUT_REGISTERS,
+    )
+    from tests.integration.test_modbus_hybrid import _fill as _hybrid_fill
+
+    unit.load_raw(
+        {
+            "input": _hybrid_fill(HYBRID_INPUT_REGISTERS),
+            "holding": _hybrid_fill(HYBRID_HOLDING_REGISTERS),
+        }
+    )
+
+    with patch("modbus_connection.tmodbus.ModbusConnection", return_value=connection):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    assert HYBRID_DEVICE_CODE == "HYBRID_INVERTER"
+    assert _entity_id(hass, "button", sn, "mode_idle") is not None
+    assert _entity_id(hass, "number", sn, "charge_power") is not None

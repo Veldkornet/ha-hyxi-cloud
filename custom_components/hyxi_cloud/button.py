@@ -30,6 +30,8 @@ from .const import (
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
+    is_control_capable_device_type,
+    is_modbus_entry,
     mask_sn,
     mask_subscription_code,
     normalize_device_type,
@@ -56,6 +58,17 @@ PEAK_SHAVING_ICONS: dict[str, str] = {
 }
 
 
+def _mode_buttons(coordinator, sn: str, dev_data: dict) -> list[HyxiModeButton]:
+    """The four operating-mode buttons, shared by the three-phase cloud path
+    and the (phase-agnostic) local Modbus path."""
+    return [
+        HyxiModeButton(coordinator, sn, dev_data, "idle"),
+        HyxiModeButton(coordinator, sn, dev_data, "charge"),
+        HyxiModeButton(coordinator, sn, dev_data, "discharge"),
+        HyxiModeButton(coordinator, sn, dev_data, "self_consume"),
+    ]
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -79,8 +92,20 @@ async def async_setup_entry(
             entities.append(HyxiMicroRestartButton(coordinator, sn, dev_data))
             continue
 
-        # Operating mode + peak shaving: hybrid_inverter and all_in_one only
-        if device_type not in ("hybrid_inverter", "all_in_one"):
+        if not is_control_capable_device_type(entry, device_type):
+            continue
+        if not is_battery_control_enabled(entry, coordinator):
+            continue
+
+        if is_modbus_entry(entry):
+            # Local Modbus has one control surface -- idle/charge/discharge/
+            # self-use -- for every device family this integration supports,
+            # regardless of electrical phase count. HALO (micro_ess) has no
+            # phase 2/3 registers at all and would never resolve past
+            # detect_phase_type's "unknown" otherwise, and neither register
+            # map has a confirmed local equivalent of the cloud's separate
+            # 5-state peak-shaving surface, so that path stays cloud-only.
+            entities.extend(_mode_buttons(coordinator, sn, dev_data))
             continue
 
         phase = detect_phase_type(dev_data)
@@ -94,18 +119,11 @@ async def async_setup_entry(
             continue
 
         # Three-phase: operating mode buttons (controlIds 1062-1065)
-        if is_battery_control_enabled(entry, coordinator) and phase == "three_phase":
-            entities.extend(
-                [
-                    HyxiModeButton(coordinator, sn, dev_data, "idle"),
-                    HyxiModeButton(coordinator, sn, dev_data, "charge"),
-                    HyxiModeButton(coordinator, sn, dev_data, "discharge"),
-                    HyxiModeButton(coordinator, sn, dev_data, "self_consume"),
-                ]
-            )
+        if phase == "three_phase":
+            entities.extend(_mode_buttons(coordinator, sn, dev_data))
 
         # Single-phase: peak shaving buttons (controlId 1021)
-        if is_battery_control_enabled(entry, coordinator) and phase == "single_phase":
+        if phase == "single_phase":
             for option in ("close", "charge", "discharge", "stop", "hold"):
                 entities.append(
                     HyxiPeakShavingButton(coordinator, sn, dev_data, option)

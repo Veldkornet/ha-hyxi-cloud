@@ -27,6 +27,8 @@ from .const import (
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
+    is_control_capable_device_type,
+    is_modbus_entry,
     mask_sn,
     normalize_device_type,
 )
@@ -136,30 +138,42 @@ async def async_setup_entry(
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
 
-        if device_type in ("hybrid_inverter", "all_in_one"):
-            phase = detect_phase_type(dev_data)
-
-            if is_battery_control_enabled(entry, coordinator):
-                # Power numbers pair with mode control (1062-1065) — three-phase only
-                # Peak shaving (single-phase) uses full inverter power, no wattage setting
-                if phase == "three_phase":
-                    entities.append(
-                        HyxiPowerNumber(coordinator, sn, dev_data, "charge")
-                    )
-                    entities.append(
-                        HyxiPowerNumber(coordinator, sn, dev_data, "discharge")
-                    )
-
-                # SOC protection numbers for both three-phase and single-phase
-                if phase in ("three_phase", "single_phase"):
-                    for definition in PROTECTION_NUMBER_DEFS:
-                        entities.append(
-                            HyxiProtectionNumber(coordinator, sn, dev_data, definition)
-                        )
-        elif device_type == "micro_inverter":
+        if device_type == "micro_inverter":
             # Microinverter power limit (controlId 3012)
             if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
+            continue
+
+        if not is_control_capable_device_type(entry, device_type):
+            continue
+        if not is_battery_control_enabled(entry, coordinator):
+            continue
+
+        if is_modbus_entry(entry):
+            # Every Modbus mode button (set_mode_charge/discharge) reads its
+            # wattage from these paired numbers -- see button.py's
+            # _mode_buttons for why phase is irrelevant on this transport.
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
+            for definition in PROTECTION_NUMBER_DEFS:
+                entities.append(
+                    HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                )
+            continue
+
+        phase = detect_phase_type(dev_data)
+        # Power numbers pair with mode control (1062-1065) — three-phase only.
+        # Peak shaving (single-phase) uses full inverter power, no wattage setting.
+        if phase == "three_phase":
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
+
+        # SOC protection numbers for both three-phase and single-phase
+        if phase in ("three_phase", "single_phase"):
+            for definition in PROTECTION_NUMBER_DEFS:
+                entities.append(
+                    HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                )
 
     # EM-only numbers — only when Energy Manager is enabled for this inverter
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)

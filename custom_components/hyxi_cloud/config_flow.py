@@ -937,11 +937,16 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
     def _get_control_capable_sns(self) -> list[str]:
         """Get serial numbers of any device control (not just EM) supports.
 
-        Includes EM-eligible inverters plus, when MICRO_ESS_CONTROL_SUPPORTED
-        is enabled, micro_ess/HALO devices (Power On/Off, controlId 1011).
+        Includes EM-eligible inverters, plus micro_ess/HALO devices when
+        either MICRO_ESS_CONTROL_SUPPORTED is enabled (cloud, currently
+        never) or this entry is Modbus (local, where the mode buttons and
+        protection numbers this toggle unlocks work today -- see
+        is_control_capable_device_type in const.py; the Power On/Off switch,
+        controlId 1011, has no confirmed local register and stays gated by
+        MICRO_ESS_CONTROL_SUPPORTED alone regardless of transport).
         """
         allowed_types: tuple[str, ...] = ("hybrid_inverter", "all_in_one")
-        if MICRO_ESS_CONTROL_SUPPORTED:
+        if MICRO_ESS_CONTROL_SUPPORTED or is_modbus_entry(self._config_entry):
             allowed_types += ("micro_ess",)
         return self._get_sns_by_device_type(allowed_types)
 

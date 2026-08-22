@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, detect_phase_type, mask_sn
+from .const import DOMAIN, detect_phase_type, is_modbus_entry, mask_sn
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -165,7 +165,7 @@ class HyxiBatteryProtectionController:
 
         soc_min = self._get_param("soc_min", DEFAULT_SOC_MIN)
         soc_max = self._get_param("soc_max", DEFAULT_SOC_MAX)
-        phase = self._phase_type()
+        mode_control = self._uses_mode_control()
         soc_min_resume = min(
             soc_max,
             soc_min
@@ -204,15 +204,13 @@ class HyxiBatteryProtectionController:
                 )
             self._low_soc_hold = True
             if self._last_sent_mode != "charge":
-                await self._ensure_mode("hold" if phase == "single_phase" else "idle")
+                await self._ensure_mode("idle" if mode_control else "hold")
             return
 
         if self._low_soc_hold:
             if soc < soc_min_resume:
                 if self._last_sent_mode != "charge":
-                    await self._ensure_mode(
-                        "hold" if phase == "single_phase" else "idle"
-                    )
+                    await self._ensure_mode("idle" if mode_control else "hold")
                 return
             _LOGGER.debug(
                 "Protection %s: exiting low-SOC hold (soc=%.1f >= resume=%.1f)",
@@ -231,24 +229,24 @@ class HyxiBatteryProtectionController:
                     soc_max,
                 )
             self._high_soc_hold = True
-            if phase == "single_phase":
-                if self._last_sent_mode not in ("discharge", "hold"):
-                    await self._ensure_mode("hold")
-            elif self._last_sent_mode not in ("discharge", "idle", "self_consume"):
-                await self._ensure_mode("idle")
+            if mode_control:
+                if self._last_sent_mode not in ("discharge", "idle", "self_consume"):
+                    await self._ensure_mode("idle")
+            elif self._last_sent_mode not in ("discharge", "hold"):
+                await self._ensure_mode("hold")
             return
 
         if self._high_soc_hold:
             if soc > soc_max_resume:
-                if phase == "single_phase":
-                    if self._last_sent_mode not in ("discharge", "hold"):
-                        await self._ensure_mode("hold")
-                elif self._last_sent_mode not in (
-                    "discharge",
-                    "idle",
-                    "self_consume",
-                ):
-                    await self._ensure_mode("idle")
+                if mode_control:
+                    if self._last_sent_mode not in (
+                        "discharge",
+                        "idle",
+                        "self_consume",
+                    ):
+                        await self._ensure_mode("idle")
+                elif self._last_sent_mode not in ("discharge", "hold"):
+                    await self._ensure_mode("hold")
                 return
             _LOGGER.debug(
                 "Protection %s: exiting high-SOC hold (soc=%.1f <= resume=%.1f)",
@@ -279,14 +277,30 @@ class HyxiBatteryProtectionController:
         await self._coordinator.async_request_refresh()
 
     async def _send_control(self, mode: str) -> None:
-        """Send the requested control using the correct phase-specific API."""
+        """Send the requested control using the correct transport-specific API."""
         client = self._coordinator.client
-        phase = self._phase_type()
+
+        if is_modbus_entry(self._coordinator.entry):
+            mode_control = True
+        else:
+            # Preserved from before this method understood transports: an
+            # entry only reaches here via a real controller instance, which
+            # __init__.py never creates for a cloud device whose phase came
+            # back "unknown" -- so this is a defensive check for a phase
+            # that changed after startup, not a case expected in practice.
+            phase = self._phase_type()
+            if phase not in ("three_phase", "single_phase"):
+                raise ValueError(f"Unsupported phase type for protection: {phase}")
+            mode_control = phase == "three_phase"
+
         _LOGGER.debug(
-            "Protection %s: sending mode=%s phase=%s", mask_sn(self._sn), mode, phase
+            "Protection %s: sending mode=%s mode_control=%s",
+            mask_sn(self._sn),
+            mode,
+            mode_control,
         )
 
-        if phase == "three_phase":
+        if mode_control:
             if mode == "idle":
                 await client.set_mode_idle(self._sn)
             elif mode == "charge":
@@ -301,13 +315,9 @@ class HyxiBatteryProtectionController:
                 raise ValueError(f"Unsupported three-phase protection mode: {mode}")
             return
 
-        if phase == "single_phase":
-            if mode not in {"close", "charge", "discharge", "stop", "hold"}:
-                raise ValueError(f"Unsupported single-phase protection mode: {mode}")
-            await client.set_peak_shaving(self._sn, mode)
-            return
-
-        raise ValueError(f"Unsupported phase type for protection: {phase}")
+        if mode not in {"close", "charge", "discharge", "stop", "hold"}:
+            raise ValueError(f"Unsupported single-phase protection mode: {mode}")
+        await client.set_peak_shaving(self._sn, mode)
 
     def _get_param(self, key: str, default: int) -> int:
         """Read a protection number value from the entity registry."""
@@ -369,6 +379,29 @@ class HyxiBatteryProtectionController:
         """Return the detected phase type for this device."""
         dev_data = (self._coordinator.data or {}).get(self._sn) or {}
         return detect_phase_type(dev_data)
+
+    def _uses_mode_control(self) -> bool:
+        """Whether this device should be driven through the mode surface
+        (idle/charge/discharge/self-use) rather than the cloud's separate
+        peak-shaving surface (hold/charge/discharge/stop/close).
+
+        Over the cloud this is decided by electrical phase count -- HYXI's
+        controlId 1062-1065 (mode) applies to three-phase hardware,
+        controlId 1021 (peak shaving) to single-phase. Local Modbus has no
+        such split: both register maps this integration supports over
+        Modbus expose the same 4-state mode surface regardless of phase
+        count, and neither has a confirmed local equivalent of peak
+        shaving's extra states -- so a Modbus device always uses mode
+        control, the same decision button.py/number.py make. This must
+        stay the one place that decision is made and read by both the SOC
+        decision logic (which mode name to pick) and _send_control (which
+        client method to call) -- if the two ever disagreed, _send_control
+        would receive a mode name from the wrong vocabulary entirely (e.g.
+        "hold", which set_mode_idle's surface has no meaning for).
+        """
+        if is_modbus_entry(self._coordinator.entry):
+            return True
+        return self._phase_type() == "three_phase"
 
     @staticmethod
     def _metric_float(value) -> float | None:

@@ -425,6 +425,28 @@ def is_battery_control_enabled(entry: Any, coordinator: Any) -> bool:
     return False
 
 
+def is_control_capable_device_type(entry: Any, device_type: str) -> bool:
+    """Return True if this device type can receive control commands on
+    this entry's transport.
+
+    hybrid_inverter and all_in_one are controllable on either transport.
+    micro_ess (HALO) is controllable over local Modbus -- the register map
+    has a working VPP dispatch block with no permission check -- but not
+    over the cloud, where HYXI's API rejects the write outright (see
+    MICRO_ESS_CONTROL_SUPPORTED's docstring, a few lines above this file's
+    device-type table). This is the one place that distinction is made;
+    every entity platform should call this rather than checking
+    device_type or MICRO_ESS_CONTROL_SUPPORTED directly, so the two
+    transports can never silently disagree about which devices are
+    controllable.
+    """
+    if device_type in ("hybrid_inverter", "all_in_one"):
+        return True
+    if device_type == "micro_ess":
+        return MICRO_ESS_CONTROL_SUPPORTED or is_modbus_entry(entry)
+    return False
+
+
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
