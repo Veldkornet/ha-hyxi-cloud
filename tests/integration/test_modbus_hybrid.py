@@ -45,9 +45,13 @@ INPUT_REGISTERS: dict[int, int] = {
     **_spread(1, 0x02030021),  # main DSP version, H32
     **_spread(1001, 0x02030021),  # main program version, H32
     **_spread(1007, 10201234567810, 4),  # serial, H64
+    20: 312,  # boost converter temperature, 1dp -> 31.2 C
+    21: 298,  # DSP temperature, 1dp -> 29.8 C
     22: 6,  # steady state operation
-    25: 1,  # grid connected
-    53: 1,
+    23: 2,  # self-test status
+    25: 1,  # grid mode: grid-connected
+    26: 1,  # run command: start
+    53: 1,  # grid connected
     1265: 1,  # self-use
     300: 23012,
     301: 23015,
@@ -57,12 +61,14 @@ INPUT_REGISTERS: dict[int, int] = {
     312: 348,
     313: 352,  # phase A/B/C current, 2dp
     316: 811,  # grid active power, W (inferred unit)
+    317: 45,  # grid reactive power, var (inferred unit)
+    318: 815,  # grid apparent power, VA (inferred unit)
     370: 270,
     371: 268,
     372: 272,  # phase A/B/C active power, W
     500: 23005,
-    501: 0,
-    502: 0,
+    501: 23010,
+    502: 22995,  # off-grid phase A/B/C voltage, 2dp
     503: 5000,
     507: 276,
     520: 276,
@@ -75,6 +81,13 @@ INPUT_REGISTERS: dict[int, int] = {
     610: 0,
     611: 0,
     612: 0,  # PV2 V/I/P
+    # Battery serial "BAT13571357", H10-encoded (2 ASCII chars/register).
+    1015: 16961,
+    1016: 21553,
+    1017: 13109,
+    1018: 14129,
+    1019: 13109,
+    1020: 14080,
     1052: 52900,  # BMS voltage, 2dp -> 529.00 V
     1053: (-42) & 0xFFFF,  # BMS current, 1dp -> -4.2 A
     1054: 78,  # SOC, 0dp
@@ -87,6 +100,8 @@ INPUT_REGISTERS: dict[int, int] = {
     1065: (-420) & 0xFFFF,  # battery real-time power, 0dp
     1097: 100,
     **_spread(1128, 12634),  # accumulated AC output A, 1dp -> 1263.4 kWh
+    **_spread(1130, 8433),  # accumulated AC output B, 1dp -> 843.3 kWh
+    **_spread(1132, 8434),  # accumulated AC output C, 1dp -> 843.4 kWh
     **_spread(1146, 8432),  # accumulated charge, 1dp -> 843.2 kWh
     **_spread(1148, 7961),  # accumulated discharge, 1dp -> 796.1 kWh
 }
@@ -134,6 +149,42 @@ async def test_read_all_decodes_realistic_values(client):
     assert metrics["ph1v"] == 230.12
     assert metrics["ph2v"] == 230.15
     assert metrics["ph3v"] == 229.98
+
+
+@pytest.mark.asyncio
+async def test_previously_unexposed_registers_now_decode_into_metrics(client):
+    """Mirrors test_modbus.py's equivalent test for the HALO client -- these
+    registers already decoded correctly; only the _build_metrics() wiring is
+    new."""
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    # Grid power quality
+    assert metrics["gridQ"] == 45
+    assert metrics["gridAp"] == 815
+
+    # Extra status telemetry
+    assert metrics["boostTemper"] == 31.2
+    assert metrics["dspTemper"] == 29.8
+    assert metrics["selfTestStatus"] == 2
+    assert metrics["gridMode"] == 1
+    assert metrics["runCommand"] == 1
+    assert metrics["currentOperatingMode"] == 1
+
+    # Off-grid (backup) circuit
+    assert metrics["offGridF"] == 50.0
+    assert metrics["offGridP"] == 276
+    assert metrics["ph1Loadv"] == 230.05
+    assert metrics["ph2Loadv"] == 230.10
+    assert metrics["ph3Loadv"] == 229.95
+
+    # Energy counters
+    assert metrics["totalEb"] == 843.3
+    assert metrics["totalEc"] == 843.4
+
+    # Battery serial routes the battery metrics onto their own device --
+    # this client previously never populated it.
+    assert metrics["batSn"] == "BAT13571357"
 
 
 @pytest.mark.asyncio

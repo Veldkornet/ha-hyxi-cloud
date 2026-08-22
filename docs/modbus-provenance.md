@@ -35,9 +35,9 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4026 | `arm_version` | Number (unsigned) | RO |  |  | device info: `sw_version` |
 | 4028 | `dsp_version` | Number (unsigned) | RO |  |  | debug log only |
 | 4034 | `hardware_version` | Number (unsigned) | RO |  |  | device info: `hw_version` |
-| 4046 | `rated_power` | Number (signed) | RO |  | W | debug log only |
-| 4048 | `rated_frequency` | Number (signed) | RO | ×0.01 | Hz | debug log only |
-| 4049 | `rated_voltage` | Number (unsigned) | RO | ×0.01 | V | debug log only |
+| 4046 | `rated_power` | Number (signed) | RO |  | W | sensor: `ratedPower` |
+| 4048 | `rated_frequency` | Number (signed) | RO | ×0.01 | Hz | sensor: `ratedFrequency` |
+| 4049 | `rated_voltage` | Number (unsigned) | RO | ×0.01 | V | sensor: `ratedVoltage` |
 | 4962 | `battery_serial_number` | Number (unsigned) | RO |  |  | sensor: `batSn` |
 
 ### HaloStatus  (space=input)
@@ -48,13 +48,13 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4101 | `work_state` | Number (unsigned) | RO |  |  | sensor: `invSts` |
 | 4102 | `work_mode` | Number (unsigned) | RO |  |  | sensor: `workMode` |
 | 4103 | `grid_state` | Number (unsigned) | RO |  |  | sensor: `gridSts` |
-| 4104 | `insulation_resistance` | Number (unsigned) | RO |  |  | — *(not exposed)* |
-| 4105 | `leakage_current` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 4104 | `insulation_resistance` | Number (unsigned) | RO |  |  | sensor: `insulationResistance` |
+| 4105 | `leakage_current` | Number (unsigned) | RO |  |  | sensor: `leakageCurrent` |
 | 4106 | `bus_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `vbus` |
-| 4109 | `ambient_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
+| 4109 | `ambient_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `ambientTemper` |
 | 4110 | `ac_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `tinv` |
-| 4111 | `dc_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
-| 4123 | `meter_online` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 4111 | `dc_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `dcSideTemper` |
+| 4123 | `meter_online` | Number (unsigned) | RO |  |  | sensor: `meterOnline` |
 
 ### HaloGrid  (space=input)
 
@@ -62,9 +62,9 @@ Generated directly from the Component classes -- this table cannot drift from th
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 4151 | `frequency` | Number (signed) | RO | ×0.01 | Hz | sensor: `f`, `gridF` |
 | 4152 | `active_power` | Number (signed) | RO | ×0.001 | kW | sensor: `gridP` |
-| 4154 | `reactive_power` | Number (signed) | RO | ×0.001 | kW | — *(not exposed)* |
-| 4156 | `apparent_power` | Number (signed) | RO | ×0.001 | kW | — *(not exposed)* |
-| 4158 | `power_factor` | Number (signed) | RO | ×0.01 |  | — *(not exposed)* |
+| 4154 | `reactive_power` | Number (signed) | RO | ×0.001 | kW | sensor: `gridQ` |
+| 4156 | `apparent_power` | Number (signed) | RO | ×0.001 | kW | sensor: `gridAp` |
+| 4158 | `power_factor` | Number (signed) | RO | ×0.01 |  | sensor: `gridPfd` |
 | 4161 | `voltage` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph1v` |
 | 4162 | `current` | Number (signed) | RO | ×0.1 | A | sensor: `ph1i` |
 | 4163 | `phase_power` | Number (signed) | RO | ×0.001 | kW | sensor: `ph1p` |
@@ -73,10 +73,10 @@ Generated directly from the Component classes -- this table cannot drift from th
 
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
-| 4200 | `frequency` | Number (signed) | RO | ×0.01 | Hz | — *(not exposed)* |
-| 4201 | `active_power` | Number (signed) | RO | ×0.001 | kW | — *(not exposed)* |
-| 4210 | `voltage` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
-| 4211 | `current` | Number (signed) | RO | ×0.1 | A | — *(not exposed)* |
+| 4200 | `frequency` | Number (signed) | RO | ×0.01 | Hz | sensor: `offGridF` |
+| 4201 | `active_power` | Number (signed) | RO | ×0.001 | kW | sensor: `offGridP` |
+| 4210 | `voltage` | Number (unsigned) | RO | ×0.01 | V | sensor: `offGridV` |
+| 4211 | `current` | Number (signed) | RO | ×0.1 | A | sensor: `offGridI` |
 | 4212 | `phase_power` | Number (signed) | RO | ×0.001 | kW | sensor: `ph1Loadp` |
 
 ### HaloEnergy  (space=input)
@@ -87,7 +87,7 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4502 | `output_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `totalE` |
 | 4506 | `battery_charged_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `batCharge`, `totalEchg` |
 | 4510 | `battery_discharged_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `batDisCharge`, `totalEdchg` |
-| 4512 | `input_today` | Number (unsigned) | RO | ×0.001 | kWh | — *(not exposed)* |
+| 4512 | `input_today` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `eTodayIn` |
 | 4514 | `input_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `totalEnt` |
 
 ### HaloFaults  (space=input)
@@ -153,21 +153,21 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 | 1 | `main_dsp_version` | Number (unsigned) | RO |  |  | debug log only |
 | 1001 | `main_program_version` | Number (unsigned) | RO |  |  | device info: `sw_version` |
 | 1007 | `serial_number` | Number (unsigned) | RO |  |  | device key (via `serial_number` property) |
-| 1015 | `battery_serial_number` | String | RO |  |  | — *(not exposed)* |
+| 1015 | `battery_serial_number` | String | RO |  |  | sensor: `batSn` |
 
 ### HybridStatus  (space=input)
 
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 19 | `inverter_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `tinv` |
-| 20 | `boost_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
-| 21 | `dsp_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
+| 20 | `boost_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `boostTemper` |
+| 21 | `dsp_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `dspTemper` |
 | 22 | `operation_status` | Number (unsigned) | RO |  |  | sensor: `invSts` |
-| 23 | `self_test_status` | Number (unsigned) | RO |  |  | — *(not exposed)* |
-| 25 | `grid_mode` | Number (unsigned) | RO |  |  | — *(not exposed)* |
-| 26 | `run_command` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 23 | `self_test_status` | Number (unsigned) | RO |  |  | sensor: `selfTestStatus` |
+| 25 | `grid_mode` | Number (unsigned) | RO |  |  | sensor: `gridMode` |
+| 26 | `run_command` | Number (unsigned) | RO |  |  | sensor: `runCommand` |
 | 53 | `grid_connected` | Number (unsigned) | RO |  |  | sensor: `gridSts` |
-| 1265 | `current_operating_mode` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 1265 | `current_operating_mode` | Number (unsigned) | RO |  |  | sensor: `currentOperatingMode` |
 
 ### HybridFaults  (space=input)
 
@@ -197,8 +197,8 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 | 312 | `current_b` | Number (signed) | RO | ×0.01 | A | sensor: `ph2i` |
 | 313 | `current_c` | Number (signed) | RO | ×0.01 | A | sensor: `ph3i` |
 | 316 | `active_power` | Number (signed) | RO |  | W | sensor: `gridP` |
-| 317 | `reactive_power` | Number (signed) | RO |  | var | — *(not exposed)* |
-| 318 | `apparent_power` | Number (signed) | RO |  | VA | — *(not exposed)* |
+| 317 | `reactive_power` | Number (signed) | RO |  | var | sensor: `gridQ` |
+| 318 | `apparent_power` | Number (signed) | RO |  | VA | sensor: `gridAp` |
 | 370 | `phase_a_power` | Number (signed) | RO |  | W | sensor: `ph1p` |
 | 371 | `phase_b_power` | Number (signed) | RO |  | W | sensor: `ph2p` |
 | 372 | `phase_c_power` | Number (signed) | RO |  | W | sensor: `ph3p` |
@@ -207,11 +207,11 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
-| 500 | `voltage_a` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
-| 501 | `voltage_b` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
-| 502 | `voltage_c` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
-| 503 | `frequency` | Number (signed) | RO | ×0.01 | Hz | — *(not exposed)* |
-| 507 | `active_power` | Number (unsigned) | RO |  | W | — *(not exposed)* |
+| 500 | `voltage_a` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph1Loadv` |
+| 501 | `voltage_b` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph2Loadv` |
+| 502 | `voltage_c` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph3Loadv` |
+| 503 | `frequency` | Number (signed) | RO | ×0.01 | Hz | sensor: `offGridF` |
+| 507 | `active_power` | Number (unsigned) | RO |  | W | sensor: `offGridP` |
 | 520 | `phase_a_power` | Number (unsigned) | RO |  | W | sensor: `ph1Loadp` |
 | 521 | `phase_b_power` | Number (unsigned) | RO |  | W | sensor: `ph2Loadp` |
 | 522 | `phase_c_power` | Number (unsigned) | RO |  | W | sensor: `ph3Loadp` |
@@ -257,8 +257,8 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1128 | `output_a` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `totalE` |
-| 1130 | `output_b` | Number (unsigned) | RO | ×0.1 | kWh | — *(not exposed)* |
-| 1132 | `output_c` | Number (unsigned) | RO | ×0.1 | kWh | — *(not exposed)* |
+| 1130 | `output_b` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `totalEb` |
+| 1132 | `output_c` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `totalEc` |
 | 1146 | `charge_total` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `batCharge`, `totalEchg` |
 | 1148 | `discharge_total` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `batDisCharge`, `totalEdchg` |
 

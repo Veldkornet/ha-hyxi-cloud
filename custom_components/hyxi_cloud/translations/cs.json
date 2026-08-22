@@ -200,6 +200,12 @@
       "totale": {
         "name": "Celkový energetický výnos"
       },
+      "totaleb": {
+        "name": "Celkový energetický výnos B"
+      },
+      "totalec": {
+        "name": "Celkový energetický výnos C"
+      },
       "bat_charge_total": {
         "name": "Celkové nabití baterie"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Energie dnes"
       },
+      "etodayin": {
+        "name": "Dnešní dovezená energie ze sítě"
+      },
       "efpv": {
         "name": "Výnos dnes (PV)"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Zátěž fáze 3"
+      },
+      "ph1loadv": {
+        "name": "Napětí zátěže fáze 1"
+      },
+      "ph2loadv": {
+        "name": "Napětí zátěže fáze 2"
+      },
+      "ph3loadv": {
+        "name": "Napětí zátěže fáze 3"
       },
       "pv1v": {
         "name": "Napětí PV1"
@@ -431,6 +449,27 @@
           "1": "Zapnuto"
         }
       },
+      "meteronline": {
+        "name": "Měřič online"
+      },
+      "gridmode": {
+        "name": "Režim sítě"
+      },
+      "runcommand": {
+        "name": "Příkaz spuštění"
+      },
+      "currentoperatingmode": {
+        "name": "Provozní režim"
+      },
+      "insulationresistance": {
+        "name": "Izolační odpor"
+      },
+      "leakagecurrent": {
+        "name": "Svodový proud"
+      },
+      "selfteststatus": {
+        "name": "Stav samotestu"
+      },
       "pvpower": {
         "name": "Celkový výkon PV"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "Teplota na straně DC"
+      },
+      "ambienttemper": {
+        "name": "Teplota okolí"
+      },
+      "boosttemper": {
+        "name": "Teplota boost měniče"
+      },
+      "dsptemper": {
+        "name": "Teplota DSP"
       },
       "gridf": {
         "name": "Frekvence sítě"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Výkon mimo síť"
+      },
+      "offgridv": {
+        "name": "Napětí mimo síť"
+      },
+      "offgridi": {
+        "name": "Proud mimo síť"
       },
       "offgridq": {
         "name": "Reaktivní výkon mimo síť"

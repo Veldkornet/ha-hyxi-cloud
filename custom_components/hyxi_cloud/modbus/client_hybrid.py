@@ -112,12 +112,13 @@ class HyxiHybridModbusClient:
             self._serial = str(self.identity.serial_number)
             _LOGGER.debug(
                 "Modbus identity on unit %s: serial=%s protocol_v=%s "
-                "main_dsp=%s main_program=%s",
+                "main_dsp=%s main_program=%s battery_sn=%s",
                 self._unit_id,
                 _mask(self._serial),
                 self.identity.protocol_version,
                 _hex_identifier(self.identity.main_dsp_version),
                 _hex_identifier(self.identity.main_program_version),
+                _mask(self.identity.battery_serial_number),
             )
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning(
@@ -206,11 +207,21 @@ class HyxiHybridModbusClient:
             "invSts": self.status.operation_status,
             "gridSts": self.status.grid_connected,
             "tinv": self.status.inverter_temperature,
+            "boostTemper": self.status.boost_temperature,
+            "dspTemper": self.status.dsp_temperature,
+            # No documented value table for self-test status, unlike the
+            # three fields below -- passed through raw rather than guessed.
+            "selfTestStatus": self.status.self_test_status,
+            "gridMode": self.status.grid_mode,
+            "runCommand": self.status.run_command,
+            "currentOperatingMode": self.status.current_operating_mode,
             "gridP": (
                 None
                 if self.grid.active_power is None
                 else self.grid.active_power / 1000
             ),
+            "gridQ": self.grid.reactive_power,
+            "gridAp": self.grid.apparent_power,
             "f": self.grid.frequency,
             "gridF": self.grid.frequency,
             "ph1v": self.grid.voltage_a,
@@ -222,6 +233,11 @@ class HyxiHybridModbusClient:
             "ph1p": self.grid.phase_a_power,
             "ph2p": self.grid.phase_b_power,
             "ph3p": self.grid.phase_c_power,
+            "offGridF": self.backup.frequency,
+            "offGridP": self.backup.active_power,
+            "ph1Loadv": self.backup.voltage_a,
+            "ph2Loadv": self.backup.voltage_b,
+            "ph3Loadv": self.backup.voltage_c,
             "ph1Loadp": self.backup.phase_a_power,
             "ph2Loadp": self.backup.phase_b_power,
             "ph3Loadp": self.backup.phase_c_power,
@@ -232,6 +248,11 @@ class HyxiHybridModbusClient:
             "pv2i": self.pv.pv2_current,
             "pv2p": self.pv.pv2_power,
             "vbus": self.pv.bus_voltage,
+            # Battery. batSn routes the battery-related keys above and below
+            # onto a separate "Battery {sn}" device, matching the HALO
+            # client -- omitting it (as this client previously did) leaves
+            # them attached to the inverter device instead.
+            "batSn": self.identity.battery_serial_number,
             "batSoc": self.battery.soc,
             "batSoh": self.battery.soh,
             "batTmp": self.battery.temperature,
@@ -244,6 +265,8 @@ class HyxiHybridModbusClient:
             "batP": self.battery.power,
             "pbat": self.battery.power,
             "totalE": self.energy.output_a,
+            "totalEb": self.energy.output_b,
+            "totalEc": self.energy.output_c,
             "totalEchg": self.energy.charge_total,
             "totalEdchg": self.energy.discharge_total,
             "batCharge": self.energy.charge_total,

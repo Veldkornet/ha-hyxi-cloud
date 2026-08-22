@@ -200,6 +200,12 @@
       "totale": {
         "name": "Toplam Enerji Verimi"
       },
+      "totaleb": {
+        "name": "Toplam Enerji Verimi B"
+      },
+      "totalec": {
+        "name": "Toplam Enerji Verimi C"
+      },
       "bat_charge_total": {
         "name": "Toplam Batarya Şarjı"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Bugünkü Enerji"
       },
+      "etodayin": {
+        "name": "Bugünkü Şebeke İthal Enerjisi"
+      },
       "efpv": {
         "name": "Bugünkü PV Verimi"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Faz 3 Yükü"
+      },
+      "ph1loadv": {
+        "name": "Faz 1 Yük Voltajı"
+      },
+      "ph2loadv": {
+        "name": "Faz 2 Yük Voltajı"
+      },
+      "ph3loadv": {
+        "name": "Faz 3 Yük Voltajı"
       },
       "pv1v": {
         "name": "PV1 Voltajı"
@@ -431,6 +449,27 @@
           "1": "Açma"
         }
       },
+      "meteronline": {
+        "name": "Sayaç Çevrimiçi"
+      },
+      "gridmode": {
+        "name": "Şebeke Modu"
+      },
+      "runcommand": {
+        "name": "Çalıştırma Komutu"
+      },
+      "currentoperatingmode": {
+        "name": "Çalışma Modu"
+      },
+      "insulationresistance": {
+        "name": "Yalıtım Direnci"
+      },
+      "leakagecurrent": {
+        "name": "Kaçak Akım"
+      },
+      "selfteststatus": {
+        "name": "Kendi Kendini Test Durumu"
+      },
       "pvpower": {
         "name": "Toplam PV Gücü"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "DC Tarafı Sıcaklığı"
+      },
+      "ambienttemper": {
+        "name": "Ortam Sıcaklığı"
+      },
+      "boosttemper": {
+        "name": "Boost Sıcaklığı"
+      },
+      "dsptemper": {
+        "name": "DSP Sıcaklığı"
       },
       "gridf": {
         "name": "Şebeke Frekansı"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Şebeke Dışı Güç"
+      },
+      "offgridv": {
+        "name": "Şebeke Dışı Voltaj"
+      },
+      "offgridi": {
+        "name": "Şebeke Dışı Akım"
       },
       "offgridq": {
         "name": "Şebeke Dışı Reaktif Güç"

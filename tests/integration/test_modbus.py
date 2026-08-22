@@ -44,6 +44,8 @@ INPUT_REGISTERS: dict[int, int] = {
     4101: 6,
     4102: 1,
     4103: 1,
+    4104: 500,  # insulation resistance, raw, unit unconfirmed
+    4105: 3,  # leakage current, raw, unit unconfirmed
     4106: 3801,  # bus voltage, 1dp -> 380.1 V
     4109: 214,
     4110: 305,  # AC-side temperature, 1dp -> 30.5 C
@@ -51,6 +53,8 @@ INPUT_REGISTERS: dict[int, int] = {
     4123: 1,
     4151: 5001,  # grid frequency, 2dp -> 50.01 Hz
     **_spread(4152, 811),  # grid active power, 3dp kW
+    **_spread(4154, 62),  # grid reactive power, 3dp kW -> 62 var
+    **_spread(4156, 823),  # grid apparent power, 3dp kW -> 823 VA
     4158: 98,
     4161: 23012,  # phase A voltage, 2dp -> 230.12 V
     4162: 35,
@@ -153,6 +157,44 @@ async def test_read_all_decodes_the_documented_values(client):
     assert metrics["f"] == 50.01
     assert metrics["packNum"] == 1
     assert metrics["batSn"] == "4213571357"
+
+
+@pytest.mark.asyncio
+async def test_previously_unexposed_registers_now_decode_into_metrics(client):
+    """The registers that were modeled but not yet wired into a metric key
+    -- grid power quality, off-grid circuit detail, extra status telemetry,
+    the input-energy-today counter and the nameplate ratings. Each already
+    decoded correctly before this; only the _build_metrics() wiring is new,
+    so this proves that wiring reaches the right register with the right
+    scale, not the decode path itself (covered by the tests above)."""
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    # Grid power quality
+    assert metrics["gridQ"] == 62.0
+    assert metrics["gridAp"] == 823.0
+    assert metrics["gridPfd"] == 0.98
+
+    # Off-grid (backup) circuit
+    assert metrics["offGridF"] == 50.0
+    assert metrics["offGridP"] == 0.0
+    assert metrics["offGridV"] == 230.05
+    assert metrics["offGridI"] == 1.2
+
+    # Extra status telemetry
+    assert metrics["ambientTemper"] == 21.4
+    assert metrics["dcSideTemper"] == 28.8
+    assert metrics["insulationResistance"] == 500
+    assert metrics["leakageCurrent"] == 3
+    assert metrics["meterOnline"] == 1
+
+    # Energy counters
+    assert metrics["eTodayIn"] == 2.11
+
+    # Nameplate ratings, read once with identity
+    assert metrics["ratedPower"] == 3000
+    assert metrics["ratedFrequency"] == 50.0
+    assert metrics["ratedVoltage"] == 230.0
 
 
 @pytest.mark.asyncio

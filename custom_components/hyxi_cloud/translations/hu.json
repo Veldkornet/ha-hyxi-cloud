@@ -200,6 +200,12 @@
       "totale": {
         "name": "Teljes energiahozam"
       },
+      "totaleb": {
+        "name": "Teljes energiahozam B"
+      },
+      "totalec": {
+        "name": "Teljes energiahozam C"
+      },
       "bat_charge_total": {
         "name": "Teljes akkumulátor töltés"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Mai energia"
       },
+      "etodayin": {
+        "name": "Mai hálózati importenergia"
+      },
       "efpv": {
         "name": "Mai PV-hozam"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "3. fázis terhelés"
+      },
+      "ph1loadv": {
+        "name": "1. fázis terhelési feszültség"
+      },
+      "ph2loadv": {
+        "name": "2. fázis terhelési feszültség"
+      },
+      "ph3loadv": {
+        "name": "3. fázis terhelési feszültség"
       },
       "pv1v": {
         "name": "PV1 feszültség"
@@ -431,6 +449,27 @@
           "1": "Bekapcsolás"
         }
       },
+      "meteronline": {
+        "name": "Mérő online"
+      },
+      "gridmode": {
+        "name": "Hálózati mód"
+      },
+      "runcommand": {
+        "name": "Futtatási parancs"
+      },
+      "currentoperatingmode": {
+        "name": "Üzemmód"
+      },
+      "insulationresistance": {
+        "name": "Szigetelési ellenállás"
+      },
+      "leakagecurrent": {
+        "name": "Szivárgási áram"
+      },
+      "selfteststatus": {
+        "name": "Önteszt állapota"
+      },
       "pvpower": {
         "name": "PV teljesítmény"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "DC oldali hőmérséklet"
+      },
+      "ambienttemper": {
+        "name": "Környezeti hőmérséklet"
+      },
+      "boosttemper": {
+        "name": "Boost hőmérséklet"
+      },
+      "dsptemper": {
+        "name": "DSP hőmérséklet"
       },
       "gridf": {
         "name": "Hálózati frekvencia"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Hálózaton kívüli teljesítmény"
+      },
+      "offgridv": {
+        "name": "Hálózaton kívüli feszültség"
+      },
+      "offgridi": {
+        "name": "Hálózaton kívüli áram"
       },
       "offgridq": {
         "name": "Hálózaton kívüli reaktív teljesítmény"

@@ -200,6 +200,12 @@
       "totale": {
         "name": "总生成能量"
       },
+      "totaleb": {
+        "name": "总生成能量B"
+      },
+      "totalec": {
+        "name": "总生成能量C"
+      },
       "bat_charge_total": {
         "name": "总累计充电"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "今日能量"
       },
+      "etodayin": {
+        "name": "今日电网输入电量"
+      },
       "efpv": {
         "name": "今日PV发电量"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "第三相负载"
+      },
+      "ph1loadv": {
+        "name": "第一相负载电压"
+      },
+      "ph2loadv": {
+        "name": "第二相负载电压"
+      },
+      "ph3loadv": {
+        "name": "第三相负载电压"
       },
       "pv1v": {
         "name": "PV1 电压"
@@ -431,6 +449,27 @@
           "1": "开机"
         }
       },
+      "meteronline": {
+        "name": "电表在线"
+      },
+      "gridmode": {
+        "name": "电网模式"
+      },
+      "runcommand": {
+        "name": "运行命令"
+      },
+      "currentoperatingmode": {
+        "name": "运行模式"
+      },
+      "insulationresistance": {
+        "name": "绝缘电阻"
+      },
+      "leakagecurrent": {
+        "name": "漏电流"
+      },
+      "selfteststatus": {
+        "name": "自检状态"
+      },
       "pvpower": {
         "name": "光伏总功率"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "直流侧温度"
+      },
+      "ambienttemper": {
+        "name": "环境温度"
+      },
+      "boosttemper": {
+        "name": "升压温度"
+      },
+      "dsptemper": {
+        "name": "DSP温度"
       },
       "gridf": {
         "name": "并网频率"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "离网功率"
+      },
+      "offgridv": {
+        "name": "离网电压"
+      },
+      "offgridi": {
+        "name": "离网电流"
       },
       "offgridq": {
         "name": "离网无功功率"

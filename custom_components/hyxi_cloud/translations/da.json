@@ -200,6 +200,12 @@
       "totale": {
         "name": "Samlet energiudbytte"
       },
+      "totaleb": {
+        "name": "Samlet energiudbytte B"
+      },
+      "totalec": {
+        "name": "Samlet energiudbytte C"
+      },
       "bat_charge_total": {
         "name": "Samlet batteriopladning"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Energi i dag"
       },
+      "etodayin": {
+        "name": "Netimportenergi i dag"
+      },
       "efpv": {
         "name": "Udbytte i dag (PV)"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Fase 3 Belastning"
+      },
+      "ph1loadv": {
+        "name": "Fase 1 Belastningsspænding"
+      },
+      "ph2loadv": {
+        "name": "Fase 2 Belastningsspænding"
+      },
+      "ph3loadv": {
+        "name": "Fase 3 Belastningsspænding"
       },
       "pv1v": {
         "name": "PV1 Spænding"
@@ -431,6 +449,27 @@
           "1": "Tændt"
         }
       },
+      "meteronline": {
+        "name": "Måler online"
+      },
+      "gridmode": {
+        "name": "Nettilstand"
+      },
+      "runcommand": {
+        "name": "Kørselskommando"
+      },
+      "currentoperatingmode": {
+        "name": "Driftstilstand"
+      },
+      "insulationresistance": {
+        "name": "Isolationsmodstand"
+      },
+      "leakagecurrent": {
+        "name": "Lækstrøm"
+      },
+      "selfteststatus": {
+        "name": "Selvtest-status"
+      },
       "pvpower": {
         "name": "Total PV-effekt"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "DC-sidetemperatur"
+      },
+      "ambienttemper": {
+        "name": "Omgivelsestemperatur"
+      },
+      "boosttemper": {
+        "name": "Boost-temperatur"
+      },
+      "dsptemper": {
+        "name": "DSP-temperatur"
       },
       "gridf": {
         "name": "Netfrekvens"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Off-grid-effekt"
+      },
+      "offgridv": {
+        "name": "Off-grid-spænding"
+      },
+      "offgridi": {
+        "name": "Off-grid-strøm"
       },
       "offgridq": {
         "name": "Off-grid reaktiv effekt"

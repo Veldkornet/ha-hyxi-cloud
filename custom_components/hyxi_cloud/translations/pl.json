@@ -200,6 +200,12 @@
       "totale": {
         "name": "Całkowity uzysk energii"
       },
+      "totaleb": {
+        "name": "Całkowity uzysk energii B"
+      },
+      "totalec": {
+        "name": "Całkowity uzysk energii C"
+      },
       "bat_charge_total": {
         "name": "Całkowite naładowanie akumulatora"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Energia dzisiaj"
       },
+      "etodayin": {
+        "name": "Dzisiejsza energia pobrana z sieci"
+      },
       "efpv": {
         "name": "Uzysk PV dzisiaj"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Obciążenie fazy 3"
+      },
+      "ph1loadv": {
+        "name": "Napięcie obciążenia fazy 1"
+      },
+      "ph2loadv": {
+        "name": "Napięcie obciążenia fazy 2"
+      },
+      "ph3loadv": {
+        "name": "Napięcie obciążenia fazy 3"
       },
       "pv1v": {
         "name": "Napięcie PV1"
@@ -431,6 +449,27 @@
           "1": "Włączony"
         }
       },
+      "meteronline": {
+        "name": "Licznik online"
+      },
+      "gridmode": {
+        "name": "Tryb sieci"
+      },
+      "runcommand": {
+        "name": "Polecenie uruchomienia"
+      },
+      "currentoperatingmode": {
+        "name": "Tryb pracy"
+      },
+      "insulationresistance": {
+        "name": "Rezystancja izolacji"
+      },
+      "leakagecurrent": {
+        "name": "Prąd upływu"
+      },
+      "selfteststatus": {
+        "name": "Stan autotestu"
+      },
       "pvpower": {
         "name": "Całkowita moc PV"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "Temperatura po stronie DC"
+      },
+      "ambienttemper": {
+        "name": "Temperatura otoczenia"
+      },
+      "boosttemper": {
+        "name": "Temperatura boost"
+      },
+      "dsptemper": {
+        "name": "Temperatura DSP"
       },
       "gridf": {
         "name": "Częstotliwość sieci"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Moc off-grid"
+      },
+      "offgridv": {
+        "name": "Napięcie off-grid"
+      },
+      "offgridi": {
+        "name": "Prąd off-grid"
       },
       "offgridq": {
         "name": "Moc bierna off-grid"

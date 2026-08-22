@@ -200,6 +200,12 @@
       "totale": {
         "name": "Kokonaistuotto"
       },
+      "totaleb": {
+        "name": "Kokonaistuotto B"
+      },
+      "totalec": {
+        "name": "Kokonaistuotto C"
+      },
       "bat_charge_total": {
         "name": "Akun kokonaislataus"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Sähköntuotto tänään"
       },
+      "etodayin": {
+        "name": "Tänään tuotu verkkoenergia"
+      },
       "efpv": {
         "name": "PV-tuotto tänään"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Vaihe 3 kuorma"
+      },
+      "ph1loadv": {
+        "name": "Vaihe 1 kuormajännite"
+      },
+      "ph2loadv": {
+        "name": "Vaihe 2 kuormajännite"
+      },
+      "ph3loadv": {
+        "name": "Vaihe 3 kuormajännite"
       },
       "pv1v": {
         "name": "PV1-jännite"
@@ -431,6 +449,27 @@
           "1": "Virta päällä"
         }
       },
+      "meteronline": {
+        "name": "Mittari verkossa"
+      },
+      "gridmode": {
+        "name": "Verkkotila"
+      },
+      "runcommand": {
+        "name": "Käyntikäsky"
+      },
+      "currentoperatingmode": {
+        "name": "Käyttötila"
+      },
+      "insulationresistance": {
+        "name": "Eristysvastus"
+      },
+      "leakagecurrent": {
+        "name": "Vuotovirta"
+      },
+      "selfteststatus": {
+        "name": "Itsetestauksen tila"
+      },
       "pvpower": {
         "name": "PV-kokonaisteho"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "DC-puolen lämpötila"
+      },
+      "ambienttemper": {
+        "name": "Ympäristön lämpötila"
+      },
+      "boosttemper": {
+        "name": "Boost-lämpötila"
+      },
+      "dsptemper": {
+        "name": "DSP-lämpötila"
       },
       "gridf": {
         "name": "Verkkotaajuus"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Off-grid-teho"
+      },
+      "offgridv": {
+        "name": "Off-grid-jännite"
+      },
+      "offgridi": {
+        "name": "Off-grid-virta"
       },
       "offgridq": {
         "name": "Off-grid-loisteho"

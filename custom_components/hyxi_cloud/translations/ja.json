@@ -200,6 +200,12 @@
       "totale": {
         "name": "累計発電量"
       },
+      "totaleb": {
+        "name": "累計発電量B"
+      },
+      "totalec": {
+        "name": "累計発電量C"
+      },
       "bat_charge_total": {
         "name": "累計充電量"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "本日の発電量"
       },
+      "etodayin": {
+        "name": "本日の系統輸入電力量"
+      },
       "efpv": {
         "name": "本日のPV発電量"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "第3相負荷"
+      },
+      "ph1loadv": {
+        "name": "第1相負荷電圧"
+      },
+      "ph2loadv": {
+        "name": "第2相負荷電圧"
+      },
+      "ph3loadv": {
+        "name": "第3相負荷電圧"
       },
       "pv1v": {
         "name": "PV1電圧"
@@ -431,6 +449,27 @@
           "1": "電源オン"
         }
       },
+      "meteronline": {
+        "name": "メーターオンライン"
+      },
+      "gridmode": {
+        "name": "グリッドモード"
+      },
+      "runcommand": {
+        "name": "運転コマンド"
+      },
+      "currentoperatingmode": {
+        "name": "動作モード"
+      },
+      "insulationresistance": {
+        "name": "絶縁抵抗"
+      },
+      "leakagecurrent": {
+        "name": "漏れ電流"
+      },
+      "selfteststatus": {
+        "name": "自己診断状態"
+      },
       "pvpower": {
         "name": "PV総電力"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "DC側温度"
+      },
+      "ambienttemper": {
+        "name": "周囲温度"
+      },
+      "boosttemper": {
+        "name": "ブースト温度"
+      },
+      "dsptemper": {
+        "name": "DSP温度"
       },
       "gridf": {
         "name": "系統周波数"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "オフグリッド電力"
+      },
+      "offgridv": {
+        "name": "オフグリッド電圧"
+      },
+      "offgridi": {
+        "name": "オフグリッド電流"
       },
       "offgridq": {
         "name": "オフグリッド無効電力"

@@ -310,17 +310,43 @@ class HyxiModbusClient:
             "deviceSwitchStatus": self.status.switch_status,
             "vbus": self.status.bus_voltage,
             "tinv": self.status.ac_temperature,
-            # Grid side. gridP stays in kW -- see the docstring.
+            "ambientTemper": self.status.ambient_temperature,
+            "dcSideTemper": self.status.dc_temperature,
+            # Unit unconfirmed -- the document gives no scale for either
+            # field, so these pass through as the raw register value rather
+            # than guessing a unit and risking a wrong one in history.
+            "insulationResistance": self.status.insulation_resistance,
+            "leakageCurrent": self.status.leakage_current,
+            "meterOnline": self.status.meter_online,
+            # Nameplate ratings, static -- read once with identity, not
+            # re-polled, but published on every metrics build like batSn.
+            "ratedPower": self.identity.rated_power,
+            "ratedFrequency": self.identity.rated_frequency,
+            "ratedVoltage": self.identity.rated_voltage,
+            # Grid side. gridP stays in kW -- see the docstring. gridQ/gridAp
+            # reuse _to_watts for its *1000 scaling only -- the register is
+            # kW-scaled regardless of whether the quantity is real, reactive
+            # or apparent power.
             "gridP": self.grid.active_power,
+            "gridQ": _to_watts(self.grid.reactive_power),
+            "gridAp": _to_watts(self.grid.apparent_power),
+            "gridPfd": self.grid.power_factor,
             "f": self.grid.frequency,
             "gridF": self.grid.frequency,
             "ph1v": self.grid.voltage,
             "ph1i": self.grid.current,
             "ph1p": _to_watts(self.grid.phase_power),
-            # Off-grid side feeds the backup load sensor.
+            # Off-grid side feeds the backup load sensor, plus its own
+            # frequency/power/voltage/current now that those registers have
+            # somewhere to go.
+            "offGridF": self.backup.frequency,
+            "offGridP": _to_watts(self.backup.active_power),
+            "offGridV": self.backup.voltage,
+            "offGridI": self.backup.current,
             "ph1Loadp": _to_watts(self.backup.phase_power),
             # Energy counters
             "eToday": self.energy.output_today,
+            "eTodayIn": self.energy.input_today,
             "totalE": self.energy.output_total,
             "totalEnt": self.energy.input_total,
             "totalEchg": self.energy.battery_charged_total,

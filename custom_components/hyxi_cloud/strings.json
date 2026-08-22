@@ -201,6 +201,12 @@
       "totale": {
         "name": "Total Energy Yield"
       },
+      "totaleb": {
+        "name": "Total Energy Yield B"
+      },
+      "totalec": {
+        "name": "Total Energy Yield C"
+      },
       "bat_charge_total": {
         "name": "Total Battery Charge"
       },
@@ -275,11 +281,11 @@
       "etoday": {
         "name": "Energy Today"
       },
+      "etodayin": {
+        "name": "Grid Import Energy Today"
+      },
       "efpv": {
         "name": "Yield Today (PV)"
-      },
-      "internal_temperature": {
-        "name": "Internal Temperature"
       },
       "ph1loadp": {
         "name": "Phase 1 Load"
@@ -289,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Phase 3 Load"
+      },
+      "ph1loadv": {
+        "name": "Phase 1 Load Voltage"
+      },
+      "ph2loadv": {
+        "name": "Phase 2 Load Voltage"
+      },
+      "ph3loadv": {
+        "name": "Phase 3 Load Voltage"
       },
       "pv1v": {
         "name": "PV1 Voltage"
@@ -402,6 +417,9 @@
       "ph3p": {
         "name": "Phase 3 Power"
       },
+      "internal_temperature": {
+        "name": "Internal Temperature"
+      },
       "invsts": {
         "name": "Inverter Status",
         "state": {
@@ -440,6 +458,27 @@
           "1": "Power On"
         }
       },
+      "meteronline": {
+        "name": "Meter Online"
+      },
+      "gridmode": {
+        "name": "Grid Mode"
+      },
+      "runcommand": {
+        "name": "Run Command"
+      },
+      "currentoperatingmode": {
+        "name": "Operating Mode"
+      },
+      "insulationresistance": {
+        "name": "Insulation Resistance"
+      },
+      "leakagecurrent": {
+        "name": "Leakage Current"
+      },
+      "selfteststatus": {
+        "name": "Self-test Status"
+      },
       "pvpower": {
         "name": "PV Power"
       },
@@ -451,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "DC Side Temperature"
+      },
+      "ambienttemper": {
+        "name": "Ambient Temperature"
+      },
+      "boosttemper": {
+        "name": "Boost Temperature"
+      },
+      "dsptemper": {
+        "name": "DSP Temperature"
       },
       "gridf": {
         "name": "On-grid Frequency"
@@ -472,6 +520,12 @@
       },
       "offgridp": {
         "name": "Off-grid Power"
+      },
+      "offgridv": {
+        "name": "Off-grid Voltage"
+      },
+      "offgridi": {
+        "name": "Off-grid Current"
       },
       "offgridq": {
         "name": "Off-grid Reactive Power"

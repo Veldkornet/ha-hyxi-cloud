@@ -200,6 +200,12 @@
       "totale": {
         "name": "Rendimiento total de energía"
       },
+      "totaleb": {
+        "name": "Rendimiento total de energía B"
+      },
+      "totalec": {
+        "name": "Rendimiento total de energía C"
+      },
       "bat_charge_total": {
         "name": "Carga total de batería"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Energía de hoy"
       },
+      "etodayin": {
+        "name": "Energía Importada de la Red Hoy"
+      },
       "efpv": {
         "name": "Rendimiento de hoy (FV)"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Carga Fase 3"
+      },
+      "ph1loadv": {
+        "name": "Voltaje de Carga Fase 1"
+      },
+      "ph2loadv": {
+        "name": "Voltaje de Carga Fase 2"
+      },
+      "ph3loadv": {
+        "name": "Voltaje de Carga Fase 3"
       },
       "pv1v": {
         "name": "Voltaje PV1"
@@ -431,6 +449,27 @@
           "1": "Encendido"
         }
       },
+      "meteronline": {
+        "name": "Medidor en línea"
+      },
+      "gridmode": {
+        "name": "Modo de red"
+      },
+      "runcommand": {
+        "name": "Comando de ejecución"
+      },
+      "currentoperatingmode": {
+        "name": "Modo de funcionamiento"
+      },
+      "insulationresistance": {
+        "name": "Resistencia de aislamiento"
+      },
+      "leakagecurrent": {
+        "name": "Corriente de fuga"
+      },
+      "selfteststatus": {
+        "name": "Estado de autoprueba"
+      },
       "pvpower": {
         "name": "Potencia PV total"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "Temperatura del lado DC"
+      },
+      "ambienttemper": {
+        "name": "Temperatura ambiente"
+      },
+      "boosttemper": {
+        "name": "Temperatura boost"
+      },
+      "dsptemper": {
+        "name": "Temperatura DSP"
       },
       "gridf": {
         "name": "Frecuencia de red"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Potencia fuera de red"
+      },
+      "offgridv": {
+        "name": "Voltaje fuera de red"
+      },
+      "offgridi": {
+        "name": "Corriente fuera de red"
       },
       "offgridq": {
         "name": "Potencia reactiva fuera de red"

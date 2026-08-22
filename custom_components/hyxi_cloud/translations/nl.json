@@ -200,6 +200,12 @@
       "totale": {
         "name": "Totale Energieopbrengst"
       },
+      "totaleb": {
+        "name": "Totale Energieopbrengst B"
+      },
+      "totalec": {
+        "name": "Totale Energieopbrengst C"
+      },
       "bat_charge_total": {
         "name": "Totaal Batterij Opgeladen"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Energie Vandaag"
       },
+      "etodayin": {
+        "name": "Netimport-energie Vandaag"
+      },
       "efpv": {
         "name": "PV-opbrengst Vandaag"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Fase 3 Belasting"
+      },
+      "ph1loadv": {
+        "name": "Fase 1 Belastingsspanning"
+      },
+      "ph2loadv": {
+        "name": "Fase 2 Belastingsspanning"
+      },
+      "ph3loadv": {
+        "name": "Fase 3 Belastingsspanning"
       },
       "pv1v": {
         "name": "PV1 Spanning"
@@ -431,6 +449,27 @@
           "1": "Inschakelen"
         }
       },
+      "meteronline": {
+        "name": "Meter online"
+      },
+      "gridmode": {
+        "name": "Netmodus"
+      },
+      "runcommand": {
+        "name": "Startopdracht"
+      },
+      "currentoperatingmode": {
+        "name": "Bedrijfsmodus"
+      },
+      "insulationresistance": {
+        "name": "Isolatieweerstand"
+      },
+      "leakagecurrent": {
+        "name": "Lekstroom"
+      },
+      "selfteststatus": {
+        "name": "Zelftest status"
+      },
       "pvpower": {
         "name": "Totaal PV-vermogen"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "Temperatuur DC-zijde"
+      },
+      "ambienttemper": {
+        "name": "Omgevingstemperatuur"
+      },
+      "boosttemper": {
+        "name": "Boost-temperatuur"
+      },
+      "dsptemper": {
+        "name": "DSP-temperatuur"
       },
       "gridf": {
         "name": "Netfrequentie"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Off-grid vermogen"
+      },
+      "offgridv": {
+        "name": "Off-grid spanning"
+      },
+      "offgridi": {
+        "name": "Off-grid stroom"
       },
       "offgridq": {
         "name": "Off-grid blindvermogen"

@@ -200,6 +200,12 @@
       "totale": {
         "name": "Gesamtertrag"
       },
+      "totaleb": {
+        "name": "Gesamtertrag B"
+      },
+      "totalec": {
+        "name": "Gesamtertrag C"
+      },
       "bat_charge_total": {
         "name": "Gesamte Batterieladung"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Tagesertrag"
       },
+      "etodayin": {
+        "name": "Netzbezugsenergie heute"
+      },
       "efpv": {
         "name": "Tagesertrag (PV)"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Phase 3 Verbrauch"
+      },
+      "ph1loadv": {
+        "name": "Phase 1 Verbrauchsspannung"
+      },
+      "ph2loadv": {
+        "name": "Phase 2 Verbrauchsspannung"
+      },
+      "ph3loadv": {
+        "name": "Phase 3 Verbrauchsspannung"
       },
       "pv1v": {
         "name": "PV1 Spannung"
@@ -431,6 +449,27 @@
           "1": "Einschalten"
         }
       },
+      "meteronline": {
+        "name": "Zähler online"
+      },
+      "gridmode": {
+        "name": "Netzmodus"
+      },
+      "runcommand": {
+        "name": "Laufbefehl"
+      },
+      "currentoperatingmode": {
+        "name": "Betriebsmodus"
+      },
+      "insulationresistance": {
+        "name": "Isolationswiderstand"
+      },
+      "leakagecurrent": {
+        "name": "Ableitstrom"
+      },
+      "selfteststatus": {
+        "name": "Selbsttest-Status"
+      },
       "pvpower": {
         "name": "PV-Gesamtleistung"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "DC-Seitentemperatur"
+      },
+      "ambienttemper": {
+        "name": "Umgebungstemperatur"
+      },
+      "boosttemper": {
+        "name": "Boost-Temperatur"
+      },
+      "dsptemper": {
+        "name": "DSP-Temperatur"
       },
       "gridf": {
         "name": "Netzfrequenz"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Off-Grid-Leistung"
+      },
+      "offgridv": {
+        "name": "Off-Grid-Spannung"
+      },
+      "offgridi": {
+        "name": "Off-Grid-Strom"
       },
       "offgridq": {
         "name": "Off-Grid-Blindleistung"

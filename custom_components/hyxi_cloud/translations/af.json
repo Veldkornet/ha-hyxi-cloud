@@ -200,6 +200,12 @@
       "totale": {
         "name": "Totale Energie-opbrengs"
       },
+      "totaleb": {
+        "name": "Totale Energie-opbrengs B"
+      },
+      "totalec": {
+        "name": "Totale Energie-opbrengs C"
+      },
       "bat_charge_total": {
         "name": "Totale Battery-herlaai"
       },
@@ -266,6 +272,9 @@
       "etoday": {
         "name": "Energie Vandag"
       },
+      "etodayin": {
+        "name": "Netinvoerenergie Vandag"
+      },
       "efpv": {
         "name": "Opbrengs Vandag (PV)"
       },
@@ -277,6 +286,15 @@
       },
       "ph3loadp": {
         "name": "Fase 3 Las"
+      },
+      "ph1loadv": {
+        "name": "Fase 1 Lasspanning"
+      },
+      "ph2loadv": {
+        "name": "Fase 2 Lasspanning"
+      },
+      "ph3loadv": {
+        "name": "Fase 3 Lasspanning"
       },
       "pv1v": {
         "name": "PV1 Spanning"
@@ -431,6 +449,27 @@
           "1": "Aanskakel"
         }
       },
+      "meteronline": {
+        "name": "Meter Aanlyn"
+      },
+      "gridmode": {
+        "name": "Netmodus"
+      },
+      "runcommand": {
+        "name": "Loopbevel"
+      },
+      "currentoperatingmode": {
+        "name": "Bedryfsmodus"
+      },
+      "insulationresistance": {
+        "name": "Isolasieweerstand"
+      },
+      "leakagecurrent": {
+        "name": "Lekstroom"
+      },
+      "selfteststatus": {
+        "name": "Selftoetsstatus"
+      },
       "pvpower": {
         "name": "Totale PV-krag"
       },
@@ -442,6 +481,15 @@
       },
       "dcsidetemper": {
         "name": "DC-kant temperatuur"
+      },
+      "ambienttemper": {
+        "name": "Omgewingstemperatuur"
+      },
+      "boosttemper": {
+        "name": "Boost-temperatuur"
+      },
+      "dsptemper": {
+        "name": "DSP-temperatuur"
       },
       "gridf": {
         "name": "Netfrekwensie"
@@ -463,6 +511,12 @@
       },
       "offgridp": {
         "name": "Af-net krag"
+      },
+      "offgridv": {
+        "name": "Af-net Spanning"
+      },
+      "offgridi": {
+        "name": "Af-net Stroom"
       },
       "offgridq": {
         "name": "Af-net reaktiewe krag"
