@@ -128,13 +128,16 @@ def _build_transport_schema() -> vol.Schema:
     )
 
 
-def _build_modbus_type_schema() -> vol.Schema:
-    """Build the Modbus connection-type chooser."""
+def _build_modbus_type_schema(*, default: str = MODBUS_TYPE_TCP) -> vol.Schema:
+    """Build the Modbus connection-type chooser.
+
+    `default` is the current entry's type on reconfigure, so switching from
+    a USB adapter to a network gateway (or back) is offered as an edit
+    rather than forcing a remove-and-re-add for that kind of change.
+    """
     return vol.Schema(
         {
-            vol.Required(
-                CONF_MODBUS_TYPE, default=MODBUS_TYPE_TCP
-            ): selector.SelectSelector(
+            vol.Required(CONF_MODBUS_TYPE, default=default): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=MODBUS_TYPE_OPTIONS,
                     mode=selector.SelectSelectorMode.LIST,
@@ -144,11 +147,12 @@ def _build_modbus_type_schema() -> vol.Schema:
     )
 
 
-def _build_unit_field() -> dict:
+def _build_unit_field(current: Mapping[str, Any] | None = None) -> dict:
     """Build the slave-address field shared by both Modbus connection types."""
+    current = current or {}
     return {
         vol.Required(
-            CONF_MODBUS_UNIT, default=DEFAULT_MODBUS_UNIT
+            CONF_MODBUS_UNIT, default=current.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT)
         ): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=1, max=247, step=1, mode=selector.NumberSelectorMode.BOX
@@ -157,37 +161,59 @@ def _build_unit_field() -> dict:
     }
 
 
-def _build_modbus_tcp_schema() -> vol.Schema:
-    """Build the schema for an RS485-to-Ethernet gateway."""
+def _build_modbus_tcp_schema(current: Mapping[str, Any] | None = None) -> vol.Schema:
+    """Build the schema for an RS485-to-Ethernet gateway.
+
+    `current` pre-fills from an existing entry's data on reconfigure;
+    omitted (or a key missing from it) falls back to the same defaults
+    used for a brand new entry.
+    """
+    current = current or {}
+    host_field = (
+        vol.Required(CONF_MODBUS_HOST, default=current[CONF_MODBUS_HOST])
+        if CONF_MODBUS_HOST in current
+        else vol.Required(CONF_MODBUS_HOST)
+    )
     return vol.Schema(
         {
-            vol.Required(CONF_MODBUS_HOST): str,
+            host_field: str,
             vol.Required(
-                CONF_MODBUS_PORT, default=DEFAULT_MODBUS_PORT
+                CONF_MODBUS_PORT,
+                default=current.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT),
             ): selector.NumberSelector(
                 selector.NumberSelectorConfig(
                     min=1, max=65535, step=1, mode=selector.NumberSelectorMode.BOX
                 )
             ),
-            **_build_unit_field(),
+            **_build_unit_field(current),
         }
     )
 
 
-def _build_modbus_serial_schema() -> vol.Schema:
-    """Build the schema for a directly attached USB RS485 adapter."""
+def _build_modbus_serial_schema(current: Mapping[str, Any] | None = None) -> vol.Schema:
+    """Build the schema for a directly attached USB RS485 adapter.
+
+    See _build_modbus_tcp_schema for what `current` is for.
+    """
+    current = current or {}
     return vol.Schema(
         {
-            vol.Required(CONF_MODBUS_DEVICE, default="/dev/ttyUSB0"): str,
             vol.Required(
-                CONF_MODBUS_BAUDRATE, default=DEFAULT_MODBUS_BAUDRATE
+                CONF_MODBUS_DEVICE,
+                default=current.get(CONF_MODBUS_DEVICE, "/dev/ttyUSB0"),
+            ): str,
+            vol.Required(
+                CONF_MODBUS_BAUDRATE,
+                # SelectSelector option values are strings; the entry stores
+                # an int, so it must be coerced back for the default to match.
+                default=str(current.get(CONF_MODBUS_BAUDRATE, DEFAULT_MODBUS_BAUDRATE)),
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=["9600", "19200", "38400", "57600", "115200"],
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
-            **_build_unit_field(),
+            **_build_unit_field(current),
         }
     )
 
@@ -405,8 +431,18 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         finally:
             await connection.close()
 
-    async def _validate_modbus(self, user_input) -> tuple[str | None, dict]:
-        """Validate a Modbus connection and return (error, entry data)."""
+    async def _validate_modbus(
+        self, user_input, *, reconfiguring_entry_id: str | None = None
+    ) -> tuple[str | None, dict]:
+        """Validate a Modbus connection and return (error, entry data).
+
+        `reconfiguring_entry_id` is the entry a reconfigure flow is editing.
+        The unique ID is connection-address-derived here (unlike the cloud
+        path's account-key one), so editing an entry back to its own
+        current address must not read as "already configured" against
+        itself -- only a collision with a genuinely different entry should
+        abort.
+        """
         from modbus_connection import ModbusSerialParams, ModbusTcpParams
 
         unit_id = int(user_input[CONF_MODBUS_UNIT])
@@ -437,8 +473,17 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             title = f"HYXI Modbus ({host})"
             data = {CONF_MODBUS_HOST: host, CONF_MODBUS_PORT: port}
 
-        await self.async_set_unique_id(unique_id)
-        self._abort_if_unique_id_configured()
+        await self.async_set_unique_id(unique_id, raise_on_progress=False)
+        existing = self.hass.config_entries.async_entry_for_domain_unique_id(
+            self.handler, unique_id
+        )
+        if existing and existing.entry_id != reconfiguring_entry_id:
+            # Definitely a different entry at this address -- raises AbortFlow,
+            # same as the plain _abort_if_unique_id_configured() call this
+            # replaces. Only reached when it will actually raise, so a
+            # reconfigure that leaves the address unchanged never aborts
+            # against its own entry.
+            self._abort_if_unique_id_configured()
 
         error, family = await self._probe_and_detect_modbus(params, unit_id)
         return error, {
@@ -482,12 +527,37 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         )
 
     async def _async_modbus_connection_step(self, step_id, schema, user_input):
-        """Validate and create an entry for either Modbus connection type."""
+        """Validate a Modbus connection type step.
+
+        Shared by both fresh setup and reconfigure -- the two differ only in
+        what happens on success, so that is the only thing branched here.
+        Reconfigure is detected from the flow's own source rather than a
+        separate parameter, since HA already tracks that distinction and a
+        second signal saying the same thing would just be a way for the two
+        to quietly disagree later.
+        """
+        # self.context.get("source") rather than the real ConfigFlow's
+        # .source property they are equivalent (that property is exactly
+        # this) -- direct access matches how this file already reads
+        # self.context["entry_id"] in async_step_reauth.
+        reconfiguring = self.context.get("source") == config_entries.SOURCE_RECONFIGURE
+        reconfigure_entry = self._get_reconfigure_entry() if reconfiguring else None
+
         errors = {}
         if user_input is not None:
-            error, data = await self._validate_modbus(user_input)
+            error, data = await self._validate_modbus(
+                user_input,
+                reconfiguring_entry_id=(
+                    reconfigure_entry.entry_id if reconfigure_entry else None
+                ),
+            )
             if not error:
-                return self.async_create_entry(title=data.pop("_title"), data=data)
+                title = data.pop("_title")
+                if reconfigure_entry is not None:
+                    return self.async_update_reload_and_abort(
+                        reconfigure_entry, title=title, data=data
+                    )
+                return self.async_create_entry(title=title, data=data)
             errors["base"] = error
 
         return self.async_show_form(step_id=step_id, data_schema=schema, errors=errors)
@@ -502,6 +572,50 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         """Configure a directly attached USB RS485 adapter."""
         return await self._async_modbus_connection_step(
             "modbus_serial", _build_modbus_serial_schema(), user_input
+        )
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Change an existing Modbus entry's connection details.
+
+        Scoped to connection details only -- host/port, device/baud, and the
+        slave address -- not the transport itself. A cloud entry's unique ID
+        is an account key; a Modbus entry's is a connection address. Those
+        are different enough kinds of identity that "reconfigure into a
+        different transport" would really be a different entry, not an edit
+        of this one, so this step only ever runs for entries that were
+        already Modbus.
+
+        Re-runs the same probe-and-detect used at setup, on purpose: if the
+        device at the new address is a different family than the one
+        stored, that gets caught and corrected here rather than left wrong
+        until someone notices the sensors look off.
+        """
+        entry = self._get_reconfigure_entry()
+        self._modbus_type = entry.data.get(CONF_MODBUS_TYPE, MODBUS_TYPE_TCP)
+
+        if user_input is not None:
+            self._modbus_type = user_input[CONF_MODBUS_TYPE]
+            if self._modbus_type == MODBUS_TYPE_SERIAL:
+                return await self.async_step_reconfigure_serial()
+            return await self.async_step_reconfigure_tcp()
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=_build_modbus_type_schema(default=self._modbus_type),
+        )
+
+    async def async_step_reconfigure_tcp(self, user_input=None):
+        """Edit an RS485-to-Ethernet gateway's connection details."""
+        entry = self._get_reconfigure_entry()
+        return await self._async_modbus_connection_step(
+            "reconfigure_tcp", _build_modbus_tcp_schema(entry.data), user_input
+        )
+
+    async def async_step_reconfigure_serial(self, user_input=None):
+        """Edit a USB RS485 adapter's connection details."""
+        entry = self._get_reconfigure_entry()
+        return await self._async_modbus_connection_step(
+            "reconfigure_serial", _build_modbus_serial_schema(entry.data), user_input
         )
 
     async def async_step_cloud(self, user_input=None):

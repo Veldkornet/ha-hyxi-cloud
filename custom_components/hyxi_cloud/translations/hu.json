@@ -50,6 +50,31 @@
           "modbus_baudrate": "Baud rate",
           "modbus_unit": "Slave address"
         }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
@@ -62,7 +87,8 @@
     },
     "abort": {
       "already_configured": "Ez a HYXI fiók már be van konfigurálva.",
-      "reauth_successful": "Az újrahitelesítés sikeres volt"
+      "reauth_successful": "Az újrahitelesítés sikeres volt",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {

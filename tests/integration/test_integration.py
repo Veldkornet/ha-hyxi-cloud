@@ -10,6 +10,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import (
     CONF_ACCESS_KEY,
+    CONF_MODBUS_BAUDRATE,
+    CONF_MODBUS_DEVICE,
     CONF_MODBUS_FAMILY,
     CONF_MODBUS_HOST,
     CONF_MODBUS_PORT,
@@ -18,6 +20,7 @@ from custom_components.hyxi_cloud.const import (
     CONF_SECRET_KEY,
     CONF_TRANSPORT,
     DOMAIN,
+    MODBUS_TYPE_SERIAL,
     MODBUS_TYPE_TCP,
     TRANSPORT_CLOUD,
     TRANSPORT_MODBUS,
@@ -452,3 +455,237 @@ async def test_config_flow_modbus_probe_failure_shows_error(hass: HomeAssistant)
 
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["errors"] == {"base": "no_device"}
+
+
+# --- Reconfigure: editing an existing Modbus entry's connection details ----
+
+
+def _existing_modbus_entry(hass: HomeAssistant, **overrides) -> MockConfigEntry:
+    """A Modbus TCP entry already set up, as reconfigure always starts from one."""
+    data = {
+        CONF_TRANSPORT: TRANSPORT_MODBUS,
+        CONF_MODBUS_TYPE: MODBUS_TYPE_TCP,
+        CONF_MODBUS_HOST: "192.168.1.50",
+        CONF_MODBUS_PORT: 502,
+        CONF_MODBUS_UNIT: 1,
+        CONF_MODBUS_FAMILY: "halo",
+    }
+    data.update(overrides)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=data,
+        unique_id="192.168.1.50:502:1",
+        title="HYXI Modbus (192.168.1.50)",
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+async def _start_reconfigure(hass: HomeAssistant, entry: MockConfigEntry):
+    return await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "entry_id": entry.entry_id,
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_prefills_the_current_connection_type(hass: HomeAssistant):
+    entry = _existing_modbus_entry(hass)
+
+    result = await _start_reconfigure(hass, entry)
+
+    assert result["step_id"] == "reconfigure"
+    schema = result["data_schema"].schema
+    (field,) = schema
+    assert field.default() == MODBUS_TYPE_TCP
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_prefills_the_current_host_and_port(hass: HomeAssistant):
+    entry = _existing_modbus_entry(hass)
+
+    result = await _start_reconfigure(hass, entry)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
+    )
+
+    assert result["step_id"] == "reconfigure_tcp"
+    defaults = {f: f.default() for f in result["data_schema"].schema if f.default}
+    assert defaults[CONF_MODBUS_HOST] == "192.168.1.50"
+    assert defaults[CONF_MODBUS_PORT] == 502
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_updates_the_entry_and_reloads(hass: HomeAssistant):
+    """The core promise: fixing a wrong IP is an edit, not a remove-and-re-add,
+    and the stored family is refreshed from a real re-probe, not carried
+    over blindly from before the change."""
+    entry = _existing_modbus_entry(hass)
+
+    result = await _start_reconfigure(hass, entry)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
+    )
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.config_flow."
+            "HyxiConfigFlow._probe_and_detect_modbus",
+            return_value=(None, "hybrid"),
+        ),
+        patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_MODBUS_HOST: "192.168.1.51",
+                CONF_MODBUS_PORT: 502,
+                CONF_MODBUS_UNIT: 1,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_MODBUS_HOST] == "192.168.1.51"
+    # Re-detected from the new address, not left as the pre-edit "halo".
+    assert entry.data[CONF_MODBUS_FAMILY] == "hybrid"
+    assert entry.title == "HYXI Modbus (192.168.1.51)"
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_can_switch_from_tcp_to_serial(hass: HomeAssistant):
+    """Swapping a network gateway for a USB adapter is a connection detail,
+    not a transport change -- offered here rather than forcing a remove-and-re-add."""
+    entry = _existing_modbus_entry(hass)
+
+    result = await _start_reconfigure(hass, entry)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_SERIAL}
+    )
+    assert result["step_id"] == "reconfigure_serial"
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.config_flow."
+            "HyxiConfigFlow._probe_and_detect_modbus",
+            return_value=(None, "halo"),
+        ),
+        patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_MODBUS_DEVICE: "/dev/ttyUSB0",
+                CONF_MODBUS_BAUDRATE: "115200",
+                CONF_MODBUS_UNIT: 1,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert entry.data[CONF_MODBUS_TYPE] == MODBUS_TYPE_SERIAL
+    assert entry.data[CONF_MODBUS_DEVICE] == "/dev/ttyUSB0"
+    assert CONF_MODBUS_HOST not in entry.data
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_reprobe_failure_redisplays_the_form(hass: HomeAssistant):
+    entry = _existing_modbus_entry(hass)
+
+    result = await _start_reconfigure(hass, entry)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
+    )
+
+    with patch(
+        "custom_components.hyxi_cloud.config_flow."
+        "HyxiConfigFlow._probe_and_detect_modbus",
+        return_value=("no_device", "halo"),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_MODBUS_HOST: "192.168.1.99",
+                CONF_MODBUS_PORT: 502,
+                CONF_MODBUS_UNIT: 1,
+            },
+        )
+
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["errors"] == {"base": "no_device"}
+    # Nothing committed -- the original entry is untouched.
+    assert entry.data[CONF_MODBUS_HOST] == "192.168.1.50"
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_with_the_address_unchanged_does_not_abort_on_itself(
+    hass: HomeAssistant,
+):
+    """The specific bug this design avoids: an edit that leaves the address
+    as-is must not read as 'already configured' against the entry's own
+    existing unique ID."""
+    entry = _existing_modbus_entry(hass)
+
+    result = await _start_reconfigure(hass, entry)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
+    )
+
+    with (
+        patch(
+            "custom_components.hyxi_cloud.config_flow."
+            "HyxiConfigFlow._probe_and_detect_modbus",
+            return_value=(None, "halo"),
+        ),
+        patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                # Same host/port/unit as the entry already has -- only the
+                # slave address is nudged to prove the rest round-trips.
+                CONF_MODBUS_HOST: "192.168.1.50",
+                CONF_MODBUS_PORT: 502,
+                CONF_MODBUS_UNIT: 1,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_aborts_when_the_new_address_belongs_to_another_entry(
+    hass: HomeAssistant,
+):
+    """Reconfiguring one entry onto an address a *different* entry already
+    owns is a real collision and must still abort."""
+    entry = _existing_modbus_entry(hass)
+    _existing_modbus_entry(
+        hass,
+        modbus_host="192.168.1.60",
+    )
+    # The second entry's unique_id must actually differ for this to test
+    # anything -- MockConfigEntry doesn't derive it from data automatically.
+    other = hass.config_entries.async_entries(DOMAIN)[1]
+    hass.config_entries.async_update_entry(other, unique_id="192.168.1.60:502:1")
+
+    result = await _start_reconfigure(hass, entry)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_MODBUS_HOST: "192.168.1.60",
+            CONF_MODBUS_PORT: 502,
+            CONF_MODBUS_UNIT: 1,
+        },
+    )
+
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["reason"] == "already_configured"

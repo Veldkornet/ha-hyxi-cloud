@@ -48,6 +48,7 @@ def mock_ha_environment():
     mock_ce.OptionsFlow = RealOptionsFlow  # type: ignore[attr-defined]
     mock_ce.ConfigEntry = MagicMock()  # type: ignore[attr-defined]
     mock_ce.exceptions = MagicMock()  # type: ignore[attr-defined]
+    mock_ce.SOURCE_RECONFIGURE = "reconfigure"  # type: ignore[attr-defined]
 
     class IntentionalTermination(Exception):
         pass
@@ -1089,8 +1090,21 @@ async def test_async_step_energy_manager_keeps_existing_sn_selection(
 @pytest.fixture
 def modbus_flow(config_flow):
     """A config flow with the unique-id guards stubbed out."""
+    # A real ConfigFlow always has these from __init__; the fake harness's
+    # stub __init__ is a no-op, so they must be set explicitly for anything
+    # that reads them (self.context.get("source"), and
+    # hass.config_entries.async_entry_for_domain_unique_id(self.handler, ...)
+    # in _validate_modbus's own-entry-aware uniqueness check).
+    config_flow.context = {}
+    config_flow.handler = "hyxi_cloud"
     config_flow.async_set_unique_id = AsyncMock()
     config_flow._abort_if_unique_id_configured = MagicMock()
+    # No existing entry at this address by default -- config_flow.hass is a
+    # bare MagicMock, and an un-configured call on one returns a truthy
+    # MagicMock, which would make every test look like a collision.
+    config_flow.hass.config_entries.async_entry_for_domain_unique_id = MagicMock(
+        return_value=None
+    )
     config_flow.async_show_form = MagicMock(
         side_effect=lambda **kw: {"type": "form", **kw}
     )
@@ -1227,7 +1241,9 @@ async def test_modbus_tcp_creates_entry_when_device_answers(modbus_flow):
     assert result["data"]["modbus_unit"] == 1
     # The title is a form field, not entry data.
     assert "_title" not in result["data"]
-    modbus_flow.async_set_unique_id.assert_awaited_once_with("192.168.1.50:502:1")
+    modbus_flow.async_set_unique_id.assert_awaited_once_with(
+        "192.168.1.50:502:1", raise_on_progress=False
+    )
     fake.connection.close.assert_awaited_once()
 
 
@@ -1250,7 +1266,9 @@ async def test_modbus_serial_creates_entry_and_coerces_types(modbus_flow):
     assert result["data"]["modbus_baudrate"] == 115200
     assert result["data"]["modbus_unit"] == 1
     assert result["data"]["modbus_type"] == "serial"
-    modbus_flow.async_set_unique_id.assert_awaited_once_with("/dev/ttyUSB0:1")
+    modbus_flow.async_set_unique_id.assert_awaited_once_with(
+        "/dev/ttyUSB0:1", raise_on_progress=False
+    )
 
 
 @pytest.mark.asyncio
@@ -1429,7 +1447,12 @@ def test_modbus_serial_schema_defaults_to_the_documented_baud_rate(
     mock_ha_environment,
 ):
     """115200 is what the Micro Storage RS485 document fixes the HALO at, so
-    it is the default even though the hybrid units are unconfirmed."""
+    it is the default even though the hybrid units are unconfirmed.
+
+    Baud rate default is asserted as a string: the SelectSelector's option
+    values are strings ("115200", not 115200), and a default of the wrong
+    type simply fails to preselect anything in the form.
+    """
     config_flow_mod = mock_ha_environment
     config_flow_mod.vol.Required.reset_mock()
 
@@ -1439,7 +1462,7 @@ def test_modbus_serial_schema_defaults_to_the_documented_baud_rate(
         c.args[0]: c.kwargs.get("default")
         for c in config_flow_mod.vol.Required.call_args_list
     }
-    assert defaults[config_flow_mod.CONF_MODBUS_BAUDRATE] == 115200
+    assert defaults[config_flow_mod.CONF_MODBUS_BAUDRATE] == "115200"
     assert defaults[config_flow_mod.CONF_MODBUS_DEVICE] == "/dev/ttyUSB0"
     assert defaults[config_flow_mod.CONF_MODBUS_UNIT] == 1
 
