@@ -24,6 +24,7 @@
 ## ✨ Features
 
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
+- **📟 Local Modbus (RS485) — In Development:** An optional local transport that talks straight to the inverter over RS485 instead of the cloud, for faster polling and control the cloud API can't offer. See [Local Modbus (RS485)](#-local-modbus-rs485--in-development) below — not yet verified against real hardware.
 - **🔄 Real-Time Push Subscriptions:** Optional support for receiving instantaneous updates for telemetry data and active alarms directly from HYXI Cloud via Home Assistant's webhook endpoints, bypassing polling delays.
 - **🔧 Device Control:** Send supported HYXI Cloud control commands from Home Assistant, including inverter mode buttons, peak shaving buttons, frequency control, and microinverter power controls.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
@@ -389,6 +390,26 @@ This integration includes a specialized diagnostic system to help you distinguis
 | **Cloud Status** | Binary connectivity sensor. | Indicates Cloud connectivity. Includes **Connection Quality** and **Data Freshness** as attributes. |
 | **Device Alarm** | Hardware fault tracking. | Binary sensor that turns `On` if the hardware reports active alarms. |
 | **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
+
+## 📟 Local Modbus (RS485) — In Development
+
+> [!WARNING]
+> **Not yet verified against real hardware, and control entities aren't wired up for it yet either.** The register maps below come from HYXI's own protocol documents, decoded and tested against simulated devices (`tools/fake_hyxi.py`) — but nobody has run this against a live inverter, and the existing Device Control entities (buttons, sliders, switches) don't yet distinguish this transport from the cloud API, so some of them won't appear for a Modbus-connected device even once control is enabled. Treat this whole section as experimental until it says otherwise. Full provenance for every register — which document it came from, what's confirmed vs. inferred, known caveats — is tracked in [`docs/modbus-provenance.md`](docs/modbus-provenance.md).
+
+As an alternative to the HYXI Cloud API, the integration can talk directly to one inverter over RS485 Modbus — no account, no internet dependency, and (once wired up) the ability to control devices the cloud API refuses. It polls far faster than the cloud allows, at the cost of needing a wired RS485 connection and losing what only makes sense with a cloud account (multi-device discovery, real-time push, remote access).
+
+**Setup:** Choosing **Add Integration → HYXI** now opens with a connection-type choice — HYXI Cloud (the default) or Local Modbus. Picking Modbus asks for either a TCP gateway (host/port — an RS485-to-Ethernet adapter) or a serial port (a USB RS485 adapter's device path and baud rate), then a slave address. You don't need to know which inverter family you have: the integration probes the bus during setup and picks the right register map automatically.
+
+### Supported models
+
+| Family | Models | Register map source |
+| :--- | :--- | :--- |
+| **Hybrid Inverter** | HYX-H(5~12)K-HT *(incl. H10K-HT)*, HYX-H(15~25)K-HT, HYX-H(6~15)K-HTA, HYX-H(6~15)K-HTAC | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1 |
+| **Micro ESS (HALO)** | HYX-MS3000AC | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0 |
+
+Both maps cover live telemetry (grid/off-grid power, PV strings, battery/BMS detail, energy counters) and charge/discharge control at the client level. Wiring and serial settings — 115200bps, no parity, 8 data bits, 1 stop bit — are documented per model in `docs/modbus-provenance.md`; the two families use different physical pins and disagree on the minimum spacing between frames, both handled automatically once your model is detected.
+
+**On HALO control specifically:** [above](#-device-control), Micro ESS Power On/Off is described as disabled because the *cloud* API rejects it (`B003026`). That restriction is cloud-specific — it doesn't apply over local Modbus — but the Device Control entities haven't been updated yet to offer HALO control just because the connection happens to be local. This is tracked as follow-up work, not a hardware limitation.
 
 ## 🎨 Community Examples
 
