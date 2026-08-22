@@ -18,6 +18,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Dev-only: tools/modbus_probe.py needs a Modbus stack to talk to hardware.
+# Deliberately NOT in [project].dependencies -- that list is mirrored into
+# manifest.json by scripts/sync_versions.py, and nothing the integration
+# ships at runtime imports this yet.
+modbus = [
+    "modbus-connection[tmodbus]>=4.8.1",
+]
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
