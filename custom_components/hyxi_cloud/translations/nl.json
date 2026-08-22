@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Max ontlaadstroom"
       },
+      "bmsstate": {
+        "name": "BMS-status"
+      },
+      "batoperatingstatus": {
+        "name": "Bedrijfsstatus batterij"
+      },
+      "batalarm1": {
+        "name": "Batterijalarm 1"
+      },
+      "batalarm2": {
+        "name": "Batterijalarm 2"
+      },
+      "batalarm3": {
+        "name": "Batterijalarm 3"
+      },
+      "batcapacityah": {
+        "name": "Batterijcapaciteit (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominale batterijcapaciteit"
+      },
+      "llcbusvoltage": {
+        "name": "LLC Bus Spanning"
+      },
+      "batchargev": {
+        "name": "Batterij laadspanning"
+      },
+      "batchargei": {
+        "name": "Batterij laadstroom"
+      },
+      "batchargep": {
+        "name": "Batterij laadvermogen"
+      },
+      "batdischargev": {
+        "name": "Batterij ontlaadspanning"
+      },
+      "batdischargei": {
+        "name": "Batterij ontlaadstroom"
+      },
+      "batdischargep": {
+        "name": "Batterij ontlaadvermogen"
+      },
       "batcharge": {
         "name": "Dagelijkse laadenergie"
       },

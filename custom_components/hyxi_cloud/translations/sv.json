@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Max urladdningsström"
       },
+      "bmsstate": {
+        "name": "BMS-status"
+      },
+      "batoperatingstatus": {
+        "name": "Batteriets driftstatus"
+      },
+      "batalarm1": {
+        "name": "Batterilarm 1"
+      },
+      "batalarm2": {
+        "name": "Batterilarm 2"
+      },
+      "batalarm3": {
+        "name": "Batterilarm 3"
+      },
+      "batcapacityah": {
+        "name": "Batterikapacitet (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominell batterikapacitet"
+      },
+      "llcbusvoltage": {
+        "name": "LLC-busspänning"
+      },
+      "batchargev": {
+        "name": "Batteri laddningsspänning"
+      },
+      "batchargei": {
+        "name": "Batteri laddström"
+      },
+      "batchargep": {
+        "name": "Batteri laddeffekt"
+      },
+      "batdischargev": {
+        "name": "Batteri urladdningsspänning"
+      },
+      "batdischargei": {
+        "name": "Batteri urladdningsström"
+      },
+      "batdischargep": {
+        "name": "Batteri urladdningseffekt"
+      },
       "batcharge": {
         "name": "Daglig laddningsenergi"
       },

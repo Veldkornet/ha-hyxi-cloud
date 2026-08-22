@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Max. vybíjecí proud"
       },
+      "bmsstate": {
+        "name": "Stav BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Provozní stav baterie"
+      },
+      "batalarm1": {
+        "name": "Alarm baterie 1"
+      },
+      "batalarm2": {
+        "name": "Alarm baterie 2"
+      },
+      "batalarm3": {
+        "name": "Alarm baterie 3"
+      },
+      "batcapacityah": {
+        "name": "Kapacita baterie (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Jmenovitá kapacita baterie"
+      },
+      "llcbusvoltage": {
+        "name": "Napětí sběrnice LLC"
+      },
+      "batchargev": {
+        "name": "Nabíjecí napětí baterie"
+      },
+      "batchargei": {
+        "name": "Nabíjecí proud baterie"
+      },
+      "batchargep": {
+        "name": "Nabíjecí výkon baterie"
+      },
+      "batdischargev": {
+        "name": "Vybíjecí napětí baterie"
+      },
+      "batdischargei": {
+        "name": "Vybíjecí proud baterie"
+      },
+      "batdischargep": {
+        "name": "Vybíjecí výkon baterie"
+      },
       "batcharge": {
         "name": "Denní energie nabíjení"
       },

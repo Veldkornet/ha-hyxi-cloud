@@ -105,7 +105,7 @@ Generated directly from the Component classes -- this table cannot drift from th
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 4978 | `pack_count` | Number (unsigned) | RO |  |  | sensor: `packNum` |
-| 4979 | `bms_state` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 4979 | `bms_state` | Number (unsigned) | RO |  |  | sensor: `bmsState` |
 | 4980 | `soc` | Number (unsigned) | RO | ×0.1 | % | sensor: `batSoc` |
 | 4981 | `soh` | Number (unsigned) | RO | ×0.1 | % | sensor: `batSoh` |
 | 4982 | `temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `batTmp` |
@@ -114,10 +114,10 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4990 | `cell_voltage_min` | Number (unsigned) | RO | ×0.001 | V | sensor: `batVcl` |
 | 4995 | `cell_temperature_max` | Number (signed) | RO | ×0.1 | °C | sensor: `batTch` |
 | 4996 | `cell_temperature_min` | Number (signed) | RO | ×0.1 | °C | sensor: `batTcl` |
-| 5000 | `alarm_1` | Raw | RO |  |  | — *(not exposed)* |
-| 5001 | `alarm_2` | Raw | RO |  |  | — *(not exposed)* |
-| 5002 | `alarm_3` | Raw | RO |  |  | — *(not exposed)* |
-| 5020 | `capacity_ah` | Number (unsigned) | RO |  | Ah | — *(not exposed)* |
+| 5000 | `alarm_1` | Raw | RO |  |  | sensor: `batAlarm1` |
+| 5001 | `alarm_2` | Raw | RO |  |  | sensor: `batAlarm2` |
+| 5002 | `alarm_3` | Raw | RO |  |  | sensor: `batAlarm3` |
+| 5020 | `capacity_ah` | Number (unsigned) | RO |  | Ah | sensor: `batCapacityAh` |
 | 5021 | `max_discharge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxDischargePower` |
 | 5023 | `max_charge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxChargePower` |
 
@@ -232,14 +232,14 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
-| 802 | `llc_bus_voltage` | Number (unsigned) | RO | ×0.1 | V | — *(not exposed)* |
-| 804 | `discharge_voltage` | Number (unsigned) | RO | ×0.1 | V | — *(not exposed)* |
-| 805 | `discharge_current` | Number (unsigned) | RO | ×0.1 | A | — *(not exposed)* |
-| 806 | `discharge_power` | Number (unsigned) | RO |  | W | — *(not exposed)* |
-| 819 | `charge_voltage` | Number (unsigned) | RO | ×0.1 | V | — *(not exposed)* |
-| 820 | `charge_current` | Number (unsigned) | RO | ×0.1 | A | — *(not exposed)* |
-| 821 | `charge_power` | Number (unsigned) | RO |  | W | — *(not exposed)* |
-| 1051 | `operating_status` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 802 | `llc_bus_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `llcBusVoltage` |
+| 804 | `discharge_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `batDischargeV` |
+| 805 | `discharge_current` | Number (unsigned) | RO | ×0.1 | A | sensor: `batDischargeI` |
+| 806 | `discharge_power` | Number (unsigned) | RO |  | W | sensor: `batDischargeP` |
+| 819 | `charge_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `batChargeV` |
+| 820 | `charge_current` | Number (unsigned) | RO | ×0.1 | A | sensor: `batChargeI` |
+| 821 | `charge_power` | Number (unsigned) | RO |  | W | sensor: `batChargeP` |
+| 1051 | `operating_status` | Number (unsigned) | RO |  |  | sensor: `batOperatingStatus` |
 | 1052 | `voltage` | Number (unsigned) | RO | ×0.01 | V | sensor: `batV` |
 | 1053 | `current` | Number (signed) | RO | ×0.1 | A | sensor: `batI` |
 | 1054 | `soc` | Number (unsigned) | RO |  | % | sensor: `batSoc` |
@@ -250,7 +250,7 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 | 1063 | `max_cell_temperature` | Number (unsigned) | RO |  | °C | sensor: `batTch` |
 | 1064 | `min_cell_temperature` | Number (unsigned) | RO |  | °C | sensor: `batTcl` |
 | 1065 | `power` | Number (signed) | RO |  | W | sensor: `batP`, `pbat` |
-| 1097 | `nominal_capacity` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 1097 | `nominal_capacity` | Number (unsigned) | RO |  |  | sensor: `batNominalCapacity` |
 
 ### HybridEnergy  (space=input)
 

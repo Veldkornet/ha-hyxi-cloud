@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Corriente máxima de descarga"
       },
+      "bmsstate": {
+        "name": "Estado del BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Estado de funcionamiento de la batería"
+      },
+      "batalarm1": {
+        "name": "Alarma de batería 1"
+      },
+      "batalarm2": {
+        "name": "Alarma de batería 2"
+      },
+      "batalarm3": {
+        "name": "Alarma de batería 3"
+      },
+      "batcapacityah": {
+        "name": "Capacidad de la batería (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Capacidad nominal de la batería"
+      },
+      "llcbusvoltage": {
+        "name": "Voltaje del bus LLC"
+      },
+      "batchargev": {
+        "name": "Voltaje de carga de la batería"
+      },
+      "batchargei": {
+        "name": "Corriente de carga de la batería"
+      },
+      "batchargep": {
+        "name": "Potencia de carga de la batería"
+      },
+      "batdischargev": {
+        "name": "Voltaje de descarga de la batería"
+      },
+      "batdischargei": {
+        "name": "Corriente de descarga de la batería"
+      },
+      "batdischargep": {
+        "name": "Potencia de descarga de la batería"
+      },
       "batcharge": {
         "name": "Energía de carga diaria"
       },

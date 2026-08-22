@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Макс. ток разряда"
       },
+      "bmsstate": {
+        "name": "Статус BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Рабочее состояние батареи"
+      },
+      "batalarm1": {
+        "name": "Тревога батареи 1"
+      },
+      "batalarm2": {
+        "name": "Тревога батареи 2"
+      },
+      "batalarm3": {
+        "name": "Тревога батареи 3"
+      },
+      "batcapacityah": {
+        "name": "Ёмкость батареи (Ач)"
+      },
+      "batnominalcapacity": {
+        "name": "Номинальная ёмкость батареи"
+      },
+      "llcbusvoltage": {
+        "name": "Напряжение шины LLC"
+      },
+      "batchargev": {
+        "name": "Напряжение заряда батареи"
+      },
+      "batchargei": {
+        "name": "Ток заряда батареи"
+      },
+      "batchargep": {
+        "name": "Мощность заряда батареи"
+      },
+      "batdischargev": {
+        "name": "Напряжение разряда батареи"
+      },
+      "batdischargei": {
+        "name": "Ток разряда батареи"
+      },
+      "batdischargep": {
+        "name": "Мощность разряда батареи"
+      },
       "batcharge": {
         "name": "Ежедневная энергия заряда"
       },

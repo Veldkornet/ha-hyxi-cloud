@@ -81,6 +81,13 @@ INPUT_REGISTERS: dict[int, int] = {
     610: 0,
     611: 0,
     612: 0,  # PV2 V/I/P
+    802: 3805,  # LLC bus voltage, 1dp -> 380.5 V
+    804: 5285,  # discharge voltage, 1dp -> 528.5 V
+    805: 42,  # discharge current, 1dp -> 4.2 A
+    806: 2220,  # discharge power, 0dp -> 2220 W
+    819: 5290,  # charge voltage, 1dp -> 529.0 V
+    820: 38,  # charge current, 1dp -> 3.8 A
+    821: 2010,  # charge power, 0dp -> 2010 W
     # Battery serial "BAT13571357", H10-encoded (2 ASCII chars/register).
     1015: 16961,
     1016: 21553,
@@ -88,6 +95,7 @@ INPUT_REGISTERS: dict[int, int] = {
     1018: 14129,
     1019: 13109,
     1020: 14080,
+    1051: 1,  # operating status: charge
     1052: 52900,  # BMS voltage, 2dp -> 529.00 V
     1053: (-42) & 0xFFFF,  # BMS current, 1dp -> -4.2 A
     1054: 78,  # SOC, 0dp
@@ -185,6 +193,26 @@ async def test_previously_unexposed_registers_now_decode_into_metrics(client):
     # Battery serial routes the battery metrics onto their own device --
     # this client previously never populated it.
     assert metrics["batSn"] == "BAT13571357"
+
+
+@pytest.mark.asyncio
+async def test_battery_detail_registers_decode_into_metrics(client):
+    """The charge/discharge voltage-current-power split, the LLC bus
+    voltage and the BMS operating status -- mirrors test_modbus.py's
+    equivalent test for the HALO client."""
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    assert metrics["batOperatingStatus"] == 1
+    assert metrics["llcBusVoltage"] == 380.5
+    assert metrics["batChargeV"] == 529.0
+    assert metrics["batChargeI"] == 3.8
+    assert metrics["batChargeP"] == 2010
+    assert metrics["batDischargeV"] == 528.5
+    assert metrics["batDischargeI"] == 4.2
+    assert metrics["batDischargeP"] == 2220
+    # Unit not stated in the document -- passed through raw, not guessed.
+    assert metrics["batNominalCapacity"] == 100
 
 
 @pytest.mark.asyncio

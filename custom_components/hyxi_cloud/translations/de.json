@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Max. Entladestrom"
       },
+      "bmsstate": {
+        "name": "BMS-Status"
+      },
+      "batoperatingstatus": {
+        "name": "Batterie-Betriebsstatus"
+      },
+      "batalarm1": {
+        "name": "Batteriealarm 1"
+      },
+      "batalarm2": {
+        "name": "Batteriealarm 2"
+      },
+      "batalarm3": {
+        "name": "Batteriealarm 3"
+      },
+      "batcapacityah": {
+        "name": "Batteriekapazität (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nennkapazität der Batterie"
+      },
+      "llcbusvoltage": {
+        "name": "LLC-Busspannung"
+      },
+      "batchargev": {
+        "name": "Batterie-Ladespannung"
+      },
+      "batchargei": {
+        "name": "Batterie-Ladestrom"
+      },
+      "batchargep": {
+        "name": "Batterie-Ladeleistung"
+      },
+      "batdischargev": {
+        "name": "Batterie-Entladespannung"
+      },
+      "batdischargei": {
+        "name": "Batterie-Entladestrom"
+      },
+      "batdischargep": {
+        "name": "Batterie-Entladeleistung"
+      },
       "batcharge": {
         "name": "Tägliche Ladeenergie"
       },

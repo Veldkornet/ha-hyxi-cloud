@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Maks ontlaaistroom"
       },
+      "bmsstate": {
+        "name": "BMS-status"
+      },
+      "batoperatingstatus": {
+        "name": "Battery-bedryfstatus"
+      },
+      "batalarm1": {
+        "name": "Battery-alarm 1"
+      },
+      "batalarm2": {
+        "name": "Battery-alarm 2"
+      },
+      "batalarm3": {
+        "name": "Battery-alarm 3"
+      },
+      "batcapacityah": {
+        "name": "Battery-kapasiteit (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominale battery-kapasiteit"
+      },
+      "llcbusvoltage": {
+        "name": "LLC-bus-spanning"
+      },
+      "batchargev": {
+        "name": "Battery-laaispanning"
+      },
+      "batchargei": {
+        "name": "Battery-laaistroom"
+      },
+      "batchargep": {
+        "name": "Battery-laaikrag"
+      },
+      "batdischargev": {
+        "name": "Battery-ontlaaispanning"
+      },
+      "batdischargei": {
+        "name": "Battery-ontlaaistroom"
+      },
+      "batdischargep": {
+        "name": "Battery-ontlaaikrag"
+      },
       "batcharge": {
         "name": "Daaglikse laai-energie"
       },

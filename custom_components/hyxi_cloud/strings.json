@@ -557,6 +557,48 @@
       "batidm": {
         "name": "Max Discharging Current"
       },
+      "bmsstate": {
+        "name": "BMS State"
+      },
+      "batoperatingstatus": {
+        "name": "Battery Operating Status"
+      },
+      "batalarm1": {
+        "name": "Battery Alarm 1"
+      },
+      "batalarm2": {
+        "name": "Battery Alarm 2"
+      },
+      "batalarm3": {
+        "name": "Battery Alarm 3"
+      },
+      "batcapacityah": {
+        "name": "Battery Capacity (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Battery Nominal Capacity"
+      },
+      "llcbusvoltage": {
+        "name": "LLC Bus Voltage"
+      },
+      "batchargev": {
+        "name": "Battery Charge Voltage"
+      },
+      "batchargei": {
+        "name": "Battery Charge Current"
+      },
+      "batchargep": {
+        "name": "Battery Charge Power"
+      },
+      "batdischargev": {
+        "name": "Battery Discharge Voltage"
+      },
+      "batdischargei": {
+        "name": "Battery Discharge Current"
+      },
+      "batdischargep": {
+        "name": "Battery Discharge Power"
+      },
       "batcharge": {
         "name": "Daily Charging Energy"
       },

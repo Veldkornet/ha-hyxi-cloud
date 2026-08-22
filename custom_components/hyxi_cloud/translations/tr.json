@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Maks Deşarj Akımı"
       },
+      "bmsstate": {
+        "name": "BMS Durumu"
+      },
+      "batoperatingstatus": {
+        "name": "Batarya Çalışma Durumu"
+      },
+      "batalarm1": {
+        "name": "Batarya Alarmı 1"
+      },
+      "batalarm2": {
+        "name": "Batarya Alarmı 2"
+      },
+      "batalarm3": {
+        "name": "Batarya Alarmı 3"
+      },
+      "batcapacityah": {
+        "name": "Batarya Kapasitesi (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominal Batarya Kapasitesi"
+      },
+      "llcbusvoltage": {
+        "name": "LLC Bus Voltajı"
+      },
+      "batchargev": {
+        "name": "Batarya Şarj Voltajı"
+      },
+      "batchargei": {
+        "name": "Batarya Şarj Akımı"
+      },
+      "batchargep": {
+        "name": "Batarya Şarj Gücü"
+      },
+      "batdischargev": {
+        "name": "Batarya Deşarj Voltajı"
+      },
+      "batdischargei": {
+        "name": "Batarya Deşarj Akımı"
+      },
+      "batdischargep": {
+        "name": "Batarya Deşarj Gücü"
+      },
       "batcharge": {
         "name": "Günlük Şarj Enerjisi"
       },

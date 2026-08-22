@@ -545,6 +545,48 @@
       "batidm": {
         "name": "最大放電電流"
       },
+      "bmsstate": {
+        "name": "BMS状態"
+      },
+      "batoperatingstatus": {
+        "name": "バッテリー動作状態"
+      },
+      "batalarm1": {
+        "name": "バッテリーアラーム1"
+      },
+      "batalarm2": {
+        "name": "バッテリーアラーム2"
+      },
+      "batalarm3": {
+        "name": "バッテリーアラーム3"
+      },
+      "batcapacityah": {
+        "name": "バッテリー容量 (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "バッテリー公称容量"
+      },
+      "llcbusvoltage": {
+        "name": "LLCバス電圧"
+      },
+      "batchargev": {
+        "name": "バッテリー充電電圧"
+      },
+      "batchargei": {
+        "name": "バッテリー充電電流"
+      },
+      "batchargep": {
+        "name": "バッテリー充電電力"
+      },
+      "batdischargev": {
+        "name": "バッテリー放電電圧"
+      },
+      "batdischargei": {
+        "name": "バッテリー放電電流"
+      },
+      "batdischargep": {
+        "name": "バッテリー放電電力"
+      },
       "batcharge": {
         "name": "日次充電電力量"
       },

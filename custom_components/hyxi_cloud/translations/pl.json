@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Maks. prąd rozładowania"
       },
+      "bmsstate": {
+        "name": "Stan BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Stan pracy akumulatora"
+      },
+      "batalarm1": {
+        "name": "Alarm baterii 1"
+      },
+      "batalarm2": {
+        "name": "Alarm baterii 2"
+      },
+      "batalarm3": {
+        "name": "Alarm baterii 3"
+      },
+      "batcapacityah": {
+        "name": "Pojemność akumulatora (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Znamionowa pojemność akumulatora"
+      },
+      "llcbusvoltage": {
+        "name": "Napięcie szyny LLC"
+      },
+      "batchargev": {
+        "name": "Napięcie ładowania baterii"
+      },
+      "batchargei": {
+        "name": "Prąd ładowania baterii"
+      },
+      "batchargep": {
+        "name": "Moc ładowania baterii"
+      },
+      "batdischargev": {
+        "name": "Napięcie rozładowania baterii"
+      },
+      "batdischargei": {
+        "name": "Prąd rozładowania baterii"
+      },
+      "batdischargep": {
+        "name": "Moc rozładowania baterii"
+      },
       "batcharge": {
         "name": "Dzienna energia ładowania"
       },

@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Maks. purkuvirta"
       },
+      "bmsstate": {
+        "name": "BMS:n tila"
+      },
+      "batoperatingstatus": {
+        "name": "Akun käyttötila"
+      },
+      "batalarm1": {
+        "name": "Akun hälytys 1"
+      },
+      "batalarm2": {
+        "name": "Akun hälytys 2"
+      },
+      "batalarm3": {
+        "name": "Akun hälytys 3"
+      },
+      "batcapacityah": {
+        "name": "Akun kapasiteetti (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Akun nimelliskapasiteetti"
+      },
+      "llcbusvoltage": {
+        "name": "LLC-väyläjännite"
+      },
+      "batchargev": {
+        "name": "Akun latausjännite"
+      },
+      "batchargei": {
+        "name": "Akun latausvirta"
+      },
+      "batchargep": {
+        "name": "Akun latausteho"
+      },
+      "batdischargev": {
+        "name": "Akun purkujännite"
+      },
+      "batdischargei": {
+        "name": "Akun purkuvirta"
+      },
+      "batdischargep": {
+        "name": "Akun purkuteho"
+      },
       "batcharge": {
         "name": "Päivittäinen latausenergia"
       },

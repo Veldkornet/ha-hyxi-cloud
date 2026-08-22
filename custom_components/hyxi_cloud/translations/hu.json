@@ -545,6 +545,48 @@
       "batidm": {
         "name": "Max. kisütési áram"
       },
+      "bmsstate": {
+        "name": "BMS állapota"
+      },
+      "batoperatingstatus": {
+        "name": "Akkumulátor üzemállapota"
+      },
+      "batalarm1": {
+        "name": "Akkumulátor riasztás 1"
+      },
+      "batalarm2": {
+        "name": "Akkumulátor riasztás 2"
+      },
+      "batalarm3": {
+        "name": "Akkumulátor riasztás 3"
+      },
+      "batcapacityah": {
+        "name": "Akkumulátor kapacitás (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Akkumulátor névleges kapacitása"
+      },
+      "llcbusvoltage": {
+        "name": "LLC busz feszültség"
+      },
+      "batchargev": {
+        "name": "Akkumulátor töltési feszültség"
+      },
+      "batchargei": {
+        "name": "Akkumulátor töltőáram"
+      },
+      "batchargep": {
+        "name": "Akkumulátor töltési teljesítmény"
+      },
+      "batdischargev": {
+        "name": "Akkumulátor kisütési feszültség"
+      },
+      "batdischargei": {
+        "name": "Akkumulátor kisütési áram"
+      },
+      "batdischargep": {
+        "name": "Akkumulátor kisütési teljesítmény"
+      },
       "batcharge": {
         "name": "Napi töltési energia"
       },

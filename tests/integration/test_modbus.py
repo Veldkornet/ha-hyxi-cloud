@@ -85,10 +85,10 @@ INPUT_REGISTERS: dict[int, int] = {
     4990: 3298,
     4995: 240,
     4996: 228,
-    5000: 0,
-    5001: 0,
-    5002: 0,
-    5020: 100,
+    5000: 17,  # BMS alarm word 1, raw
+    5001: 34,  # BMS alarm word 2, raw
+    5002: 68,  # BMS alarm word 3, raw
+    5020: 100,  # battery capacity, Ah -- not the cloud's kWh
     **_spread(5021, 3000),
     **_spread(5023, 3000),
 }
@@ -195,6 +195,21 @@ async def test_previously_unexposed_registers_now_decode_into_metrics(client):
     assert metrics["ratedPower"] == 3000
     assert metrics["ratedFrequency"] == 50.0
     assert metrics["ratedVoltage"] == 230.0
+
+
+@pytest.mark.asyncio
+async def test_battery_detail_registers_decode_into_metrics(client):
+    """BMS state, raw alarm words and the Ah-scaled capacity figure."""
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    assert metrics["bmsState"] == 5
+    assert metrics["batAlarm1"] == 17
+    assert metrics["batAlarm2"] == 34
+    assert metrics["batAlarm3"] == 68
+    # Ah, not the cloud's kWh -- see HaloBattery.capacity_ah's docstring.
+    assert metrics["batCapacityAh"] == 100
+    assert "batCap" not in metrics
 
 
 @pytest.mark.asyncio
