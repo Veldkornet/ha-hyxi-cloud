@@ -95,7 +95,12 @@ class HyxiHybridModbusClient:
         return self._serial or f"modbus_{self._unit_id}"
 
     async def async_close(self) -> None:
-        """Release the underlying connection."""
+        """Release the underlying connection.
+
+        Logged unconditionally rather than at each call site -- see
+        client.py's HyxiModbusClient.async_close for why.
+        """
+        _LOGGER.debug("Modbus: closing connection for unit %s", self._unit_id)
         await self._connection.close()
 
     async def async_read_identity(self) -> None:
@@ -259,6 +264,9 @@ class HyxiHybridModbusClient:
             await self.settings.write("scheduling_enabled", 1)
             await self.settings.write("control_mode", CONTROL_MODE_BATTERY_POWER)
         except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus scheduling enable failed on unit %s: %s", self._unit_id, err
+            )
             raise self.ControlError(f"Modbus write failed: {err}") from err
 
     async def _write_battery_power(self, watts: int) -> dict:
@@ -306,16 +314,32 @@ class HyxiHybridModbusClient:
         try:
             await self.settings.write("scheduling_enabled", 0)
         except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus self-consume write failed on unit %s: %s",
+                self._unit_id,
+                err,
+            )
             raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug("Modbus self-consume write ok on unit %s: 3000=0", self._unit_id)
         return {"code": "0", "msg": "ok"}
 
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict:
         """Limit or release export via the real feed-in registers."""
         _LOGGER.debug("Modbus: peak shaving %s on %s", action, _mask(device_sn))
+        limit_enabled = action in ("on", "enable", "start")
         try:
-            await self.settings.write(
-                "feed_in_enable", 1 if action in ("on", "enable", "start") else 0
-            )
+            await self.settings.write("feed_in_enable", 1 if limit_enabled else 0)
         except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus peak shaving write failed on unit %s (action=%s): %s",
+                self._unit_id,
+                action,
+                err,
+            )
             raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug(
+            "Modbus peak shaving write ok on unit %s: 1099=%s",
+            self._unit_id,
+            1 if limit_enabled else 0,
+        )
         return {"code": "0", "msg": "ok"}

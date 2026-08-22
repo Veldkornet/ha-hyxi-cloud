@@ -172,7 +172,16 @@ class HyxiModbusClient:
         return self._serial or f"modbus_{self._unit_id}"
 
     async def async_close(self) -> None:
-        """Release the underlying connection."""
+        """Release the underlying connection.
+
+        Logged unconditionally rather than at each of its several call
+        sites (probe teardown, detection teardown, a failed first refresh,
+        unload) -- one line here covers all of them, and it is the only
+        direct evidence in the log that a serial port or socket was
+        actually freed, which matters when diagnosing "why won't the next
+        setup open the port".
+        """
+        _LOGGER.debug("Modbus: closing connection for unit %s", self._unit_id)
         await self._connection.close()
 
     async def async_read_identity(self) -> None:
@@ -397,10 +406,20 @@ class HyxiModbusClient:
         switch outright rather than approximating it.
         """
         _LOGGER.debug("Modbus: peak shaving %s on %s", action, _mask(device_sn))
+        gate_closed = action in ("on", "enable", "start")
         try:
-            await self.settings.write(
-                "feed_in_enable", 0 if action in ("on", "enable", "start") else 1
-            )
+            await self.settings.write("feed_in_enable", 0 if gate_closed else 1)
         except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus peak shaving write failed on unit %s (action=%s): %s",
+                self._unit_id,
+                action,
+                err,
+            )
             raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug(
+            "Modbus peak shaving write ok on unit %s: 4162=%s",
+            self._unit_id,
+            0 if gate_closed else 1,
+        )
         return {"code": "0", "msg": "ok"}
