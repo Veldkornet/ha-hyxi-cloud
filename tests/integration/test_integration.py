@@ -10,8 +10,16 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import (
     CONF_ACCESS_KEY,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_TYPE,
+    CONF_MODBUS_UNIT,
     CONF_SECRET_KEY,
+    CONF_TRANSPORT,
     DOMAIN,
+    MODBUS_TYPE_TCP,
+    TRANSPORT_CLOUD,
+    TRANSPORT_MODBUS,
 )
 
 
@@ -24,6 +32,12 @@ async def test_config_flow_success(hass: HomeAssistant):
     )
     assert result["type"] == data_entry_flow.FlowResultType.FORM
     assert result["step_id"] == "user"
+
+    # The first step chooses a transport; cloud leads to the credentials form.
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_TRANSPORT: TRANSPORT_CLOUD}
+    )
+    assert result["step_id"] == "cloud"
 
     # 2. Configure with mock credentials and mock API client
     with patch(
@@ -54,6 +68,7 @@ async def test_config_flow_success(hass: HomeAssistant):
             CONF_SECRET_KEY: "test_secret_key",
             "region": "eu",
             "base_url": "https://open.hyxicloud.com",
+            CONF_TRANSPORT: TRANSPORT_CLOUD,
         }
 
 
@@ -62,6 +77,10 @@ async def test_config_flow_invalid_auth(hass: HomeAssistant):
     """Test config flow failure due to invalid authentication."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    # The first step chooses a transport; cloud leads to the credentials form.
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_TRANSPORT: TRANSPORT_CLOUD}
     )
 
     with patch(
@@ -249,6 +268,10 @@ async def test_config_flow_no_devices(hass: HomeAssistant):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
+    # The first step chooses a transport; cloud leads to the credentials form.
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_TRANSPORT: TRANSPORT_CLOUD}
+    )
 
     with patch(
         "custom_components.hyxi_cloud.config_flow.HyxiApiClient"
@@ -341,3 +364,81 @@ async def test_enum_sensor_survives_out_of_range_api_value(hass: HomeAssistant):
         total_e_state = hass.states.get("sensor.hyxi_sn123_totale")
         assert total_e_state is not None
         assert total_e_state.state == "100.5"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
+    """Walk the local Modbus branch through Home Assistant's real flow engine.
+
+    The mocked config-flow tests stub voluptuous out entirely, so they cannot
+    tell whether the selectors actually validate the values the form submits.
+    This goes through the real schemas end to end.
+    """
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    assert result["step_id"] == "user"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_TRANSPORT: TRANSPORT_MODBUS}
+    )
+    assert result["step_id"] == "modbus"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
+    )
+    assert result["step_id"] == "modbus_tcp"
+
+    with patch(
+        "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._probe_modbus",
+        return_value=None,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_MODBUS_HOST: "192.168.1.50",
+                CONF_MODBUS_PORT: 502,
+                CONF_MODBUS_UNIT: 1,
+            },
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result["title"] == "HYXI Modbus (192.168.1.50)"
+    assert result["data"] == {
+        CONF_TRANSPORT: TRANSPORT_MODBUS,
+        CONF_MODBUS_TYPE: MODBUS_TYPE_TCP,
+        CONF_MODBUS_HOST: "192.168.1.50",
+        CONF_MODBUS_PORT: 502,
+        CONF_MODBUS_UNIT: 1,
+    }
+
+
+@pytest.mark.asyncio
+async def test_config_flow_modbus_probe_failure_shows_error(hass: HomeAssistant):
+    """A bus with nothing on it must return to the form, not create an entry."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_TRANSPORT: TRANSPORT_MODBUS}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
+    )
+
+    with patch(
+        "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._probe_modbus",
+        return_value="no_device",
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_MODBUS_HOST: "192.168.1.50",
+                CONF_MODBUS_PORT: 502,
+                CONF_MODBUS_UNIT: 1,
+            },
+        )
+
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["errors"] == {"base": "no_device"}

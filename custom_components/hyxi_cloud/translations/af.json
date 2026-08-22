@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Verbind met HYXI Cloud",
-        "description": "Voer jou **Ontwikkelaar API-bewysbriewe (AK/SK)** in. Jy kan dit genereer by die [HYXIPOWER-ontwikkelaarsplatform]({link}).\n\n**Nota:** Dit vereis 'n aparte ontwikkelaarrekening. As jou ontwikkelaar-e-pos verskil van jou app-e-pos, moet jy eers jou **Aanleg Deel** (Share Plant) vanaf die app na die ontwikkelaar-e-pos.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Toegangsleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)",
-          "region": "Bedienerstreek"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,13 +16,49 @@
           "secret_key": "Geheime Sleutel (SK)",
           "region": "Bedienerstreek"
         }
+      },
+      "cloud": {
+        "title": "Verbind met HYXI Cloud",
+        "description": "Voer jou **Ontwikkelaar API-bewysbriewe (AK/SK)** in. Jy kan dit genereer by die [HYXIPOWER-ontwikkelaarsplatform]({link}).\n\n**Nota:** Dit vereis 'n aparte ontwikkelaarrekening. As jou ontwikkelaar-e-pos verskil van jou app-e-pos, moet jy eers jou **Aanleg Deel** (Share Plant) vanaf die app na die ontwikkelaar-e-pos.",
+        "data": {
+          "access_key": "Toegangsleutel (AK)",
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Bedienerstreek"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Kon nie met HYXI-bedieners verbind nie",
       "invalid_auth": "Ongeldige Toegangsleutel of Geheime Sleutel",
       "unknown": "Onverwagte fout het voorgekom",
-      "no_devices": "Geen aanlegte of toestelle gevind nie. As u ontwikkelaars-e-posadres verskil van u toepassing-e-posadres, moet u eers u aanleg vanaf die toepassing met die ontwikkelaars-e-posadres deel."
+      "no_devices": "Geen aanlegte of toestelle gevind nie. As u ontwikkelaars-e-posadres verskil van u toepassing-e-posadres, moet u eers u aanleg vanaf die toepassing met die ontwikkelaars-e-posadres deel.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Hierdie HYXI-rekening is reeds opgestel.",

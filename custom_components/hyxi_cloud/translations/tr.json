@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "HYXI Cloud'a Bağlan",
-        "description": "**Geliştirici API kimlik bilgilerinizi (AK/SK)** girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) üzerinden oluşturabilirsiniz.\n\n**Not:** Bu işlem ayrı bir geliştirici hesabı gerektirir. Geliştirici e-postanız uygulama e-postanızdan farklıysa, önce uygulamadan geliştirici e-postasına **Tesisinizi Paylaşmanız** gerekir.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Erişim Anahtarı (AK)",
-          "secret_key": "Gizli Anahtar (SK)",
-          "region": "Sunucu Bölgesi"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,13 +16,49 @@
           "secret_key": "Gizli Anahtar (SK)",
           "region": "Sunucu Bölgesi"
         }
+      },
+      "cloud": {
+        "title": "HYXI Cloud'a Bağlan",
+        "description": "**Geliştirici API kimlik bilgilerinizi (AK/SK)** girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) üzerinden oluşturabilirsiniz.\n\n**Not:** Bu işlem ayrı bir geliştirici hesabı gerektirir. Geliştirici e-postanız uygulama e-postanızdan farklıysa, önce uygulamadan geliştirici e-postasına **Tesisinizi Paylaşmanız** gerekir.",
+        "data": {
+          "access_key": "Erişim Anahtarı (AK)",
+          "secret_key": "Gizli Anahtar (SK)",
+          "region": "Sunucu Bölgesi"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "HYXI sunucularına bağlanılamadı",
       "invalid_auth": "Geçersiz Erişim Anahtarı veya Gizli Anahtar",
       "unknown": "Beklenmedik bir hata oluştu",
-      "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız."
+      "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Bu HYXI hesabı zaten yapılandırılmış.",

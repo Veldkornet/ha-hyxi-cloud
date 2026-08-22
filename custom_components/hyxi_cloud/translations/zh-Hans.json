@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "连接到 HYXI Cloud",
-        "description": "请输入您的 **开发者 API 凭据 (AK/SK)**。您可以在 [HYXIPOWER 开发者平台]({link}) 生成这些凭据。\n\n**注意：** 这需要一个单独的开发者账号。如果您的开发者邮箱与应用邮箱不同，您必须先通过应用将您的 **电站分享** 给开发者邮箱。",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "访问密钥 (AK)",
-          "secret_key": "加密密钥 (SK)",
-          "region": "服务器区域"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,13 +16,49 @@
           "secret_key": "加密密钥 (SK)",
           "region": "服务器区域"
         }
+      },
+      "cloud": {
+        "title": "连接到 HYXI Cloud",
+        "description": "请输入您的 **开发者 API 凭据 (AK/SK)**。您可以在 [HYXIPOWER 开发者平台]({link}) 生成这些凭据。\n\n**注意：** 这需要一个单独的开发者账号。如果您的开发者邮箱与应用邮箱不同，您必须先通过应用将您的 **电站分享** 给开发者邮箱。",
+        "data": {
+          "access_key": "访问密钥 (AK)",
+          "secret_key": "加密密钥 (SK)",
+          "region": "服务器区域"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "连接 HYXI 服务器失败",
       "invalid_auth": "无效的访问密钥或加密密钥",
       "unknown": "发生未知错误",
-      "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。"
+      "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "该 HYXI 账号已配置。",

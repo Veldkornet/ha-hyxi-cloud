@@ -73,6 +73,60 @@ _MANIFEST = json.loads(
 )
 VERSION = _MANIFEST["version"]
 
+# Transport selection. The integration can reach a device through HYXI's
+# cloud API or over a local RS485 Modbus link. Entries created before this
+# existed have no transport key at all, so absence means cloud.
+CONF_TRANSPORT = "transport"
+TRANSPORT_CLOUD = "cloud"
+TRANSPORT_MODBUS = "modbus"
+DEFAULT_TRANSPORT = TRANSPORT_CLOUD
+
+# Modbus connection settings, stored in entry.data
+CONF_MODBUS_TYPE = "modbus_type"
+MODBUS_TYPE_TCP = "tcp"
+MODBUS_TYPE_SERIAL = "serial"
+CONF_MODBUS_HOST = "modbus_host"
+CONF_MODBUS_PORT = "modbus_port"
+CONF_MODBUS_DEVICE = "modbus_device"
+CONF_MODBUS_BAUDRATE = "modbus_baudrate"
+CONF_MODBUS_UNIT = "modbus_unit"
+
+DEFAULT_MODBUS_PORT = 502
+DEFAULT_MODBUS_BAUDRATE = 115200
+DEFAULT_MODBUS_UNIT = 1
+# The Micro Storage RS485 document requires more than 200ms between frames.
+# Nothing states the hybrid units are more relaxed, so the conservative
+# figure is used for every device until measurement says otherwise.
+MODBUS_MESSAGE_SPACING = 0.2
+MODBUS_TIMEOUT = 10.0
+# Local polling is cheap compared with the rate-limited cloud API.
+DEFAULT_MODBUS_INTERVAL = 15
+
+# Addresses used only to prove something is answering on the bus, all taken
+# from the Micro Storage RS485 document V1.0 -- 4980 and 4101 from its
+# register table, 1009 from its own worked examples (which decode against
+# the hybrid map: 0x7080 = 28800 seconds = UTC+8).
+MODBUS_PROBE_POINTS: tuple[tuple[str, int], ...] = (
+    ("input", 4980),
+    ("input", 4101),
+    ("holding", 1009),
+)
+
+
+def entry_transport(entry: Any) -> str:
+    """Return the transport an entry uses.
+
+    Entries predating local Modbus support carry no transport key, so a
+    missing value means cloud rather than an error.
+    """
+    return (getattr(entry, "data", None) or {}).get(CONF_TRANSPORT, DEFAULT_TRANSPORT)
+
+
+def is_modbus_entry(entry: Any) -> bool:
+    """Return True when an entry talks to its device over local Modbus."""
+    return entry_transport(entry) == TRANSPORT_MODBUS
+
+
 CONF_BACK_DISCOVERY = "back_discovery"
 
 # Real-time Webhook Push Constants

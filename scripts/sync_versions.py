@@ -21,17 +21,40 @@ MANIFEST_PATH = ROOT / "custom_components" / "hyxi_cloud" / "manifest.json"
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 
 
+def _extract_dependencies(pyproject_text: str) -> list[str]:
+    """Return [project].dependencies, tolerating extras in the requirement.
+
+    A non-greedy regex to the first "]" is wrong here: a requirement may
+    carry its own brackets, as "modbus-connection[tmodbus]>=4.8.1" does, and
+    the match would stop inside it -- silently dropping that requirement and
+    every one after it, then reporting the manifest as already in sync.
+    Scanning for the bracket that actually closes the list avoids that.
+    """
+    start = re.search(r"(?m)^dependencies\s*=\s*\[", pyproject_text)
+    if not start:
+        print("Error: could not find [project].dependencies in pyproject.toml")
+        sys.exit(1)
+
+    depth, index = 1, start.end()
+    while index < len(pyproject_text) and depth:
+        depth += {"[": 1, "]": -1}.get(pyproject_text[index], 0)
+        index += 1
+    if depth:
+        print("Error: unterminated [project].dependencies list")
+        sys.exit(1)
+
+    body = pyproject_text[start.end() : index - 1]
+    # Requirements are quoted; comments in the list are not.
+    return re.findall(r'"([^"]+)"', re.sub(r"(?m)#.*$", "", body))
+
+
 def main() -> None:
     """Sync manifest.json requirements and pyproject.toml version in place."""
     manifest_text = MANIFEST_PATH.read_text(encoding="utf-8")
     manifest = json.loads(manifest_text)
     pyproject_text = PYPROJECT_PATH.read_text(encoding="utf-8")
 
-    deps_match = re.search(r"dependencies\s*=\s*\[(.*?)\]", pyproject_text, re.DOTALL)
-    if not deps_match:
-        print("Error: could not find [project].dependencies in pyproject.toml")
-        sys.exit(1)
-    dependencies = re.findall(r'"([^"]+)"', deps_match.group(1))
+    dependencies = _extract_dependencies(pyproject_text)
 
     version_match = re.search(r'(?m)^version\s*=\s*"(.*?)"', pyproject_text)
     if not version_match:

@@ -993,6 +993,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "hyxi-cloud-api" },
+    { name = "modbus-connection", extra = ["tmodbus"] },
     { name = "voluptuous" },
 ]
 
@@ -1015,6 +1016,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.5" },
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.165.5" },
     { name = "hyxi-cloud-api", specifier = ">=1.4.4" },
+    { name = "modbus-connection", extras = ["tmodbus"], specifier = ">=4.8.1" },
     { name = "modbus-connection", extras = ["tmodbus"], marker = "extra == 'modbus'", specifier = ">=4.8.1" },
     { name = "mypy", marker = "extra == 'test'", specifier = ">=2.3.0" },
     { name = "pymodbus", marker = "extra == 'modbus'", specifier = ">=3.15.0" },

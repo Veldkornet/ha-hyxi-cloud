@@ -26,20 +26,49 @@ from .const import (
     CONF_EM_LOOP_INTERVAL,
     CONF_EM_P1_ENTITY,
     CONF_ENABLE_PUSH,
+    CONF_MODBUS_BAUDRATE,
+    CONF_MODBUS_DEVICE,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_TYPE,
+    CONF_MODBUS_UNIT,
     CONF_PUSH_RATE,
     CONF_PUSH_URL,
     CONF_REGION,
     CONF_SECRET_KEY,
+    CONF_TRANSPORT,
+    DEFAULT_MODBUS_BAUDRATE,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DEFAULT_REGION,
+    DEFAULT_TRANSPORT,
     DOMAIN,
     MICRO_ESS_CONTROL_SUPPORTED,
+    MODBUS_MESSAGE_SPACING,
+    MODBUS_PROBE_POINTS,
+    MODBUS_TIMEOUT,
+    MODBUS_TYPE_SERIAL,
+    MODBUS_TYPE_TCP,
+    TRANSPORT_CLOUD,
+    TRANSPORT_MODBUS,
     default_region_for_country,
     get_raw_device_code,
+    is_modbus_entry,
     normalize_device_type,
     region_for_base_url,
     resolve_base_url,
 )
+
+TRANSPORT_OPTIONS: list[selector.SelectOptionDict] = [
+    {"value": TRANSPORT_CLOUD, "label": "HYXI Cloud (online account)"},
+    {"value": TRANSPORT_MODBUS, "label": "Local Modbus (RS485, no account)"},
+]
+
+MODBUS_TYPE_OPTIONS: list[selector.SelectOptionDict] = [
+    {"value": MODBUS_TYPE_TCP, "label": "Modbus TCP gateway (RS485-to-Ethernet)"},
+    {"value": MODBUS_TYPE_SERIAL, "label": "Serial port (USB RS485 adapter)"},
+]
 
 REGION_OPTIONS: list[selector.SelectOptionDict] = [
     {"value": "eu", "label": "Europe"},
@@ -73,6 +102,90 @@ def _build_user_schema(default_region: str = DEFAULT_REGION) -> vol.Schema:
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
+        }
+    )
+
+
+def _build_transport_schema() -> vol.Schema:
+    """Build the transport chooser shown before anything else.
+
+    A select rather than a menu, because the cloud path is what almost every
+    existing user wants and a menu cannot express a default.
+    """
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_TRANSPORT, default=DEFAULT_TRANSPORT
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=TRANSPORT_OPTIONS,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
+    )
+
+
+def _build_modbus_type_schema() -> vol.Schema:
+    """Build the Modbus connection-type chooser."""
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_MODBUS_TYPE, default=MODBUS_TYPE_TCP
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=MODBUS_TYPE_OPTIONS,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
+    )
+
+
+def _build_unit_field() -> dict:
+    """Build the slave-address field shared by both Modbus connection types."""
+    return {
+        vol.Required(
+            CONF_MODBUS_UNIT, default=DEFAULT_MODBUS_UNIT
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1, max=247, step=1, mode=selector.NumberSelectorMode.BOX
+            )
+        )
+    }
+
+
+def _build_modbus_tcp_schema() -> vol.Schema:
+    """Build the schema for an RS485-to-Ethernet gateway."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_MODBUS_HOST): str,
+            vol.Required(
+                CONF_MODBUS_PORT, default=DEFAULT_MODBUS_PORT
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=1, max=65535, step=1, mode=selector.NumberSelectorMode.BOX
+                )
+            ),
+            **_build_unit_field(),
+        }
+    )
+
+
+def _build_modbus_serial_schema() -> vol.Schema:
+    """Build the schema for a directly attached USB RS485 adapter."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_MODBUS_DEVICE, default="/dev/ttyUSB0"): str,
+            vol.Required(
+                CONF_MODBUS_BAUDRATE, default=DEFAULT_MODBUS_BAUDRATE
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["9600", "19200", "38400", "57600", "115200"],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            **_build_unit_field(),
         }
     )
 
@@ -153,6 +266,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
     def __init__(self):
         """Initialize the flow."""
         self.reauth_entry = None
+        self._modbus_type = MODBUS_TYPE_TCP
 
     async def _validate_input(self, data, base_url: str = BASE_URL_DEFAULT):
         """Validate the user input allows us to connect."""
@@ -193,10 +307,143 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return None
 
+    async def _probe_modbus(self, params, unit_id: int) -> str | None:
+        """Return an error key, or None if a device answered on the bus.
+
+        A Modbus exception response counts as success. It means the device
+        replied and simply does not carry that register, which already
+        proves the wiring, framing and slave address are right -- and this
+        runs before any register map is known, so a value is not required.
+        """
+        try:
+            from modbus_connection import ModbusExceptionError, ModbusTimeoutError
+            from modbus_connection.tmodbus import ModbusConnection
+        except ImportError:
+            _LOGGER.error("modbus-connection is not installed")
+            return "modbus_unavailable"
+
+        connection = ModbusConnection(
+            params, timeout=MODBUS_TIMEOUT, message_spacing=MODBUS_MESSAGE_SPACING
+        )
+        unit = connection.for_unit(unit_id)
+        try:
+            for space, address in MODBUS_PROBE_POINTS:
+                read = (
+                    unit.read_input_registers
+                    if space == "input"
+                    else unit.read_holding_registers
+                )
+                try:
+                    await read(address, 1)
+                except ModbusExceptionError:
+                    return None
+                except ModbusTimeoutError:
+                    continue
+                return None
+            return "no_device"
+        except Exception:  # pylint: disable=broad-exception-caught
+            _LOGGER.exception("Could not reach the Modbus device")
+            return "cannot_connect"
+        finally:
+            await connection.close()
+
+    async def _validate_modbus(self, user_input) -> tuple[str | None, dict]:
+        """Validate a Modbus connection and return (error, entry data)."""
+        from modbus_connection import ModbusSerialParams, ModbusTcpParams
+
+        unit_id = int(user_input[CONF_MODBUS_UNIT])
+        if self._modbus_type == MODBUS_TYPE_SERIAL:
+            device = user_input[CONF_MODBUS_DEVICE]
+            baudrate = int(user_input[CONF_MODBUS_BAUDRATE])
+            params = ModbusSerialParams(
+                device=device, baudrate=baudrate, bytesize=8, parity="N", stopbits=1
+            )
+            unique_id = f"{device}:{unit_id}"
+            title = f"HYXI Modbus ({device})"
+            data = {
+                CONF_MODBUS_DEVICE: device,
+                CONF_MODBUS_BAUDRATE: baudrate,
+            }
+        else:
+            host = user_input[CONF_MODBUS_HOST]
+            port = int(user_input[CONF_MODBUS_PORT])
+            # RS485-to-Ethernet gateways almost always tunnel RTU frames
+            # rather than speaking native Modbus TCP framing.
+            params = ModbusTcpParams(host=host, port=port, framer="rtu")
+            unique_id = f"{host}:{port}:{unit_id}"
+            title = f"HYXI Modbus ({host})"
+            data = {CONF_MODBUS_HOST: host, CONF_MODBUS_PORT: port}
+
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured()
+
+        error = await self._probe_modbus(params, unit_id)
+        return error, {
+            **data,
+            CONF_TRANSPORT: TRANSPORT_MODBUS,
+            CONF_MODBUS_TYPE: self._modbus_type,
+            CONF_MODBUS_UNIT: unit_id,
+            "_title": title,
+        }
+
     async def async_step_user(self, user_input=None):
-        """Handle the initial setup step."""
+        """Choose between the cloud API and a local Modbus link."""
         _LOGGER.debug(
             "Config flow: entering step_user (input provided=%s)",
+            user_input is not None,
+        )
+        if user_input is not None:
+            if user_input[CONF_TRANSPORT] == TRANSPORT_MODBUS:
+                return await self.async_step_modbus()
+            return await self.async_step_cloud()
+
+        return self.async_show_form(
+            step_id="user", data_schema=_build_transport_schema()
+        )
+
+    async def async_step_modbus(self, user_input=None):
+        """Choose how the RS485 bus is attached."""
+        _LOGGER.debug(
+            "Config flow: entering step_modbus (input provided=%s)",
+            user_input is not None,
+        )
+        if user_input is not None:
+            self._modbus_type = user_input[CONF_MODBUS_TYPE]
+            if self._modbus_type == MODBUS_TYPE_SERIAL:
+                return await self.async_step_modbus_serial()
+            return await self.async_step_modbus_tcp()
+
+        return self.async_show_form(
+            step_id="modbus", data_schema=_build_modbus_type_schema()
+        )
+
+    async def _async_modbus_connection_step(self, step_id, schema, user_input):
+        """Validate and create an entry for either Modbus connection type."""
+        errors = {}
+        if user_input is not None:
+            error, data = await self._validate_modbus(user_input)
+            if not error:
+                return self.async_create_entry(title=data.pop("_title"), data=data)
+            errors["base"] = error
+
+        return self.async_show_form(step_id=step_id, data_schema=schema, errors=errors)
+
+    async def async_step_modbus_tcp(self, user_input=None):
+        """Configure an RS485-to-Ethernet gateway."""
+        return await self._async_modbus_connection_step(
+            "modbus_tcp", _build_modbus_tcp_schema(), user_input
+        )
+
+    async def async_step_modbus_serial(self, user_input=None):
+        """Configure a directly attached USB RS485 adapter."""
+        return await self._async_modbus_connection_step(
+            "modbus_serial", _build_modbus_serial_schema(), user_input
+        )
+
+    async def async_step_cloud(self, user_input=None):
+        """Handle credentials for the HYXI Cloud API."""
+        _LOGGER.debug(
+            "Config flow: entering step_cloud (input provided=%s)",
             user_input is not None,
         )
         errors = {}
@@ -215,13 +462,14 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                     data={
                         **user_input,
                         "base_url": base_url,
+                        CONF_TRANSPORT: TRANSPORT_CLOUD,
                     },
                 )
 
             errors["base"] = error
 
         return self.async_show_form(
-            step_id="user",
+            step_id="cloud",
             data_schema=_build_user_schema(default_region),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
@@ -383,17 +631,25 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             vol.Required("update_interval", default=current_interval): vol.All(
                 vol.Coerce(int), vol.Range(min=1, max=60)
             ),
-            # Toggle for Alarm-based discovery
-            vol.Optional(
-                CONF_BACK_DISCOVERY,
-                default=options.get(CONF_BACK_DISCOVERY, False),
-            ): selector.BooleanSelector(),
-            # Toggle for Real-Time Push
-            vol.Optional(
-                CONF_ENABLE_PUSH,
-                default=options.get(CONF_ENABLE_PUSH, False),
-            ): selector.BooleanSelector(),
         }
+
+        # Alarm-based discovery and real-time push are both cloud services:
+        # discovery walks the account's alarm records, and push is a webhook
+        # subscription registered with HYXI's servers. A point-to-point RS485
+        # link has neither, so a Modbus entry never shows them.
+        if not is_modbus_entry(self._config_entry):
+            schema_dict[
+                vol.Optional(
+                    CONF_BACK_DISCOVERY,
+                    default=options.get(CONF_BACK_DISCOVERY, False),
+                )
+            ] = selector.BooleanSelector()
+            schema_dict[
+                vol.Optional(
+                    CONF_ENABLE_PUSH,
+                    default=options.get(CONF_ENABLE_PUSH, False),
+                )
+            ] = selector.BooleanSelector()
 
         # If push is enabled, show the rate and url inputs
         if options.get(CONF_ENABLE_PUSH, False):
