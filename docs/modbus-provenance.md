@@ -16,10 +16,271 @@ for a different family whose examples happened to decode against it.
 | Source | Covers | Standing |
 | :--- | :--- | :--- |
 | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1, 2025-06-13 | HYX-H(5~12)K-HT (incl. the H10K-HT on the bench), HYX-H(15~25)K-HT, HYX-H(6~15)K-HTA/HTAC — registers 0–1351 and 973–3121 | **Vendor claim, current document, exact hardware family.** Supplied directly for this project. The strongest source held for any device here — not yet checked against a device, but not borrowed from a different product's document either. |
-| HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Shared on [issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662) by @Ton123, who confirmed with HYXI that it may be published. Not yet checked against a device — no HALO has been on a bus. |
+| HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. Not yet checked against a device — no HALO has been on a bus. |
 | HYXIPower *HYX-H(5~12)K-HT User Manual*, V1.2, 2024-07 | Alarm code table; lists port 14 as "Reserved Communication" with no pinout | **Vendor, published.** Superseded on the pinout question by the protocol document above — see below. |
 | [Eniris device documentation](https://docs.eniris.be/nl/Controller/Devices/PV-hybrid-and-battery-inverters/HYXiPOWER/Hybrid%20Inverters) | Claimed RS485 is on port 14; supported hybrid models | **Third party, and contradicted.** The protocol document says PIN5/6 of the inverter's COM port (RJ45), not port 14. Kept in this table only as a record of what was checked, not as a source to trust. |
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | Cloud `workMode` values 13 and 14 | **Inference, unconfirmed.** Derived by reverse-engineering the HYXI phone app's APK. Never observed on a device. See rule 1. |
+
+## HALO register map (from registers.py)
+
+Generated directly from the Component classes -- this table cannot drift from the code, because it is read out of the code. "sensor: X" shows the cloud metric key `client.py`'s `_build_metrics()` maps a field to, matched by which component instance it came from (not just field name -- `HaloGrid.frequency` and `HaloBackup.frequency` are different registers with the same field name, and only one of them is actually read). "device info: X" means the field feeds the HA device registry entry (model/serial/versions shown on the device page) rather than a sensor entity. "used by a control method" means a `set_mode_*`/`set_peak_shaving` write touches it but nothing reads it back. "debug log only" means it is read and logged at setup but stored nowhere a user sees. "*(not exposed)*" means the register is modeled but genuinely unused beyond that.
+
+### HaloIdentity  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4002 | `model_low` | Number (unsigned) | RO |  |  | device info: `model` |
+| 4006 | `model_high` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 4018 | `serial_number` | Number (unsigned) | RO |  |  | device key (via `serial_number` property) |
+| 4026 | `arm_version` | Number (unsigned) | RO |  |  | device info: `sw_version` |
+| 4028 | `dsp_version` | Number (unsigned) | RO |  |  | debug log only |
+| 4034 | `hardware_version` | Number (unsigned) | RO |  |  | device info: `hw_version` |
+| 4046 | `rated_power` | Number (signed) | RO |  | W | debug log only |
+| 4048 | `rated_frequency` | Number (signed) | RO | ×0.01 | Hz | debug log only |
+| 4049 | `rated_voltage` | Number (unsigned) | RO | ×0.01 | V | debug log only |
+| 4962 | `battery_serial_number` | Number (unsigned) | RO |  |  | sensor: `batSn` |
+
+### HaloStatus  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4100 | `switch_status` | Number (unsigned) | RO |  |  | sensor: `deviceSwitchStatus` |
+| 4101 | `work_state` | Number (unsigned) | RO |  |  | sensor: `invSts` |
+| 4102 | `work_mode` | Number (unsigned) | RO |  |  | sensor: `workMode` |
+| 4103 | `grid_state` | Number (unsigned) | RO |  |  | sensor: `gridSts` |
+| 4104 | `insulation_resistance` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 4105 | `leakage_current` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 4106 | `bus_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `vbus` |
+| 4109 | `ambient_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
+| 4110 | `ac_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `tinv` |
+| 4111 | `dc_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
+| 4123 | `meter_online` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+
+### HaloGrid  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4151 | `frequency` | Number (signed) | RO | ×0.01 | Hz | sensor: `f`, `gridF` |
+| 4152 | `active_power` | Number (signed) | RO | ×0.001 | kW | sensor: `gridP` |
+| 4154 | `reactive_power` | Number (signed) | RO | ×0.001 | kW | — *(not exposed)* |
+| 4156 | `apparent_power` | Number (signed) | RO | ×0.001 | kW | — *(not exposed)* |
+| 4158 | `power_factor` | Number (signed) | RO | ×0.01 |  | — *(not exposed)* |
+| 4161 | `voltage` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph1v` |
+| 4162 | `current` | Number (signed) | RO | ×0.1 | A | sensor: `ph1i` |
+| 4163 | `phase_power` | Number (signed) | RO | ×0.001 | kW | sensor: `ph1p` |
+
+### HaloBackup  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4200 | `frequency` | Number (signed) | RO | ×0.01 | Hz | — *(not exposed)* |
+| 4201 | `active_power` | Number (signed) | RO | ×0.001 | kW | — *(not exposed)* |
+| 4210 | `voltage` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
+| 4211 | `current` | Number (signed) | RO | ×0.1 | A | — *(not exposed)* |
+| 4212 | `phase_power` | Number (signed) | RO | ×0.001 | kW | sensor: `ph1Loadp` |
+
+### HaloEnergy  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4500 | `output_today` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `eToday` |
+| 4502 | `output_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `totalE` |
+| 4506 | `battery_charged_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `batCharge`, `totalEchg` |
+| 4510 | `battery_discharged_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `batDisCharge`, `totalEdchg` |
+| 4512 | `input_today` | Number (unsigned) | RO | ×0.001 | kWh | — *(not exposed)* |
+| 4514 | `input_total` | Number (unsigned) | RO | ×0.001 | kWh | sensor: `totalEnt` |
+
+### HaloFaults  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4850 | `hardware_fault` | Raw | RO |  |  | — *(not exposed)* |
+| 4851 | `software_fault_1` | Raw | RO |  |  | — *(not exposed)* |
+| 4852 | `software_fault_2` | Raw | RO |  |  | — *(not exposed)* |
+| 4853 | `software_fault_3` | Raw | RO |  |  | — *(not exposed)* |
+| 4857 | `software_alarm_1` | Raw | RO |  |  | — *(not exposed)* |
+
+### HaloBattery  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4978 | `pack_count` | Number (unsigned) | RO |  |  | sensor: `packNum` |
+| 4979 | `bms_state` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 4980 | `soc` | Number (unsigned) | RO | ×0.1 | % | sensor: `batSoc` |
+| 4981 | `soh` | Number (unsigned) | RO | ×0.1 | % | sensor: `batSoh` |
+| 4982 | `temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `batTmp` |
+| 4985 | `power` | Number (signed) | RO | ×0.001 | kW | sensor: `batP`, `pbat` |
+| 4989 | `cell_voltage_max` | Number (unsigned) | RO | ×0.001 | V | sensor: `batVch` |
+| 4990 | `cell_voltage_min` | Number (unsigned) | RO | ×0.001 | V | sensor: `batVcl` |
+| 4995 | `cell_temperature_max` | Number (signed) | RO | ×0.1 | °C | sensor: `batTch` |
+| 4996 | `cell_temperature_min` | Number (signed) | RO | ×0.1 | °C | sensor: `batTcl` |
+| 5000 | `alarm_1` | Raw | RO |  |  | — *(not exposed)* |
+| 5001 | `alarm_2` | Raw | RO |  |  | — *(not exposed)* |
+| 5002 | `alarm_3` | Raw | RO |  |  | — *(not exposed)* |
+| 5020 | `capacity_ah` | Number (unsigned) | RO |  | Ah | — *(not exposed)* |
+| 5021 | `max_discharge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxDischargePower` |
+| 5023 | `max_charge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxChargePower` |
+
+### HaloSettings  (space=holding)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4048 | `dispatch_mode` | Number (unsigned) | RW |  |  | — *(not exposed)* |
+| 4049 | `active_power_setpoint` | Number (signed) | RW | ×0.001 | kW | — *(not exposed)* |
+| 4121 | `anti_starvation` | Number (unsigned) | RW |  |  | — *(not exposed)* |
+| 4132 | `force_charge_start_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4133 | `off_grid_min_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4134 | `self_use_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4140 | `force_charge_stop_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4141 | `discharge_min_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4146 | `vpp_enable` | Number (unsigned) | RW |  |  | used by a control method |
+| 4147 | `vpp_mode` | Number (unsigned) | RW |  |  | used by a control method |
+| 4148 | `vpp_charge_power` | Number (unsigned) | RW |  | W | used by a control method |
+| 4150 | `vpp_discharge_power` | Number (unsigned) | RW |  | W | used by a control method |
+| 4152 | `vpp_min_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4162 | `feed_in_enable` | Number (unsigned) | RW |  |  | used by a control method |
+| 4163 | `feed_in_power_limit` | Number (signed) | RW | ×0.001 | kW | — *(not exposed)* |
+
+## Hybrid register map (from registers_hybrid.py)
+
+Same generation and legend, from the hybrid Component classes and `client_hybrid.py`.
+
+### HybridIdentity  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 0 | `protocol_version` | Number (unsigned) | RO |  |  | debug log only |
+| 1 | `main_dsp_version` | Number (unsigned) | RO |  |  | debug log only |
+| 1001 | `main_program_version` | Number (unsigned) | RO |  |  | device info: `sw_version` |
+| 1007 | `serial_number` | Number (unsigned) | RO |  |  | device key (via `serial_number` property) |
+| 1015 | `battery_serial_number` | String | RO |  |  | — *(not exposed)* |
+
+### HybridStatus  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 19 | `inverter_temperature` | Number (signed) | RO | ×0.1 | °C | sensor: `tinv` |
+| 20 | `boost_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
+| 21 | `dsp_temperature` | Number (signed) | RO | ×0.1 | °C | — *(not exposed)* |
+| 22 | `operation_status` | Number (unsigned) | RO |  |  | sensor: `invSts` |
+| 23 | `self_test_status` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 25 | `grid_mode` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 26 | `run_command` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 53 | `grid_connected` | Number (unsigned) | RO |  |  | sensor: `gridSts` |
+| 1265 | `current_operating_mode` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+
+### HybridFaults  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 38 | `software_fault_1` | Raw | RO |  |  | — *(not exposed)* |
+| 39 | `software_fault_2` | Raw | RO |  |  | — *(not exposed)* |
+| 40 | `software_fault_3` | Raw | RO |  |  | — *(not exposed)* |
+| 41 | `software_fault_4` | Raw | RO |  |  | — *(not exposed)* |
+| 42 | `software_fault_5` | Raw | RO |  |  | — *(not exposed)* |
+| 43 | `software_fault_6` | Raw | RO |  |  | — *(not exposed)* |
+| 44 | `software_alarm_1` | Raw | RO |  |  | — *(not exposed)* |
+| 45 | `software_alarm_2` | Raw | RO |  |  | — *(not exposed)* |
+| 1041 | `dsp_comm_fault` | Raw | RO |  |  | — *(not exposed)* |
+| 1042 | `device_comm_fault` | Raw | RO |  |  | — *(not exposed)* |
+| 1043 | `device_alarm` | Raw | RO |  |  | — *(not exposed)* |
+
+### HybridGrid  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 300 | `voltage_a` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph1v` |
+| 301 | `voltage_b` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph2v` |
+| 302 | `voltage_c` | Number (unsigned) | RO | ×0.01 | V | sensor: `ph3v` |
+| 303 | `frequency` | Number (signed) | RO | ×0.01 | Hz | sensor: `f`, `gridF` |
+| 311 | `current_a` | Number (signed) | RO | ×0.01 | A | sensor: `ph1i` |
+| 312 | `current_b` | Number (signed) | RO | ×0.01 | A | sensor: `ph2i` |
+| 313 | `current_c` | Number (signed) | RO | ×0.01 | A | sensor: `ph3i` |
+| 316 | `active_power` | Number (signed) | RO |  | W | sensor: `gridP` |
+| 317 | `reactive_power` | Number (signed) | RO |  | var | — *(not exposed)* |
+| 318 | `apparent_power` | Number (signed) | RO |  | VA | — *(not exposed)* |
+| 370 | `phase_a_power` | Number (signed) | RO |  | W | sensor: `ph1p` |
+| 371 | `phase_b_power` | Number (signed) | RO |  | W | sensor: `ph2p` |
+| 372 | `phase_c_power` | Number (signed) | RO |  | W | sensor: `ph3p` |
+
+### HybridBackup  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 500 | `voltage_a` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
+| 501 | `voltage_b` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
+| 502 | `voltage_c` | Number (unsigned) | RO | ×0.01 | V | — *(not exposed)* |
+| 503 | `frequency` | Number (signed) | RO | ×0.01 | Hz | — *(not exposed)* |
+| 507 | `active_power` | Number (unsigned) | RO |  | W | — *(not exposed)* |
+| 520 | `phase_a_power` | Number (unsigned) | RO |  | W | sensor: `ph1Loadp` |
+| 521 | `phase_b_power` | Number (unsigned) | RO |  | W | sensor: `ph2Loadp` |
+| 522 | `phase_c_power` | Number (unsigned) | RO |  | W | sensor: `ph3Loadp` |
+
+### HybridPv  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 600 | `bus_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `vbus` |
+| 604 | `pv1_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `pv1v` |
+| 605 | `pv1_current` | Number (unsigned) | RO | ×0.1 | A | sensor: `pv1i` |
+| 606 | `pv1_power` | Number (unsigned) | RO |  | W | sensor: `pv1p` |
+| 610 | `pv2_voltage` | Number (unsigned) | RO | ×0.1 | V | sensor: `pv2v` |
+| 611 | `pv2_current` | Number (unsigned) | RO | ×0.1 | A | sensor: `pv2i` |
+| 612 | `pv2_power` | Number (unsigned) | RO |  | W | sensor: `pv2p` |
+
+### HybridBattery  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 802 | `llc_bus_voltage` | Number (unsigned) | RO | ×0.1 | V | — *(not exposed)* |
+| 804 | `discharge_voltage` | Number (unsigned) | RO | ×0.1 | V | — *(not exposed)* |
+| 805 | `discharge_current` | Number (unsigned) | RO | ×0.1 | A | — *(not exposed)* |
+| 806 | `discharge_power` | Number (unsigned) | RO |  | W | — *(not exposed)* |
+| 819 | `charge_voltage` | Number (unsigned) | RO | ×0.1 | V | — *(not exposed)* |
+| 820 | `charge_current` | Number (unsigned) | RO | ×0.1 | A | — *(not exposed)* |
+| 821 | `charge_power` | Number (unsigned) | RO |  | W | — *(not exposed)* |
+| 1051 | `operating_status` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+| 1052 | `voltage` | Number (unsigned) | RO | ×0.01 | V | sensor: `batV` |
+| 1053 | `current` | Number (signed) | RO | ×0.1 | A | sensor: `batI` |
+| 1054 | `soc` | Number (unsigned) | RO |  | % | sensor: `batSoc` |
+| 1055 | `soh` | Number (unsigned) | RO |  | % | sensor: `batSoh` |
+| 1056 | `temperature` | Number (signed) | RO |  | °C | sensor: `batTmp` |
+| 1061 | `max_cell_voltage` | Number (unsigned) | RO | ×0.001 | V | sensor: `batVch` |
+| 1062 | `min_cell_voltage` | Number (unsigned) | RO | ×0.001 | V | sensor: `batVcl` |
+| 1063 | `max_cell_temperature` | Number (unsigned) | RO |  | °C | sensor: `batTch` |
+| 1064 | `min_cell_temperature` | Number (unsigned) | RO |  | °C | sensor: `batTcl` |
+| 1065 | `power` | Number (signed) | RO |  | W | sensor: `batP`, `pbat` |
+| 1097 | `nominal_capacity` | Number (unsigned) | RO |  |  | — *(not exposed)* |
+
+### HybridEnergy  (space=input)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1128 | `output_a` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `totalE` |
+| 1130 | `output_b` | Number (unsigned) | RO | ×0.1 | kWh | — *(not exposed)* |
+| 1132 | `output_c` | Number (unsigned) | RO | ×0.1 | kWh | — *(not exposed)* |
+| 1146 | `charge_total` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `batCharge`, `totalEchg` |
+| 1148 | `discharge_total` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `batDisCharge`, `totalEdchg` |
+
+### HybridSettings  (space=holding)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1099 | `feed_in_enable` | Number (unsigned) | RW |  |  | used by a control method |
+| 1100 | `feed_in_power` | Number (unsigned) | RW |  | W | — *(not exposed)* |
+| 1101 | `anti_starvation_protection` | Number (unsigned) | RW |  |  | — *(not exposed)* |
+| 1102 | `self_use_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 1103 | `backup_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 1104 | `forced_charge_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 1105 | `feed_in_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 1106 | `off_grid_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 3000 | `scheduling_enabled` | Number (unsigned) | RW |  |  | used by a control method |
+| 3002 | `power_command` | Number (unsigned) | RW |  |  | — *(not exposed)* |
+| 3004 | `control_mode` | Number (unsigned) | RW |  |  | used by a control method |
+| 3015 | `battery_power` | Number (signed) | RW |  | W | used by a control method |
+| 3112 | `max_charge_current` | Number (unsigned) | RW | ×0.1 | A | — *(not exposed)* |
+| 3113 | `max_discharge_current` | Number (unsigned) | RW | ×0.1 | A | — *(not exposed)* |
+
 
 ## Resolved: the RS485 wiring for the hybrid series
 
