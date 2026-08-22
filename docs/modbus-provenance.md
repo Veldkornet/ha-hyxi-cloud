@@ -137,9 +137,9 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4147 | `vpp_mode` | Number (unsigned) | RW |  |  | used by a control method |
 | 4148 | `vpp_charge_power` | Number (unsigned) | RW |  | W | used by a control method |
 | 4150 | `vpp_discharge_power` | Number (unsigned) | RW |  | W | used by a control method |
-| 4152 | `vpp_min_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4152 | `vpp_min_soc` | Number (unsigned) | RW |  | % | used by a control method |
 | 4162 | `feed_in_enable` | Number (unsigned) | RW |  |  | used by a control method |
-| 4163 | `feed_in_power_limit` | Number (signed) | RW | ×0.001 | kW | — *(not exposed)* |
+| 4163 | `feed_in_power_limit` | Number (signed) | RW | ×0.001 | kW | used by a control method |
 
 ## Hybrid register map (from registers_hybrid.py)
 
@@ -267,7 +267,7 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1099 | `feed_in_enable` | Number (unsigned) | RW |  |  | used by a control method |
-| 1100 | `feed_in_power` | Number (unsigned) | RW |  | W | — *(not exposed)* |
+| 1100 | `feed_in_power` | Number (unsigned) | RW |  | W | used by a control method |
 | 1101 | `anti_starvation_protection` | Number (unsigned) | RW |  |  | — *(not exposed)* |
 | 1102 | `self_use_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
 | 1103 | `backup_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
@@ -275,11 +275,11 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 | 1105 | `feed_in_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
 | 1106 | `off_grid_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
 | 3000 | `scheduling_enabled` | Number (unsigned) | RW |  |  | used by a control method |
-| 3002 | `power_command` | Number (unsigned) | RW |  |  | — *(not exposed)* |
+| 3002 | `power_command` | Number (unsigned) | RW |  |  | used by a control method |
 | 3004 | `control_mode` | Number (unsigned) | RW |  |  | used by a control method |
 | 3015 | `battery_power` | Number (signed) | RW |  | W | used by a control method |
-| 3112 | `max_charge_current` | Number (unsigned) | RW | ×0.1 | A | — *(not exposed)* |
-| 3113 | `max_discharge_current` | Number (unsigned) | RW | ×0.1 | A | — *(not exposed)* |
+| 3112 | `max_charge_current` | Number (unsigned) | RW | ×0.1 | A | used by a control method |
+| 3113 | `max_discharge_current` | Number (unsigned) | RW | ×0.1 | A | used by a control method |
 
 
 ## Resolved: the RS485 wiring for the hybrid series

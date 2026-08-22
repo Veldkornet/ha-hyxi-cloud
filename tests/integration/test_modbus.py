@@ -361,6 +361,24 @@ async def test_peak_shaving_closes_the_real_export_switch(client):
 
 
 @pytest.mark.asyncio
+async def test_feed_in_power_limit_write_converts_watts_to_kilowatts(client):
+    """The register is kW-scaled; the entity and client method work in
+    watts to match every other power control in this integration."""
+    await client.set_feed_in_power_limit(3500)
+    await client.settings.async_update()
+    assert client.settings.feed_in_power_limit == 3.5
+
+
+@pytest.mark.asyncio
+async def test_vpp_min_soc_write_lands_in_holding_space(client):
+    """4152 in holding space -- not grid active power, the same address in
+    input space. See registers.py's HaloGrid."""
+    await client.set_vpp_min_soc(15)
+    await client.settings.async_update()
+    assert client.settings.vpp_min_soc == 15
+
+
+@pytest.mark.asyncio
 async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
     """button.py and friends catch HyxiApiClient.ControlError by name."""
     with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
@@ -369,6 +387,12 @@ async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
 
         with pytest.raises(HyxiModbusClient.ControlError):
             await client.set_peak_shaving("SN", "on")
+
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_feed_in_power_limit(3500)
+
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_vpp_min_soc(15)
 
 
 @pytest.mark.asyncio
@@ -568,6 +592,28 @@ def _seeded_connection() -> MockModbusConnection:
     return connection
 
 
+def _seeded_hybrid_connection() -> MockModbusConnection:
+    """A connection serving the hybrid document's register file -- shared
+    by every test in this module that needs a full hybrid device rather
+    than the HALO-shaped fixtures above."""
+    from tests.integration.test_modbus_hybrid import (
+        HOLDING_REGISTERS as HYBRID_HOLDING_REGISTERS,
+    )
+    from tests.integration.test_modbus_hybrid import (
+        INPUT_REGISTERS as HYBRID_INPUT_REGISTERS,
+    )
+    from tests.integration.test_modbus_hybrid import _fill as _hybrid_fill
+
+    connection = MockModbusConnection()
+    connection.for_unit(1).load_raw(
+        {
+            "input": _hybrid_fill(HYBRID_INPUT_REGISTERS),
+            "holding": _hybrid_fill(HYBRID_HOLDING_REGISTERS),
+        }
+    )
+    return connection
+
+
 @pytest.mark.asyncio
 async def test_setting_up_a_modbus_entry_creates_entities(hass):
     """The whole point: existing platforms light up over RS485 unchanged.
@@ -753,24 +799,10 @@ async def test_hybrid_control_entities_still_appear_unaffected(hass):
         hass, modbus_family="hybrid", options={"enable_battery_control": True}
     )
 
-    connection = MockModbusConnection()
-    unit = connection.for_unit(1)
-    from tests.integration.test_modbus_hybrid import (
-        HOLDING_REGISTERS as HYBRID_HOLDING_REGISTERS,
-    )
-    from tests.integration.test_modbus_hybrid import (
-        INPUT_REGISTERS as HYBRID_INPUT_REGISTERS,
-    )
-    from tests.integration.test_modbus_hybrid import _fill as _hybrid_fill
-
-    unit.load_raw(
-        {
-            "input": _hybrid_fill(HYBRID_INPUT_REGISTERS),
-            "holding": _hybrid_fill(HYBRID_HOLDING_REGISTERS),
-        }
-    )
-
-    with patch("modbus_connection.tmodbus.ModbusConnection", return_value=connection):
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_hybrid_connection(),
+    ):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     await hass.async_block_till_done()
@@ -779,3 +811,150 @@ async def test_hybrid_control_entities_still_appear_unaffected(hass):
     assert HYBRID_DEVICE_CODE == "HYBRID_INVERTER"
     assert _entity_id(hass, "button", sn, "mode_idle") is not None
     assert _entity_id(hass, "number", sn, "charge_power") is not None
+
+
+@pytest.mark.asyncio
+async def test_halo_setting_numbers_appear_and_write_through(hass):
+    """The two HaloSettings fields with an unambiguous numeric range and no
+    overlap with the software-side protection numbers -- feed-in power
+    limit and the VPP dispatch block's minimum SOC."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+
+    feed_in_id = _entity_id(hass, "number", sn, "feed_in_power_limit")
+    soc_id = _entity_id(hass, "number", sn, "vpp_min_soc")
+    assert feed_in_id is not None
+    assert soc_id is not None
+
+    # Hybrid-only settings must not appear on a HALO entry.
+    assert _entity_id(hass, "number", sn, "feed_in_power") is None
+    assert _entity_id(hass, "number", sn, "max_charge_current") is None
+
+    with patch.object(
+        coordinator.client,
+        "set_feed_in_power_limit",
+        wraps=coordinator.client.set_feed_in_power_limit,
+    ) as spy:
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": feed_in_id, "value": 3500},
+            blocking=True,
+        )
+    spy.assert_awaited_once_with(3500)
+
+    with patch.object(
+        coordinator.client, "set_vpp_min_soc", wraps=coordinator.client.set_vpp_min_soc
+    ) as spy:
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": soc_id, "value": 15}, blocking=True
+        )
+    spy.assert_awaited_once_with(15)
+
+
+@pytest.mark.asyncio
+async def test_hybrid_setting_numbers_appear_and_write_through(hass):
+    """feed-in power limit and the two current caps -- the HybridSettings
+    equivalent of the HALO test above."""
+    entry = _modbus_entry(
+        hass, modbus_family="hybrid", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_hybrid_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+
+    feed_in_id = _entity_id(hass, "number", sn, "feed_in_power")
+    max_charge_id = _entity_id(hass, "number", sn, "max_charge_current")
+    max_discharge_id = _entity_id(hass, "number", sn, "max_discharge_current")
+    assert feed_in_id is not None
+    assert max_charge_id is not None
+    assert max_discharge_id is not None
+
+    # HALO-only settings must not appear on a hybrid entry.
+    assert _entity_id(hass, "number", sn, "feed_in_power_limit") is None
+    assert _entity_id(hass, "number", sn, "vpp_min_soc") is None
+
+    with patch.object(
+        coordinator.client,
+        "set_max_charge_current",
+        wraps=coordinator.client.set_max_charge_current,
+    ) as spy:
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": max_charge_id, "value": 32.5},
+            blocking=True,
+        )
+    spy.assert_awaited_once_with(32.5)
+
+
+@pytest.mark.asyncio
+async def test_hybrid_power_command_buttons_appear_and_write_through(hass):
+    """power_command has no cloud equivalent and no HALO register -- these
+    three buttons must exist only for a hybrid Modbus entry."""
+    entry = _modbus_entry(
+        hass, modbus_family="hybrid", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_hybrid_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+
+    for key in ("power_on", "power_off", "restart"):
+        assert _entity_id(hass, "button", sn, key) is not None, key
+
+    restart_id = _entity_id(hass, "button", sn, "restart")
+    with patch.object(
+        coordinator.client, "restart", wraps=coordinator.client.restart
+    ) as spy:
+        await hass.services.async_call(
+            "button", "press", {"entity_id": restart_id}, blocking=True
+        )
+    spy.assert_awaited_once_with(sn)
+
+
+@pytest.mark.asyncio
+async def test_halo_has_no_power_command_buttons(hass):
+    """HALO has no power_command register -- see HaloSettings' docstring."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    for key in ("power_on", "power_off", "restart"):
+        assert _entity_id(hass, "button", sn, key) is None, key

@@ -354,6 +354,40 @@ async def test_peak_shaving_enables_the_real_export_control(client):
 
 
 @pytest.mark.asyncio
+async def test_feed_in_power_write_is_unscaled_watts(client):
+    """Unlike the HALO client's feed_in_power_limit, this register is
+    plain watts -- no kW conversion needed."""
+    await client.set_feed_in_power(4200)
+    await client.settings.async_update()
+    assert client.settings.feed_in_power == 4200
+
+
+@pytest.mark.asyncio
+async def test_max_charge_and_discharge_current_writes_land_correctly(client):
+    await client.set_max_charge_current(32.5)
+    await client.set_max_discharge_current(28.0)
+    await client.settings.async_update()
+    assert client.settings.max_charge_current == 32.5
+    assert client.settings.max_discharge_current == 28.0
+
+
+@pytest.mark.asyncio
+async def test_power_command_writes_the_documented_values(client):
+    """1 power on, 2 power off, 3 restart."""
+    await client.power_on("SN")
+    await client.settings.async_update()
+    assert client.settings.power_command == 1
+
+    await client.power_off("SN")
+    await client.settings.async_update()
+    assert client.settings.power_command == 2
+
+    await client.restart("SN")
+    await client.settings.async_update()
+    assert client.settings.power_command == 3
+
+
+@pytest.mark.asyncio
 async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
     with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
         with pytest.raises(HyxiHybridModbusClient.ControlError):
@@ -364,6 +398,24 @@ async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
 
         with pytest.raises(HyxiHybridModbusClient.ControlError):
             await client.set_mode_self_consume("SN")
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.set_feed_in_power(4200)
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.set_max_charge_current(32.5)
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.set_max_discharge_current(28.0)
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.power_on("SN")
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.power_off("SN")
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.restart("SN")
 
 
 @pytest.mark.asyncio

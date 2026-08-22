@@ -57,6 +57,12 @@ PEAK_SHAVING_ICONS: dict[str, str] = {
     "hold": "mdi:pause-circle-outline",
 }
 
+POWER_COMMAND_ICONS: dict[str, str] = {
+    "power_on": "mdi:power",
+    "power_off": "mdi:power-off",
+    "restart": "mdi:restart",
+}
+
 
 def _mode_buttons(coordinator, sn: str, dev_data: dict) -> list[HyxiModeButton]:
     """The four operating-mode buttons, shared by the three-phase cloud path
@@ -66,6 +72,19 @@ def _mode_buttons(coordinator, sn: str, dev_data: dict) -> list[HyxiModeButton]:
         HyxiModeButton(coordinator, sn, dev_data, "charge"),
         HyxiModeButton(coordinator, sn, dev_data, "discharge"),
         HyxiModeButton(coordinator, sn, dev_data, "self_consume"),
+    ]
+
+
+def _power_command_buttons(
+    coordinator, sn: str, dev_data: dict
+) -> list[HyxiPowerCommandButton]:
+    """Power on/off/restart -- register 3002, Hybrid Modbus only. HALO's
+    document has no equivalent write register (see HaloSettings' own
+    docstring), and the cloud API has no power_command controlId either."""
+    return [
+        HyxiPowerCommandButton(coordinator, sn, dev_data, "power_on"),
+        HyxiPowerCommandButton(coordinator, sn, dev_data, "power_off"),
+        HyxiPowerCommandButton(coordinator, sn, dev_data, "restart"),
     ]
 
 
@@ -106,6 +125,10 @@ async def async_setup_entry(
             # map has a confirmed local equivalent of the cloud's separate
             # 5-state peak-shaving surface, so that path stays cloud-only.
             entities.extend(_mode_buttons(coordinator, sn, dev_data))
+            # One device per Modbus entry (see client.py's async_read_all),
+            # so device_type reliably tells the two register maps apart.
+            if device_type == "hybrid_inverter":
+                entities.extend(_power_command_buttons(coordinator, sn, dev_data))
             continue
 
         phase = detect_phase_type(dev_data)
@@ -351,6 +374,61 @@ class HyxiPeakShavingButton(
             _LOGGER.error(
                 "Failed to send peak shaving '%s' to %s: %s",
                 self._option,
+                mask_sn(self._sn),
+                err,
+            )
+            raise
+
+    @property
+    def available(self) -> bool:
+        """Unavailable when battery control is not enabled."""
+        return super().available
+
+
+class HyxiPowerCommandButton(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity
+):
+    """Button to send a power on/off/restart command (Hybrid Modbus, write-
+    only, register 3002).
+
+    Three separate buttons rather than one number entity with values 1-3:
+    one of those values restarts the inverter, and a slider a click away
+    from that is a worse interface than three individually-named,
+    individually-confirmable buttons for the same three actions.
+    """
+
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, sn: str, dev_data: dict, action: str) -> None:
+        """Initialize the power command button."""
+        super().__init__(coordinator)
+        self._sn = sn
+        self._action = action
+        self._attr_unique_id = f"hyxi_{sn}_{action}"
+        self._attr_translation_key = action
+        self._attr_icon = POWER_COMMAND_ICONS.get(action, "mdi:power")
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": sn,
+        }
+
+    async def async_press(self) -> None:
+        """Send the power command to the inverter."""
+        client = self.coordinator.client
+        method = getattr(client, self._action)
+        try:
+            await method(self._sn)
+            _LOGGER.info(
+                "Power command '%s' sent to %s", self._action, mask_sn(self._sn)
+            )
+            await self.coordinator.async_request_refresh()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.error(
+                "Failed to send power command '%s' to %s: %s",
+                self._action,
                 mask_sn(self._sn),
                 err,
             )

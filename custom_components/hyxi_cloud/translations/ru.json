@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Ограничение мощности"
       },
+      "feed_in_power_limit": {
+        "name": "Ограничение мощности экспорта"
+      },
+      "vpp_min_soc": {
+        "name": "Минимальный SOC VPP"
+      },
+      "feed_in_power": {
+        "name": "Ограничение мощности экспорта"
+      },
+      "max_charge_current": {
+        "name": "Макс. ток зарядки"
+      },
+      "max_discharge_current": {
+        "name": "Макс. ток разрядки"
+      },
       "soc_min": {
         "name": "Минимальный SOC"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Сглаживание пиков: Удерживать"
+      },
+      "power_on": {
+        "name": "Включить"
+      },
+      "power_off": {
+        "name": "Выключить"
+      },
+      "restart": {
+        "name": "Перезагрузить"
       },
       "clear_alarms": {
         "name": "Очистить активные аварии"

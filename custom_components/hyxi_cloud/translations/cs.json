@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Limit výkonu"
       },
+      "feed_in_power_limit": {
+        "name": "Limit výkonu do sítě"
+      },
+      "vpp_min_soc": {
+        "name": "VPP minimální SOC"
+      },
+      "feed_in_power": {
+        "name": "Limit výkonu do sítě"
+      },
+      "max_charge_current": {
+        "name": "Max. nabíjecí proud"
+      },
+      "max_discharge_current": {
+        "name": "Max. vybíjecí proud"
+      },
       "soc_min": {
         "name": "Minimální SOC"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Omezování špiček: Pozastavit"
+      },
+      "power_on": {
+        "name": "Zapnout"
+      },
+      "power_off": {
+        "name": "Vypnout"
+      },
+      "restart": {
+        "name": "Restartovat"
       },
       "clear_alarms": {
         "name": "Vymazat aktivní alarmy"

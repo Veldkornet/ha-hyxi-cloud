@@ -314,6 +314,33 @@ async def test_micro_restart_button_error(mock_coordinator_fixture):
 
 
 @pytest.mark.asyncio()
+async def test_power_command_button_press(mock_coordinator_fixture):
+    """Test pressing each of the three power command buttons."""
+    for action in ("power_on", "power_off", "restart"):
+        btn = button_mod.HyxiPowerCommandButton(
+            mock_coordinator_fixture, "SN123", {}, action
+        )
+        await btn.async_press()
+        getattr(mock_coordinator_fixture.client, action).assert_called_once_with(
+            "SN123"
+        )
+
+
+@pytest.mark.asyncio()
+async def test_power_command_button_error(mock_coordinator_fixture):
+    """Test error handling when a power command write fails."""
+    mock_coordinator_fixture.client.restart.side_effect = (
+        button_mod.HyxiApiClient.ControlError("bus fell over")
+    )
+    btn = button_mod.HyxiPowerCommandButton(
+        mock_coordinator_fixture, "SN123", {}, "restart"
+    )
+
+    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+        await btn.async_press()
+
+
+@pytest.mark.asyncio()
 async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
     """Test pressing idle and self_consume mode buttons."""
     btn_idle = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")

@@ -404,9 +404,9 @@ As an alternative to the HYXI Cloud API, the integration can talk directly to on
 | **Hybrid Inverter** | HYX-H(5~12)K-HT *(incl. H10K-HT)*, HYX-H(15~25)K-HT, HYX-H(6~15)K-HTA, HYX-H(6~15)K-HTAC | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1 |
 | **Micro ESS (HALO)** | HYX-MS3000AC | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0 |
 
-Both maps cover live telemetry (grid/off-grid power, PV strings, battery/BMS detail, energy counters) and charge/discharge control at the client level. Wiring and serial settings — 115200bps, no parity, 8 data bits, 1 stop bit — are documented per model in `docs/modbus-provenance.md`; the two families use different physical pins and disagree on the minimum spacing between frames, both handled automatically once your model is detected.
+Both maps cover live telemetry (grid/off-grid power, PV strings, battery/BMS detail, energy counters), charge/discharge control at the client level, and a first slice of hardware settings — feed-in power limit, VPP minimum SOC (HALO) or max charge/discharge current (Hybrid) — exposed as number entities that write straight to the device, plus power on/off/restart buttons on Hybrid. Wiring and serial settings — 115200bps, no parity, 8 data bits, 1 stop bit — are documented per model in `docs/modbus-provenance.md`; the two families use different physical pins and disagree on the minimum spacing between frames, both handled automatically once your model is detected.
 
-**On HALO control specifically:** [above](#-device-control), Micro ESS Power On/Off is described as disabled because the *cloud* API rejects it (`B003026`). That restriction is cloud-specific — it doesn't apply over local Modbus — but the Device Control entities haven't been updated yet to offer HALO control just because the connection happens to be local. This is tracked as follow-up work, not a hardware limitation.
+**On HALO control specifically:** [above](#-device-control), Micro ESS Power On/Off is described as disabled because the *cloud* API rejects it (`B003026`). That restriction is cloud-specific: over local Modbus, HALO gets the same mode buttons (Idle/Charge/Discharge/Self-Consume) and charge/discharge power numbers a three-phase cloud device gets, driven by the register map's VPP dispatch block rather than the cloud's rejected permission.
 
 ## 🎨 Community Examples
 

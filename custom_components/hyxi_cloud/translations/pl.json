@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Limit mocy"
       },
+      "feed_in_power_limit": {
+        "name": "Limit mocy eksportu"
+      },
+      "vpp_min_soc": {
+        "name": "Minimalny SOC VPP"
+      },
+      "feed_in_power": {
+        "name": "Limit mocy eksportu"
+      },
+      "max_charge_current": {
+        "name": "Maks. prąd ładowania"
+      },
+      "max_discharge_current": {
+        "name": "Maks. prąd rozładowania"
+      },
       "soc_min": {
         "name": "Minimalny SOC"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Redukcja szczytów: Wstrzymaj"
+      },
+      "power_on": {
+        "name": "Włącz"
+      },
+      "power_off": {
+        "name": "Wyłącz"
+      },
+      "restart": {
+        "name": "Uruchom ponownie"
       },
       "clear_alarms": {
         "name": "Wyczyść aktywne alarmy"

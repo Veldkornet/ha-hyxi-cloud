@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Effektgrænse"
       },
+      "feed_in_power_limit": {
+        "name": "Eksport effektgrænse"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC Minimum"
+      },
+      "feed_in_power": {
+        "name": "Eksport effektgrænse"
+      },
+      "max_charge_current": {
+        "name": "Maks Ladestrøm"
+      },
+      "max_discharge_current": {
+        "name": "Maks Afladestrøm"
+      },
       "soc_min": {
         "name": "SOC Minimum"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Spidsbelastningsudjævning: Hold"
+      },
+      "power_on": {
+        "name": "Tænd"
+      },
+      "power_off": {
+        "name": "Sluk"
+      },
+      "restart": {
+        "name": "Genstart"
       },
       "clear_alarms": {
         "name": "Ryd aktive alarmer"

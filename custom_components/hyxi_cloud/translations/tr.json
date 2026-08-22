@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Güç Sınırı"
       },
+      "feed_in_power_limit": {
+        "name": "Şebekeye Verilen Güç Sınırı"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC Minimum"
+      },
+      "feed_in_power": {
+        "name": "Şebekeye Verilen Güç Sınırı"
+      },
+      "max_charge_current": {
+        "name": "Maks Şarj Akımı"
+      },
+      "max_discharge_current": {
+        "name": "Maks Deşarj Akımı"
+      },
       "soc_min": {
         "name": "SOC Minimum"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Pik Tıraşlama: Tut"
+      },
+      "power_on": {
+        "name": "Gücü Aç"
+      },
+      "power_off": {
+        "name": "Gücü Kapat"
+      },
+      "restart": {
+        "name": "Yeniden Başlat"
       },
       "clear_alarms": {
         "name": "Aktif alarmları temizle"

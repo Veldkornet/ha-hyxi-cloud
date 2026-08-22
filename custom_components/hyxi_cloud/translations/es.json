@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Límite de potencia"
       },
+      "feed_in_power_limit": {
+        "name": "Límite de Potencia de Inyección"
+      },
+      "vpp_min_soc": {
+        "name": "SOC Mínimo VPP"
+      },
+      "feed_in_power": {
+        "name": "Límite de Potencia de Inyección"
+      },
+      "max_charge_current": {
+        "name": "Corriente Máx de Carga"
+      },
+      "max_discharge_current": {
+        "name": "Corriente Máx de Descarga"
+      },
       "soc_min": {
         "name": "SOC Mínimo"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Control de picos de demanda: Mantener"
+      },
+      "power_on": {
+        "name": "Encender"
+      },
+      "power_off": {
+        "name": "Apagar"
+      },
+      "restart": {
+        "name": "Reiniciar"
       },
       "clear_alarms": {
         "name": "Borrar alarmas activas"

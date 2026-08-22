@@ -476,6 +476,83 @@ async def test_hyxi_micro_power_limit_set_value_error():
     entity.async_write_ha_state.assert_not_called()
 
 
+def test_hyxi_setting_number_init():
+    """Test initialization of HyxiSettingNumber."""
+    coordinator = MagicMock()
+    dev_data: dict = {"device_name": "My HALO"}
+    definition = number_mod.HALO_SETTING_NUMBER_DEFS[0]  # feed_in_power_limit
+
+    entity = number_mod.HyxiSettingNumber(coordinator, "SN1", dev_data, definition)
+    assert entity._attr_unique_id == "hyxi_SN1_feed_in_power_limit"
+    assert entity._attr_native_value == 0
+    assert entity._attr_native_min_value == 0
+    assert entity._attr_native_max_value == 15000
+
+
+@pytest.mark.asyncio
+async def test_hyxi_setting_number_restore_state():
+    """Test restoring state for HyxiSettingNumber."""
+    coordinator = MagicMock()
+    dev_data: dict = {}
+    definition = number_mod.HALO_SETTING_NUMBER_DEFS[1]  # vpp_min_soc
+    entity = number_mod.HyxiSettingNumber(coordinator, "SN1", dev_data, definition)
+
+    mock_state = MagicMock()
+    mock_state.state = "12"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 12.0
+
+    # Invalid stored state should not crash, value stays at the last good one
+    mock_state.state = "invalid"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 12.0
+
+
+@pytest.mark.asyncio
+async def test_hyxi_setting_number_set_value():
+    """Test setting value for HyxiSettingNumber writes through the client."""
+    coordinator = MagicMock()
+    client = AsyncMock()
+    coordinator.client = client
+    dev_data: dict = {}
+    definition = number_mod.HALO_SETTING_NUMBER_DEFS[0]  # feed_in_power_limit
+    entity = number_mod.HyxiSettingNumber(coordinator, "SN1", dev_data, definition)
+    entity.async_write_ha_state = MagicMock()
+
+    await entity.async_set_native_value(3500)
+    client.set_feed_in_power_limit.assert_called_once_with(3500)
+    assert entity._attr_native_value == 3500
+    entity.async_write_ha_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_hyxi_setting_number_set_value_error():
+    """Test setting value handles errors for HyxiSettingNumber."""
+    coordinator = MagicMock()
+    client = AsyncMock()
+    client.set_feed_in_power_limit.side_effect = MockControlError("write failed")
+    coordinator.client = client
+    dev_data: dict = {}
+    definition = number_mod.HALO_SETTING_NUMBER_DEFS[0]
+    entity = number_mod.HyxiSettingNumber(coordinator, "SN1", dev_data, definition)
+    entity.async_write_ha_state = MagicMock()
+
+    with pytest.raises(MockControlError):
+        with patch(
+            "custom_components.hyxi_cloud.number.HyxiApiClient.ControlError",
+            MockControlError,
+        ):
+            await entity.async_set_native_value(3500)
+
+    # Value should not be updated and state should not be written
+    assert entity._attr_native_value == 0
+    entity.async_write_ha_state.assert_not_called()
+
+
 @pytest.mark.asyncio
 async def test_hyxi_protection_number_set_value():
     """Test setting value for HyxiProtectionNumber triggers controller evaluation."""

@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "功率限制"
       },
+      "feed_in_power_limit": {
+        "name": "上网功率限制"
+      },
+      "vpp_min_soc": {
+        "name": "VPP最小SOC"
+      },
+      "feed_in_power": {
+        "name": "上网功率限制"
+      },
+      "max_charge_current": {
+        "name": "最大充电电流"
+      },
+      "max_discharge_current": {
+        "name": "最大放电电流"
+      },
       "soc_min": {
         "name": "SOC 最小值"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "削峰填谷：保持"
+      },
+      "power_on": {
+        "name": "开机"
+      },
+      "power_off": {
+        "name": "关机"
+      },
+      "restart": {
+        "name": "重启"
       },
       "clear_alarms": {
         "name": "清除活动告警"

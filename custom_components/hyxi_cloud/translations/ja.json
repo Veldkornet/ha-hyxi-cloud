@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "出力制限"
       },
+      "feed_in_power_limit": {
+        "name": "売電電力制限"
+      },
+      "vpp_min_soc": {
+        "name": "VPP最小SOC"
+      },
+      "feed_in_power": {
+        "name": "売電電力制限"
+      },
+      "max_charge_current": {
+        "name": "最大充電電流"
+      },
+      "max_discharge_current": {
+        "name": "最大放電電流"
+      },
       "soc_min": {
         "name": "SOC最小値"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "ピークカット: 維持"
+      },
+      "power_on": {
+        "name": "電源オン"
+      },
+      "power_off": {
+        "name": "電源オフ"
+      },
+      "restart": {
+        "name": "再起動"
       },
       "clear_alarms": {
         "name": "アクティブなアラームをクリア"

@@ -456,3 +456,48 @@ class HyxiModbusClient:
             0 if gate_closed else 1,
         )
         return {"code": "0", "msg": "ok"}
+
+    async def set_feed_in_power_limit(self, watts: int) -> None:
+        """Write the export power limit.
+
+        The register is kW-scaled; the entity works in watts to match every
+        other power control in this integration, so the conversion happens
+        here rather than asking the caller to know the register's scale.
+        """
+        try:
+            await self.settings.write("feed_in_power_limit", watts / 1000)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus feed-in power limit write failed on unit %s (watts=%s): %s",
+                self._unit_id,
+                watts,
+                err,
+            )
+            raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug(
+            "Modbus feed-in power limit write ok on unit %s: 4163=%sW",
+            self._unit_id,
+            watts,
+        )
+
+    async def set_vpp_min_soc(self, percent: int) -> None:
+        """Write the minimum SOC the VPP dispatch block will discharge below.
+
+        Register 4152 in holding space -- not grid active power, which is
+        the same address in input space. See registers.py's HaloGrid.
+        """
+        try:
+            await self.settings.write("vpp_min_soc", percent)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus VPP min SOC write failed on unit %s (percent=%s): %s",
+                self._unit_id,
+                percent,
+                err,
+            )
+            raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug(
+            "Modbus VPP min SOC write ok on unit %s: 4152=%s%%",
+            self._unit_id,
+            percent,
+        )

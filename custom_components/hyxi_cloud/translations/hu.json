@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Teljesítménykorlát"
       },
+      "feed_in_power_limit": {
+        "name": "Betáplálási teljesítménykorlát"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC minimum"
+      },
+      "feed_in_power": {
+        "name": "Betáplálási teljesítménykorlát"
+      },
+      "max_charge_current": {
+        "name": "Max töltőáram"
+      },
+      "max_discharge_current": {
+        "name": "Max kisütési áram"
+      },
       "soc_min": {
         "name": "SOC minimum"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Csúcskisímítás: Tartás"
+      },
+      "power_on": {
+        "name": "Bekapcsolás"
+      },
+      "power_off": {
+        "name": "Kikapcsolás"
+      },
+      "restart": {
+        "name": "Újraindítás"
       },
       "clear_alarms": {
         "name": "Aktív riasztások törlése"

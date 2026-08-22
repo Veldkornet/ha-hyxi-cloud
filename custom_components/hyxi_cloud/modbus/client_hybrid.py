@@ -376,3 +376,56 @@ class HyxiHybridModbusClient:
             1 if limit_enabled else 0,
         )
         return {"code": "0", "msg": "ok"}
+
+    async def _write_setting(self, field: str, value: Any, register: int) -> None:
+        """Write one HybridSettings field, wrapping failures uniformly.
+
+        A shared helper rather than repeating the try/except in every
+        setting method below -- unlike set_peak_shaving and _write_vpp,
+        these are plain single-field writes with nothing else to sequence.
+        """
+        try:
+            await self.settings.write(field, value)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus %s write failed on unit %s (value=%s): %s",
+                field,
+                self._unit_id,
+                value,
+                err,
+            )
+            raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug(
+            "Modbus %s write ok on unit %s: %s=%s",
+            field,
+            self._unit_id,
+            register,
+            value,
+        )
+
+    async def set_feed_in_power(self, watts: int) -> None:
+        """Write the export power limit. Unscaled -- the register is W."""
+        await self._write_setting("feed_in_power", watts, 1100)
+
+    async def set_max_charge_current(self, amps: float) -> None:
+        """Write the maximum charge current. 0 means no limit."""
+        await self._write_setting("max_charge_current", amps, 3112)
+
+    async def set_max_discharge_current(self, amps: float) -> None:
+        """Write the maximum discharge current. 0 means no limit."""
+        await self._write_setting("max_discharge_current", amps, 3113)
+
+    async def power_on(self, device_sn: str) -> None:
+        """Send the power-on command (register 3002 = 1)."""
+        _LOGGER.debug("Modbus: power on %s", _mask(device_sn))
+        await self._write_setting("power_command", 1, 3002)
+
+    async def power_off(self, device_sn: str) -> None:
+        """Send the power-off command (register 3002 = 2)."""
+        _LOGGER.debug("Modbus: power off %s", _mask(device_sn))
+        await self._write_setting("power_command", 2, 3002)
+
+    async def restart(self, device_sn: str) -> None:
+        """Send the restart command (register 3002 = 3)."""
+        _LOGGER.debug("Modbus: restart %s", _mask(device_sn))
+        await self._write_setting("power_command", 3, 3002)

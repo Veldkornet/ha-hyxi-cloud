@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Kragbeperking"
       },
+      "feed_in_power_limit": {
+        "name": "Terugvoerkrag-limiet"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC Minimum"
+      },
+      "feed_in_power": {
+        "name": "Terugvoerkrag-limiet"
+      },
+      "max_charge_current": {
+        "name": "Maks Laaistroom"
+      },
+      "max_discharge_current": {
+        "name": "Maks Ontlaaistroom"
+      },
       "soc_min": {
         "name": "SOC Minimum"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Piekbesnoeiing: Hou"
+      },
+      "power_on": {
+        "name": "Skakel Aan"
+      },
+      "power_off": {
+        "name": "Skakel Af"
+      },
+      "restart": {
+        "name": "Herlaai"
       },
       "clear_alarms": {
         "name": "Maak aktiewe alarms skoon"

@@ -79,6 +79,86 @@ PROTECTION_NUMBER_DEFS: list[dict[str, str | int]] = [
 ]
 
 
+class HyxiSettingNumberDef(NamedTuple):
+    """Definition for a device-hardware setting number entity.
+
+    Unlike HyxiProtectionNumber (pure HA-side automation thresholds, never
+    touches the device) and HyxiPowerNumber (locally stored, sent only when
+    a mode button is pressed), these write straight to the device's own
+    settings register the moment the value changes -- there is no
+    local-only state to hold in between.
+    """
+
+    key: str
+    client_method: str
+    unit: str
+    min_val: float
+    max_val: float
+    step: float
+    icon: str
+
+
+# HaloSettings fields with an unambiguous numeric range and no overlap with
+# PROTECTION_NUMBER_DEFS or an existing control method. The rest of
+# HaloSettings (dispatch_mode/active_power_setpoint -- a second, untested
+# dispatch path alongside the VPP block set_mode_* already drives; the
+# firmware-level SOC setpoints; anti_starvation, which is boolean) is left
+# for later rounds -- see docs/modbus-provenance.md.
+HALO_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
+    HyxiSettingNumberDef(
+        "feed_in_power_limit",
+        "set_feed_in_power_limit",
+        "W",
+        0,
+        15000,
+        100,
+        "mdi:transmission-tower-export",
+    ),
+    HyxiSettingNumberDef(
+        "vpp_min_soc",
+        "set_vpp_min_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-alert-variant-outline",
+    ),
+]
+
+# Same idea for HybridSettings. power_command is deliberately not here --
+# one of its three values restarts the inverter, which is a button.py
+# concern (with a confirmation), not a number box.
+HYBRID_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
+    HyxiSettingNumberDef(
+        "feed_in_power",
+        "set_feed_in_power",
+        "W",
+        0,
+        15000,
+        100,
+        "mdi:transmission-tower-export",
+    ),
+    HyxiSettingNumberDef(
+        "max_charge_current",
+        "set_max_charge_current",
+        "A",
+        0,
+        200,
+        0.1,
+        "mdi:current-dc",
+    ),
+    HyxiSettingNumberDef(
+        "max_discharge_current",
+        "set_max_discharge_current",
+        "A",
+        0,
+        200,
+        0.1,
+        "mdi:current-dc",
+    ),
+]
+
+
 class EMNumberDef(NamedTuple):
     """Definition for an Energy Manager number entity."""
 
@@ -158,6 +238,18 @@ async def async_setup_entry(
             for definition in PROTECTION_NUMBER_DEFS:
                 entities.append(
                     HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                )
+            # One device per Modbus entry (see client.py's async_read_all),
+            # so device_type here reliably tells the two register maps
+            # apart -- no need for a separate family lookup.
+            setting_defs = (
+                HALO_SETTING_NUMBER_DEFS
+                if device_type == "micro_ess"
+                else HYBRID_SETTING_NUMBER_DEFS
+            )
+            for setting_def in setting_defs:
+                entities.append(
+                    HyxiSettingNumber(coordinator, sn, dev_data, setting_def)
                 )
             continue
 
@@ -251,6 +343,88 @@ class HyxiPowerNumber(
         )
         self._attr_native_value = int(value)
         self.async_write_ha_state()
+
+
+class HyxiSettingNumber(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], NumberEntity, RestoreEntity
+):
+    """A device-hardware setting, written straight to its Modbus register
+    on every change -- see HyxiSettingNumberDef's docstring for how this
+    differs from the other number entities in this file.
+
+    Starts at each field's minimum (0 for all of them so far) rather than a
+    guessed "typical" value: this integration never reads settings
+    registers back from the device (registers.py's HaloSettings/
+    HybridSettings are holding-space and outside the regular poll), so
+    there is no way to know what the device is actually set to, and
+    showing a guess would misrepresent it as observed. 0 is never written
+    on its own -- only an explicit change by the user calls the client.
+    """
+
+    _attr_has_entity_name = True
+    _attr_mode = NumberMode.BOX
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: HyxiDataUpdateCoordinator,
+        sn: str,
+        dev_data: dict,
+        definition: HyxiSettingNumberDef,
+    ) -> None:
+        """Initialize the setting number."""
+        super().__init__(coordinator)
+        self._sn = sn
+        self._definition = definition
+        self._attr_unique_id = f"hyxi_{sn}_{definition.key}"
+        self._attr_translation_key = definition.key
+        self._attr_native_unit_of_measurement = definition.unit
+        self._attr_native_min_value = definition.min_val
+        self._attr_native_max_value = definition.max_val
+        self._attr_native_step = definition.step
+        self._attr_native_value = definition.min_val
+        self._attr_icon = definition.icon
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": sn,
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last value written, if any."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is not None:
+            try:
+                self._attr_native_value = float(last_state.state)
+            except ValueError, TypeError:
+                _LOGGER.debug(
+                    "Could not restore %s from state %r",
+                    self._attr_unique_id,
+                    last_state.state,
+                )
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Write the new value straight to the device."""
+        client = self.coordinator.client
+        method = getattr(client, self._definition.client_method)
+        _LOGGER.debug(
+            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+        )
+        try:
+            await method(value)
+            self._attr_native_value = value
+            self.async_write_ha_state()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.error(
+                "Failed to set %s to %s for %s: %s",
+                self._definition.key,
+                value,
+                mask_sn(self._sn),
+                err,
+            )
+            raise
 
 
 class HyxiMicroPowerLimit(

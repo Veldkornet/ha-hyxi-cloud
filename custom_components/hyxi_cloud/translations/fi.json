@@ -666,6 +666,21 @@
       "micro_power_limit": {
         "name": "Tehoraja"
       },
+      "feed_in_power_limit": {
+        "name": "Verkkoonsyötön tehoraja"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC-minimi"
+      },
+      "feed_in_power": {
+        "name": "Verkkoonsyötön tehoraja"
+      },
+      "max_charge_current": {
+        "name": "Maks. latausvirta"
+      },
+      "max_discharge_current": {
+        "name": "Maks. purkuvirta"
+      },
       "soc_min": {
         "name": "SOC-minimi"
       },
@@ -780,6 +795,15 @@
       },
       "peak_shaving_hold": {
         "name": "Huipputehon leikkaus: Pidä"
+      },
+      "power_on": {
+        "name": "Käynnistä"
+      },
+      "power_off": {
+        "name": "Sammuta"
+      },
+      "restart": {
+        "name": "Käynnistä uudelleen"
       },
       "clear_alarms": {
         "name": "Tyhjennä aktiiviset hälytykset"
