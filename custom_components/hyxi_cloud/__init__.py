@@ -34,6 +34,7 @@ from .const import (
     CONF_ENABLE_PUSH,
     CONF_MODBUS_BAUDRATE,
     CONF_MODBUS_DEVICE,
+    CONF_MODBUS_FAMILY,
     CONF_MODBUS_HOST,
     CONF_MODBUS_PORT,
     CONF_MODBUS_TYPE,
@@ -42,11 +43,13 @@ from .const import (
     CONF_PUSH_URL,
     CONF_SECRET_KEY,
     DEFAULT_MODBUS_BAUDRATE,
+    DEFAULT_MODBUS_FAMILY,
     DEFAULT_MODBUS_PORT,
     DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DOMAIN,
     MANUFACTURER,
+    MODBUS_FAMILY_HYBRID,
     MODBUS_MESSAGE_SPACING,
     MODBUS_TIMEOUT,
     MODBUS_TYPE_SERIAL,
@@ -68,14 +71,25 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def _async_build_modbus_coordinator(hass: HomeAssistant, entry: ConfigEntry):
-    """Build a coordinator that reaches the device over local RS485."""
+    """Build a coordinator that reaches the device over local RS485.
+
+    Which register map and client class to use was decided once, during
+    setup, by config_flow's family detection (a real value at a
+    family-specific signature register -- the confirmed HALO and hybrid
+    address ranges don't overlap, so that's strong evidence). It is not
+    re-detected here on every load: an entry created before this concept
+    existed carries no CONF_MODBUS_FAMILY at all, and DEFAULT_MODBUS_FAMILY
+    covers that case the same way entry_transport() covers pre-Modbus
+    entries -- absence means the newer, stronger-evidenced default.
+    """
     from modbus_connection import ModbusSerialParams, ModbusTcpParams
     from modbus_connection.tmodbus import ModbusConnection
 
-    from .modbus.client import HyxiModbusClient
+    from .modbus.client import ModbusClient
     from .modbus_coordinator import HyxiModbusCoordinator
 
     unit_id = int(entry.data.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT))
+    family = entry.data.get(CONF_MODBUS_FAMILY, DEFAULT_MODBUS_FAMILY)
 
     if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
         params = ModbusSerialParams(
@@ -94,19 +108,34 @@ async def _async_build_modbus_coordinator(hass: HomeAssistant, entry: ConfigEntr
             framer="rtu",
         )
 
+    # Minimum inter-frame spacing differs by document: HALO asks for
+    # >200ms, the hybrid protocol for >500ms. Using the wrong one against a
+    # hybrid device would violate its documented timing.
+    spacing = MODBUS_MESSAGE_SPACING[family]
     _LOGGER.debug(
-        "Building Modbus connection for entry %s: %s, unit %s, "
+        "Building Modbus connection for entry %s: %s, unit %s, family %s, "
         "timeout %ss, message spacing %ss",
         entry.entry_id,
         params,
         unit_id,
+        family,
         MODBUS_TIMEOUT,
-        MODBUS_MESSAGE_SPACING,
+        spacing,
     )
     connection = ModbusConnection(
-        params, timeout=MODBUS_TIMEOUT, message_spacing=MODBUS_MESSAGE_SPACING
+        params, timeout=MODBUS_TIMEOUT, message_spacing=spacing
     )
-    client = HyxiModbusClient(connection, unit_id)
+
+    client: ModbusClient
+    if family == MODBUS_FAMILY_HYBRID:
+        from .modbus.client_hybrid import HyxiHybridModbusClient
+
+        client = HyxiHybridModbusClient(connection, unit_id)
+    else:
+        from .modbus.client import HyxiModbusClient
+
+        client = HyxiModbusClient(connection, unit_id)
+
     return HyxiModbusCoordinator(hass, client, entry)
 
 

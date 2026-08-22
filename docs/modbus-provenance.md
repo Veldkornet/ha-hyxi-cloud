@@ -169,6 +169,30 @@ documented explicitly rather than assumed to match:
   the limit (writes 1). This is not a bug in either — they are different
   registers on different hardware with different documented meanings.
 
+## How family is picked (auto-detection, unconfirmed on hardware)
+
+The setup flow doesn't ask which device family it's talking to. It reads one
+signature register from each — hybrid's protocol version (input 0), HALO's
+BMS SOC (input 4980) — and treats a real value at either as identifying
+evidence, since the two documents' confirmed ranges don't overlap. A Modbus
+exception response still proves the device is present, just not which
+family; if neither signature returns a value even though something answered,
+it falls back to `DEFAULT_MODBUS_FAMILY` (hybrid, the stronger-evidenced
+document) and logs a warning rather than refusing to create the entry.
+
+This is a heuristic, not something checked against real hardware, and it has
+a known failure mode worth watching for: a Modbus stack that silently
+zero-fills undefined addresses instead of raising an exception would make
+*both* signatures "succeed", and whichever is tried first (hybrid) wins even
+if the device is actually the other family. If a freshly-added entry's
+sensors look wrong in a way that suggests the wrong register map, this is
+the first thing to check — see `_probe_and_detect_modbus` in
+`config_flow.py`, and the debug log line it writes either way.
+
+The chosen family is stored once, in `entry.data[CONF_MODBUS_FAMILY]`, and
+never re-detected on subsequent loads. There is no reconfigure flow yet for
+correcting a wrong guess short of removing and re-adding the integration.
+
 ## Still unverified
 
 Everything below is a vendor claim or an inference. Check against hardware

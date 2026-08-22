@@ -29,7 +29,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import time
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from hyxi_cloud_api import HyxiApiClient
 from modbus_connection.model import Component
@@ -47,6 +47,33 @@ from .registers import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class ModbusClient(Protocol):
+    """The shape both device-family clients present to the coordinator.
+
+    HyxiModbusClient (below) and HyxiHybridModbusClient (client_hybrid.py)
+    are unrelated classes with no shared base -- deliberately, since their
+    register models genuinely differ -- but the coordinator and __init__.py
+    only ever call through this surface, so a Protocol is what lets either
+    one satisfy the same type hint without inventing an inheritance
+    relationship neither class actually has.
+    """
+
+    ControlError: type[Exception]
+
+    @property
+    def serial_number(self) -> str: ...
+
+    async def async_close(self) -> None: ...
+    async def async_read_all(self) -> dict[str, dict]: ...
+    async def set_mode_idle(self, device_sn: str) -> dict: ...
+    async def set_mode_charge(self, device_sn: str, watts: int) -> dict: ...
+    async def set_mode_discharge(self, device_sn: str, watts: int) -> dict: ...
+    async def set_mode_self_consume(self, device_sn: str) -> dict: ...
+    async def set_peak_shaving(self, device_sn: str, action: str) -> dict: ...
+
 
 # The device type the HALO reports over the cloud API. Reused verbatim so
 # normalize_device_type() resolves it to "micro_ess" on both transports and

@@ -28,6 +28,7 @@ from .const import (
     CONF_ENABLE_PUSH,
     CONF_MODBUS_BAUDRATE,
     CONF_MODBUS_DEVICE,
+    CONF_MODBUS_FAMILY,
     CONF_MODBUS_HOST,
     CONF_MODBUS_PORT,
     CONF_MODBUS_TYPE,
@@ -38,15 +39,16 @@ from .const import (
     CONF_SECRET_KEY,
     CONF_TRANSPORT,
     DEFAULT_MODBUS_BAUDRATE,
+    DEFAULT_MODBUS_FAMILY,
     DEFAULT_MODBUS_PORT,
     DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DEFAULT_REGION,
     DEFAULT_TRANSPORT,
+    DETECTION_MESSAGE_SPACING,
     DOMAIN,
     MICRO_ESS_CONTROL_SUPPORTED,
-    MODBUS_MESSAGE_SPACING,
-    MODBUS_PROBE_POINTS,
+    MODBUS_FAMILY_SIGNATURES,
     MODBUS_TIMEOUT,
     MODBUS_TYPE_SERIAL,
     MODBUS_TYPE_TCP,
@@ -307,27 +309,40 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return None
 
-    async def _probe_modbus(self, params, unit_id: int) -> str | None:
-        """Return an error key, or None if a device answered on the bus.
+    async def _probe_and_detect_modbus(
+        self, params, unit_id: int
+    ) -> tuple[str | None, str]:
+        """Confirm a device answers, and guess which register map it speaks.
 
-        A Modbus exception response counts as success. It means the device
-        replied and simply does not carry that register, which already
-        proves the wiring, framing and slave address are right -- and this
-        runs before any register map is known, so a value is not required.
+        Returns (error, family). error is None on success.
+
+        A Modbus exception response still counts as the device being
+        present -- it means something replied and simply does not carry
+        that register. But a real *value* at one of MODBUS_FAMILY_SIGNATURES
+        is stronger: those two addresses were chosen because the HALO and
+        hybrid documents' confirmed ranges don't overlap (hybrid tops out at
+        3121, HALO starts at 4000), so a value at either is direct evidence
+        for that family, not just for "a device is here".
+
+        Every signature is tried before giving up, rather than returning on
+        the first exception, so a device that happens to reject its own
+        family's earlier-tried signature but answer a later one is still
+        identified correctly instead of falling through to the default.
         """
         try:
             from modbus_connection import ModbusExceptionError, ModbusTimeoutError
             from modbus_connection.tmodbus import ModbusConnection
         except ImportError:
             _LOGGER.error("modbus-connection is not installed")
-            return "modbus_unavailable"
+            return "modbus_unavailable", DEFAULT_MODBUS_FAMILY
 
         connection = ModbusConnection(
-            params, timeout=MODBUS_TIMEOUT, message_spacing=MODBUS_MESSAGE_SPACING
+            params, timeout=MODBUS_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
         )
         unit = connection.for_unit(unit_id)
+        reachable = False
         try:
-            for space, address in MODBUS_PROBE_POINTS:
+            for family, space, address in MODBUS_FAMILY_SIGNATURES:
                 read = (
                     unit.read_input_registers
                     if space == "input"
@@ -336,41 +351,57 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                 try:
                     await read(address, 1)
                 except ModbusExceptionError as err:
-                    # A rejection is still an answer: the device is on the
-                    # bus and speaking Modbus at this slave address.
+                    reachable = True
                     _LOGGER.debug(
                         "Modbus probe: unit %s rejected %s register %s (%s) "
-                        "-- device is present",
+                        "for family %s -- device present, not this family",
                         unit_id,
                         space,
                         address,
                         type(err).__name__,
+                        family,
                     )
-                    return None
+                    continue
                 except ModbusTimeoutError:
                     _LOGGER.debug(
-                        "Modbus probe: no answer from unit %s at %s register %s",
+                        "Modbus probe: no answer from unit %s at %s register %s "
+                        "(family %s)",
                         unit_id,
                         space,
                         address,
+                        family,
                     )
                     continue
+                reachable = True
                 _LOGGER.debug(
-                    "Modbus probe: unit %s returned a value for %s register %s",
+                    "Modbus probe: unit %s returned a value for %s register %s "
+                    "-- detected as %s",
                     unit_id,
                     space,
                     address,
+                    family,
                 )
-                return None
+                return None, family
+
+            if reachable:
+                _LOGGER.warning(
+                    "Modbus device on unit %s is reachable but answered no "
+                    "known signature register with a value; defaulting to "
+                    "%s. If sensors look wrong, this guess may be why.",
+                    unit_id,
+                    DEFAULT_MODBUS_FAMILY,
+                )
+                return None, DEFAULT_MODBUS_FAMILY
+
             _LOGGER.debug(
-                "Modbus probe: unit %s answered none of %d probe points",
+                "Modbus probe: unit %s answered none of %d signature registers",
                 unit_id,
-                len(MODBUS_PROBE_POINTS),
+                len(MODBUS_FAMILY_SIGNATURES),
             )
-            return "no_device"
+            return "no_device", DEFAULT_MODBUS_FAMILY
         except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.exception("Could not reach the Modbus device")
-            return "cannot_connect"
+            return "cannot_connect", DEFAULT_MODBUS_FAMILY
         finally:
             await connection.close()
 
@@ -409,12 +440,13 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         await self.async_set_unique_id(unique_id)
         self._abort_if_unique_id_configured()
 
-        error = await self._probe_modbus(params, unit_id)
+        error, family = await self._probe_and_detect_modbus(params, unit_id)
         return error, {
             **data,
             CONF_TRANSPORT: TRANSPORT_MODBUS,
             CONF_MODBUS_TYPE: self._modbus_type,
             CONF_MODBUS_UNIT: unit_id,
+            CONF_MODBUS_FAMILY: family,
             "_title": title,
         }
 

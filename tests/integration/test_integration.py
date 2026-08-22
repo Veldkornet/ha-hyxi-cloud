@@ -10,6 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import (
     CONF_ACCESS_KEY,
+    CONF_MODBUS_FAMILY,
     CONF_MODBUS_HOST,
     CONF_MODBUS_PORT,
     CONF_MODBUS_TYPE,
@@ -394,8 +395,9 @@ async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
     # gateway. This test is about the flow, not the transport.
     with (
         patch(
-            "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._probe_modbus",
-            return_value=None,
+            "custom_components.hyxi_cloud.config_flow."
+            "HyxiConfigFlow._probe_and_detect_modbus",
+            return_value=(None, "halo"),
         ),
         patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
     ):
@@ -417,6 +419,7 @@ async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
         CONF_MODBUS_HOST: "192.168.1.50",
         CONF_MODBUS_PORT: 502,
         CONF_MODBUS_UNIT: 1,
+        CONF_MODBUS_FAMILY: "halo",
     }
 
 
@@ -434,8 +437,9 @@ async def test_config_flow_modbus_probe_failure_shows_error(hass: HomeAssistant)
     )
 
     with patch(
-        "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._probe_modbus",
-        return_value="no_device",
+        "custom_components.hyxi_cloud.config_flow."
+        "HyxiConfigFlow._probe_and_detect_modbus",
+        return_value=("no_device", "hybrid"),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],

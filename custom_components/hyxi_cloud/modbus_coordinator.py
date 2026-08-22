@@ -20,16 +20,21 @@ from homeassistant.util import dt as dt_util
 
 from .const import DEFAULT_MODBUS_INTERVAL
 from .coordinator import HyxiDataUpdateCoordinator
-from .modbus.client import HyxiModbusClient
+from .modbus.client import ModbusClient
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class HyxiModbusCoordinator(HyxiDataUpdateCoordinator):
-    """Polls one device over RS485 and publishes the cloud data shape."""
+    """Polls one device over RS485 and publishes the cloud data shape.
+
+    Works with either device family's client -- HyxiModbusClient (HALO) or
+    HyxiHybridModbusClient (hybrid) -- since both satisfy ModbusClient and
+    nothing here reaches past that shared surface.
+    """
 
     def __init__(
-        self, hass: HomeAssistant, client: HyxiModbusClient, entry: ConfigEntry
+        self, hass: HomeAssistant, client: ModbusClient, entry: ConfigEntry
     ) -> None:
         """Initialize with a local polling interval."""
         super().__init__(hass, client, entry)

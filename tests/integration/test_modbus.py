@@ -454,6 +454,35 @@ async def test_setup_builds_the_right_connection_for_each_type(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("family", "expected_client", "expected_spacing"),
+    [
+        ("halo", "HyxiModbusClient", 0.2),
+        ("hybrid", "HyxiHybridModbusClient", 0.5),
+        # No stored family at all -- entries created before family detection
+        # existed. Defaults to hybrid, the stronger-evidenced document.
+        (None, "HyxiHybridModbusClient", 0.5),
+    ],
+)
+async def test_setup_selects_the_client_class_and_spacing_for_the_family(
+    hass, family, expected_client, expected_spacing
+):
+    """The two documents disagree on minimum frame spacing (HALO >200ms,
+    hybrid >500ms), so using the wrong client class would also mean using
+    the wrong timing against real hardware."""
+    from custom_components.hyxi_cloud import _async_build_modbus_coordinator
+
+    overrides = {} if family is None else {"modbus_family": family}
+    entry = _modbus_entry(hass, **overrides)
+
+    with patch("modbus_connection.tmodbus.ModbusConnection") as connection_class:
+        coordinator = await _async_build_modbus_coordinator(hass, entry)
+
+    assert type(coordinator.client).__name__ == expected_client
+    assert connection_class.call_args.kwargs["message_spacing"] == expected_spacing
+
+
+@pytest.mark.asyncio
 async def test_unload_releases_the_bus(hass):
     """A reload that leaves the port held cannot open it again."""
     from custom_components.hyxi_cloud import async_unload_entry
@@ -490,7 +519,10 @@ async def test_setting_up_a_modbus_entry_creates_entities(hass):
     exercises the code a user actually hits rather than the coordinator
     in isolation.
     """
-    entry = _modbus_entry(hass)
+    # This module's fixtures are HALO-shaped; family must be explicit rather
+    # than left to the default (hybrid, since that's the stronger-evidenced
+    # document) or this seeded connection would be read with the wrong map.
+    entry = _modbus_entry(hass, modbus_family="halo")
 
     with patch(
         "modbus_connection.tmodbus.ModbusConnection",

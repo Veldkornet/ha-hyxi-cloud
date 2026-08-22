@@ -94,23 +94,48 @@ CONF_MODBUS_UNIT = "modbus_unit"
 DEFAULT_MODBUS_PORT = 502
 DEFAULT_MODBUS_BAUDRATE = 115200
 DEFAULT_MODBUS_UNIT = 1
-# The Micro Storage RS485 document requires more than 200ms between frames.
-# Nothing states the hybrid units are more relaxed, so the conservative
-# figure is used for every device until measurement says otherwise.
-MODBUS_MESSAGE_SPACING = 0.2
 MODBUS_TIMEOUT = 10.0
 # Local polling is cheap compared with the rate-limited cloud API.
 DEFAULT_MODBUS_INTERVAL = 15
 
-# Addresses used only to prove something is answering on the bus, all taken
-# from the Micro Storage RS485 document V1.0 -- 4980 and 4101 from its
-# register table, 1009 from its own worked examples (which decode against
-# the hybrid map: 0x7080 = 28800 seconds = UTC+8).
-MODBUS_PROBE_POINTS: tuple[tuple[str, int], ...] = (
-    ("input", 4980),
-    ("input", 4101),
-    ("holding", 1009),
+# Which register map an entry talks. Detected automatically during setup
+# (see config_flow._detect_modbus_family) rather than asked of the user --
+# the two documents' confirmed address ranges don't overlap (hybrid tops
+# out at 3121, HALO starts at 4000), so a real value at either family's
+# signature register is strong, direct evidence.
+CONF_MODBUS_FAMILY = "modbus_family"
+MODBUS_FAMILY_HALO = "halo"
+MODBUS_FAMILY_HYBRID = "hybrid"
+# Falls back here when a device is confirmed reachable but answers neither
+# signature register with a value (an unusual firmware, or a Modbus stack
+# that silently zero-fills undefined addresses instead of raising an
+# exception). Hybrid is the stronger-evidenced document of the two -- the
+# vendor's current one, for the exact hardware this transport was built
+# against -- so it is the safer default to fall back to.
+DEFAULT_MODBUS_FAMILY = MODBUS_FAMILY_HYBRID
+
+# One register from each family that's cheap and safe to read: HALO's BMS
+# SOC (input 4980, from the Micro Storage RS485 document V1.0) and the
+# hybrid's own communication protocol version (input 0, from the RS485_
+# MODBUS RTU Hybrid Inverter Protocol V4.1). A real value at either is
+# treated as identifying evidence; a Modbus exception response there still
+# proves the device is present and speaking Modbus, just not which family.
+MODBUS_FAMILY_SIGNATURES: tuple[tuple[str, str, int], ...] = (
+    (MODBUS_FAMILY_HYBRID, "input", 0),
+    (MODBUS_FAMILY_HALO, "input", 4980),
 )
+
+# Minimum inter-frame spacing per family. The HALO document requires more
+# than 200ms; the hybrid document requires more than 500ms -- a real
+# difference, not a rounding choice, and using the HALO figure against a
+# hybrid device would violate its documented timing. DETECTION_SPACING is
+# used only before a family is known (during setup's probe/detect pass),
+# and is deliberately the more conservative of the two.
+MODBUS_MESSAGE_SPACING: dict[str, float] = {
+    MODBUS_FAMILY_HALO: 0.2,
+    MODBUS_FAMILY_HYBRID: 0.5,
+}
+DETECTION_MESSAGE_SPACING = max(MODBUS_MESSAGE_SPACING.values())
 
 
 def entry_transport(entry: Any) -> str:

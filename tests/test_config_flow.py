@@ -1331,6 +1331,78 @@ async def test_modbus_shows_form_before_any_input(modbus_flow):
     assert result["errors"] == {}
 
 
+# --- Family detection: does a value at either signature register pick the
+# right client, given the two documents' address ranges don't overlap -----
+
+
+@pytest.mark.asyncio
+async def test_modbus_detects_hybrid_family_from_a_real_value(modbus_flow):
+    """A value at register 0 -- the hybrid's protocol version -- is treated
+    as this being a hybrid inverter, without needing to try register 4980."""
+    fake = _fake_modbus_modules()
+
+    async def read(address, _count):
+        if address == 0:
+            return [42]
+        raise AssertionError(f"should not read {address} once 0 succeeded")
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["data"]["modbus_family"] == "hybrid"
+
+
+@pytest.mark.asyncio
+async def test_modbus_detects_halo_family_when_only_its_signature_answers(
+    modbus_flow,
+):
+    """Hybrid's register 0 raises (not this family); HALO's 4980 returns a
+    value. Both signatures must be tried, not just the first."""
+    fake = _fake_modbus_modules()
+
+    async def read(address, _count):
+        if address == 0:
+            raise _FakeModbusError()
+        if address == 4980:
+            return [780]
+        raise AssertionError(f"unexpected address {address}")
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["data"]["modbus_family"] == "halo"
+
+
+@pytest.mark.asyncio
+async def test_modbus_falls_back_to_default_family_when_unidentified(
+    modbus_flow, caplog
+):
+    """A device that answers only with exceptions is confirmed present, but
+    neither signature identifies it -- falls back rather than refusing."""
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusError())
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "entry"
+    assert result["data"]["modbus_family"] == "hybrid"
+    assert "defaulting to" in caplog.text
+
+
 def test_transport_schema_defaults_to_cloud(mock_ha_environment):
     """The chooser must preselect cloud -- it is what almost every existing
     user wants, and it is the only reason this is a select and not a menu.
