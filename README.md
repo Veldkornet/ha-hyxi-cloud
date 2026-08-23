@@ -24,7 +24,7 @@
 ## ✨ Features
 
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
-- **📟 Local Modbus (RS485) — In Development:** An optional local transport that talks straight to the inverter over RS485 instead of the cloud, for faster polling and control the cloud API can't offer. See [Local Modbus (RS485)](#-local-modbus-rs485--in-development) below — not yet verified against real hardware.
+- **📟 Local Modbus (RS485) — In Development:** An optional local transport that talks straight to the inverter over RS485 instead of the cloud, for faster polling and control the cloud API can't offer. See [Local Modbus (RS485)](#-local-modbus-rs485--in-development) below.
 - **🔄 Real-Time Push Subscriptions:** Optional support for receiving instantaneous updates for telemetry data and active alarms directly from HYXI Cloud via Home Assistant's webhook endpoints, bypassing polling delays.
 - **🔧 Device Control:** Send supported HYXI Cloud control commands from Home Assistant, including inverter mode buttons, peak shaving buttons, frequency control, and microinverter power controls.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.

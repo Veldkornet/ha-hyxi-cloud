@@ -388,6 +388,36 @@ async def test_power_command_writes_the_documented_values(client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("call", "field"),
+    [
+        ("set_self_use_soc", "self_use_soc"),
+        ("set_backup_soc", "backup_soc"),
+        ("set_forced_charge_soc", "forced_charge_soc"),
+        ("set_feed_in_soc", "feed_in_soc"),
+        ("set_off_grid_soc", "off_grid_soc"),
+    ],
+)
+async def test_soc_setpoint_writes_land_in_the_right_field(client, call, field):
+    await getattr(client, call)(12)
+    await client.settings.async_update()
+    assert getattr(client.settings, field) == 12
+
+
+@pytest.mark.asyncio
+async def test_anti_starvation_protection_write_is_inverted_polarity(client):
+    """0 open (enabled), 1 close (disabled) -- the opposite sense from the
+    HALO client's anti_starvation."""
+    await client.set_anti_starvation_protection(True)
+    await client.settings.async_update()
+    assert client.settings.anti_starvation_protection == 0
+
+    await client.set_anti_starvation_protection(False)
+    await client.settings.async_update()
+    assert client.settings.anti_starvation_protection == 1
+
+
+@pytest.mark.asyncio
 async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
     with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
         with pytest.raises(HyxiHybridModbusClient.ControlError):
@@ -416,6 +446,12 @@ async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
 
         with pytest.raises(HyxiHybridModbusClient.ControlError):
             await client.restart("SN")
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.set_self_use_soc(12)
+
+        with pytest.raises(HyxiHybridModbusClient.ControlError):
+            await client.set_anti_starvation_protection(True)
 
 
 @pytest.mark.asyncio

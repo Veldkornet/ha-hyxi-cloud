@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC Minimum"
       },
+      "force_charge_start_soc": {
+        "name": "Tvungen Opladning Start-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Tvungen Opladning Stop-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Eget Forbrug Reserve-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Afladning Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Backup Reserve-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Tvungen Opladning SOC"
+      },
+      "feed_in_soc": {
+        "name": "Eksport SOC-tærskel"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid Tilstand SOC-tærskel"
+      },
       "feed_in_power": {
         "name": "Eksport effektgrænse"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Strøm"
+      },
+      "anti_starvation": {
+        "name": "Dybafladningsbeskyttelse"
       },
       "em_grid_charge_allowed": {
         "name": "Netopladning Tilladt"

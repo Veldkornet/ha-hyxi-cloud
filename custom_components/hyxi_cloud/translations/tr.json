@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC Minimum"
       },
+      "force_charge_start_soc": {
+        "name": "Zorunlu Şarj Başlangıç SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Zorunlu Şarj Durdurma SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Şebeke Dışı Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Öz Tüketim Rezerv SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Deşarj Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Yedek Güç Rezerv SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Zorunlu Şarj SOC"
+      },
+      "feed_in_soc": {
+        "name": "Şebekeye Verme SOC Eşiği"
+      },
+      "off_grid_soc": {
+        "name": "Şebeke Dışı Mod SOC Eşiği"
+      },
       "feed_in_power": {
         "name": "Şebekeye Verilen Güç Sınırı"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Güç"
+      },
+      "anti_starvation": {
+        "name": "Aşırı Deşarj Koruması"
       },
       "em_grid_charge_allowed": {
         "name": "Şebeke Şarjına İzin Verildi"

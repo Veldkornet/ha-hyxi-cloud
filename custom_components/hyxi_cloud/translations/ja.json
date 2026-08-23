@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP最小SOC"
       },
+      "force_charge_start_soc": {
+        "name": "強制充電開始SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "強制充電終了SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "オフグリッド最小SOC"
+      },
+      "self_use_soc": {
+        "name": "自家消費予備SOC"
+      },
+      "discharge_min_soc": {
+        "name": "放電最小SOC"
+      },
+      "backup_soc": {
+        "name": "バックアップ予備SOC"
+      },
+      "forced_charge_soc": {
+        "name": "強制充電SOC"
+      },
+      "feed_in_soc": {
+        "name": "売電SOCしきい値"
+      },
+      "off_grid_soc": {
+        "name": "オフグリッドモードSOCしきい値"
+      },
       "feed_in_power": {
         "name": "売電電力制限"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "電源"
+      },
+      "anti_starvation": {
+        "name": "過放電保護"
       },
       "em_grid_charge_allowed": {
         "name": "系統充電許可"

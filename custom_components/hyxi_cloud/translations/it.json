@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "SOC Minimo VPP"
       },
+      "force_charge_start_soc": {
+        "name": "SOC di Inizio Carica Forzata"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC di Fine Carica Forzata"
+      },
+      "off_grid_min_soc": {
+        "name": "SOC Minimo Fuori Rete"
+      },
+      "self_use_soc": {
+        "name": "SOC di Riserva Autoconsumo"
+      },
+      "discharge_min_soc": {
+        "name": "SOC Minimo di Scarica"
+      },
+      "backup_soc": {
+        "name": "SOC di Riserva Backup"
+      },
+      "forced_charge_soc": {
+        "name": "SOC Carica Forzata"
+      },
+      "feed_in_soc": {
+        "name": "Soglia SOC di Immissione"
+      },
+      "off_grid_soc": {
+        "name": "Soglia SOC Modalità Fuori Rete"
+      },
       "feed_in_power": {
         "name": "Limite di potenza di immissione"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Alimentazione"
+      },
+      "anti_starvation": {
+        "name": "Protezione da scarica profonda"
       },
       "em_grid_charge_allowed": {
         "name": "Carica da Rete Consentita"

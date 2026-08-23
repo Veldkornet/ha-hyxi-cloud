@@ -379,6 +379,36 @@ async def test_vpp_min_soc_write_lands_in_holding_space(client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("call", "field"),
+    [
+        ("set_force_charge_start_soc", "force_charge_start_soc"),
+        ("set_force_charge_stop_soc", "force_charge_stop_soc"),
+        ("set_off_grid_min_soc", "off_grid_min_soc"),
+        ("set_self_use_soc", "self_use_soc"),
+        ("set_discharge_min_soc", "discharge_min_soc"),
+    ],
+)
+async def test_soc_setpoint_writes_land_in_the_right_field(client, call, field):
+    await getattr(client, call)(12)
+    await client.settings.async_update()
+    assert getattr(client.settings, field) == 12
+
+
+@pytest.mark.asyncio
+async def test_anti_starvation_write_is_straightforward_polarity(client):
+    """0 disabled, 1 enabled -- unlike the hybrid client's inverted
+    equivalent."""
+    await client.set_anti_starvation(True)
+    await client.settings.async_update()
+    assert client.settings.anti_starvation == 1
+
+    await client.set_anti_starvation(False)
+    await client.settings.async_update()
+    assert client.settings.anti_starvation == 0
+
+
+@pytest.mark.asyncio
 async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
     """button.py and friends catch HyxiApiClient.ControlError by name."""
     with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
@@ -393,6 +423,12 @@ async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
 
         with pytest.raises(HyxiModbusClient.ControlError):
             await client.set_vpp_min_soc(15)
+
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_force_charge_start_soc(12)
+
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_anti_starvation(True)
 
 
 @pytest.mark.asyncio
@@ -815,9 +851,9 @@ async def test_hybrid_control_entities_still_appear_unaffected(hass):
 
 @pytest.mark.asyncio
 async def test_halo_setting_numbers_appear_and_write_through(hass):
-    """The two HaloSettings fields with an unambiguous numeric range and no
-    overlap with the software-side protection numbers -- feed-in power
-    limit and the VPP dispatch block's minimum SOC."""
+    """HaloSettings fields with an unambiguous numeric range and no overlap
+    with the software-side protection numbers -- feed-in power limit, the
+    VPP dispatch block's minimum SOC, and the five firmware SOC setpoints."""
     entry = _modbus_entry(
         hass, modbus_family="halo", options={"enable_battery_control": True}
     )
@@ -837,10 +873,19 @@ async def test_halo_setting_numbers_appear_and_write_through(hass):
     soc_id = _entity_id(hass, "number", sn, "vpp_min_soc")
     assert feed_in_id is not None
     assert soc_id is not None
+    for key in (
+        "force_charge_start_soc",
+        "force_charge_stop_soc",
+        "off_grid_min_soc",
+        "self_use_soc",
+        "discharge_min_soc",
+    ):
+        assert _entity_id(hass, "number", sn, key) is not None, key
 
     # Hybrid-only settings must not appear on a HALO entry.
     assert _entity_id(hass, "number", sn, "feed_in_power") is None
     assert _entity_id(hass, "number", sn, "max_charge_current") is None
+    assert _entity_id(hass, "number", sn, "backup_soc") is None
 
     with patch.object(
         coordinator.client,
@@ -863,11 +908,25 @@ async def test_halo_setting_numbers_appear_and_write_through(hass):
         )
     spy.assert_awaited_once_with(15)
 
+    self_use_id = _entity_id(hass, "number", sn, "self_use_soc")
+    with patch.object(
+        coordinator.client,
+        "set_self_use_soc",
+        wraps=coordinator.client.set_self_use_soc,
+    ) as spy:
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": self_use_id, "value": 20},
+            blocking=True,
+        )
+    spy.assert_awaited_once_with(20)
+
 
 @pytest.mark.asyncio
 async def test_hybrid_setting_numbers_appear_and_write_through(hass):
-    """feed-in power limit and the two current caps -- the HybridSettings
-    equivalent of the HALO test above."""
+    """feed-in power limit, the two current caps and the five firmware SOC
+    setpoints -- the HybridSettings equivalent of the HALO test above."""
     entry = _modbus_entry(
         hass, modbus_family="hybrid", options={"enable_battery_control": True}
     )
@@ -889,10 +948,19 @@ async def test_hybrid_setting_numbers_appear_and_write_through(hass):
     assert feed_in_id is not None
     assert max_charge_id is not None
     assert max_discharge_id is not None
+    for key in (
+        "self_use_soc",
+        "backup_soc",
+        "forced_charge_soc",
+        "feed_in_soc",
+        "off_grid_soc",
+    ):
+        assert _entity_id(hass, "number", sn, key) is not None, key
 
     # HALO-only settings must not appear on a hybrid entry.
     assert _entity_id(hass, "number", sn, "feed_in_power_limit") is None
     assert _entity_id(hass, "number", sn, "vpp_min_soc") is None
+    assert _entity_id(hass, "number", sn, "off_grid_min_soc") is None
 
     with patch.object(
         coordinator.client,
@@ -906,6 +974,18 @@ async def test_hybrid_setting_numbers_appear_and_write_through(hass):
             blocking=True,
         )
     spy.assert_awaited_once_with(32.5)
+
+    backup_soc_id = _entity_id(hass, "number", sn, "backup_soc")
+    with patch.object(
+        coordinator.client, "set_backup_soc", wraps=coordinator.client.set_backup_soc
+    ) as spy:
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": backup_soc_id, "value": 25},
+            blocking=True,
+        )
+    spy.assert_awaited_once_with(25)
 
 
 @pytest.mark.asyncio
@@ -958,3 +1038,68 @@ async def test_halo_has_no_power_command_buttons(hass):
     sn = "10201234567810"
     for key in ("power_on", "power_off", "restart"):
         assert _entity_id(hass, "button", sn, key) is None, key
+
+
+@pytest.mark.asyncio
+async def test_halo_anti_starvation_switch_appears_and_writes_through(hass):
+    """The one boolean HaloSettings field, calling set_anti_starvation --
+    the straightforward-polarity client method."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    entity_id = _entity_id(hass, "switch", sn, "anti_starvation")
+    assert entity_id is not None
+
+    with patch.object(
+        coordinator.client,
+        "set_anti_starvation",
+        wraps=coordinator.client.set_anti_starvation,
+    ) as spy:
+        await hass.services.async_call(
+            "switch", "turn_on", {"entity_id": entity_id}, blocking=True
+        )
+    spy.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_hybrid_anti_starvation_switch_appears_and_writes_through(hass):
+    """The HybridSettings equivalent, calling the inverted-polarity client
+    method -- proving the right method got wired to the right family, not
+    just that some method got called."""
+    entry = _modbus_entry(
+        hass, modbus_family="hybrid", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "modbus_connection.tmodbus.ModbusConnection",
+        return_value=_seeded_hybrid_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    entity_id = _entity_id(hass, "switch", sn, "anti_starvation")
+    assert entity_id is not None
+
+    with patch.object(
+        coordinator.client,
+        "set_anti_starvation_protection",
+        wraps=coordinator.client.set_anti_starvation_protection,
+    ) as spy:
+        await hass.services.async_call(
+            "switch", "turn_off", {"entity_id": entity_id}, blocking=True
+        )
+    spy.assert_awaited_once_with(False)

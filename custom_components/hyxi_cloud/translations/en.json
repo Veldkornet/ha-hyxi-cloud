@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP Minimum SOC"
       },
+      "force_charge_start_soc": {
+        "name": "Forced Charge Start SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Forced Charge Stop SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Self-Use Reserve SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Discharge Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Backup Reserve SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Forced Charge SOC"
+      },
+      "feed_in_soc": {
+        "name": "Feed-in SOC Threshold"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid Mode SOC Threshold"
+      },
       "feed_in_power": {
         "name": "Feed-in Power Limit"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Power"
+      },
+      "anti_starvation": {
+        "name": "Anti-Starvation Protection"
       },
       "em_grid_charge_allowed": {
         "name": "Grid Charge Allowed"

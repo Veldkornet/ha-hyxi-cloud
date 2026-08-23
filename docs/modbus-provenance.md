@@ -127,12 +127,12 @@ Generated directly from the Component classes -- this table cannot drift from th
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 4048 | `dispatch_mode` | Number (unsigned) | RW |  |  | — *(not exposed)* |
 | 4049 | `active_power_setpoint` | Number (signed) | RW | ×0.001 | kW | — *(not exposed)* |
-| 4121 | `anti_starvation` | Number (unsigned) | RW |  |  | — *(not exposed)* |
-| 4132 | `force_charge_start_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 4133 | `off_grid_min_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 4134 | `self_use_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 4140 | `force_charge_stop_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 4141 | `discharge_min_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 4121 | `anti_starvation` | Number (unsigned) | RW |  |  | used by a control method |
+| 4132 | `force_charge_start_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 4133 | `off_grid_min_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 4134 | `self_use_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 4140 | `force_charge_stop_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 4141 | `discharge_min_soc` | Number (unsigned) | RW |  | % | used by a control method |
 | 4146 | `vpp_enable` | Number (unsigned) | RW |  |  | used by a control method |
 | 4147 | `vpp_mode` | Number (unsigned) | RW |  |  | used by a control method |
 | 4148 | `vpp_charge_power` | Number (unsigned) | RW |  | W | used by a control method |
@@ -268,12 +268,12 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1099 | `feed_in_enable` | Number (unsigned) | RW |  |  | used by a control method |
 | 1100 | `feed_in_power` | Number (unsigned) | RW |  | W | used by a control method |
-| 1101 | `anti_starvation_protection` | Number (unsigned) | RW |  |  | — *(not exposed)* |
-| 1102 | `self_use_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 1103 | `backup_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 1104 | `forced_charge_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 1105 | `feed_in_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
-| 1106 | `off_grid_soc` | Number (unsigned) | RW |  | % | — *(not exposed)* |
+| 1101 | `anti_starvation_protection` | Number (unsigned) | RW |  |  | used by a control method |
+| 1102 | `self_use_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 1103 | `backup_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 1104 | `forced_charge_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 1105 | `feed_in_soc` | Number (unsigned) | RW |  | % | used by a control method |
+| 1106 | `off_grid_soc` | Number (unsigned) | RW |  | % | used by a control method |
 | 3000 | `scheduling_enabled` | Number (unsigned) | RW |  |  | used by a control method |
 | 3002 | `power_command` | Number (unsigned) | RW |  |  | used by a control method |
 | 3004 | `control_mode` | Number (unsigned) | RW |  |  | used by a control method |
@@ -467,6 +467,7 @@ and update this file with the result.
 | BMS fault word addresses | HALO | See rule 3. |
 | Whether 4146 must enable dispatch before 4147 takes effect | HALO | `_write_vpp` writes the enable every time on the assumption it does. Harmless if unnecessary. |
 | Whether a VPP dispatch survives a power cycle, or a watchdog reverts it | HALO | Decides whether the integration needs a heartbeat write to hold a mode. |
+| **How `dispatch_mode`/`active_power_setpoint` (4048/4049, "dispatch mode 1") relate to the VPP block (4146–4152, "dispatch mode 2")** | HALO | The document names both as separate dispatch modes but never states whether they're independent, mutually exclusive, or one overrides the other. `set_mode_*` only ever writes the VPP block; 4048/4049 are deliberately left unexposed rather than guessed. A public search for the vendor's Micro Storage RS485 protocol document (2026-08-23) turned up nothing beyond what's already transcribed here — no public copy of the register-level document was found, only marketing-level descriptions of "dispatch"/"VPP" as product concepts, which don't answer this question either. Resolve by testing against hardware: write 4048/4049 while the VPP block is enabled and observe whether it fights the VPP writes. |
 | **Unit of the grid/inverter power registers** (316–318, 333, 370–372, 507, 520–522, PV powers) | Hybrid | The document gives 0 decimal places and no unit label. Treated as Watts by convention (0dp is too coarse for kW at this precision), then `gridP` alone is converted to kW to satisfy `compute_derived_metrics`'s general contract. If the true native unit is something else, every power metric on the hybrid client is wrong by a constant factor. |
 | **Sign convention of battery real-time power** (register 1065) | Hybrid | Unlike register 3015 (explicitly "positive discharge, negative charge"), 1065's sign is not stated. `batP`/`pbat` currently pass it through unconverted; if the read-side convention differs from the write-side one, the sensor and the control write would disagree about which sign means what. |
 | Whether control_mode (3004) must be written before scheduling_enabled (3000), or vice versa, or either order works | Hybrid | `_prepare_scheduling` writes enable then control_mode every call. Untested ordering. |

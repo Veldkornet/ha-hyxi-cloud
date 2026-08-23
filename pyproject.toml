@@ -113,5 +113,6 @@ disable = [
     "unsupported-membership-test",
     "too-many-statements",
     "too-many-lines",
+    "too-many-public-methods",
     "consider-using-from-import",
 ]

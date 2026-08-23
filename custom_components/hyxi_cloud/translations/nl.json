@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC Minimum"
       },
+      "force_charge_start_soc": {
+        "name": "Geforceerd Laden Start-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Geforceerd Laden Stop-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Eigen Verbruik Reserve-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Ontlading Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Back-up Reserve-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Geforceerd Laden SOC"
+      },
+      "feed_in_soc": {
+        "name": "Teruglevering SOC-drempel"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid Modus SOC-drempel"
+      },
       "feed_in_power": {
         "name": "Terugleveringsvermogenslimiet"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Voeding"
+      },
+      "anti_starvation": {
+        "name": "Diepontladingsbeveiliging"
       },
       "em_grid_charge_allowed": {
         "name": "Netladen Toegestaan"

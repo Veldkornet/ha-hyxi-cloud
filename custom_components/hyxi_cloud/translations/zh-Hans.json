@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP最小SOC"
       },
+      "force_charge_start_soc": {
+        "name": "强制充电起始SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "强制充电结束SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "离网最小SOC"
+      },
+      "self_use_soc": {
+        "name": "自用备用SOC"
+      },
+      "discharge_min_soc": {
+        "name": "放电最小SOC"
+      },
+      "backup_soc": {
+        "name": "备用电源备用SOC"
+      },
+      "forced_charge_soc": {
+        "name": "强制充电SOC"
+      },
+      "feed_in_soc": {
+        "name": "上网SOC阈值"
+      },
+      "off_grid_soc": {
+        "name": "离网模式SOC阈值"
+      },
       "feed_in_power": {
         "name": "上网功率限制"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "电源"
+      },
+      "anti_starvation": {
+        "name": "防过放保护"
       },
       "em_grid_charge_allowed": {
         "name": "允许电网充电"

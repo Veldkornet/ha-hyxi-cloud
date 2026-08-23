@@ -457,6 +457,32 @@ class HyxiModbusClient:
         )
         return {"code": "0", "msg": "ok"}
 
+    async def _write_setting(self, field: str, value: Any, register: int) -> None:
+        """Write one HaloSettings field, wrapping failures uniformly.
+
+        A shared helper rather than repeating the try/except in every
+        setting method below -- unlike _write_vpp and set_peak_shaving,
+        these are plain single-field writes with nothing else to sequence.
+        """
+        try:
+            await self.settings.write(field, value)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus %s write failed on unit %s (value=%s): %s",
+                field,
+                self._unit_id,
+                value,
+                err,
+            )
+            raise self.ControlError(f"Modbus write failed: {err}") from err
+        _LOGGER.debug(
+            "Modbus %s write ok on unit %s: %s=%s",
+            field,
+            self._unit_id,
+            register,
+            value,
+        )
+
     async def set_feed_in_power_limit(self, watts: int) -> None:
         """Write the export power limit.
 
@@ -464,21 +490,7 @@ class HyxiModbusClient:
         other power control in this integration, so the conversion happens
         here rather than asking the caller to know the register's scale.
         """
-        try:
-            await self.settings.write("feed_in_power_limit", watts / 1000)
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.debug(
-                "Modbus feed-in power limit write failed on unit %s (watts=%s): %s",
-                self._unit_id,
-                watts,
-                err,
-            )
-            raise self.ControlError(f"Modbus write failed: {err}") from err
-        _LOGGER.debug(
-            "Modbus feed-in power limit write ok on unit %s: 4163=%sW",
-            self._unit_id,
-            watts,
-        )
+        await self._write_setting("feed_in_power_limit", watts / 1000, 4163)
 
     async def set_vpp_min_soc(self, percent: int) -> None:
         """Write the minimum SOC the VPP dispatch block will discharge below.
@@ -486,18 +498,33 @@ class HyxiModbusClient:
         Register 4152 in holding space -- not grid active power, which is
         the same address in input space. See registers.py's HaloGrid.
         """
-        try:
-            await self.settings.write("vpp_min_soc", percent)
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.debug(
-                "Modbus VPP min SOC write failed on unit %s (percent=%s): %s",
-                self._unit_id,
-                percent,
-                err,
-            )
-            raise self.ControlError(f"Modbus write failed: {err}") from err
-        _LOGGER.debug(
-            "Modbus VPP min SOC write ok on unit %s: 4152=%s%%",
-            self._unit_id,
-            percent,
-        )
+        await self._write_setting("vpp_min_soc", percent, 4152)
+
+    async def set_force_charge_start_soc(self, percent: int) -> None:
+        """Write the anti-starvation forced-charge start SOC."""
+        await self._write_setting("force_charge_start_soc", percent, 4132)
+
+    async def set_force_charge_stop_soc(self, percent: int) -> None:
+        """Write the anti-starvation forced-charge stop SOC."""
+        await self._write_setting("force_charge_stop_soc", percent, 4140)
+
+    async def set_off_grid_min_soc(self, percent: int) -> None:
+        """Write the minimum SOC while off grid (EPS/backup reserve)."""
+        await self._write_setting("off_grid_min_soc", percent, 4133)
+
+    async def set_self_use_soc(self, percent: int) -> None:
+        """Write the self-consumption reserve SOC."""
+        await self._write_setting("self_use_soc", percent, 4134)
+
+    async def set_discharge_min_soc(self, percent: int) -> None:
+        """Write the discharge floor SOC."""
+        await self._write_setting("discharge_min_soc", percent, 4141)
+
+    async def set_anti_starvation(self, enabled: bool) -> None:
+        """Enable or disable battery anti-starvation protection.
+
+        0 disabled, 1 enabled -- straightforward, unlike the hybrid
+        client's anti_starvation_protection, which the document states has
+        the opposite polarity. See client_hybrid.py's own method.
+        """
+        await self._write_setting("anti_starvation", 1 if enabled else 0, 4121)

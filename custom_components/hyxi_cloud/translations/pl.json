@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "Minimalny SOC VPP"
       },
+      "force_charge_start_soc": {
+        "name": "SOC rozpoczęcia wymuszonego ładowania"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC zakończenia wymuszonego ładowania"
+      },
+      "off_grid_min_soc": {
+        "name": "Minimalny SOC off-grid"
+      },
+      "self_use_soc": {
+        "name": "Rezerwowy SOC autokonsumpcji"
+      },
+      "discharge_min_soc": {
+        "name": "Minimalny SOC rozładowania"
+      },
+      "backup_soc": {
+        "name": "Rezerwowy SOC zasilania awaryjnego"
+      },
+      "forced_charge_soc": {
+        "name": "SOC wymuszonego ładowania"
+      },
+      "feed_in_soc": {
+        "name": "Próg SOC eksportu"
+      },
+      "off_grid_soc": {
+        "name": "Próg SOC trybu off-grid"
+      },
       "feed_in_power": {
         "name": "Limit mocy eksportu"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Zasilanie"
+      },
+      "anti_starvation": {
+        "name": "Ochrona przed głębokim rozładowaniem"
       },
       "em_grid_charge_allowed": {
         "name": "Dozwolone Ładowanie z Sieci"

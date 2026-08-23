@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC-minimi"
       },
+      "force_charge_start_soc": {
+        "name": "Pakkolatauksen aloitus-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Pakkolatauksen lopetus-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimi-SOC"
+      },
+      "self_use_soc": {
+        "name": "Omakäytön varaus-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Purun minimi-SOC"
+      },
+      "backup_soc": {
+        "name": "Varmuusvaraus-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Pakkolatauksen SOC"
+      },
+      "feed_in_soc": {
+        "name": "Verkkoonsyötön SOC-kynnys"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid-tilan SOC-kynnys"
+      },
       "feed_in_power": {
         "name": "Verkkoonsyötön tehoraja"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Virta"
+      },
+      "anti_starvation": {
+        "name": "Syväpurkaussuoja"
       },
       "em_grid_charge_allowed": {
         "name": "Verkkolataus Sallittu"

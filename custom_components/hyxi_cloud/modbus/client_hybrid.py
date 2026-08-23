@@ -429,3 +429,37 @@ class HyxiHybridModbusClient:
         """Send the restart command (register 3002 = 3)."""
         _LOGGER.debug("Modbus: restart %s", _mask(device_sn))
         await self._write_setting("power_command", 3, 3002)
+
+    async def set_self_use_soc(self, percent: int) -> None:
+        """Write the self-consumption reserve SOC."""
+        await self._write_setting("self_use_soc", percent, 1102)
+
+    async def set_backup_soc(self, percent: int) -> None:
+        """Write the off-grid/backup reserve SOC."""
+        await self._write_setting("backup_soc", percent, 1103)
+
+    async def set_forced_charge_soc(self, percent: int) -> None:
+        """Write the anti-starvation forced-charge SOC."""
+        await self._write_setting("forced_charge_soc", percent, 1104)
+
+    async def set_feed_in_soc(self, percent: int) -> None:
+        """Write the SOC above which export is permitted."""
+        await self._write_setting("feed_in_soc", percent, 1105)
+
+    async def set_off_grid_soc(self, percent: int) -> None:
+        """Write the SOC threshold for switching to off-grid mode."""
+        await self._write_setting("off_grid_soc", percent, 1106)
+
+    async def set_anti_starvation_protection(self, enabled: bool) -> None:
+        """Enable or disable battery anti-starvation protection.
+
+        0 open, 1 close per the document -- the opposite polarity from the
+        HALO client's anti_starvation (there, 0 disables and 1 enables).
+        The entity presents "enabled" uniformly regardless of family; the
+        polarity difference is hidden here, the same way set_peak_shaving
+        already hides an inverted feed_in_enable sense between the two
+        clients.
+        """
+        await self._write_setting(
+            "anti_starvation_protection", 0 if enabled else 1, 1101
+        )

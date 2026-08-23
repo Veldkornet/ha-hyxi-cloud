@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP minimální SOC"
       },
+      "force_charge_start_soc": {
+        "name": "SOC začátku nuceného nabíjení"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC konce nuceného nabíjení"
+      },
+      "off_grid_min_soc": {
+        "name": "Minimální SOC mimo síť"
+      },
+      "self_use_soc": {
+        "name": "Rezervní SOC vlastní spotřeby"
+      },
+      "discharge_min_soc": {
+        "name": "Minimální SOC vybíjení"
+      },
+      "backup_soc": {
+        "name": "Rezervní SOC zálohy"
+      },
+      "forced_charge_soc": {
+        "name": "SOC nuceného nabíjení"
+      },
+      "feed_in_soc": {
+        "name": "Práh SOC pro dodávku do sítě"
+      },
+      "off_grid_soc": {
+        "name": "Práh SOC pro režim mimo síť"
+      },
       "feed_in_power": {
         "name": "Limit výkonu do sítě"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Napájení"
+      },
+      "anti_starvation": {
+        "name": "Ochrana proti vybití"
       },
       "em_grid_charge_allowed": {
         "name": "Povoleno nabíjení ze sítě"

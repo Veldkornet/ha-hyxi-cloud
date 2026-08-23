@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "Минимальный SOC VPP"
       },
+      "force_charge_start_soc": {
+        "name": "SOC начала принудительной зарядки"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC окончания принудительной зарядки"
+      },
+      "off_grid_min_soc": {
+        "name": "Минимальный SOC вне сети"
+      },
+      "self_use_soc": {
+        "name": "Резервный SOC собственного потребления"
+      },
+      "discharge_min_soc": {
+        "name": "Минимальный SOC разряда"
+      },
+      "backup_soc": {
+        "name": "Резервный SOC резервного питания"
+      },
+      "forced_charge_soc": {
+        "name": "SOC принудительной зарядки"
+      },
+      "feed_in_soc": {
+        "name": "Порог SOC экспорта"
+      },
+      "off_grid_soc": {
+        "name": "Порог SOC режима вне сети"
+      },
       "feed_in_power": {
         "name": "Ограничение мощности экспорта"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Питание"
+      },
+      "anti_starvation": {
+        "name": "Защита от глубокого разряда"
       },
       "em_grid_charge_allowed": {
         "name": "Разрешена зарядка от сети"

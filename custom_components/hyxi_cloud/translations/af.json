@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC Minimum"
       },
+      "force_charge_start_soc": {
+        "name": "Geforseerde Laai Begin-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Geforseerde Laai Stop-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Af-net Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Eie-gebruik Reserwe-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Ontlaai Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Rugsteun Reserwe-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Geforseerde Laai SOC"
+      },
+      "feed_in_soc": {
+        "name": "Terugvoer SOC-drempel"
+      },
+      "off_grid_soc": {
+        "name": "Af-net Modus SOC-drempel"
+      },
       "feed_in_power": {
         "name": "Terugvoerkrag-limiet"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Krag"
+      },
+      "anti_starvation": {
+        "name": "Diepontlaai-beskerming"
       },
       "em_grid_charge_allowed": {
         "name": "Netlading Toegelaat"

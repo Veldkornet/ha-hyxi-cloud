@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC Minimum"
       },
+      "force_charge_start_soc": {
+        "name": "Zwangsladung Start-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Zwangsladung Stopp-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-Grid Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Eigenverbrauch Reserve-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Entladung Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Notstrom Reserve-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Zwangsladung SOC"
+      },
+      "feed_in_soc": {
+        "name": "Einspeise-SOC-Schwelle"
+      },
+      "off_grid_soc": {
+        "name": "Off-Grid-Modus SOC-Schwelle"
+      },
       "feed_in_power": {
         "name": "Einspeiseleistungsgrenze"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Strom"
+      },
+      "anti_starvation": {
+        "name": "Tiefentladeschutz"
       },
       "em_grid_charge_allowed": {
         "name": "Netzladung Erlaubt"

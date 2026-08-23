@@ -98,12 +98,13 @@ class HyxiSettingNumberDef(NamedTuple):
     icon: str
 
 
-# HaloSettings fields with an unambiguous numeric range and no overlap with
-# PROTECTION_NUMBER_DEFS or an existing control method. The rest of
-# HaloSettings (dispatch_mode/active_power_setpoint -- a second, untested
-# dispatch path alongside the VPP block set_mode_* already drives; the
-# firmware-level SOC setpoints; anti_starvation, which is boolean) is left
-# for later rounds -- see docs/modbus-provenance.md.
+# HaloSettings fields with an unambiguous numeric range and no interaction
+# risk with an existing control method. dispatch_mode/active_power_setpoint
+# is deliberately still not here: a second, untested dispatch path
+# alongside the VPP block set_mode_* already drives, and neither the
+# vendor document nor a public search turned up how the two interact on
+# real hardware -- see docs/modbus-provenance.md. anti_starvation is
+# boolean and lives in switch.py instead.
 HALO_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
     HyxiSettingNumberDef(
         "feed_in_power_limit",
@@ -123,11 +124,57 @@ HALO_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
         1,
         "mdi:battery-alert-variant-outline",
     ),
+    HyxiSettingNumberDef(
+        "force_charge_start_soc",
+        "set_force_charge_start_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-charging-low",
+    ),
+    HyxiSettingNumberDef(
+        "force_charge_stop_soc",
+        "set_force_charge_stop_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-charging-high",
+    ),
+    HyxiSettingNumberDef(
+        "off_grid_min_soc",
+        "set_off_grid_min_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery-outline",
+    ),
+    HyxiSettingNumberDef(
+        "self_use_soc",
+        "set_self_use_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery",
+    ),
+    HyxiSettingNumberDef(
+        "discharge_min_soc",
+        "set_discharge_min_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-arrow-down-outline",
+    ),
 ]
 
 # Same idea for HybridSettings. power_command is deliberately not here --
 # one of its three values restarts the inverter, which is a button.py
-# concern (with a confirmation), not a number box.
+# concern (with a confirmation), not a number box. anti_starvation_protection
+# is boolean and lives in switch.py instead.
 HYBRID_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
     HyxiSettingNumberDef(
         "feed_in_power",
@@ -146,6 +193,51 @@ HYBRID_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
         200,
         0.1,
         "mdi:current-dc",
+    ),
+    HyxiSettingNumberDef(
+        "self_use_soc",
+        "set_self_use_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery",
+    ),
+    HyxiSettingNumberDef(
+        "backup_soc",
+        "set_backup_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery-outline",
+    ),
+    HyxiSettingNumberDef(
+        "forced_charge_soc",
+        "set_forced_charge_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-charging-low",
+    ),
+    HyxiSettingNumberDef(
+        "feed_in_soc",
+        "set_feed_in_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:transmission-tower-export",
+    ),
+    HyxiSettingNumberDef(
+        "off_grid_soc",
+        "set_off_grid_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:transmission-tower-off",
     ),
     HyxiSettingNumberDef(
         "max_discharge_current",

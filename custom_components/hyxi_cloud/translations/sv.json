@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC Minimum"
       },
+      "force_charge_start_soc": {
+        "name": "Tvångsladdning Start-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Tvångsladdning Stopp-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Egenförbrukning Reserv-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Urladdning Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Backup Reserv-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Tvångsladdning SOC"
+      },
+      "feed_in_soc": {
+        "name": "Nätexport SOC-tröskel"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid-läge SOC-tröskel"
+      },
       "feed_in_power": {
         "name": "Nätexport effektgräns"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Ström"
+      },
+      "anti_starvation": {
+        "name": "Djupurladdningsskydd"
       },
       "em_grid_charge_allowed": {
         "name": "Nätladdning Tillåten"

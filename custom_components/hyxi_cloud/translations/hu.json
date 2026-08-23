@@ -672,6 +672,33 @@
       "vpp_min_soc": {
         "name": "VPP SOC minimum"
       },
+      "force_charge_start_soc": {
+        "name": "Kényszertöltés kezdő SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Kényszertöltés befejező SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Hálózaton kívüli minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Saját fogyasztás tartalék SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Kisütés minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Tartalék energia tartalék SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Kényszertöltés SOC"
+      },
+      "feed_in_soc": {
+        "name": "Betáplálási SOC küszöb"
+      },
+      "off_grid_soc": {
+        "name": "Hálózaton kívüli mód SOC küszöb"
+      },
       "feed_in_power": {
         "name": "Betáplálási teljesítménykorlát"
       },
@@ -748,6 +775,9 @@
       },
       "micro_ess_power": {
         "name": "Tápellátás"
+      },
+      "anti_starvation": {
+        "name": "Mélykisütés elleni védelem"
       },
       "em_grid_charge_allowed": {
         "name": "Hálózati Töltés Engedélyezve"
