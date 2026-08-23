@@ -867,6 +867,47 @@ async def test_migrate_vpp_dispatch_to_work_mode(mock_hass, mock_entry):
             )
 
 
+@pytest.mark.asyncio
+async def test_migrate_vpp_dispatch_to_work_mode_unique_id_collision(
+    mock_hass, mock_entry
+):
+    """A previous migration attempt left both the legacy vpp_dispatch and
+    the renamed work_mode entity registered for the same device.
+
+    async_update_entity would raise ValueError on the unique_id collision
+    and abort the whole config entry setup -- the migration must instead
+    keep the work_mode entity (and its history) and drop the now-redundant
+    legacy duplicate, without ever calling async_update_entity.
+    """
+    from custom_components.hyxi_cloud.__init__ import (
+        _migrate_vpp_dispatch_to_work_mode,
+    )
+
+    mock_entry.entry_id = "test_id"
+
+    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+        mock_registry = MagicMock()
+        mock_er_get.return_value = mock_registry
+
+        def mock_get_entity_id(domain, component, unique_id):
+            if unique_id == "test_id_123_vpp_dispatch":
+                return "binary_sensor.hyx_123_vpp_dispatch"
+            if unique_id == "test_id_123_work_mode":
+                return "binary_sensor.hyx_123_work_mode"
+            return None
+
+        mock_registry.async_get_entity_id.side_effect = mock_get_entity_id
+
+        devices: dict[str, dict] = {"123": {}}
+
+        _migrate_vpp_dispatch_to_work_mode(mock_hass, mock_entry, devices)
+
+        mock_registry.async_update_entity.assert_not_called()
+        mock_registry.async_remove.assert_called_once_with(
+            "binary_sensor.hyx_123_vpp_dispatch"
+        )
+
+
 # --- __init__.py Platform Tests ---
 
 from custom_components.hyxi_cloud.__init__ import (

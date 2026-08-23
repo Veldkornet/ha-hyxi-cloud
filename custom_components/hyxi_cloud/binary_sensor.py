@@ -269,7 +269,13 @@ class HyxiWorkModeSensor(
     _attr_translation_key = "work_mode"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator, entry, sn: str, dev_data: dict) -> None:
+    def __init__(
+        self,
+        coordinator: HyxiDataUpdateCoordinator,
+        entry: ConfigEntry,
+        sn: str,
+        dev_data: dict[str, Any],
+    ) -> None:
         """Initialize the work mode sensor."""
         super().__init__(coordinator)
         self.sn = sn

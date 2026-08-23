@@ -35,7 +35,7 @@
     "step": {
       "init": {
         "title": "HYXI rendszerkonfiguráció",
-        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\n> ⚠️ **Eszközvezérlés**: Óvatosan engedélyezze, ha az invertertét már az energiaszolgáltatója kezeli, vagy be van jelentkezve egy Virtuális Erőmű (VPP) programba. A parancsok küldése, amíg a szolgáltatója rendelkezik az irányítással, ütközhet az ő diszpécseri ütemezésével.\n\n---",
+        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\n> ⚠️ **Eszközvezérlés**: Óvatosan engedélyezze, ha az invertert már az energiaszolgáltatója kezeli, vagy részt vesz egy Virtuális Erőmű (VPP) programban. A parancsok küldése, amíg a szolgáltatója rendelkezik az irányítással, ütközhet az ő diszpécseri ütemezésével.\n\n---",
         "data": {
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
           "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)",

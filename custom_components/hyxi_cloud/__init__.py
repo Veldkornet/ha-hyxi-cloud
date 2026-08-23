@@ -348,12 +348,31 @@ def _migrate_vpp_dispatch_to_work_mode(
     for sn in devices:
         old_unique_id = f"{entry.entry_id}_{sn}_vpp_dispatch"
         entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, old_unique_id)
-        if entity_id is not None:
-            new_unique_id = f"{entry.entry_id}_{sn}_work_mode"
+        if entity_id is None:
+            continue
+        new_unique_id = f"{entry.entry_id}_{sn}_work_mode"
+        if (
+            registry.async_get_entity_id("binary_sensor", DOMAIN, new_unique_id)
+            is not None
+        ):
+            # Both the legacy and the renamed entity already exist for this
+            # device (e.g. a previous migration attempt partially
+            # completed). async_update_entity would raise ValueError on the
+            # unique_id collision and abort the whole config entry setup --
+            # instead keep the work_mode entity (already the live one, with
+            # whatever history it has) and drop the now-redundant legacy
+            # duplicate.
             _LOGGER.debug(
-                "Migrating %s from vpp_dispatch to work_mode unique_id", entity_id
+                "Removing orphaned legacy vpp_dispatch entity %s; %s already exists",
+                entity_id,
+                new_unique_id,
             )
-            registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
+            registry.async_remove(entity_id)
+            continue
+        _LOGGER.debug(
+            "Migrating %s from vpp_dispatch to work_mode unique_id", entity_id
+        )
+        registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
 
 
 def _cleanup_control_entities(
