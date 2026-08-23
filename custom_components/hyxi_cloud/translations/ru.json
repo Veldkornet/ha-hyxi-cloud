@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Обнаружена высокая нагрузка"
       },
-      "vpp_dispatch": {
-        "name": "Диспетчеризация VPP",
+      "work_mode": {
+        "name": "Рабочий режим",
         "state": {
           "off": "Ожидание",
           "on": "Активно"

@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Magas terhelés észlelve"
       },
-      "vpp_dispatch": {
-        "name": "VPP diszpécselés",
+      "work_mode": {
+        "name": "Munkamód",
         "state": {
           "off": "Készenlét",
           "on": "Aktív"

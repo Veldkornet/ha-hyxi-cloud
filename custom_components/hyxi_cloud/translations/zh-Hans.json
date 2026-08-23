@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "检测到高负载"
       },
-      "vpp_dispatch": {
-        "name": "VPP 调度",
+      "work_mode": {
+        "name": "工作模式",
         "state": {
           "off": "待机",
           "on": "活动"

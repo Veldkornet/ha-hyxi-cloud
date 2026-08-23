@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Charge élevée détectée"
       },
-      "vpp_dispatch": {
-        "name": "Répartition VPP",
+      "work_mode": {
+        "name": "Mode de fonctionnement",
         "state": {
           "off": "Veille",
           "on": "Actif"

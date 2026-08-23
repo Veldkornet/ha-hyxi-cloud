@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "High Load Detected"
       },
-      "vpp_dispatch": {
-        "name": "VPP Dispatch",
+      "work_mode": {
+        "name": "Work Mode",
         "state": {
           "off": "Standby",
           "on": "Active"

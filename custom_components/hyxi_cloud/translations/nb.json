@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Høy Belastning Oppdaget"
       },
-      "vpp_dispatch": {
-        "name": "VPP-dispatch",
+      "work_mode": {
+        "name": "Arbeidsmodus",
         "state": {
           "off": "Standby",
           "on": "Aktiv"

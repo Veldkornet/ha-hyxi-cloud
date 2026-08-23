@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "高負荷検出"
       },
-      "vpp_dispatch": {
-        "name": "VPPディスパッチ",
+      "work_mode": {
+        "name": "動作モード",
         "state": {
           "off": "スタンバイ",
           "on": "アクティブ"

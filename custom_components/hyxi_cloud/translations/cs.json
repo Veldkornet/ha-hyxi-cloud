@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Zjištěno vysoké zatížení"
       },
-      "vpp_dispatch": {
-        "name": "VPP dispečink",
+      "work_mode": {
+        "name": "Pracovní režim",
         "state": {
           "off": "Pohotovostní režim",
           "on": "Aktivní"

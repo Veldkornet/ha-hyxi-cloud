@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Korkea kuormitus havaittu"
       },
-      "vpp_dispatch": {
-        "name": "VPP-ohjaus",
+      "work_mode": {
+        "name": "Työtila",
         "state": {
           "off": "Valmiustila",
           "on": "Aktiivinen"

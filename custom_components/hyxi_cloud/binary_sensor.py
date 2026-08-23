@@ -53,9 +53,7 @@ async def async_setup_entry(
 
         dev_type = normalize_device_type(get_raw_device_code(dev_data))
         if dev_type in ("hybrid_inverter", "all_in_one", "micro_ess"):
-            entities.append(
-                HyxiVppDispatchSensor(coordinator, entry, device_sn, dev_data)
-            )
+            entities.append(HyxiWorkModeSensor(coordinator, entry, device_sn, dev_data))
 
     # Energy Manager binary sensors (EM-only)
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
@@ -244,35 +242,38 @@ class HyxiDeviceAlarmSensor(
         }
 
 
-class HyxiVppDispatchSensor(
+class HyxiWorkModeSensor(
     CoordinatorEntity["HyxiDataUpdateCoordinator"], BinarySensorEntity
 ):
-    """Binary sensor indicating whether a VPP program is actively dispatching to/from this device.
+    """Binary sensor indicating whether the device's reported work mode is
+    currently one of the values that means an active VPP dispatch.
 
-    ON  = a VPP dispatch is in progress.
-    OFF = device is under normal (manual / self-consumption) operation.
+    ON  = workMode is a confirmed active-dispatch value (VPP charge/discharge).
+    OFF = any other work mode, including HYXI's own "VPP enrolled / standby"
+    value and every ordinary (non-VPP) mode.
 
-    Use this entity in automations to detect VPP activity and suppress
-    any conflicting home automation rules.
-
-    Reads workMode, not a dedicated VPP field -- the cloud API has no such
-    field, only workMode (see hyxi_cloud_api.HyxiApiClient.VPP_ACTIVE_MODES,
+    Named after the field it actually reads (workMode) rather than "VPP
+    Dispatch" -- the cloud API has no dedicated VPP field, and there is no
+    VPP programme name/supplier/manufacturer detail available to show,
+    only this one number (see hyxi_cloud_api.HyxiApiClient.VPP_ACTIVE_MODES,
     which documents which workMode values mean an active dispatch). Purely
     informational: nothing in this integration currently gates control
-    entities on VPP state, so this cannot suppress a conflicting manual
-    command by itself -- only report that one may be in progress.
+    entities on this state, so it cannot suppress a conflicting manual
+    command by itself -- only report that one may be in progress. Use it
+    in automations to detect VPP activity and suppress any conflicting
+    home automation rules.
     """
 
     _attr_device_class = BinarySensorDeviceClass.RUNNING
     _attr_has_entity_name = True
-    _attr_translation_key = "vpp_dispatch"
+    _attr_translation_key = "work_mode"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator, entry, sn: str, dev_data: dict) -> None:
-        """Initialize the VPP dispatch sensor."""
+        """Initialize the work mode sensor."""
         super().__init__(coordinator)
         self.sn = sn
-        self._attr_unique_id = f"{entry.entry_id}_{sn}_vpp_dispatch"
+        self._attr_unique_id = f"{entry.entry_id}_{sn}_work_mode"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": dev_data.get("device_name") or f"Device {sn}",
@@ -287,7 +288,7 @@ class HyxiVppDispatchSensor(
         new_mode = self._metrics.get("workMode")
         if new_mode != self._last_work_mode:
             _LOGGER.debug(
-                "VPP dispatch %s: mode %s -> %s",
+                "Work mode %s: %s -> %s",
                 mask_sn(self.sn),
                 self._last_work_mode,
                 new_mode,

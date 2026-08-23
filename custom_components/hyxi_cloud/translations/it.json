@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Carico elevato rilevato"
       },
-      "vpp_dispatch": {
-        "name": "Dispacciamento VPP",
+      "work_mode": {
+        "name": "Modalità di lavoro",
         "state": {
           "off": "Standby",
           "on": "Attivo"

@@ -81,8 +81,8 @@
       "em_high_load_detected": {
         "name": "High Load Detected"
       },
-      "vpp_dispatch": {
-        "name": "VPP Dispatch",
+      "work_mode": {
+        "name": "Work Mode",
         "state": {
           "off": "Standby",
           "on": "Active"
@@ -218,9 +218,6 @@
       "efpv": {
         "name": "Yield Today (PV)"
       },
-      "internal_temperature": {
-        "name": "Internal Temperature"
-      },
       "ph1loadp": {
         "name": "Phase 1 Load"
       },
@@ -341,6 +338,9 @@
       },
       "ph3p": {
         "name": "Phase 3 Power"
+      },
+      "internal_temperature": {
+        "name": "Internal Temperature"
       },
       "invsts": {
         "name": "Inverter Status",

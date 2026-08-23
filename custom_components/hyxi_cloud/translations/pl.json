@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Wykryto wysokie obciążenie"
       },
-      "vpp_dispatch": {
-        "name": "Dyspozycja VPP",
+      "work_mode": {
+        "name": "Tryb pracy",
         "state": {
           "off": "Tryb czuwania",
           "on": "Aktywny"

@@ -157,7 +157,7 @@ async def test_async_setup_entry_adds_vpp_dispatch_sensor(mock_coordinator, mock
     await bs_mod.async_setup_entry(hass, mock_entry, async_add_entities)
 
     entities = async_add_entities.call_args[0][0]
-    assert any(isinstance(e, bs_mod.HyxiVppDispatchSensor) for e in entities)
+    assert any(isinstance(e, bs_mod.HyxiWorkModeSensor) for e in entities)
 
 
 @pytest.mark.asyncio
@@ -370,7 +370,7 @@ def test_vpp_dispatch_sensor_handle_coordinator_update_logs_transition(
 ):
     """Test that a work mode change is logged and tracked, and no-change is silent."""
     mock_coordinator.data["SN123"]["metrics"] = {"workMode": "1"}
-    sensor = bs_mod.HyxiVppDispatchSensor(mock_coordinator, mock_entry, "SN123", {})
+    sensor = bs_mod.HyxiWorkModeSensor(mock_coordinator, mock_entry, "SN123", {})
     assert sensor._last_work_mode == "1"  # pylint: disable=protected-access
 
     # Mode changes -> logged and cached value updated.

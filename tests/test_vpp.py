@@ -114,7 +114,7 @@ def test_vpp_dispatch_sensor_on_during_active_dispatch():
     ):
         for active_mode in (13, 14):
             coordinator.data = {"SN123": {"metrics": {"workMode": active_mode}}}
-            sensor = binary_sensor_mod.HyxiVppDispatchSensor(
+            sensor = binary_sensor_mod.HyxiWorkModeSensor(
                 coordinator, entry, "SN123", {}
             )
             assert sensor.is_on is True, (
@@ -135,7 +135,7 @@ def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
     ):
         for inactive_mode in ("16", "0", "1", "2", "3"):
             coordinator.data = {"SN123": {"metrics": {"workMode": inactive_mode}}}
-            sensor = binary_sensor_mod.HyxiVppDispatchSensor(
+            sensor = binary_sensor_mod.HyxiWorkModeSensor(
                 coordinator, entry, "SN123", {}
             )
             assert sensor.is_on is False, (
@@ -144,9 +144,7 @@ def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
 
         # No workMode reported at all -- falls back to "None", not a crash.
         coordinator.data["SN123"]["metrics"] = {}
-        sensor = binary_sensor_mod.HyxiVppDispatchSensor(
-            coordinator, entry, "SN123", {}
-        )
+        sensor = binary_sensor_mod.HyxiWorkModeSensor(coordinator, entry, "SN123", {})
         assert sensor.is_on is False
         assert sensor.extra_state_attributes == {"work_mode": "None"}
 
