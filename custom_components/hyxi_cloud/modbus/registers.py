@@ -89,10 +89,13 @@ class HaloStatus(Component):
     #
     # DO NOT "fix" work_mode to agree with hyxi_cloud_api.VPP_ACTIVE_MODES.
     # The document says 13 idle / 14 charge / 15 discharge / 16 self-use;
-    # VPP_ACTIVE_MODES says 13 charge / 14 discharge / 16 standby, and it was
-    # inferred from the phone app's APK, never observed. They are independent
-    # evidence about the same field. Editing either to match the other
-    # destroys the only way to tell which is right.
+    # VPP_ACTIVE_MODES says 13 charge / 14 discharge / 16 standby. Per
+    # hyxi_cloud_api's own comment, that's confirmed via live observation of
+    # the *cloud* workMode field plus community register documentation --
+    # but it has never been cross-checked against a HALO unit's actual
+    # Modbus registers, so it's still independent evidence about the same
+    # field, not corroboration. Editing either to match the other destroys
+    # the only way to tell which is right over Modbus.
     # See docs/modbus-provenance.md, rule 1.
     switch_status = integer(4100, signed=False)
     """Power on/off state. 0 off, 1 on."""
