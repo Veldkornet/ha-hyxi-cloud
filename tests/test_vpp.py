@@ -96,7 +96,14 @@ from custom_components.hyxi_cloud.const import is_battery_control_enabled
 
 
 def test_vpp_dispatch_sensor_on_during_active_dispatch():
-    """VPP binary sensor is ON only during confirmed dispatch modes (13=charge, 14=discharge)."""
+    """VPP binary sensor is ON only during confirmed dispatch modes (13=charge, 14=discharge).
+
+    Reads workMode -- the only field the cloud API actually populates.
+    vppCode/vppName/vppManufacturer/vppSupplierName never existed in
+    hyxi_cloud_api and were removed along with the vppMode key mismatch
+    that made this sensor permanently read as "off" regardless of the
+    real device state.
+    """
     coordinator = MagicMock()
     entry = MagicMock()
     entry.entry_id = "test_entry"
@@ -105,49 +112,15 @@ def test_vpp_dispatch_sensor_on_during_active_dispatch():
         "custom_components.hyxi_cloud.binary_sensor.VPP_ACTIVE_MODES",
         frozenset({"13", "14"}),
     ):
-        # Mode 13 and 14 must trigger the sensor
         for active_mode in (13, 14):
-            coordinator.data = {
-                "SN123": {
-                    "metrics": {
-                        "vppMode": active_mode,
-                        "vppCode": "VPP1",
-                        "vppName": "Virtual Power Plant",
-                        "vppManufacturer": "HYXI",
-                        "vppSupplierName": "Supplier",
-                    }
-                }
-            }
+            coordinator.data = {"SN123": {"metrics": {"workMode": active_mode}}}
             sensor = binary_sensor_mod.HyxiVppDispatchSensor(
                 coordinator, entry, "SN123", {}
             )
             assert sensor.is_on is True, (
                 f"Mode {active_mode} should activate the VPP sensor"
             )
-            attrs = sensor.extra_state_attributes
-            assert attrs["vpp_mode"] == str(active_mode)
-            assert attrs["vpp_code"] == "VPP1"
-            assert attrs["vpp_name"] == "Virtual Power Plant"
-
-        # Active dispatch with empty detail fields — fallback attributes
-        for active_mode in (13, 14):
-            coordinator.data["SN123"]["metrics"] = {
-                "vppMode": active_mode,
-                "vppCode": "",
-                "vppName": "",
-                "vppManufacturer": "",
-                "vppSupplierName": "",
-            }
-            sensor_int = binary_sensor_mod.HyxiVppDispatchSensor(
-                coordinator, entry, "SN123", {}
-            )
-            assert sensor_int.is_on is True
-            attrs = sensor_int.extra_state_attributes
-            assert attrs["vpp_mode"] == str(active_mode)
-            assert attrs["vpp_code"] == "Active"
-            assert attrs["vpp_name"] == "Active VPP"
-            assert attrs["vpp_manufacturer"] == "Enrolled"
-            assert attrs["vpp_supplier_name"] == "Enrolled (Active VPP)"
+            assert sensor.extra_state_attributes == {"work_mode": str(active_mode)}
 
 
 def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
@@ -161,17 +134,7 @@ def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
         frozenset({"13", "14"}),
     ):
         for inactive_mode in ("16", "0", "1", "2", "3"):
-            coordinator.data = {
-                "SN123": {
-                    "metrics": {
-                        "vppMode": inactive_mode,
-                        "vppCode": "",
-                        "vppName": "",
-                        "vppManufacturer": "",
-                        "vppSupplierName": "",
-                    }
-                }
-            }
+            coordinator.data = {"SN123": {"metrics": {"workMode": inactive_mode}}}
             sensor = binary_sensor_mod.HyxiVppDispatchSensor(
                 coordinator, entry, "SN123", {}
             )
@@ -179,16 +142,13 @@ def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
                 f"Mode {inactive_mode!r} should NOT activate the VPP sensor"
             )
 
-        # Verify not-enrolled attribute fallback for mode 0
-        coordinator.data["SN123"]["metrics"]["vppMode"] = "0"
+        # No workMode reported at all -- falls back to "None", not a crash.
+        coordinator.data["SN123"]["metrics"] = {}
         sensor = binary_sensor_mod.HyxiVppDispatchSensor(
             coordinator, entry, "SN123", {}
         )
-        attrs = sensor.extra_state_attributes
-        assert attrs["vpp_code"] == "None"
-        assert attrs["vpp_name"] == "None"
-        assert attrs["vpp_manufacturer"] == "Not enrolled"
-        assert attrs["vpp_supplier_name"] == "Not enrolled"
+        assert sensor.is_on is False
+        assert sensor.extra_state_attributes == {"work_mode": "None"}
 
 
 def test_is_battery_control_enabled_helper():

@@ -254,6 +254,13 @@ class HyxiVppDispatchSensor(
 
     Use this entity in automations to detect VPP activity and suppress
     any conflicting home automation rules.
+
+    Reads workMode, not a dedicated VPP field -- the cloud API has no such
+    field, only workMode (see hyxi_cloud_api.HyxiApiClient.VPP_ACTIVE_MODES,
+    which documents which workMode values mean an active dispatch). Purely
+    informational: nothing in this integration currently gates control
+    entities on VPP state, so this cannot suppress a conflicting manual
+    command by itself -- only report that one may be in progress.
     """
 
     _attr_device_class = BinarySensorDeviceClass.RUNNING
@@ -272,20 +279,20 @@ class HyxiVppDispatchSensor(
             "manufacturer": MANUFACTURER,
             "model": dev_data.get("model"),
         }
-        self._last_vpp_mode = self._metrics.get("vppMode")
+        self._last_work_mode = self._metrics.get("workMode")
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator, logging mode transitions."""
-        new_mode = self._metrics.get("vppMode")
-        if new_mode != self._last_vpp_mode:
+        new_mode = self._metrics.get("workMode")
+        if new_mode != self._last_work_mode:
             _LOGGER.debug(
                 "VPP dispatch %s: mode %s -> %s",
                 mask_sn(self.sn),
-                self._last_vpp_mode,
+                self._last_work_mode,
                 new_mode,
             )
-            self._last_vpp_mode = new_mode
+            self._last_work_mode = new_mode
         super()._handle_coordinator_update()
 
     @property
@@ -295,39 +302,19 @@ class HyxiVppDispatchSensor(
     @property
     def is_on(self) -> bool:
         """Return True when an active VPP mode is in progress."""
-        return str(self._metrics.get("vppMode")) in VPP_ACTIVE_MODES
+        return str(self._metrics.get("workMode")) in VPP_ACTIVE_MODES
 
     @property
     def extra_state_attributes(self) -> dict:
-        """Expose VPP programme details for dashboard and debugging."""
-        m = self._metrics
-        mode = str(m.get("vppMode")) if m.get("vppMode") is not None else ""
-        code = m.get("vppCode") or ""
-        name = m.get("vppName") or ""
-        supplier = m.get("vppSupplierName") or ""
-        manufacturer = m.get("vppManufacturer") or ""
+        """Expose the raw workMode value this sensor's state is derived from.
 
-        # If VPP is active but details are empty (common via OpenAPI which lacks
-        # the app-only vppSupplier endpoint), provide clean fallbacks instead of
-        # contradicting "Not enrolled" labels.
-        is_active = str(mode) in VPP_ACTIVE_MODES
-        if is_active:
-            if not supplier:
-                supplier = "Enrolled (Active VPP)"
-            if not manufacturer:
-                manufacturer = "Enrolled"
-            if not name:
-                name = "Active VPP"
-            if not code:
-                code = "Active"
-
-        return {
-            "vpp_mode": mode or "None",
-            "vpp_code": code or "None",
-            "vpp_name": name or "None",
-            "vpp_manufacturer": manufacturer or "Not enrolled",
-            "vpp_supplier_name": supplier or "Not enrolled",
-        }
+        No programme name/supplier/manufacturer detail here -- the cloud API
+        has no field for any of that; showing invented placeholders for data
+        that was never actually available would be worse than showing
+        nothing.
+        """
+        mode = self._metrics.get("workMode")
+        return {"work_mode": "None" if mode is None else str(mode)}
 
 
 class EMBinarySensor(BinarySensorEntity):
