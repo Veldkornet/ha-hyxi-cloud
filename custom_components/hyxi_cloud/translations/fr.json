@@ -35,7 +35,7 @@
     "step": {
       "init": {
         "title": "Configuration du système HYXI",
-        "description": "Ajustez la façon dont votre intégration communique avec le cloud HYXI.\n\nSi les commandes sont verrouillées en raison d'une détection VPP faussement positive (par exemple, workMode 16 normal), cochez **Override VPP Lock** pour les restaurer.\n\n---",
+        "description": "Ajustez la façon dont votre intégration communique avec le cloud HYXI.\n\n> ⚠️ **Contrôle de l'appareil** : Activez avec prudence si votre onduleur est déjà géré par votre fournisseur d'énergie ou inscrit à un programme de centrale électrique virtuelle (VPP). L'envoi de commandes pendant que votre fournisseur a le contrôle peut entrer en conflit avec son calendrier de répartition.\n\n---",
         "data": {
           "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)",
           "back_discovery": "Activer la découverte via les alarmes (Avancé)",

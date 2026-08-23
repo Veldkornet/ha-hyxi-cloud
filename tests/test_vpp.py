@@ -120,7 +120,7 @@ def test_vpp_dispatch_sensor_on_during_active_dispatch():
             assert sensor.is_on is True, (
                 f"Mode {active_mode} should activate the VPP sensor"
             )
-            assert sensor.extra_state_attributes == {"work_mode": str(active_mode)}
+            assert sensor.extra_state_attributes == {"work_mode": active_mode}
 
 
 def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
@@ -142,11 +142,11 @@ def test_vpp_dispatch_sensor_off_in_standby_and_normal_modes():
                 f"Mode {inactive_mode!r} should NOT activate the VPP sensor"
             )
 
-        # No workMode reported at all -- falls back to "None", not a crash.
+        # No workMode reported at all -- falls back to None, not a crash.
         coordinator.data["SN123"]["metrics"] = {}
         sensor = binary_sensor_mod.HyxiWorkModeSensor(coordinator, entry, "SN123", {})
         assert sensor.is_on is False
-        assert sensor.extra_state_attributes == {"work_mode": "None"}
+        assert sensor.extra_state_attributes == {"work_mode": None}
 
 
 def test_is_battery_control_enabled_helper():

@@ -255,8 +255,8 @@ class HyxiWorkModeSensor(
     Named after the field it actually reads (workMode) rather than "VPP
     Dispatch" -- the cloud API has no dedicated VPP field, and there is no
     VPP programme name/supplier/manufacturer detail available to show,
-    only this one number (see hyxi_cloud_api.HyxiApiClient.VPP_ACTIVE_MODES,
-    which documents which workMode values mean an active dispatch). Purely
+    only this one number (see hyxi_cloud_api.VPP_ACTIVE_MODES, which
+    documents which workMode values mean an active dispatch). Purely
     informational: nothing in this integration currently gates control
     entities on this state, so it cannot suppress a conflicting manual
     command by itself -- only report that one may be in progress. Use it
@@ -280,12 +280,12 @@ class HyxiWorkModeSensor(
             "manufacturer": MANUFACTURER,
             "model": dev_data.get("model"),
         }
-        self._last_work_mode = self._metrics.get("workMode")
+        self._last_work_mode = self._normalized_work_mode
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator, logging mode transitions."""
-        new_mode = self._metrics.get("workMode")
+        new_mode = self._normalized_work_mode
         if new_mode != self._last_work_mode:
             _LOGGER.debug(
                 "Work mode %s: %s -> %s",
@@ -301,12 +301,23 @@ class HyxiWorkModeSensor(
         return (self.coordinator.data.get(self.sn) or {}).get("metrics", {})
 
     @property
+    def _normalized_work_mode(self) -> str | None:
+        """workMode as a string, or None if the metric is missing.
+
+        Used only for transition detection/logging so that a coordinator
+        update reporting the same mode as a different Python type (e.g. int
+        13 vs str "13") doesn't get logged as a spurious transition.
+        """
+        mode = self._metrics.get("workMode")
+        return None if mode is None else str(mode)
+
+    @property
     def is_on(self) -> bool:
         """Return True when an active VPP mode is in progress."""
         return str(self._metrics.get("workMode")) in VPP_ACTIVE_MODES
 
     @property
-    def extra_state_attributes(self) -> dict:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Expose the raw workMode value this sensor's state is derived from.
 
         No programme name/supplier/manufacturer detail here -- the cloud API
@@ -314,8 +325,7 @@ class HyxiWorkModeSensor(
         that was never actually available would be worse than showing
         nothing.
         """
-        mode = self._metrics.get("workMode")
-        return {"work_mode": "None" if mode is None else str(mode)}
+        return {"work_mode": self._metrics.get("workMode")}
 
 
 class EMBinarySensor(BinarySensorEntity):

@@ -35,7 +35,7 @@
     "step": {
       "init": {
         "title": "Configuração do Sistema HYXI",
-        "description": "Ajuste como a integração se comunica com o HYXI Cloud.\n\nSe os controlos estiverem bloqueados devido a uma deteção de VPP falso positivo (por exemplo, workMode 16 normal), selecione **Override VPP Lock** para os restaurar.\n\n---",
+        "description": "Ajuste como a integração se comunica com o HYXI Cloud.\n\n> ⚠️ **Controlo do Dispositivo**: Ative com cautela se o seu inversor já estiver a ser gerido pelo seu fornecedor de energia ou estiver inscrito num programa de Central Elétrica Virtual (VPP). O envio de comandos enquanto o fornecedor tem o controlo pode entrar em conflito com o seu calendário de despacho.\n\n---",
         "data": {
           "update_interval": "Intervalo de Atualização (1-60 minutos, padrão: 5)",
           "back_discovery": "Habilitar descoberta via alarmes (Avançado)",

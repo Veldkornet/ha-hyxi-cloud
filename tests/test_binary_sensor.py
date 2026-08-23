@@ -2,6 +2,7 @@
 
 # pylint: disable=redefined-outer-name,import-outside-toplevel,unused-import,wrong-import-order,wrong-import-position
 import importlib
+import logging
 import sys
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -381,6 +382,24 @@ def test_vpp_dispatch_sensor_handle_coordinator_update_logs_transition(
     # Same mode again -> no transition, cached value unchanged.
     sensor._handle_coordinator_update()  # pylint: disable=protected-access
     assert sensor._last_work_mode == "2"  # pylint: disable=protected-access
+
+
+def test_vpp_dispatch_sensor_no_false_transition_on_type_change(
+    mock_coordinator, mock_entry, caplog
+):
+    """Same mode reported as a different Python type (int vs str) across
+    polls must not be logged as a transition -- comparison is normalized
+    to string, independent of the raw value extra_state_attributes exposes.
+    """
+    caplog.set_level(logging.DEBUG)
+    mock_coordinator.data["SN123"]["metrics"] = {"workMode": "13"}
+    sensor = bs_mod.HyxiWorkModeSensor(mock_coordinator, mock_entry, "SN123", {})
+
+    caplog.clear()
+    mock_coordinator.data["SN123"]["metrics"] = {"workMode": 13}
+    sensor._handle_coordinator_update()  # pylint: disable=protected-access
+    assert sensor._last_work_mode == "13"  # pylint: disable=protected-access
+    assert not [r for r in caplog.records if "Work mode" in r.getMessage()]
 
 
 @pytest.fixture

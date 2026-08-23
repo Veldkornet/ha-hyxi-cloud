@@ -35,7 +35,7 @@
     "step": {
       "init": {
         "title": "HYXI-stelselkonfigurasie",
-        "description": "Pas aan hoe jou integrasie met die HYXI Cloud kommunikeer.\n\nAs kontroles gesluit is as gevolg van 'n vals-positiewe VPP-opsporing (bv. normale workMode 16), merk **Override VPP Lock** om hulle te herstel.\n\n---",
+        "description": "Pas aan hoe jou integrasie met die HYXI Cloud kommunikeer.\n\n> ⚠️ **Toestelbeheer**: Skakel met omsigtigheid in as jou omsetter reeds deur jou energieverskaffer bestuur word of by 'n Virtuele Kragstasie (VPP)-program ingeskryf is. Die stuur van opdragte terwyl jou verskaffer beheer het, kan met hul dispatch-skedule bots.\n\n---",
         "data": {
           "update_interval": "Opvragsinterval (1-60 minute, verstek: 5)",
           "back_discovery": "Aktiveer ontdekking via alarms (Gevorderd)",
