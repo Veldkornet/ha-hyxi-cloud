@@ -89,9 +89,6 @@ Beta releases get the same testing as any other release, but haven't accumulated
 > 1. Go to **Settings > Devices & Services** > **HYXI**.
 > 2. Click the **Configure** button on the integration card.
 > 3. Check the box for **"Enable Device Control & Protection"** and save. The integration will reload and all control entities will appear.
->
-> **VPP Lockout Safety:** If a Virtual Power Plant (VPP) dispatch is active (i.e. your energy provider is actively controlling your device), controls will be automatically disabled/locked out in Home Assistant to prevent command conflicts.
-> - *Bypassing the Lockout:* You can bypass this lockout by checking the **"Override VPP Lock (force-enable controls during VPP)"** option in the Configure card. **Warning:** Enabling this could interfere with grid management commands sent by your energy provider.
 
 
 This integration supports writing control commands to compatible inverters via the HYXI Cloud API.

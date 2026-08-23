@@ -95,7 +95,7 @@
     "step": {
       "init": {
         "title": "HYXI Systemkonfiguration",
-        "description": "Passen Sie an, wie Ihre Integration mit HYXI kommuniziert.\n\nWenn die Steuerung aufgrund einer falsch-positiven VPP-Erkennung (z. B. normaler workMode 16) gesperrt ist, aktivieren Sie **Override VPP Lock**, um sie wiederherzustellen.\n\n---",
+        "description": "Passen Sie an, wie Ihre Integration mit HYXI kommuniziert.\n\n> ⚠️ **Gerätesteuerung**: Aktivieren Sie dies mit Vorsicht, wenn Ihr Wechselrichter bereits von Ihrem Energieversorger verwaltet wird oder an einem Virtual-Power-Plant-Programm (VPP) teilnimmt. Das Senden von Befehlen, während Ihr Versorger die Kontrolle hat, kann mit dessen Dispatch-Zeitplan in Konflikt geraten.\n\n---",
         "data": {
           "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
           "back_discovery": "Discovery über Alarme aktivieren (Erweitert)",
@@ -140,8 +140,8 @@
       "em_high_load_detected": {
         "name": "Hohe Last erkannt"
       },
-      "vpp_dispatch": {
-        "name": "VPP-Dispatch",
+      "work_mode": {
+        "name": "Arbeitsmodus",
         "state": {
           "off": "Standby",
           "on": "Aktiv"
