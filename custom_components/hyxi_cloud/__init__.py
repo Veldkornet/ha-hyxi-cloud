@@ -106,6 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _async_register_devices(hass, entry, coordinator)
 
     _remove_legacy_select_entities(hass, coordinator.data)
+    _migrate_vpp_dispatch_to_work_mode(hass, entry, coordinator.data)
     _cleanup_control_entities(hass, entry, coordinator)
     await _async_setup_battery_protection(hass, coordinator)
     _async_setup_energy_manager(hass, entry, coordinator)
@@ -327,6 +328,51 @@ def _remove_legacy_select_entities(hass: HomeAssistant, devices: dict) -> None:
             if entity_id is not None:
                 _LOGGER.debug("Removing legacy HYXI select entity %s", entity_id)
                 registry.async_remove(entity_id)
+
+
+def _migrate_vpp_dispatch_to_work_mode(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Migrate HyxiVppDispatchSensor's unique_id after its rename to
+    HyxiWorkModeSensor.
+
+    The entity was renamed from "vpp_dispatch" to "work_mode" to match the
+    metric key it actually reads (the cloud API has no dedicated VPP
+    field). Without this, every existing install would get a fresh,
+    history-less entity at a new entity_id on upgrade, while the old one
+    goes permanently unavailable in the registry -- dangling, not gone,
+    until a user notices and deletes it by hand. Cheap and safe to run on
+    every setup: a no-op once the old unique_id no longer exists.
+    """
+    registry = er.async_get(hass)
+    for sn in devices:
+        old_unique_id = f"{entry.entry_id}_{sn}_vpp_dispatch"
+        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, old_unique_id)
+        if entity_id is None:
+            continue
+        new_unique_id = f"{entry.entry_id}_{sn}_work_mode"
+        if (
+            registry.async_get_entity_id("binary_sensor", DOMAIN, new_unique_id)
+            is not None
+        ):
+            # Both the legacy and the renamed entity already exist for this
+            # device (e.g. a previous migration attempt partially
+            # completed). async_update_entity would raise ValueError on the
+            # unique_id collision and abort the whole config entry setup --
+            # instead keep the work_mode entity (already the live one, with
+            # whatever history it has) and drop the now-redundant legacy
+            # duplicate.
+            _LOGGER.debug(
+                "Removing orphaned legacy vpp_dispatch entity %s; %s already exists",
+                entity_id,
+                new_unique_id,
+            )
+            registry.async_remove(entity_id)
+            continue
+        _LOGGER.debug(
+            "Migrating %s from vpp_dispatch to work_mode unique_id", entity_id
+        )
+        registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
 
 
 def _cleanup_control_entities(

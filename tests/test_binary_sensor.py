@@ -2,6 +2,7 @@
 
 # pylint: disable=redefined-outer-name,import-outside-toplevel,unused-import,wrong-import-order,wrong-import-position
 import importlib
+import logging
 import sys
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -157,7 +158,7 @@ async def test_async_setup_entry_adds_vpp_dispatch_sensor(mock_coordinator, mock
     await bs_mod.async_setup_entry(hass, mock_entry, async_add_entities)
 
     entities = async_add_entities.call_args[0][0]
-    assert any(isinstance(e, bs_mod.HyxiVppDispatchSensor) for e in entities)
+    assert any(isinstance(e, bs_mod.HyxiWorkModeSensor) for e in entities)
 
 
 @pytest.mark.asyncio
@@ -368,19 +369,37 @@ def test_connectivity_sensor_always_available(mock_coordinator, mock_entry):
 def test_vpp_dispatch_sensor_handle_coordinator_update_logs_transition(
     mock_coordinator, mock_entry
 ):
-    """Test that a VPP mode change is logged and tracked, and no-change is silent."""
-    mock_coordinator.data["SN123"]["metrics"] = {"vppMode": "1"}
-    sensor = bs_mod.HyxiVppDispatchSensor(mock_coordinator, mock_entry, "SN123", {})
-    assert sensor._last_vpp_mode == "1"  # pylint: disable=protected-access
+    """Test that a work mode change is logged and tracked, and no-change is silent."""
+    mock_coordinator.data["SN123"]["metrics"] = {"workMode": "1"}
+    sensor = bs_mod.HyxiWorkModeSensor(mock_coordinator, mock_entry, "SN123", {})
+    assert sensor._last_work_mode == "1"  # pylint: disable=protected-access
 
     # Mode changes -> logged and cached value updated.
-    mock_coordinator.data["SN123"]["metrics"] = {"vppMode": "2"}
+    mock_coordinator.data["SN123"]["metrics"] = {"workMode": "2"}
     sensor._handle_coordinator_update()  # pylint: disable=protected-access
-    assert sensor._last_vpp_mode == "2"  # pylint: disable=protected-access
+    assert sensor._last_work_mode == "2"  # pylint: disable=protected-access
 
     # Same mode again -> no transition, cached value unchanged.
     sensor._handle_coordinator_update()  # pylint: disable=protected-access
-    assert sensor._last_vpp_mode == "2"  # pylint: disable=protected-access
+    assert sensor._last_work_mode == "2"  # pylint: disable=protected-access
+
+
+def test_vpp_dispatch_sensor_no_false_transition_on_type_change(
+    mock_coordinator, mock_entry, caplog
+):
+    """Same mode reported as a different Python type (int vs str) across
+    polls must not be logged as a transition -- comparison is normalized
+    to string, independent of the raw value extra_state_attributes exposes.
+    """
+    caplog.set_level(logging.DEBUG)
+    mock_coordinator.data["SN123"]["metrics"] = {"workMode": "13"}
+    sensor = bs_mod.HyxiWorkModeSensor(mock_coordinator, mock_entry, "SN123", {})
+
+    caplog.clear()
+    mock_coordinator.data["SN123"]["metrics"] = {"workMode": 13}
+    sensor._handle_coordinator_update()  # pylint: disable=protected-access
+    assert sensor._last_work_mode == "13"  # pylint: disable=protected-access
+    assert not [r for r in caplog.records if "Work mode" in r.getMessage()]
 
 
 @pytest.fixture

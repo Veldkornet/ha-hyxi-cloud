@@ -35,7 +35,7 @@
     "step": {
       "init": {
         "title": "HYXI Systeemconfiguratie",
-        "description": "Pas aan hoe uw integratie communiceert met de HYXI Cloud.\n\nAls bedieningselementen zijn vergrendeld vanwege een valse VPP-detectie (bijv. normale workMode 16), vink dan **Override VPP Lock** aan om ze te herstellen.\n\n---",
+        "description": "Pas aan hoe uw integratie communiceert met de HYXI Cloud.\n\n> ⚠️ **Apparaatbediening**: Schakel dit voorzichtig in als uw omvormer al wordt beheerd door uw energieleverancier of is aangemeld voor een Virtual Power Plant (VPP)-programma. Het verzenden van commando's terwijl uw leverancier de controle heeft, kan in strijd zijn met hun dispatch-schema.\n\n---",
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
           "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)",
@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Hoge Belasting Gedetecteerd"
       },
-      "vpp_dispatch": {
-        "name": "VPP-dispatch",
+      "work_mode": {
+        "name": "Werkmodus",
         "state": {
           "off": "Standby",
           "on": "Actief"

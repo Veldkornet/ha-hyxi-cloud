@@ -35,7 +35,7 @@
     "step": {
       "init": {
         "title": "HYXI rendszerkonfiguráció",
-        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\nHa a vezérlők zárolva vannak egy hamis pozitív VPP észlelés miatt (pl. normál workMode 16), jelölje be a **Override VPP Lock** opciót a visszaállításukhoz.\n\n---",
+        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\n> ⚠️ **Eszközvezérlés**: Óvatosan engedélyezze, ha az invertert már az energiaszolgáltatója kezeli, vagy részt vesz egy Virtuális Erőmű (VPP) programban. A parancsok küldése, amíg a szolgáltatója rendelkezik az irányítással, ütközhet az ő diszpécseri ütemezésével.\n\n---",
         "data": {
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
           "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)",
@@ -80,8 +80,8 @@
       "em_high_load_detected": {
         "name": "Magas terhelés észlelve"
       },
-      "vpp_dispatch": {
-        "name": "VPP diszpécselés",
+      "work_mode": {
+        "name": "Munkamód",
         "state": {
           "off": "Készenlét",
           "on": "Aktív"
