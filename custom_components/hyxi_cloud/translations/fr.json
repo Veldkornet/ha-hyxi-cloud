@@ -83,7 +83,8 @@
       "unknown": "Une erreur inattendue est survenue",
       "no_devices": "Aucune centrale ni aucun appareil trouvé. Si votre adresse e-mail de développeur diffère de celle de votre application, vous devez d'abord partager votre centrale depuis l'application avec l'adresse e-mail de développeur.",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
+      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
     },
     "abort": {
       "already_configured": "Ce compte HYXI est déjà configuré.",

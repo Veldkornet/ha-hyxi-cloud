@@ -83,7 +83,8 @@
       "unknown": "Tapahtui odottamaton virhe",
       "no_devices": "Laitoksia tai laitteita ei löytynyt. Jos kehittäjän sähköpostiosoitteesi eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin jaettava laitoksesi sovelluksesta kehittäjän sähköpostiosoitteeseen.",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
+      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
     },
     "abort": {
       "already_configured": "Tämä HYXI-tili on jo määritetty.",

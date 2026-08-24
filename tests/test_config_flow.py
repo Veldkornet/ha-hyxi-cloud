@@ -1272,21 +1272,6 @@ async def test_modbus_serial_creates_entry_and_coerces_types(modbus_flow):
 
 
 @pytest.mark.asyncio
-async def test_modbus_exception_response_still_counts_as_reachable(modbus_flow):
-    """A device that rejects the address has still proven it is on the bus."""
-    fake = _fake_modbus_modules()
-    fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusError())
-    modbus_flow._modbus_type = "tcp"
-
-    with _install_modbus(fake.root, fake.backend):
-        result = await modbus_flow.async_step_modbus_tcp(
-            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
-        )
-
-    assert result["type"] == "entry"
-
-
-@pytest.mark.asyncio
 async def test_modbus_all_probe_points_timing_out_reports_no_device(modbus_flow):
     fake = _fake_modbus_modules()
     fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusTimeout())
@@ -1406,11 +1391,13 @@ async def test_modbus_detects_halo_family_when_only_its_signature_answers(
 
 
 @pytest.mark.asyncio
-async def test_modbus_falls_back_to_default_family_when_unidentified(
-    modbus_flow, caplog
-):
+async def test_modbus_refuses_to_guess_family_when_unidentified(modbus_flow, caplog):
     """A device that answers only with exceptions is confirmed present, but
-    neither signature identifies it -- falls back rather than refusing."""
+    neither signature identifies it -- these two registers are the only
+    thing distinguishing "definitely a HALO or hybrid inverter" from "some
+    other Modbus device on this bus", so guessing wrong here would create
+    an entry reading (and writing) another device's registers under the
+    wrong map. Refuses rather than defaulting."""
     fake = _fake_modbus_modules()
     fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusError())
     modbus_flow._modbus_type = "tcp"
@@ -1420,9 +1407,9 @@ async def test_modbus_falls_back_to_default_family_when_unidentified(
             user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
         )
 
-    assert result["type"] == "entry"
-    assert result["data"]["modbus_family"] == "hybrid"
-    assert "defaulting to" in caplog.text
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "unidentified_family"}
+    assert "refusing to guess" in caplog.text
 
 
 # --- Wire-framing detection: does a TCP gateway that only answers under the

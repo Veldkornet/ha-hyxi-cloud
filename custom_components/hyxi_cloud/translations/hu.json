@@ -83,7 +83,8 @@
       "unknown": "Váratlan hiba történt",
       "no_devices": "Nem található erőmű vagy eszköz. Ha a fejlesztői e-mail-címe eltér az alkalmazás e-mail-címétől, először meg kell osztania az erőművét az alkalmazásból a fejlesztői e-mail-címmel.",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
+      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
     },
     "abort": {
       "already_configured": "Ez a HYXI fiók már be van konfigurálva.",

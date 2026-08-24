@@ -83,7 +83,8 @@
       "unknown": "发生未知错误",
       "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
+      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
     },
     "abort": {
       "already_configured": "该 HYXI 账号已配置。",

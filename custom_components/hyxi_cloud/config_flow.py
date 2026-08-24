@@ -356,7 +356,16 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         Every signature is tried before giving up, rather than returning on
         the first exception, so a device that happens to reject its own
         family's earlier-tried signature but answer a later one is still
-        identified correctly instead of falling through to the default.
+        identified correctly instead of falling through to a guess.
+
+        A device that answers but confirms neither family is refused
+        rather than defaulted to one of them -- these two signatures are
+        the only thing standing between "definitely a HALO or hybrid
+        inverter" and "some other Modbus device that happens to be on
+        this bus", and guessing wrong here doesn't fail loudly: it
+        creates an entry that reads (and writes) another device's
+        registers under the wrong map, with nothing louder than a log
+        line to say so.
         """
         try:
             from modbus_connection import ModbusExceptionError, ModbusTimeoutError
@@ -414,12 +423,11 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             if reachable:
                 _LOGGER.warning(
                     "Modbus device on unit %s is reachable but answered no "
-                    "known signature register with a value; defaulting to "
-                    "%s. If sensors look wrong, this guess may be why.",
+                    "known signature register with a value -- refusing to "
+                    "guess which family it is",
                     unit_id,
-                    DEFAULT_MODBUS_FAMILY,
                 )
-                return None, DEFAULT_MODBUS_FAMILY
+                return "unidentified_family", DEFAULT_MODBUS_FAMILY
 
             _LOGGER.debug(
                 "Modbus probe: unit %s answered none of %d signature registers",
@@ -444,16 +452,17 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         Nothing in the setup form distinguishes a gateway that tunnels raw
         RTU frames over a plain TCP socket from one that speaks native
         Modbus-TCP/MBAP framing and translates to RTU on the wire itself
-        (see MODBUS_TCP_FRAMERS's definition for concrete examples), and
-        getting it wrong doesn't degrade gracefully into "wrong family" the
-        way a real device answering an unexpected register does -- it's a
-        hard framing mismatch, so every read behaves as if the device
-        weren't there at all (a timeout) or as a transport-level failure.
-        Both of those are exactly the signals _probe_and_detect_modbus
-        already reports as "no_device" or "cannot_connect", so retrying
-        under the next framer on either one -- rather than only on a
-        harder failure -- is what actually distinguishes "wrong framer"
-        from "no device at this address".
+        (see MODBUS_TCP_FRAMERS's definition for concrete examples). A
+        wrong framer is a hard framing mismatch, not a real exchange with
+        the device -- every read behaves as if it weren't there at all (a
+        timeout) or as a transport-level failure, exactly the signals
+        _probe_and_detect_modbus already reports as "no_device" or
+        "cannot_connect", so retrying under the next framer on either one
+        is what actually distinguishes "wrong framer" from "no device at
+        this address". "unidentified_family" is deliberately excluded
+        from that retry: it requires a well-formed Modbus exception
+        response, which only a *correctly* framed exchange can produce --
+        retrying it under the other framer would not change the outcome.
         """
         from modbus_connection import ModbusTcpParams
 

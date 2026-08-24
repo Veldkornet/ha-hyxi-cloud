@@ -83,7 +83,8 @@
       "unknown": "Beklenmedik bir hata oluştu",
       "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız.",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
+      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
     },
     "abort": {
       "already_configured": "Bu HYXI hesabı zaten yapılandırılmış.",

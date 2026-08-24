@@ -83,7 +83,8 @@
       "unknown": "予期しないエラーが発生しました",
       "no_devices": "プラントまたはデバイスが見つかりません。開発者用メールアドレスがアプリ用メールアドレスと異なる場合は、まずアプリから開発者用メールアドレスにプラントを共有する必要があります。",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
+      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
     },
     "abort": {
       "already_configured": "このHYXIアカウントは既に設定されています。",
