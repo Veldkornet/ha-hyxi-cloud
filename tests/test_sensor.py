@@ -223,11 +223,11 @@ async def test_async_setup_entry_adds_microinverter_summary(mock_entry):
     coord.data = {
         "SN_MICRO_1": {
             "device_type_code": "MICRO_INVERTER",
-            "metrics": {"acP": "18.0", "eToday": "4.51"},
+            "metrics": {"acP": "18.0", "efpv": "4.51"},
         },
         "SN_MICRO_2": {
             "device_type_code": "MICRO_INVERTER",
-            "metrics": {"acP": "22.5", "eToday": "3.29"},
+            "metrics": {"acP": "22.5", "efpv": "3.29"},
         },
     }
     coord.hyxi_metadata = {"last_success": "2026-03-11T12:00:00Z"}

@@ -122,16 +122,16 @@ def multi_micro_inverter_coordinator():
     coordinator.data = {
         "SN_MICRO_1": {
             "device_type_code": "MICRO_INVERTER",
-            "metrics": {"acP": 18.0, "eToday": 4.51},
+            "metrics": {"acP": 18.0, "efpv": 4.51},
         },
         "SN_MICRO_2": {
             "device_type_code": "MICRO_INVERTER",
-            "metrics": {"acP": 22.5, "eToday": 3.29},
+            "metrics": {"acP": 22.5, "efpv": 3.29},
         },
         # Null/placeholder metric values must be skipped, not treated as 0
         "SN_MICRO_3": {
             "device_type_code": "MICRO_INVERTER",
-            "metrics": {"acP": "--", "eToday": None},
+            "metrics": {"acP": "--", "efpv": None},
         },
         # A hybrid inverter in the same plant must not be counted in the sum
         "SN_HYBRID": {
@@ -169,7 +169,7 @@ def test_microinverter_sum_sensor_daily_yield(multi_micro_inverter_coordinator):
     description.key = "micro_daily_yield_total"
 
     sensor = sensor_mod.HyxiMicroinverterSumSensor(
-        multi_micro_inverter_coordinator, entry, "eToday", description
+        multi_micro_inverter_coordinator, entry, "efpv", description
     )
 
     assert sensor.native_value == 7.8  # 4.51 + 3.29, rounded
