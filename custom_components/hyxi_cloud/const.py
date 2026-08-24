@@ -130,12 +130,20 @@ MODBUS_TCP_FRAMERS: tuple[Literal["rtu", "socket"], ...] = ("rtu", "socket")
 CONF_MODBUS_FAMILY = "modbus_family"
 MODBUS_FAMILY_HALO = "halo"
 MODBUS_FAMILY_HYBRID = "hybrid"
-# Falls back here when a device is confirmed reachable but answers neither
-# signature register with a value (an unusual firmware, or a Modbus stack
-# that silently zero-fills undefined addresses instead of raising an
-# exception). Hybrid is the stronger-evidenced document of the two -- the
-# vendor's current one, for the exact hardware this transport was built
-# against -- so it is the safer default to fall back to.
+# Two different jobs, both about there being no confirmed family to use:
+# - In config_flow._probe_and_detect_modbus, a placeholder returned
+#   alongside every error path (unidentified device, no response,
+#   connection failure, library missing) where no family is ever
+#   persisted, since an error there means no entry gets created. A device
+#   that's confirmed reachable but answers neither signature register is
+#   refused rather than guessed at, so this value never actually picks a
+#   register map at setup time.
+# - In __init__.py's coordinator builder, a genuine fallback for an entry
+#   created before CONF_MODBUS_FAMILY existed at all and so carries none
+#   -- absence there means the newer, stronger-evidenced default, the
+#   same way entry_transport() covers pre-Modbus entries. Hybrid is the
+#   stronger-evidenced document of the two -- the vendor's current one,
+#   for the exact hardware this transport was built against.
 DEFAULT_MODBUS_FAMILY = MODBUS_FAMILY_HYBRID
 
 # One register from each family that's cheap and safe to read: HALO's BMS
