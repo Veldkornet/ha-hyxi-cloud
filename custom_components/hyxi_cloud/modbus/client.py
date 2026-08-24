@@ -349,6 +349,14 @@ class HyxiModbusClient:
             "ratedPower": self.identity.rated_power,
             "ratedFrequency": self.identity.rated_frequency,
             "ratedVoltage": self.identity.rated_voltage,
+            # ARM is the primary control processor, DSP a real-time
+            # co-processor for power electronics -- the same
+            # primary/secondary split the cloud API's "Master"/"Secondary"
+            # labels describe. sw_version above already treats arm_version
+            # as *the* firmware version for the device page on this same
+            # reasoning.
+            "swVerMaster": _hex_identifier(self.identity.arm_version),
+            "swVerSlave": _hex_identifier(self.identity.dsp_version),
             # Grid side. gridP stays in kW -- see the docstring. gridQ/gridAp
             # reuse _to_watts for its *1000 scaling only -- the register is
             # kW-scaled regardless of whether the quantity is real, reactive

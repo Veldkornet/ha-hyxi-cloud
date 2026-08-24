@@ -157,6 +157,10 @@ async def test_read_all_decodes_the_documented_values(client):
     assert metrics["f"] == 50.01
     assert metrics["packNum"] == 1
     assert metrics["batSn"] == "4213571357"
+    # ARM (main control) and DSP (power electronics co-processor) versions,
+    # matching the same primary/secondary split "Master"/"Secondary" name.
+    assert metrics["swVerMaster"] == "2030021"
+    assert metrics["swVerSlave"] == "0"
 
 
 @pytest.mark.asyncio

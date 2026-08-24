@@ -270,6 +270,14 @@ class HyxiHybridModbusClient:
             "pv2i": self.pv.pv2_current,
             "pv2p": self.pv.pv2_power,
             "vbus": self.pv.bus_voltage,
+            # main_program is the primary control processor, main_dsp a
+            # real-time co-processor for power electronics -- the same
+            # primary/secondary split the cloud API's "Master"/"Secondary"
+            # labels describe. sw_version above already treats
+            # main_program_version as *the* firmware version for the
+            # device page on this same reasoning.
+            "swVerMaster": _hex_identifier(self.identity.main_program_version),
+            "swVerSlave": _hex_identifier(self.identity.main_dsp_version),
             # Battery. batSn routes the battery-related keys above and below
             # onto a separate "Battery {sn}" device, matching the HALO
             # client -- omitting it (as this client previously did) leaves

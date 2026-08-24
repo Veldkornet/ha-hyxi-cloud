@@ -194,6 +194,12 @@ async def test_previously_unexposed_registers_now_decode_into_metrics(client):
     # this client previously never populated it.
     assert metrics["batSn"] == "BAT13571357"
 
+    # main_program (main control) and main_dsp (power electronics
+    # co-processor) versions, matching the same primary/secondary split
+    # "Master"/"Secondary" name.
+    assert metrics["swVerMaster"] == "2030021"
+    assert metrics["swVerSlave"] == "2030021"
+
 
 @pytest.mark.asyncio
 async def test_battery_detail_registers_decode_into_metrics(client):

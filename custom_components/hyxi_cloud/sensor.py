@@ -865,7 +865,6 @@ SENSOR_TYPES = [
     SensorEntityDescription(
         key="selfTestStatus",
         entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:progress-check",
     ),
     SensorEntityDescription(
