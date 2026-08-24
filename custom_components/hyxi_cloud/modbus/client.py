@@ -353,6 +353,8 @@ class HyxiModbusClient:
             "totalEdchg": self.energy.battery_discharged_total,
             "batCharge": self.energy.battery_charged_total,
             "batDisCharge": self.energy.battery_discharged_total,
+            "bat_charge_total": self.energy.battery_charged_total,
+            "bat_discharge_total": self.energy.battery_discharged_total,
             # Battery
             "batSn": _hex_identifier(self.identity.battery_serial_number),
             "packNum": self.battery.pack_count,

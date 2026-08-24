@@ -281,6 +281,8 @@ class HyxiHybridModbusClient:
             "totalEdchg": self.energy.discharge_total,
             "batCharge": self.energy.charge_total,
             "batDisCharge": self.energy.discharge_total,
+            "bat_charge_total": self.energy.charge_total,
+            "bat_discharge_total": self.energy.discharge_total,
         }
         return {key: value for key, value in raw.items() if value is not None}
 

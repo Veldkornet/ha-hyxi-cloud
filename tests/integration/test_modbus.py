@@ -211,6 +211,16 @@ async def test_battery_detail_registers_decode_into_metrics(client):
     assert metrics["batCapacityAh"] == 100
     assert "batCap" not in metrics
 
+    # bat_charge_total/bat_discharge_total alias the same register as
+    # totalEchg/totalEdchg and batCharge/batDisCharge -- three cloud-API
+    # field names for one quantity this hardware only exposes once.
+    assert metrics["bat_charge_total"] == metrics["totalEchg"] == metrics["batCharge"]
+    assert (
+        metrics["bat_discharge_total"]
+        == metrics["totalEdchg"]
+        == metrics["batDisCharge"]
+    )
+
 
 @pytest.mark.asyncio
 async def test_thirty_two_bit_values_are_read_low_word_first(client):
@@ -695,6 +705,10 @@ async def test_setting_up_a_modbus_entry_creates_entities(hass):
     # SOC is published as an integer -- batsoc is in INT_SENSOR_KEYS.
     assert by_id["sensor.hyxi_4213571357_batsoc"] == "78"
     assert by_id["sensor.hyxi_4213571357_batp"] == "-420.0"
+
+    # last_seen is a cloud heartbeat timestamp Modbus never populates --
+    # must not be created at all rather than sit frozen or unavailable.
+    assert f"sensor.hyxi_{sn}_last_seen" not in by_id
 
 
 @pytest.mark.asyncio

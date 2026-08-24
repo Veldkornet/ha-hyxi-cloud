@@ -1273,6 +1273,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         # Pre-calculate base keys to process + specific static keys
         keys_to_add = set(base_keys)
+        if is_modbus_entry(entry):
+            # last_seen is a cloud heartbeat timestamp; neither Modbus
+            # client ever populates it, so it would just sit frozen at
+            # whatever a prior cloud entry for this same device last wrote.
+            keys_to_add.discard("last_seen")
         keys_to_add.add("device_type")
 
         # Process dynamically available valid metrics keys

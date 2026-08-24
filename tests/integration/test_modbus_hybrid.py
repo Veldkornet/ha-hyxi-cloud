@@ -214,6 +214,19 @@ async def test_battery_detail_registers_decode_into_metrics(client):
     # Unit not stated in the document -- passed through raw, not guessed.
     assert metrics["batNominalCapacity"] == 100
 
+    # bat_charge_total/bat_discharge_total alias the same register as
+    # totalEchg/totalEdchg and batCharge/batDisCharge -- three cloud-API
+    # field names for one quantity this hardware only exposes once. Without
+    # this alias the bat_charge_total sensor (created for every hybrid/
+    # all-in-one device regardless of transport) would never get a live
+    # value from Modbus at all.
+    assert metrics["bat_charge_total"] == metrics["totalEchg"] == metrics["batCharge"]
+    assert (
+        metrics["bat_discharge_total"]
+        == metrics["totalEdchg"]
+        == metrics["batDisCharge"]
+    )
+
 
 @pytest.mark.asyncio
 async def test_grid_power_is_converted_to_kilowatts(client):
