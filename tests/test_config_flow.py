@@ -1122,6 +1122,17 @@ class _FakeModbusTimeout(Exception):
     """Stands in for modbus_connection's timeout error."""
 
 
+class _FakeGatewayPathUnavailable(_FakeModbusError):
+    """Mirrors modbus_connection's real hierarchy: a ModbusExceptionError
+    subclass, but the *gateway* reporting it couldn't reach anything past
+    itself, not the target device rejecting a register."""
+
+
+class _FakeGatewayTarget(_FakeModbusError):
+    """Same as _FakeGatewayPathUnavailable -- the other gateway target-
+    failure exception code."""
+
+
 def _fake_modbus_modules(read_side_effect=None):
     """Build stand-ins for modbus_connection and its tmodbus backend.
 
@@ -1140,6 +1151,8 @@ def _fake_modbus_modules(read_side_effect=None):
     root = types.ModuleType("modbus_connection")
     root.ModbusExceptionError = _FakeModbusError  # type: ignore[attr-defined]
     root.ModbusTimeoutError = _FakeModbusTimeout  # type: ignore[attr-defined]
+    root.GatewayPathUnavailableError = _FakeGatewayPathUnavailable  # type: ignore[attr-defined]
+    root.GatewayTargetError = _FakeGatewayTarget  # type: ignore[attr-defined]
     root.ModbusSerialParams = lambda **kw: ("serial", kw)  # type: ignore[attr-defined]
     root.ModbusTcpParams = lambda **kw: ("tcp", kw)  # type: ignore[attr-defined]
 
@@ -1272,21 +1285,6 @@ async def test_modbus_serial_creates_entry_and_coerces_types(modbus_flow):
 
 
 @pytest.mark.asyncio
-async def test_modbus_exception_response_still_counts_as_reachable(modbus_flow):
-    """A device that rejects the address has still proven it is on the bus."""
-    fake = _fake_modbus_modules()
-    fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusError())
-    modbus_flow._modbus_type = "tcp"
-
-    with _install_modbus(fake.root, fake.backend):
-        result = await modbus_flow.async_step_modbus_tcp(
-            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
-        )
-
-    assert result["type"] == "entry"
-
-
-@pytest.mark.asyncio
 async def test_modbus_all_probe_points_timing_out_reports_no_device(modbus_flow):
     fake = _fake_modbus_modules()
     fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusTimeout())
@@ -1406,11 +1404,42 @@ async def test_modbus_detects_halo_family_when_only_its_signature_answers(
 
 
 @pytest.mark.asyncio
-async def test_modbus_falls_back_to_default_family_when_unidentified(
-    modbus_flow, caplog
-):
+async def test_modbus_rejects_implausible_value_at_halo_signature(modbus_flow, caplog):
+    """HALO's SOC signature is a documented 0-100% gauge, so its raw value
+    can only ever be 0-1000. A value far outside that isn't HALO answering
+    oddly -- it's some other device having *something* at register 4980,
+    which the document gives no reason to expect. Must not be accepted as
+    identifying evidence just because a value came back at all."""
+    fake = _fake_modbus_modules()
+
+    async def read(address, _count):
+        if address == 0:
+            raise _FakeModbusError()
+        if address == 4980:
+            return [50000]  # far outside the documented 0-1000 raw range
+        raise AssertionError(f"unexpected address {address}")
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "unidentified_family"}
+    assert "implausible" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_modbus_refuses_to_guess_family_when_unidentified(modbus_flow, caplog):
     """A device that answers only with exceptions is confirmed present, but
-    neither signature identifies it -- falls back rather than refusing."""
+    neither signature identifies it -- these two registers are the only
+    thing distinguishing "definitely a HALO or hybrid inverter" from "some
+    other Modbus device on this bus", so guessing wrong here would create
+    an entry reading (and writing) another device's registers under the
+    wrong map. Refuses rather than defaulting."""
     fake = _fake_modbus_modules()
     fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusError())
     modbus_flow._modbus_type = "tcp"
@@ -1420,9 +1449,36 @@ async def test_modbus_falls_back_to_default_family_when_unidentified(
             user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
         )
 
-    assert result["type"] == "entry"
-    assert result["data"]["modbus_family"] == "hybrid"
-    assert "defaulting to" in caplog.text
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "unidentified_family"}
+    assert "refusing to guess" in caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("exc_cls", [_FakeGatewayPathUnavailable, _FakeGatewayTarget])
+async def test_modbus_gateway_target_failure_is_not_treated_as_reachable(
+    exc_cls, modbus_flow, caplog
+):
+    """A gateway target-failure exception (GatewayPathUnavailableError,
+    GatewayTargetError) is a ModbusExceptionError subclass, but it's the
+    *gateway* saying it couldn't reach anything past itself -- not a real
+    device rejecting this specific register. Must not count as
+    "reachable" the way a genuine exception response does, or a gateway
+    with nothing wired to it reports the misleading unidentified_family
+    ("check the slave address, or that this is a supported model")
+    instead of no_device ("check the wiring")."""
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=exc_cls())
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "no_device"}
+    assert "treated as no answer" in caplog.text
 
 
 # --- Wire-framing detection: does a TCP gateway that only answers under the

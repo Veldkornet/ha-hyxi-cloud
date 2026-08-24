@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Jak by se měl Home Assistant připojit k vašemu systému HYXI?",
+        "description": "**HYXI Cloud** funguje kdekoli a pokrývá všechna zařízení ve vašem účtu, ale závisí na serverech HYXI a vašem internetovém připojení.\n\n**Lokální Modbus** komunikuje přímo s jedním měničem přes RS485. Vyžaduje kabeláž a adaptér, ale dotazuje se mnohem rychleji, funguje i bez internetu a dokáže ovládat zařízení, která cloudové API odmítá.",
         "data": {
-          "transport": "Connection method"
+          "transport": "Způsob připojení"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "Jak je připojena sběrnice RS485?",
+        "description": "Vyberte, jak Home Assistant přistupuje ke svorkám RS485 měniče.\n\n**Brána Modbus TCP** se nachází poblíž měniče a je dostupná přes vaši síť. **Sériový port** je adaptér USB-RS485 připojený k počítači, na kterém běží Home Assistant.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Typ připojení"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Brána Modbus TCP",
+        "description": "Zadejte adresu brány RS485-Ethernet.\n\n**Adresa slave** je Modbus ID měniče, výchozí hodnota je 1, pokud jste ji nezměnili. Pokud sběrnici sdílí více zařízení, každé potřebuje vlastní adresu.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
+          "modbus_host": "Hostitel nebo IP adresa brány",
           "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_unit": "Adresa slave"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "Sériový port",
+        "description": "Zadejte sériové zařízení pro váš adaptér USB-RS485, například `/dev/ttyUSB0`.\n\nPonechte tovární přenosovou rychlost, pokud jste ji na měniči nezměnili. **Adresa slave** je Modbus ID měniče, výchozí hodnota je 1.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Sériové zařízení",
+          "modbus_baudrate": "Přenosová rychlost",
+          "modbus_unit": "Adresa slave"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "Jak je připojena sběrnice RS485?",
+        "description": "Změňte typ připojení, pokud jste přešli mezi síťovou bránou a adaptérem USB, nebo ponechte současný typ pro pokračování.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Typ připojení"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Brána Modbus TCP",
+        "description": "Aktualizujte údaje brány RS485-Ethernet. Připojení bude znovu otestováno a zařízení před uložením znovu identifikováno.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
+          "modbus_host": "Hostitel nebo IP adresa brány",
           "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_unit": "Adresa slave"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Sériový port",
+        "description": "Aktualizujte údaje vašeho adaptéru USB-RS485. Připojení bude znovu otestováno a zařízení před uložením znovu identifikováno.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Sériové zařízení",
+          "modbus_baudrate": "Přenosová rychlost",
+          "modbus_unit": "Adresa slave"
         }
       }
     },
@@ -82,13 +82,14 @@
       "invalid_auth": "Neplatný přístupový klíč nebo tajný klíč",
       "unknown": "Došlo k neočekávané chybě",
       "no_devices": "Nebyly nalezeny žádné elektrárny ani zařízení. Pokud se váš vývojářský e-mail liší od e-mailu aplikace, musíte nejprve sdílet svou elektrárnu z aplikace na vývojářský e-mail.",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "no_device": "Na sběrnici nikdo neodpověděl. Zkontrolujte kabeláž, adresu slave a přenosovou rychlost.",
+      "modbus_unavailable": "Podpora Modbus není nainstalována. Restartujte Home Assistant a zkuste to znovu.",
+      "unidentified_family": "Zařízení odpovědělo, ale nepodařilo se potvrdit, že jde o podporovaný měnič HALO nebo hybridní měnič. Zkontrolujte adresu slave, nebo zda jde o podporovaný model."
     },
     "abort": {
       "already_configured": "Tento HYXI účet je již nakonfigurován.",
       "reauth_successful": "Opětovné ověření bylo úspěšné",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "Připojení Modbus bylo úspěšně aktualizováno."
     }
   },
   "options": {
@@ -229,11 +230,11 @@
         "name": "Poslední aktualizace integrace"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "Typ připojení",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "Brána TCP (průchozí RTU)",
+          "tcp_socket": "Brána TCP (nativní Modbus-TCP)",
+          "serial": "Sériové USB"
         }
       },
       "batcap": {

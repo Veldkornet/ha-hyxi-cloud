@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Miten Home Assistantin tulisi olla yhteydessä HYXI-järjestelmääsi?",
+        "description": "**HYXI Cloud** toimii kaikkialla ja kattaa kaikki tilisi laitteet, mutta on riippuvainen HYXI:n palvelimista ja internetyhteydestäsi.\n\n**Paikallinen Modbus** kommunikoi suoraan yhden invertterin kanssa RS485:n kautta. Se vaatii johdotuksen ja sovittimen, mutta kyselee paljon nopeammin, toimii edelleen ilman internetiä ja voi ohjata laitteita, jotka pilvi-API hylkää.",
         "data": {
-          "transport": "Connection method"
+          "transport": "Yhteystapa"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "Miten RS485-väylä on kytketty?",
+        "description": "Valitse, miten Home Assistant tavoittaa invertterin RS485-liittimet.\n\n**Modbus TCP -yhdyskäytävä** sijaitsee lähellä invertteriä ja siihen otetaan yhteys verkon kautta. **Sarjaportti** on USB-RS485-sovitin, joka on kytketty Home Assistantia suorittavaan koneeseen.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Yhteystyyppi"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Modbus TCP -yhdyskäytävä",
+        "description": "Anna RS485-Ethernet-yhdyskäytävän osoite.\n\n**Orjaosoite** on invertterin Modbus-tunnus, joka on 1, ellet ole muuttanut sitä. Jos useampi laite jakaa väylän, jokainen tarvitsee omansa.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Yhdyskäytävän isäntä tai IP-osoite",
+          "modbus_port": "Portti",
+          "modbus_unit": "Orjaosoite"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "Sarjaportti",
+        "description": "Anna USB-RS485-sovittimesi sarjalaite, esimerkiksi `/dev/ttyUSB0`.\n\nSäilytä tehtaan baudinopeus, ellet ole muuttanut sitä invertterissä. **Orjaosoite** on invertterin Modbus-tunnus, joka on oletuksena 1.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Sarjalaite",
+          "modbus_baudrate": "Baudinopeus",
+          "modbus_unit": "Orjaosoite"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "Miten RS485-väylä on kytketty?",
+        "description": "Vaihda yhteystyyppiä, jos olet vaihtanut verkkoyhdyskäytävän ja USB-sovittimen välillä, tai säilytä nykyinen jatkaaksesi.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Yhteystyyppi"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Modbus TCP -yhdyskäytävä",
+        "description": "Päivitä RS485-Ethernet-yhdyskäytävän tiedot. Yhteys testataan uudelleen ja laite tunnistetaan uudelleen ennen tallennusta.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Yhdyskäytävän isäntä tai IP-osoite",
+          "modbus_port": "Portti",
+          "modbus_unit": "Orjaosoite"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Sarjaportti",
+        "description": "Päivitä USB-RS485-sovittimesi tiedot. Yhteys testataan uudelleen ja laite tunnistetaan uudelleen ennen tallennusta.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Sarjalaite",
+          "modbus_baudrate": "Baudinopeus",
+          "modbus_unit": "Orjaosoite"
         }
       }
     },
@@ -82,13 +82,14 @@
       "invalid_auth": "Virheellinen Access Key tai Secret Key",
       "unknown": "Tapahtui odottamaton virhe",
       "no_devices": "Laitoksia tai laitteita ei löytynyt. Jos kehittäjän sähköpostiosoitteesi eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin jaettava laitoksesi sovelluksesta kehittäjän sähköpostiosoitteeseen.",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "no_device": "Väylässä ei vastannut mikään. Tarkista johdotus, orjaosoite ja baudinopeus.",
+      "modbus_unavailable": "Modbus-tukea ei ole asennettu. Käynnistä Home Assistant uudelleen ja yritä uudestaan.",
+      "unidentified_family": "Laite vastasi, mutta sitä ei voitu vahvistaa tuetuksi HALO- tai hybridi-invertteriksi. Tarkista orjaosoite, tai onko tämä tuettu malli."
     },
     "abort": {
       "already_configured": "Tämä HYXI-tili on jo määritetty.",
       "reauth_successful": "Uudelleentunnistautuminen onnistui",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "Modbus-yhteys päivitettiin onnistuneesti."
     }
   },
   "options": {
@@ -229,11 +230,11 @@
         "name": "Integraatio päivitetty viimeksi"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "Yhteystyyppi",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "TCP-yhdyskäytävä (RTU-läpivienti)",
+          "tcp_socket": "TCP-yhdyskäytävä (natiivi Modbus-TCP)",
+          "serial": "USB-sarja"
         }
       },
       "batcap": {

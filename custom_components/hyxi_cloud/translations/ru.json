@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Как Home Assistant должен подключаться к вашей системе HYXI?",
+        "description": "**HYXI Cloud** работает где угодно и охватывает все устройства вашей учётной записи, но зависит от серверов HYXI и вашего интернет-соединения.\n\n**Локальный Modbus** напрямую взаимодействует с одним инвертором через RS485. Требует проводки и адаптера, но опрашивает гораздо быстрее, продолжает работать без интернета и может управлять устройствами, которые облачный API отклоняет.",
         "data": {
-          "transport": "Connection method"
+          "transport": "Способ подключения"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "Как подключена шина RS485?",
+        "description": "Выберите, как Home Assistant подключается к клеммам RS485 инвертора.\n\n**Шлюз Modbus TCP** располагается рядом с инвертором и доступен через вашу сеть. **Последовательный порт** — это адаптер USB-RS485, подключённый к машине, на которой работает Home Assistant.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Тип подключения"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Шлюз Modbus TCP",
+        "description": "Введите адрес шлюза RS485-Ethernet.\n\n**Адрес подчинённого устройства (slave)** — это Modbus ID инвертора, по умолчанию 1, если вы его не меняли. Если несколько устройств используют общую шину, каждому нужен свой адрес.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Хост или IP-адрес шлюза",
+          "modbus_port": "Порт",
+          "modbus_unit": "Адрес slave-устройства"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "Последовательный порт",
+        "description": "Введите последовательное устройство для вашего адаптера USB-RS485, например `/dev/ttyUSB0`.\n\nСохраните заводскую скорость передачи (baud rate), если вы не меняли её на инверторе. **Адрес slave-устройства** — это Modbus ID инвертора, по умолчанию 1.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Последовательное устройство",
+          "modbus_baudrate": "Скорость передачи (baud rate)",
+          "modbus_unit": "Адрес slave-устройства"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "Как подключена шина RS485?",
+        "description": "Измените тип подключения, если вы перешли с сетевого шлюза на USB-адаптер (или наоборот), либо оставьте текущий, чтобы продолжить.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Тип подключения"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Шлюз Modbus TCP",
+        "description": "Обновите данные шлюза RS485-Ethernet. Перед сохранением соединение будет повторно проверено, а устройство — повторно идентифицировано.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Хост или IP-адрес шлюза",
+          "modbus_port": "Порт",
+          "modbus_unit": "Адрес slave-устройства"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Последовательный порт",
+        "description": "Обновите данные вашего адаптера USB-RS485. Перед сохранением соединение будет повторно проверено, а устройство — повторно идентифицировано.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Последовательное устройство",
+          "modbus_baudrate": "Скорость передачи (baud rate)",
+          "modbus_unit": "Адрес slave-устройства"
         }
       }
     },
@@ -82,13 +82,14 @@
       "invalid_auth": "Неверный ключ доступа или секретный ключ",
       "unknown": "Произошла непредвиденная ошибка",
       "no_devices": "Не найдено электростанций или устройств. Если ваш email разработчика отличается от email приложения, сначала необходимо поделиться своей электростанцией из приложения на email разработчика.",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
+      "no_device": "На шине никто не ответил. Проверьте проводку, адрес slave-устройства и скорость передачи.",
+      "modbus_unavailable": "Поддержка Modbus не установлена. Перезапустите Home Assistant и повторите попытку.",
+      "unidentified_family": "Устройство ответило, но не удалось подтвердить, что это поддерживаемый инвертор HALO или гибридный инвертор. Проверьте адрес slave-устройства, либо является ли это поддерживаемой моделью."
     },
     "abort": {
       "already_configured": "Этот аккаунт HYXI уже настроен.",
       "reauth_successful": "Повторная авторизация прошла успешно",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "Подключение Modbus успешно обновлено."
     }
   },
   "options": {
@@ -229,11 +230,11 @@
         "name": "Последнее обновление интеграции"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "Тип подключения",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "TCP-шлюз (прозрачный RTU)",
+          "tcp_socket": "TCP-шлюз (нативный Modbus-TCP)",
+          "serial": "USB (последовательный)"
         }
       },
       "batcap": {

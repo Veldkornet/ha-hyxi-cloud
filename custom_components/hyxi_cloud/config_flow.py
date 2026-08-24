@@ -50,7 +50,9 @@ from .const import (
     DETECTION_MESSAGE_SPACING,
     DETECTION_TIMEOUT,
     DOMAIN,
+    HALO_SOC_SIGNATURE_MAX_RAW,
     MICRO_ESS_CONTROL_SUPPORTED,
+    MODBUS_FAMILY_HALO,
     MODBUS_FAMILY_SIGNATURES,
     MODBUS_TCP_FRAMERS,
     MODBUS_TYPE_SERIAL,
@@ -343,23 +345,52 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
     ) -> tuple[str | None, str]:
         """Confirm a device answers, and guess which register map it speaks.
 
-        Returns (error, family). error is None on success.
+        Returns (error, family). error is None on success; family is
+        meaningless when error is set -- every error path still returns
+        DEFAULT_MODBUS_FAMILY alongside it purely to keep the return type
+        consistent, not because it's used for anything.
 
         A Modbus exception response still counts as the device being
         present -- it means something replied and simply does not carry
-        that register. But a real *value* at one of MODBUS_FAMILY_SIGNATURES
-        is stronger: those two addresses were chosen because the HALO and
-        hybrid documents' confirmed ranges don't overlap (hybrid tops out at
-        3121, HALO starts at 4000), so a value at either is direct evidence
-        for that family, not just for "a device is here".
+        that register. The exception being a *gateway* target-failure
+        (GatewayPathUnavailableError, GatewayTargetError) is the one case
+        that doesn't count: that's the gateway saying it couldn't reach
+        anything past itself, not a device rejecting this specific
+        register, so it's treated the same as no answer at all. A real
+        *value* at one of MODBUS_FAMILY_SIGNATURES is stronger evidence
+        still: those two addresses were chosen because the HALO and
+        hybrid documents' confirmed ranges don't overlap (hybrid tops out
+        at 3121, HALO starts at 4000), so a value at either is direct
+        evidence for that family, not just for "a device is here" --
+        *if* the value itself is plausible. HALO's signature is a
+        documented 0-100% gauge, so a raw value outside 0-1000 can't
+        really be that field; it's some other device having *something*
+        at that address, not HALO answering oddly, so it doesn't count
+        as identifying evidence either (see HALO_SOC_SIGNATURE_MAX_RAW).
+        The hybrid signature has no documented range to check the same
+        way, so any non-error value there is still accepted as-is.
 
         Every signature is tried before giving up, rather than returning on
         the first exception, so a device that happens to reject its own
         family's earlier-tried signature but answer a later one is still
-        identified correctly instead of falling through to the default.
+        identified correctly instead of falling through to a guess.
+
+        A device that answers but confirms neither family is refused
+        rather than defaulted to one of them -- these two signatures are
+        the only thing standing between "definitely a HALO or hybrid
+        inverter" and "some other Modbus device that happens to be on
+        this bus", and guessing wrong here doesn't fail loudly: it
+        creates an entry that reads (and writes) another device's
+        registers under the wrong map, with nothing louder than a log
+        line to say so.
         """
         try:
-            from modbus_connection import ModbusExceptionError, ModbusTimeoutError
+            from modbus_connection import (
+                GatewayPathUnavailableError,
+                GatewayTargetError,
+                ModbusExceptionError,
+                ModbusTimeoutError,
+            )
             from modbus_connection.tmodbus import ModbusConnection
         except ImportError:
             _LOGGER.error("modbus-connection is not installed")
@@ -378,7 +409,24 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                     else unit.read_holding_registers
                 )
                 try:
-                    await read(address, 1)
+                    result = await read(address, 1)
+                # Both are ModbusExceptionError subclasses -- caught ahead of
+                # it on purpose. They're the *gateway* reporting it couldn't
+                # reach its target, not the target device rejecting this
+                # specific register, so unlike a real exception response
+                # they're not evidence anything answered.
+                except GatewayPathUnavailableError, GatewayTargetError:
+                    _LOGGER.debug(
+                        "Modbus probe: gateway for unit %s could not reach "
+                        "its target for %s register %s (family %s) -- "
+                        "treated as no answer, not proof a device is "
+                        "present",
+                        unit_id,
+                        space,
+                        address,
+                        family,
+                    )
+                    continue
                 except ModbusExceptionError as err:
                     reachable = True
                     _LOGGER.debug(
@@ -401,6 +449,32 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                         family,
                     )
                     continue
+                value = result[0]
+                if family == MODBUS_FAMILY_HALO and not (
+                    0 <= value <= HALO_SOC_SIGNATURE_MAX_RAW
+                ):
+                    # A value came back, but it can't be a real SOC reading
+                    # -- soc is documented as an unsigned 0-100% gauge at
+                    # x0.1 scale, so anything outside 0-1000 raw isn't
+                    # evidence of HALO, just evidence *something* answered
+                    # (an unrelated device with something at this address,
+                    # for instance). Unlike an exception response, this
+                    # can't be trusted as identifying evidence, but it's
+                    # still not nothing -- treated the same as one.
+                    reachable = True
+                    _LOGGER.debug(
+                        "Modbus probe: unit %s returned an implausible "
+                        "value %s for %s register %s (family %s, expected "
+                        "0-%s as a raw SOC reading) -- not treated as "
+                        "identifying evidence",
+                        unit_id,
+                        value,
+                        space,
+                        address,
+                        family,
+                        HALO_SOC_SIGNATURE_MAX_RAW,
+                    )
+                    continue
                 _LOGGER.debug(
                     "Modbus probe: unit %s returned a value for %s register %s "
                     "-- detected as %s",
@@ -414,12 +488,11 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             if reachable:
                 _LOGGER.warning(
                     "Modbus device on unit %s is reachable but answered no "
-                    "known signature register with a value; defaulting to "
-                    "%s. If sensors look wrong, this guess may be why.",
+                    "known signature register with a value -- refusing to "
+                    "guess which family it is",
                     unit_id,
-                    DEFAULT_MODBUS_FAMILY,
                 )
-                return None, DEFAULT_MODBUS_FAMILY
+                return "unidentified_family", DEFAULT_MODBUS_FAMILY
 
             _LOGGER.debug(
                 "Modbus probe: unit %s answered none of %d signature registers",
@@ -444,16 +517,17 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         Nothing in the setup form distinguishes a gateway that tunnels raw
         RTU frames over a plain TCP socket from one that speaks native
         Modbus-TCP/MBAP framing and translates to RTU on the wire itself
-        (see MODBUS_TCP_FRAMERS's definition for concrete examples), and
-        getting it wrong doesn't degrade gracefully into "wrong family" the
-        way a real device answering an unexpected register does -- it's a
-        hard framing mismatch, so every read behaves as if the device
-        weren't there at all (a timeout) or as a transport-level failure.
-        Both of those are exactly the signals _probe_and_detect_modbus
-        already reports as "no_device" or "cannot_connect", so retrying
-        under the next framer on either one -- rather than only on a
-        harder failure -- is what actually distinguishes "wrong framer"
-        from "no device at this address".
+        (see MODBUS_TCP_FRAMERS's definition for concrete examples). A
+        wrong framer is a hard framing mismatch, not a real exchange with
+        the device -- every read behaves as if it weren't there at all (a
+        timeout) or as a transport-level failure, exactly the signals
+        _probe_and_detect_modbus already reports as "no_device" or
+        "cannot_connect", so retrying under the next framer on either one
+        is what actually distinguishes "wrong framer" from "no device at
+        this address". "unidentified_family" is deliberately excluded
+        from that retry: it requires a well-formed Modbus exception
+        response, which only a *correctly* framed exchange can produce --
+        retrying it under the other framer would not change the outcome.
         """
         from modbus_connection import ModbusTcpParams
 
