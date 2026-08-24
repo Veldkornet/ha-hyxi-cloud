@@ -92,6 +92,9 @@ async def _async_build_modbus_coordinator(hass: HomeAssistant, entry: ConfigEntr
     unit_id = int(entry.data.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT))
     family = entry.data.get(CONF_MODBUS_FAMILY, DEFAULT_MODBUS_FAMILY)
 
+    # Annotated explicitly -- without it, mypy narrows params to whichever
+    # branch assigns it first and rejects the other as incompatible.
+    params: ModbusSerialParams | ModbusTcpParams
     if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
         params = ModbusSerialParams(
             device=entry.data[CONF_MODBUS_DEVICE],

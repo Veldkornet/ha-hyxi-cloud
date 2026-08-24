@@ -33,6 +33,7 @@ connection level (message_spacing), not here.
 
 from __future__ import annotations
 
+from modbus_connection import WordOrder
 from modbus_connection.model import (
     Component,
     gauge,
@@ -45,7 +46,10 @@ from modbus_connection.model import (
 )
 
 MAX_SPAN = 100
-LOW_WORD_FIRST = "little"
+# Annotated with modbus_connection's own Literal alias -- a bare `str` here
+# doesn't satisfy the word_order= parameter's Literal["big", "little"] type,
+# since mypy won't narrow a module-level assignment to a Literal on its own.
+LOW_WORD_FIRST: WordOrder = "little"
 
 
 class HybridIdentity(Component):

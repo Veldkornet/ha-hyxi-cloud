@@ -399,7 +399,6 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                         family,
                     )
                     continue
-                reachable = True
                 _LOGGER.debug(
                     "Modbus probe: unit %s returned a value for %s register %s "
                     "-- detected as %s",
@@ -452,6 +451,10 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             self._modbus_type,
             unit_id,
         )
+        # Annotated explicitly -- without it, mypy narrows params to
+        # whichever branch assigns it first and rejects the other as
+        # incompatible.
+        params: ModbusSerialParams | ModbusTcpParams
         if self._modbus_type == MODBUS_TYPE_SERIAL:
             device = user_input[CONF_MODBUS_DEVICE]
             baudrate = int(user_input[CONF_MODBUS_BAUDRATE])
@@ -816,7 +819,10 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         has_em_capable = self._has_controllable_inverter()
         has_control_capable = self._has_control_capable_device()
 
-        schema_dict = {
+        # Annotated explicitly -- without it, mypy narrows both the key and
+        # value types to this first entry (Required, All) and rejects the
+        # Optional keys and selector values added conditionally below.
+        schema_dict: dict[vol.Marker, Any] = {
             # Slider for Interval
             vol.Required(interval_key, default=current_interval): vol.All(
                 vol.Coerce(int), vol.Range(min=1, max=60)

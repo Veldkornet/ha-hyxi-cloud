@@ -28,6 +28,7 @@ Read it before changing any address, scale or enumeration here.
 
 from __future__ import annotations
 
+from modbus_connection import WordOrder
 from modbus_connection.model import (
     Component,
     gauge,
@@ -42,8 +43,11 @@ from modbus_connection.model import (
 # between frames, so components read in blocks no wider than that.
 MAX_SPAN = 100
 
-# Word order for every 32- and 64-bit value in the HYXI maps.
-LOW_WORD_FIRST = "little"
+# Word order for every 32- and 64-bit value in the HYXI maps. Annotated with
+# modbus_connection's own Literal alias -- a bare `str` here doesn't satisfy
+# the word_order= parameter's Literal["big", "little"] type, since mypy
+# won't narrow a module-level assignment to a Literal on its own.
+LOW_WORD_FIRST: WordOrder = "little"
 
 
 class HaloIdentity(Component):

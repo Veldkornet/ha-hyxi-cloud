@@ -576,7 +576,7 @@ async def test_reconfigure_can_switch_from_tcp_to_serial(hass: HomeAssistant):
         ),
         patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
     ):
-        result = await hass.config_entries.flow.async_configure(
+        await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
                 CONF_MODBUS_DEVICE: "/dev/ttyUSB0",
