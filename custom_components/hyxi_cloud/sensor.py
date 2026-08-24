@@ -779,12 +779,11 @@ SENSOR_TYPES = [
         key="invSts",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # 0-4 have confirmed labels below. 6 is a value observed live on a
-        # real hybrid inverter (2026-08-24) with no documented meaning --
-        # listed with no state translation so it displays as the raw
-        # number rather than "unknown", without guessing what it means.
-        # Extend here (and add a translated label, once confirmed) the
-        # same way the next undocumented value shows up.
+        # 0-4 have confirmed labels below. 6 is undocumented but observed
+        # on real hardware -- listed with no state translation so it
+        # displays as the raw number rather than "unknown", without
+        # guessing what it means. Extend the same way if another
+        # undocumented value shows up.
         options=["0", "1", "2", "3", "4", "6"],
         icon="mdi:information",
     ),
@@ -841,17 +840,15 @@ SENSOR_TYPES = [
         key="currentOperatingMode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # 1-7 have confirmed labels below. 15 and 16 are values observed
-        # live on a real hybrid inverter (2026-08-24 -- 15 while
-        # discharging at high SOC, 16 later at 69% SOC) with no documented
-        # meaning -- see invSts above for why they're listed with no
-        # translation rather than guessed or hidden.
+        # 1-7 have confirmed labels below. 15 and 16 are undocumented but
+        # observed on real hardware under two different conditions -- see
+        # invSts above for why they're listed with no translation rather
+        # than guessed or hidden.
         # pylint: disable-next=fixme
-        # TODO: the vendor's 1-7 table is looking more incomplete than a
-        # single stray value would suggest -- two different undocumented
-        # values under two different real conditions so far. Keep adding
-        # newly observed values here as they show up, and add a translated
-        # label once any of them gets a confirmed meaning.
+        # TODO: the vendor's 1-7 table looks more incomplete than a single
+        # stray value would suggest. Keep adding newly observed values
+        # here as they show up, and add a translated label once any of
+        # them gets a confirmed meaning.
         options=["1", "2", "3", "4", "5", "6", "7", "15", "16"],
         icon="mdi:state-machine",
     ),
