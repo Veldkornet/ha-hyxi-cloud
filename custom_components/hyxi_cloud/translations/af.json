@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Hoe moet Home Assistant u HYXI-stelsel bereik?",
+        "description": "**HYXI Cloud** werk oral en dek elke toestel in u rekening, maar is afhanklik van HYXI se bedieners en u internetverbinding.\n\n**Plaaslike Modbus** kommunikeer direk met een omsetter via RS485. Dit benodig bedrading en 'n adapter, maar bevraag baie vinniger, werk steeds sonder internet, en kan toestelle beheer wat die wolk-API weier.",
         "data": {
-          "transport": "Connection method"
+          "transport": "Verbindingsmetode"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "Hoe is die RS485-bus gekoppel?",
+        "description": "Kies hoe Home Assistant die omsetter se RS485-aansluitings bereik.\n\n'n **Modbus TCP-gateway** is naby die omsetter geleë en word oor u netwerk bereik. 'n **seriële poort** is 'n USB-RS485-adapter wat aan die masjien gekoppel is waarop Home Assistant loop.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Verbindingstipe"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Modbus TCP-gateway",
+        "description": "Voer die adres van die RS485-na-Ethernet-gateway in.\n\nDie **slaaf-adres** is die omsetter se Modbus-ID, wat 1 is tensy u dit verander het. As verskeie toestelle die bus deel, benodig elkeen sy eie adres.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Gateway-gasheer of IP-adres",
+          "modbus_port": "Poort",
+          "modbus_unit": "Slaaf-adres"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "Seriële poort",
+        "description": "Voer die seriële toestel vir u USB-RS485-adapter in, byvoorbeeld `/dev/ttyUSB0`.\n\nBehou die fabrieks-baudtempo tensy u dit op die omsetter verander het. Die **slaaf-adres** is die omsetter se Modbus-ID, wat by verstek 1 is.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Seriële toestel",
+          "modbus_baudrate": "Baudtempo",
+          "modbus_unit": "Slaaf-adres"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "Hoe is die RS485-bus gekoppel?",
+        "description": "Verander die verbindingstipe as u tussen 'n netwerk-gateway en 'n USB-adapter gewissel het, of behou die huidige een om voort te gaan.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Verbindingstipe"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Modbus TCP-gateway",
+        "description": "Werk die besonderhede van die RS485-na-Ethernet-gateway by. Die verbinding word weer getoets en die toestel voor stoor weer geïdentifiseer.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Gateway-gasheer of IP-adres",
+          "modbus_port": "Poort",
+          "modbus_unit": "Slaaf-adres"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Seriële poort",
+        "description": "Werk die besonderhede van u USB-RS485-adapter by. Die verbinding word weer getoets en die toestel voor stoor weer geïdentifiseer.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Seriële toestel",
+          "modbus_baudrate": "Baudtempo",
+          "modbus_unit": "Slaaf-adres"
         }
       }
     },
@@ -82,14 +82,14 @@
       "invalid_auth": "Ongeldige Toegangsleutel of Geheime Sleutel",
       "unknown": "Onverwagte fout het voorgekom",
       "no_devices": "Geen aanlegte of toestelle gevind nie. As u ontwikkelaars-e-posadres verskil van u toepassing-e-posadres, moet u eers u aanleg vanaf die toepassing met die ontwikkelaars-e-posadres deel.",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
-      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
+      "no_device": "Niks het op die bus geantwoord nie. Kontroleer die bedrading, die slaaf-adres en die baudtempo.",
+      "modbus_unavailable": "Modbus-ondersteuning is nie geïnstalleer nie. Herbegin Home Assistant en probeer weer.",
+      "unidentified_family": "'n Toestel het geantwoord, maar kon nie bevestig word as 'n ondersteunde HALO- of hibriede omsetter nie. Kontroleer die slaaf-adres, of dat dit 'n ondersteunde model is."
     },
     "abort": {
       "already_configured": "Hierdie HYXI-rekening is reeds opgestel.",
       "reauth_successful": "Hertoestemming was suksesvol",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "Die Modbus-verbinding is suksesvol bygewerk."
     }
   },
   "options": {
@@ -230,11 +230,11 @@
         "name": "Integrasie Laas Opgedateer"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "Verbindingstipe",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "TCP-gateway (RTU-deurlaat)",
+          "tcp_socket": "TCP-gateway (inheemse Modbus-TCP)",
+          "serial": "USB-serieel"
         }
       },
       "batcap": {

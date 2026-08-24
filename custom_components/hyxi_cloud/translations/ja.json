@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Home AssistantはどのようにHYXIシステムに接続すべきですか？",
+        "description": "**HYXI Cloud**はどこでも動作し、アカウント内のすべてのデバイスをカバーしますが、HYXIのサーバーとインターネット接続に依存します。\n\n**ローカルModbus**はRS485経由で1台のインバーターと直接通信します。配線とアダプターが必要ですが、はるかに高速にポーリングし、インターネットがなくても動作し続け、クラウドAPIが拒否するデバイスも制御できます。",
         "data": {
-          "transport": "Connection method"
+          "transport": "接続方法"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "RS485バスはどのように接続されていますか？",
+        "description": "Home AssistantがインバーターのRS485端子にどのように接続するかを選択してください。\n\n**Modbus TCPゲートウェイ**はインバーターの近くに設置され、ネットワーク経由でアクセスします。**シリアルポート**は、Home Assistantを実行しているマシンに接続されたUSB-RS485アダプターです。",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "接続タイプ"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Modbus TCPゲートウェイ",
+        "description": "RS485-Ethernetゲートウェイのアドレスを入力してください。\n\n**スレーブアドレス**はインバーターのModbus IDで、変更していなければ1です。複数のデバイスがバスを共有している場合、それぞれに固有のアドレスが必要です。",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "ゲートウェイのホストまたはIPアドレス",
+          "modbus_port": "ポート",
+          "modbus_unit": "スレーブアドレス"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "シリアルポート",
+        "description": "USB-RS485アダプターのシリアルデバイスを入力してください（例：`/dev/ttyUSB0`）。\n\nインバーター側で変更していなければ、工場出荷時のボーレートのままにしてください。**スレーブアドレス**はインバーターのModbus IDで、デフォルトは1です。",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "シリアルデバイス",
+          "modbus_baudrate": "ボーレート",
+          "modbus_unit": "スレーブアドレス"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "RS485バスはどのように接続されていますか？",
+        "description": "ネットワークゲートウェイとUSBアダプターを切り替えた場合は接続タイプを変更し、そうでなければ現在の設定のまま続行してください。",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "接続タイプ"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Modbus TCPゲートウェイ",
+        "description": "RS485-Ethernetゲートウェイの詳細を更新してください。保存前に接続が再テストされ、デバイスが再識別されます。",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "ゲートウェイのホストまたはIPアドレス",
+          "modbus_port": "ポート",
+          "modbus_unit": "スレーブアドレス"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "シリアルポート",
+        "description": "USB-RS485アダプターの詳細を更新してください。保存前に接続が再テストされ、デバイスが再識別されます。",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "シリアルデバイス",
+          "modbus_baudrate": "ボーレート",
+          "modbus_unit": "スレーブアドレス"
         }
       }
     },
@@ -82,14 +82,14 @@
       "invalid_auth": "アクセスキーまたはシークレットキーが無効です",
       "unknown": "予期しないエラーが発生しました",
       "no_devices": "プラントまたはデバイスが見つかりません。開発者用メールアドレスがアプリ用メールアドレスと異なる場合は、まずアプリから開発者用メールアドレスにプラントを共有する必要があります。",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
-      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
+      "no_device": "バス上で応答がありませんでした。配線、スレーブアドレス、ボーレートを確認してください。",
+      "modbus_unavailable": "Modbusサポートがインストールされていません。Home Assistantを再起動してもう一度お試しください。",
+      "unidentified_family": "デバイスから応答がありましたが、対応するHALOまたはハイブリッドインバーターであることを確認できませんでした。スレーブアドレス、または対応モデルかどうかを確認してください。"
     },
     "abort": {
       "already_configured": "このHYXIアカウントは既に設定されています。",
       "reauth_successful": "再認証に成功しました",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "Modbus接続が正常に更新されました。"
     }
   },
   "options": {
@@ -230,11 +230,11 @@
         "name": "統合の最終更新"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "接続タイプ",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "TCPゲートウェイ（RTUパススルー）",
+          "tcp_socket": "TCPゲートウェイ（ネイティブModbus-TCP）",
+          "serial": "USBシリアル"
         }
       },
       "batcap": {

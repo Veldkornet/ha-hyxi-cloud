@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Home Assistant 应如何连接到您的 HYXI 系统？",
+        "description": "**HYXI Cloud** 可在任何地方使用，覆盖您账户下的所有设备，但依赖于 HYXI 的服务器和您的网络连接。\n\n**本地 Modbus** 通过 RS485 直接与一台逆变器通信。它需要布线和一个适配器，但轮询速度快得多，即使没有网络也能继续工作，并且可以控制云 API 拒绝控制的设备。",
         "data": {
-          "transport": "Connection method"
+          "transport": "连接方式"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "RS485 总线是如何连接的？",
+        "description": "选择 Home Assistant 如何连接到逆变器的 RS485 端子。\n\n**Modbus TCP 网关**安装在逆变器附近，通过您的网络访问。**串口**是通过 USB-RS485 适配器连接到运行 Home Assistant 的主机。",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "连接类型"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Modbus TCP 网关",
+        "description": "输入 RS485 转以太网网关的地址。\n\n**从站地址**是逆变器的 Modbus ID，如果未更改，则为 1。如果多台设备共用总线，每台设备都需要各自独立的地址。",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "网关主机或 IP 地址",
+          "modbus_port": "端口",
+          "modbus_unit": "从站地址"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "串口",
+        "description": "输入您的 USB-RS485 适配器对应的串行设备，例如 `/dev/ttyUSB0`。\n\n除非您已在逆变器上更改过波特率，否则请保持出厂波特率不变。**从站地址**是逆变器的 Modbus ID，默认值为 1。",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "串行设备",
+          "modbus_baudrate": "波特率",
+          "modbus_unit": "从站地址"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "RS485 总线是如何连接的？",
+        "description": "如果您在网络网关和 USB 适配器之间进行了切换，请更改连接类型；否则保留当前设置以继续。",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "连接类型"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Modbus TCP 网关",
+        "description": "更新 RS485 转以太网网关的详细信息。保存前将重新测试连接并重新识别设备。",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "网关主机或 IP 地址",
+          "modbus_port": "端口",
+          "modbus_unit": "从站地址"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "串口",
+        "description": "更新您的 USB-RS485 适配器的详细信息。保存前将重新测试连接并重新识别设备。",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "串行设备",
+          "modbus_baudrate": "波特率",
+          "modbus_unit": "从站地址"
         }
       }
     },
@@ -82,14 +82,14 @@
       "invalid_auth": "无效的访问密钥或加密密钥",
       "unknown": "发生未知错误",
       "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
-      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
+      "no_device": "总线上没有任何响应。请检查布线、从站地址和波特率。",
+      "modbus_unavailable": "未安装 Modbus 支持。请重启 Home Assistant 后重试。",
+      "unidentified_family": "设备已响应，但无法确认其为受支持的 HALO 或混合逆变器。请检查从站地址，或确认这是否为受支持的型号。"
     },
     "abort": {
       "already_configured": "该 HYXI 账号已配置。",
       "reauth_successful": "重新认证成功",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "Modbus 连接已成功更新。"
     }
   },
   "options": {
@@ -230,11 +230,11 @@
         "name": "插件最后更新"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "连接类型",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "TCP 网关（RTU 透传）",
+          "tcp_socket": "TCP 网关（原生 Modbus-TCP）",
+          "serial": "USB 串行"
         }
       },
       "batcap": {

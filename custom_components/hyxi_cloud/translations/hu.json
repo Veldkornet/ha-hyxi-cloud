@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Hogyan érje el a Home Assistant a HYXI rendszerét?",
+        "description": "A **HYXI Cloud** bárhol működik, és a fiókod minden eszközét lefedi, de függ a HYXI szervereitől és az internetkapcsolatodtól.\n\nA **helyi Modbus** közvetlenül kommunikál egy inverterrel RS485-ön keresztül. Vezetékezést és adaptert igényel, de sokkal gyorsabban kérdez le, internet nélkül is működik tovább, és olyan eszközöket is tud vezérelni, amelyeket a felhő API elutasít.",
         "data": {
-          "transport": "Connection method"
+          "transport": "Kapcsolódási mód"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "Hogyan van csatlakoztatva az RS485 busz?",
+        "description": "Válaszd ki, hogyan érje el a Home Assistant az inverter RS485 kivezetéseit.\n\nA **Modbus TCP átjáró** az inverter közelében helyezkedik el, és a hálózaton keresztül érhető el. A **soros port** egy USB-RS485 adapter, amely a Home Assistantot futtató géphez csatlakozik.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Kapcsolat típusa"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Modbus TCP átjáró",
+        "description": "Add meg az RS485-Ethernet átjáró címét.\n\nA **slave cím** az inverter Modbus azonosítója, alapértelmezés szerint 1, hacsak nem módosítottad. Ha több eszköz osztozik a buszon, mindegyiknek saját címre van szüksége.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
+          "modbus_host": "Átjáró gazdagépe vagy IP-címe",
           "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_unit": "Slave cím"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "Soros port",
+        "description": "Add meg az USB-RS485 adapter soros eszközét, például `/dev/ttyUSB0`.\n\nTartsd meg a gyári átviteli sebességet, hacsak nem módosítottad az inverteren. A **slave cím** az inverter Modbus azonosítója, alapértelmezés szerint 1.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Soros eszköz",
+          "modbus_baudrate": "Átviteli sebesség",
+          "modbus_unit": "Slave cím"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "Hogyan van csatlakoztatva az RS485 busz?",
+        "description": "Módosítsd a kapcsolat típusát, ha hálózati átjáróról USB-adapterre váltottál (vagy fordítva), vagy tartsd meg a jelenlegit a folytatáshoz.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Kapcsolat típusa"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Modbus TCP átjáró",
+        "description": "Frissítsd az RS485-Ethernet átjáró adatait. A kapcsolat mentés előtt újra tesztelésre, az eszköz pedig újra azonosításra kerül.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
+          "modbus_host": "Átjáró gazdagépe vagy IP-címe",
           "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_unit": "Slave cím"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Soros port",
+        "description": "Frissítsd az USB-RS485 adapter adatait. A kapcsolat mentés előtt újra tesztelésre, az eszköz pedig újra azonosításra kerül.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Soros eszköz",
+          "modbus_baudrate": "Átviteli sebesség",
+          "modbus_unit": "Slave cím"
         }
       }
     },
@@ -82,14 +82,14 @@
       "invalid_auth": "Érvénytelen hozzáférési kulcs vagy titkos kulcs",
       "unknown": "Váratlan hiba történt",
       "no_devices": "Nem található erőmű vagy eszköz. Ha a fejlesztői e-mail-címe eltér az alkalmazás e-mail-címétől, először meg kell osztania az erőművét az alkalmazásból a fejlesztői e-mail-címmel.",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
-      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
+      "no_device": "Semmi sem válaszolt a buszon. Ellenőrizd a vezetékezést, a slave címet és az átviteli sebességet.",
+      "modbus_unavailable": "A Modbus támogatás nincs telepítve. Indítsd újra a Home Assistantot, és próbáld újra.",
+      "unidentified_family": "Egy eszköz válaszolt, de nem sikerült megerősíteni, hogy támogatott HALO vagy hibrid inverter. Ellenőrizd a slave címet, vagy hogy ez egy támogatott modell-e."
     },
     "abort": {
       "already_configured": "Ez a HYXI fiók már be van konfigurálva.",
       "reauth_successful": "Az újrahitelesítés sikeres volt",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "A Modbus-kapcsolat sikeresen frissült."
     }
   },
   "options": {
@@ -230,11 +230,11 @@
         "name": "Integráció utoljára frissítve"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "Kapcsolat típusa",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "TCP átjáró (RTU átjátszás)",
+          "tcp_socket": "TCP átjáró (natív Modbus-TCP)",
+          "serial": "USB soros"
         }
       },
       "batcap": {

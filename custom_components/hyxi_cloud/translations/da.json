@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "Hvordan skal Home Assistant tilgå dit HYXI-system?",
+        "description": "**HYXI Cloud** fungerer overalt og dækker alle enheder på din konto, men afhænger af HYXI's servere og din internetforbindelse.\n\n**Lokal Modbus** kommunikerer direkte med én vekselretter via RS485. Det kræver kabling og en adapter, men afspørger langt hurtigere, fortsætter med at virke uden internet og kan styre enheder, som cloud-API'et afviser.",
         "data": {
-          "transport": "Connection method"
+          "transport": "Forbindelsesmetode"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "Hvordan er RS485-bussen tilsluttet?",
+        "description": "Vælg, hvordan Home Assistant tilgår vekselretterens RS485-terminaler.\n\nEn **Modbus TCP-gateway** sidder tæt på vekselretteren og tilgås via dit netværk. En **seriel port** er en USB-RS485-adapter, der er sluttet til den maskine, der kører Home Assistant.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Forbindelsestype"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Modbus TCP-gateway",
+        "description": "Indtast adressen på RS485-til-Ethernet-gatewayen.\n\n**Slaveadressen** er vekselretterens Modbus-ID, som er 1, medmindre du har ændret den. Hvis flere enheder deler bussen, skal hver have sin egen.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
+          "modbus_host": "Gateway-host eller IP-adresse",
           "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_unit": "Slaveadresse"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "Seriel port",
+        "description": "Indtast den serielle enhed for din USB-RS485-adapter, for eksempel `/dev/ttyUSB0`.\n\nBehold fabriksbaudraten, medmindre du har ændret den på vekselretteren. **Slaveadressen** er vekselretterens Modbus-ID, som er 1 som standard.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Seriel enhed",
+          "modbus_baudrate": "Baudrate",
+          "modbus_unit": "Slaveadresse"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "Hvordan er RS485-bussen tilsluttet?",
+        "description": "Skift forbindelsestype, hvis du er skiftet mellem en netværksgateway og en USB-adapter, eller behold den nuværende for at fortsætte.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Forbindelsestype"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Modbus TCP-gateway",
+        "description": "Opdater detaljerne for RS485-til-Ethernet-gatewayen. Forbindelsen testes igen, og enheden genidentificeres, før den gemmes.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
+          "modbus_host": "Gateway-host eller IP-adresse",
           "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_unit": "Slaveadresse"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Seriel port",
+        "description": "Opdater detaljerne for din USB-RS485-adapter. Forbindelsen testes igen, og enheden genidentificeres, før den gemmes.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Seriel enhed",
+          "modbus_baudrate": "Baudrate",
+          "modbus_unit": "Slaveadresse"
         }
       }
     },
@@ -82,14 +82,14 @@
       "invalid_auth": "Ugyldig adgangsnøgle eller hemmelig nøgle",
       "unknown": "Uventet fejl opstod",
       "no_devices": "Ingen anlæg eller enheder fundet. Hvis din udvikler-e-mail er forskellig fra din app-e-mail, skal du først dele dit anlæg fra appen til udvikler-e-mailen.",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
-      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
+      "no_device": "Intet svarede på bussen. Tjek kablingen, slaveadressen og baudraten.",
+      "modbus_unavailable": "Modbus-understøttelse er ikke installeret. Genstart Home Assistant, og prøv igen.",
+      "unidentified_family": "En enhed svarede, men kunne ikke bekræftes som en understøttet HALO- eller hybrid-vekselretter. Tjek slaveadressen, eller om dette er en understøttet model."
     },
     "abort": {
       "already_configured": "Denne HYXI-konto er allerede konfigureret.",
       "reauth_successful": "Gen-godkendelse lykkedes",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "Modbus-forbindelsen blev opdateret."
     }
   },
   "options": {
@@ -230,11 +230,11 @@
         "name": "Integrationen sidst opdateret"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "Forbindelsestype",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "TCP-gateway (RTU passthrough)",
+          "tcp_socket": "TCP-gateway (indbygget Modbus-TCP)",
+          "serial": "USB-seriel"
         }
       },
       "batcap": {

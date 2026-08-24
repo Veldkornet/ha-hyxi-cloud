@@ -2,10 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "How should Home Assistant reach your HYXI system?",
-        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
+        "title": "¿Cómo debería Home Assistant conectarse a su sistema HYXI?",
+        "description": "**HYXI Cloud** funciona en cualquier lugar y cubre todos los dispositivos de su cuenta, pero depende de los servidores de HYXI y de su conexión a internet.\n\n**Modbus local** se comunica directamente con un inversor a través de RS485. Requiere cableado y un adaptador, pero consulta mucho más rápido, sigue funcionando sin internet y puede controlar dispositivos que la API en la nube rechaza.",
         "data": {
-          "transport": "Connection method"
+          "transport": "Método de conexión"
         }
       },
       "reauth_confirm": {
@@ -27,53 +27,53 @@
         }
       },
       "modbus": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "title": "¿Cómo está conectado el bus RS485?",
+        "description": "Elija cómo accede Home Assistant a los terminales RS485 del inversor.\n\nUna **pasarela Modbus TCP** se sitúa cerca del inversor y se accede a través de su red. Un **puerto serie** es un adaptador USB-RS485 conectado al equipo que ejecuta Home Assistant.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Tipo de conexión"
         }
       },
       "modbus_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "title": "Pasarela Modbus TCP",
+        "description": "Introduzca la dirección de la pasarela RS485 a Ethernet.\n\nLa **dirección esclava** es el ID Modbus del inversor, que es 1 a menos que lo haya cambiado. Si varios dispositivos comparten el bus, cada uno necesita la suya propia.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Host o dirección IP de la pasarela",
+          "modbus_port": "Puerto",
+          "modbus_unit": "Dirección esclava"
         }
       },
       "modbus_serial": {
-        "title": "Serial port",
-        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "title": "Puerto serie",
+        "description": "Introduzca el dispositivo serie de su adaptador USB-RS485, por ejemplo `/dev/ttyUSB0`.\n\nConserve la velocidad en baudios de fábrica a menos que la haya cambiado en el inversor. La **dirección esclava** es el ID Modbus del inversor, que es 1 por defecto.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Dispositivo serie",
+          "modbus_baudrate": "Velocidad en baudios",
+          "modbus_unit": "Dirección esclava"
         }
       },
       "reconfigure": {
-        "title": "How is the RS485 bus connected?",
-        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "title": "¿Cómo está conectado el bus RS485?",
+        "description": "Cambie el tipo de conexión si ha pasado de una pasarela de red a un adaptador USB (o viceversa), o mantenga el actual para continuar.",
         "data": {
-          "modbus_type": "Connection type"
+          "modbus_type": "Tipo de conexión"
         }
       },
       "reconfigure_tcp": {
-        "title": "Modbus TCP gateway",
-        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Pasarela Modbus TCP",
+        "description": "Actualice los detalles de la pasarela RS485 a Ethernet. La conexión se vuelve a probar y el dispositivo se vuelve a identificar antes de guardar.",
         "data": {
-          "modbus_host": "Gateway host or IP address",
-          "modbus_port": "Port",
-          "modbus_unit": "Slave address"
+          "modbus_host": "Host o dirección IP de la pasarela",
+          "modbus_port": "Puerto",
+          "modbus_unit": "Dirección esclava"
         }
       },
       "reconfigure_serial": {
-        "title": "Serial port",
-        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "title": "Puerto serie",
+        "description": "Actualice los detalles de su adaptador USB-RS485. La conexión se vuelve a probar y el dispositivo se vuelve a identificar antes de guardar.",
         "data": {
-          "modbus_device": "Serial device",
-          "modbus_baudrate": "Baud rate",
-          "modbus_unit": "Slave address"
+          "modbus_device": "Dispositivo serie",
+          "modbus_baudrate": "Velocidad en baudios",
+          "modbus_unit": "Dirección esclava"
         }
       }
     },
@@ -82,14 +82,14 @@
       "invalid_auth": "Clave de acceso o clave secreta no válida",
       "unknown": "Ocurrió un error inesperado",
       "no_devices": "No se encontraron plantas ni dispositivos. Si su correo electrónico de desarrollador es diferente al de su aplicación, primero debe compartir su planta desde la aplicación al correo electrónico de desarrollador.",
-      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
-      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
-      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
+      "no_device": "Nada respondió en el bus. Compruebe el cableado, la dirección esclava y la velocidad en baudios.",
+      "modbus_unavailable": "La compatibilidad con Modbus no está instalada. Reinicie Home Assistant e inténtelo de nuevo.",
+      "unidentified_family": "Un dispositivo respondió, pero no se pudo confirmar que fuera un inversor HALO o híbrido compatible. Compruebe la dirección esclava, o que se trate de un modelo compatible."
     },
     "abort": {
       "already_configured": "Esta cuenta de HYXI ya está configurada.",
       "reauth_successful": "La re-autenticación fue exitosa",
-      "reconfigure_successful": "The Modbus connection was updated successfully."
+      "reconfigure_successful": "La conexión Modbus se actualizó correctamente."
     }
   },
   "options": {
@@ -230,11 +230,11 @@
         "name": "Última actualización de la integración"
       },
       "modbus_connection_type": {
-        "name": "Connection Type",
+        "name": "Tipo de conexión",
         "state": {
-          "tcp_rtu": "TCP Gateway (RTU passthrough)",
-          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
-          "serial": "USB Serial"
+          "tcp_rtu": "Pasarela TCP (RTU en modo transparente)",
+          "tcp_socket": "Pasarela TCP (Modbus-TCP nativo)",
+          "serial": "Serie USB"
         }
       },
       "batcap": {
