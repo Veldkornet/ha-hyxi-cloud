@@ -11,7 +11,9 @@ from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionControl
 class FakeCoordinator:
     """Minimal coordinator stub for protection tests."""
 
-    def __init__(self, soc: float, model: str = "H5K-HT") -> None:
+    def __init__(
+        self, soc: float, model: str = "H5K-HT", transport: str = "cloud"
+    ) -> None:
         self.data = {
             "SN123": {
                 "model": model,
@@ -26,6 +28,10 @@ class FakeCoordinator:
             set_peak_shaving=AsyncMock(),
         )
         self.async_request_refresh = AsyncMock()
+        # A real coordinator always has .entry; default matches every
+        # existing test in this file, which was written against the cloud
+        # phase-based routing these fakes predate.
+        self.entry = SimpleNamespace(data={"transport": transport})
 
     def async_add_listener(self, listener):
         """Return a no-op unsubscribe callback."""
@@ -33,13 +39,13 @@ class FakeCoordinator:
 
 
 def _build_controller(
-    soc: float, model: str = "H5K-HT"
+    soc: float, model: str = "H5K-HT", transport: str = "cloud"
 ) -> HyxiBatteryProtectionController:
     """Create a controller with parameter lookups stubbed."""
     hass = MagicMock()
     hass.async_create_task = MagicMock()
     controller = HyxiBatteryProtectionController(
-        hass, FakeCoordinator(soc, model), "SN123"
+        hass, FakeCoordinator(soc, model, transport), "SN123"
     )
 
     def get_param(key, default):
@@ -480,6 +486,21 @@ async def test_ensure_mode_single_phase_actions():
     controller._coordinator.client.set_peak_shaving.assert_awaited_once_with(
         "SN123", "hold"
     )
+
+
+@pytest.mark.asyncio
+async def test_ensure_mode_modbus_actions_override_single_phase_model():
+    """A Modbus entry must use the mode surface even on a model name that
+    would route to peak-shaving over the cloud -- proving _uses_mode_control
+    checks transport before phase, not the other way around."""
+    controller = _build_controller(50, "H5K-HS", transport="modbus")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+
+    await controller._ensure_mode("idle")
+    controller._coordinator.client.set_mode_idle.assert_awaited_once_with("SN123")
+    controller._coordinator.client.set_peak_shaving.assert_not_called()
 
 
 @pytest.mark.asyncio

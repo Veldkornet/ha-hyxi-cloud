@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Připojit k HYXI Cloud",
-        "description": "Zadejte své **vývojářské API údaje (AK/SK)**. Tyto údaje si můžete vygenerovat na [HYXIPOWER Developer Platform]({link}).\n\n**Poznámka:** Vyžaduje to samostatný vývojářský účet. Pokud se váš vývojářský e-mail liší od e-mailu v aplikaci, musíte nejprve v aplikaci **nasdílet svou elektrárnu (Plant)** na vývojářský e-mail.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Přístupový klíč (AK)",
-          "secret_key": "Tajný klíč (SK)",
-          "region": "Oblast serveru"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Tajný klíč (SK)",
           "region": "Oblast serveru"
         }
+      },
+      "cloud": {
+        "title": "Připojit k HYXI Cloud",
+        "description": "Zadejte své **vývojářské API údaje (AK/SK)**. Tyto údaje si můžete vygenerovat na [HYXIPOWER Developer Platform]({link}).\n\n**Poznámka:** Vyžaduje to samostatný vývojářský účet. Pokud se váš vývojářský e-mail liší od e-mailu v aplikaci, musíte nejprve v aplikaci **nasdílet svou elektrárnu (Plant)** na vývojářský e-mail.",
+        "data": {
+          "access_key": "Přístupový klíč (AK)",
+          "secret_key": "Tajný klíč (SK)",
+          "region": "Oblast serveru"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Nepodařilo se připojit k serverům HYXI",
       "invalid_auth": "Neplatný přístupový klíč nebo tajný klíč",
       "unknown": "Došlo k neočekávané chybě",
-      "no_devices": "Nebyly nalezeny žádné elektrárny ani zařízení. Pokud se váš vývojářský e-mail liší od e-mailu aplikace, musíte nejprve sdílet svou elektrárnu z aplikace na vývojářský e-mail."
+      "no_devices": "Nebyly nalezeny žádné elektrárny ani zařízení. Pokud se váš vývojářský e-mail liší od e-mailu aplikace, musíte nejprve sdílet svou elektrárnu z aplikace na vývojářský e-mail.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Tento HYXI účet je již nakonfigurován.",
-      "reauth_successful": "Opětovné ověření bylo úspěšné"
+      "reauth_successful": "Opětovné ověření bylo úspěšné",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Konfigurace systému HYXI",
-        "description": "Upravte způsob, jakým vaše integrace komunikuje s HYXI Cloud.\n\n> ⚠️ **Ovládání zařízení**: Povolte opatrně, pokud váš měnič již spravuje váš dodavatel energie nebo je zapojen do programu Virtuální elektrárny (VPP). Odesílání příkazů, zatímco má váš dodavatel kontrolu, může být v rozporu s jeho plánem dispečinku.\n\n---",
+        "description": "Upravte způsob, jakým vaše integrace komunikuje s HYXI.\n\n> ⚠️ **Ovládání zařízení**: Povolte opatrně, pokud váš měnič již spravuje váš dodavatel energie nebo je zapojen do programu Virtuální elektrárny (VPP). Odesílání příkazů, zatímco má váš dodavatel kontrolu, může být v rozporu s jeho plánem dispečinku.\n\n---",
         "data": {
           "update_interval": "Interval dotazování (1-60 minut, výchozí: 5)",
+          "update_interval_modbus": "Interval dotazování (1-60 sekund, výchozí: 15)",
           "back_discovery": "Povolit vyhledávání prostřednictvím alarmů (pro pokročilé)",
           "enable_battery_control": "Aktivovat ovládání a ochranu zařízení",
           "enable_energy_manager": "Povolit samostatný Energetický manažer (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Stav cloudu"
+        "name": "Stav připojení"
       },
       "device_alarm": {
         "name": "Aktivní problémy",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Celkový energetický výnos"
       },
+      "totaleb": {
+        "name": "Celkový energetický výnos B"
+      },
+      "totalec": {
+        "name": "Celkový energetický výnos C"
+      },
       "bat_charge_total": {
         "name": "Celkové nabití baterie"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Poslední aktualizace integrace"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Kapacita baterie"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Energie dnes"
       },
+      "etodayin": {
+        "name": "Dnešní dovezená energie ze sítě"
+      },
       "efpv": {
         "name": "Výnos dnes (PV)"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Zátěž fáze 3"
+      },
+      "ph1loadv": {
+        "name": "Napětí zátěže fáze 1"
+      },
+      "ph2loadv": {
+        "name": "Napětí zátěže fáze 2"
+      },
+      "ph3loadv": {
+        "name": "Napětí zátěže fáze 3"
       },
       "pv1v": {
         "name": "Napětí PV1"
@@ -371,6 +458,27 @@
           "1": "Zapnuto"
         }
       },
+      "meteronline": {
+        "name": "Měřič online"
+      },
+      "gridmode": {
+        "name": "Režim sítě"
+      },
+      "runcommand": {
+        "name": "Příkaz spuštění"
+      },
+      "currentoperatingmode": {
+        "name": "Provozní režim"
+      },
+      "insulationresistance": {
+        "name": "Izolační odpor"
+      },
+      "leakagecurrent": {
+        "name": "Svodový proud"
+      },
+      "selfteststatus": {
+        "name": "Stav samotestu"
+      },
       "pvpower": {
         "name": "Celkový výkon PV"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "Teplota na straně DC"
+      },
+      "ambienttemper": {
+        "name": "Teplota okolí"
+      },
+      "boosttemper": {
+        "name": "Teplota boost měniče"
+      },
+      "dsptemper": {
+        "name": "Teplota DSP"
       },
       "gridf": {
         "name": "Frekvence sítě"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Výkon mimo síť"
+      },
+      "offgridv": {
+        "name": "Napětí mimo síť"
+      },
+      "offgridi": {
+        "name": "Proud mimo síť"
       },
       "offgridq": {
         "name": "Reaktivní výkon mimo síť"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Max. vybíjecí proud"
+      },
+      "bmsstate": {
+        "name": "Stav BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Provozní stav baterie"
+      },
+      "batalarm1": {
+        "name": "Alarm baterie 1"
+      },
+      "batalarm2": {
+        "name": "Alarm baterie 2"
+      },
+      "batalarm3": {
+        "name": "Alarm baterie 3"
+      },
+      "batcapacityah": {
+        "name": "Kapacita baterie (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Jmenovitá kapacita baterie"
+      },
+      "llcbusvoltage": {
+        "name": "Napětí sběrnice LLC"
+      },
+      "batchargev": {
+        "name": "Nabíjecí napětí baterie"
+      },
+      "batchargei": {
+        "name": "Nabíjecí proud baterie"
+      },
+      "batchargep": {
+        "name": "Nabíjecí výkon baterie"
+      },
+      "batdischargev": {
+        "name": "Vybíjecí napětí baterie"
+      },
+      "batdischargei": {
+        "name": "Vybíjecí proud baterie"
+      },
+      "batdischargep": {
+        "name": "Vybíjecí výkon baterie"
       },
       "batcharge": {
         "name": "Denní energie nabíjení"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Limit výkonu"
       },
+      "feed_in_power_limit": {
+        "name": "Limit výkonu do sítě"
+      },
+      "vpp_min_soc": {
+        "name": "VPP minimální SOC"
+      },
+      "force_charge_start_soc": {
+        "name": "SOC začátku nuceného nabíjení"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC konce nuceného nabíjení"
+      },
+      "off_grid_min_soc": {
+        "name": "Minimální SOC mimo síť"
+      },
+      "self_use_soc": {
+        "name": "Rezervní SOC vlastní spotřeby"
+      },
+      "discharge_min_soc": {
+        "name": "Minimální SOC vybíjení"
+      },
+      "backup_soc": {
+        "name": "Rezervní SOC zálohy"
+      },
+      "forced_charge_soc": {
+        "name": "SOC nuceného nabíjení"
+      },
+      "feed_in_soc": {
+        "name": "Práh SOC pro dodávku do sítě"
+      },
+      "off_grid_soc": {
+        "name": "Práh SOC pro režim mimo síť"
+      },
+      "feed_in_power": {
+        "name": "Limit výkonu do sítě"
+      },
+      "max_charge_current": {
+        "name": "Max. nabíjecí proud"
+      },
+      "max_discharge_current": {
+        "name": "Max. vybíjecí proud"
+      },
       "soc_min": {
         "name": "Minimální SOC"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Napájení"
       },
+      "anti_starvation": {
+        "name": "Ochrana proti vybití"
+      },
       "em_grid_charge_allowed": {
         "name": "Povoleno nabíjení ze sítě"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Omezování špiček: Pozastavit"
+      },
+      "power_on": {
+        "name": "Zapnout"
+      },
+      "power_off": {
+        "name": "Vypnout"
+      },
+      "restart": {
+        "name": "Restartovat"
       },
       "clear_alarms": {
         "name": "Vymazat aktivní alarmy"

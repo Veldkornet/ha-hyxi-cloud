@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Yhdistä HYXI Cloudiin",
-        "description": "Kirjoita **kehittäjän API-tunnisteet (AK/SK)**. Voit luoda nämä [HYXIPOWER-kehittäjäalustalla]({link}).\n\n**Huomautus:** Tämä vaatii erillisen kehittäjätilin. Jos kehittäjän sähköpostiosoite eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin **jaettava laitoksesi (Plant)** sovelluksesta kehittäjän sähköpostiosoitteeseen.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Käyttöavain (AK)",
-          "secret_key": "Salainen avain (SK)",
-          "region": "Palvelinalue"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Salainen avain (SK)",
           "region": "Palvelinalue"
         }
+      },
+      "cloud": {
+        "title": "Yhdistä HYXI Cloudiin",
+        "description": "Kirjoita **kehittäjän API-tunnisteet (AK/SK)**. Voit luoda nämä [HYXIPOWER-kehittäjäalustalla]({link}).\n\n**Huomautus:** Tämä vaatii erillisen kehittäjätilin. Jos kehittäjän sähköpostiosoite eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin **jaettava laitoksesi (Plant)** sovelluksesta kehittäjän sähköpostiosoitteeseen.",
+        "data": {
+          "access_key": "Käyttöavain (AK)",
+          "secret_key": "Salainen avain (SK)",
+          "region": "Palvelinalue"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Yhteys HYXI-palvelimiin epäonnistui",
       "invalid_auth": "Virheellinen Access Key tai Secret Key",
       "unknown": "Tapahtui odottamaton virhe",
-      "no_devices": "Laitoksia tai laitteita ei löytynyt. Jos kehittäjän sähköpostiosoitteesi eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin jaettava laitoksesi sovelluksesta kehittäjän sähköpostiosoitteeseen."
+      "no_devices": "Laitoksia tai laitteita ei löytynyt. Jos kehittäjän sähköpostiosoitteesi eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin jaettava laitoksesi sovelluksesta kehittäjän sähköpostiosoitteeseen.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Tämä HYXI-tili on jo määritetty.",
-      "reauth_successful": "Uudelleentunnistautuminen onnistui"
+      "reauth_successful": "Uudelleentunnistautuminen onnistui",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXI-järjestelmän kokoonpano",
-        "description": "Säädä, miten integraatiosi kommunikoi HYXI Cloudin kanssa.\n\n> ⚠️ **Laitteen ohjaus**: Ota käyttöön varoen, jos energiantoimittajasi jo hallitsee invertteriäsi tai se on liitetty virtuaalivoimalaohjelmaan (VPP). Komentojen lähettäminen, kun toimittajallasi on hallinta, voi olla ristiriidassa heidän ohjausaikataulunsa kanssa.\n\n---",
+        "description": "Säädä, miten integraatiosi kommunikoi HYXIn kanssa.\n\n> ⚠️ **Laitteen ohjaus**: Ota käyttöön varoen, jos energiantoimittajasi jo hallitsee invertteriäsi tai se on liitetty virtuaalivoimalaohjelmaan (VPP). Komentojen lähettäminen, kun toimittajallasi on hallinta, voi olla ristiriidassa heidän ohjausaikataulunsa kanssa.\n\n---",
         "data": {
           "update_interval": "Päivitysväli (1-60 minuuttia, oletus: 5)",
+          "update_interval_modbus": "Päivitysväli (1-60 sekuntia, oletus: 15)",
           "back_discovery": "Ota löytäminen käyttöön hällytysten kautta (edistynyt)",
           "enable_battery_control": "Ota laitteen ohjaus ja suojaus käyttöön",
           "enable_energy_manager": "Ota käyttöön itsenäinen Energianhallinta (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Pilvipalvelun tila"
+        "name": "Yhteyden tila"
       },
       "device_alarm": {
         "name": "Aktiiviset ongelmat",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Kokonaistuotto"
       },
+      "totaleb": {
+        "name": "Kokonaistuotto B"
+      },
+      "totalec": {
+        "name": "Kokonaistuotto C"
+      },
       "bat_charge_total": {
         "name": "Akun kokonaislataus"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Integraatio päivitetty viimeksi"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Akun kapasiteetti"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Sähköntuotto tänään"
       },
+      "etodayin": {
+        "name": "Tänään tuotu verkkoenergia"
+      },
       "efpv": {
         "name": "PV-tuotto tänään"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Vaihe 3 kuorma"
+      },
+      "ph1loadv": {
+        "name": "Vaihe 1 kuormajännite"
+      },
+      "ph2loadv": {
+        "name": "Vaihe 2 kuormajännite"
+      },
+      "ph3loadv": {
+        "name": "Vaihe 3 kuormajännite"
       },
       "pv1v": {
         "name": "PV1-jännite"
@@ -371,6 +458,27 @@
           "1": "Virta päällä"
         }
       },
+      "meteronline": {
+        "name": "Mittari verkossa"
+      },
+      "gridmode": {
+        "name": "Verkkotila"
+      },
+      "runcommand": {
+        "name": "Käyntikäsky"
+      },
+      "currentoperatingmode": {
+        "name": "Käyttötila"
+      },
+      "insulationresistance": {
+        "name": "Eristysvastus"
+      },
+      "leakagecurrent": {
+        "name": "Vuotovirta"
+      },
+      "selfteststatus": {
+        "name": "Itsetestauksen tila"
+      },
       "pvpower": {
         "name": "PV-kokonaisteho"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "DC-puolen lämpötila"
+      },
+      "ambienttemper": {
+        "name": "Ympäristön lämpötila"
+      },
+      "boosttemper": {
+        "name": "Boost-lämpötila"
+      },
+      "dsptemper": {
+        "name": "DSP-lämpötila"
       },
       "gridf": {
         "name": "Verkkotaajuus"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Off-grid-teho"
+      },
+      "offgridv": {
+        "name": "Off-grid-jännite"
+      },
+      "offgridi": {
+        "name": "Off-grid-virta"
       },
       "offgridq": {
         "name": "Off-grid-loisteho"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Maks. purkuvirta"
+      },
+      "bmsstate": {
+        "name": "BMS:n tila"
+      },
+      "batoperatingstatus": {
+        "name": "Akun käyttötila"
+      },
+      "batalarm1": {
+        "name": "Akun hälytys 1"
+      },
+      "batalarm2": {
+        "name": "Akun hälytys 2"
+      },
+      "batalarm3": {
+        "name": "Akun hälytys 3"
+      },
+      "batcapacityah": {
+        "name": "Akun kapasiteetti (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Akun nimelliskapasiteetti"
+      },
+      "llcbusvoltage": {
+        "name": "LLC-väyläjännite"
+      },
+      "batchargev": {
+        "name": "Akun latausjännite"
+      },
+      "batchargei": {
+        "name": "Akun latausvirta"
+      },
+      "batchargep": {
+        "name": "Akun latausteho"
+      },
+      "batdischargev": {
+        "name": "Akun purkujännite"
+      },
+      "batdischargei": {
+        "name": "Akun purkuvirta"
+      },
+      "batdischargep": {
+        "name": "Akun purkuteho"
       },
       "batcharge": {
         "name": "Päivittäinen latausenergia"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Tehoraja"
       },
+      "feed_in_power_limit": {
+        "name": "Verkkoonsyötön tehoraja"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC-minimi"
+      },
+      "force_charge_start_soc": {
+        "name": "Pakkolatauksen aloitus-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Pakkolatauksen lopetus-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimi-SOC"
+      },
+      "self_use_soc": {
+        "name": "Omakäytön varaus-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Purun minimi-SOC"
+      },
+      "backup_soc": {
+        "name": "Varmuusvaraus-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Pakkolatauksen SOC"
+      },
+      "feed_in_soc": {
+        "name": "Verkkoonsyötön SOC-kynnys"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid-tilan SOC-kynnys"
+      },
+      "feed_in_power": {
+        "name": "Verkkoonsyötön tehoraja"
+      },
+      "max_charge_current": {
+        "name": "Maks. latausvirta"
+      },
+      "max_discharge_current": {
+        "name": "Maks. purkuvirta"
+      },
       "soc_min": {
         "name": "SOC-minimi"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Virta"
       },
+      "anti_starvation": {
+        "name": "Syväpurkaussuoja"
+      },
       "em_grid_charge_allowed": {
         "name": "Verkkolataus Sallittu"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Huipputehon leikkaus: Pidä"
+      },
+      "power_on": {
+        "name": "Käynnistä"
+      },
+      "power_off": {
+        "name": "Sammuta"
+      },
+      "restart": {
+        "name": "Käynnistä uudelleen"
       },
       "clear_alarms": {
         "name": "Tyhjennä aktiiviset hälytykset"

@@ -78,6 +78,8 @@ def mock_coordinator_fixture():
     coordinator.client.set_frequency_control = AsyncMock()
     coordinator.client.set_micro_power = AsyncMock()
     coordinator.client.set_micro_ess_power = AsyncMock()
+    coordinator.client.set_anti_starvation = AsyncMock()
+    coordinator.client.set_anti_starvation_protection = AsyncMock()
     # Ensure async methods are awaitable
     coordinator.async_request_refresh = AsyncMock()
     return coordinator
@@ -412,6 +414,71 @@ async def test_frequency_control_switch_error(mock_coordinator_fixture):
             switch_mod.mask_sn("SN123"),
             err,
         )
+
+
+@pytest.mark.asyncio
+async def test_anti_starvation_switch_turn_on(mock_coordinator_fixture):
+    """Test turning on the anti-starvation switch calls the given client
+    method by name."""
+    switch = switch_mod.HyxiAntiStarvationSwitch(
+        mock_coordinator_fixture, "SN123", {}, "set_anti_starvation"
+    )
+    switch.async_write_ha_state = MagicMock()
+
+    await switch.async_turn_on()
+
+    mock_coordinator_fixture.client.set_anti_starvation.assert_called_once_with(True)
+    assert switch._attr_is_on is True
+    switch.async_write_ha_state.assert_called_once()
+    mock_coordinator_fixture.async_request_refresh.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_anti_starvation_switch_turn_off_uses_the_hybrid_method(
+    mock_coordinator_fixture,
+):
+    """A hybrid entry passes the inverted-polarity method name -- this
+    entity does not need to know that, it just calls whatever it's given."""
+    switch = switch_mod.HyxiAntiStarvationSwitch(
+        mock_coordinator_fixture, "SN123", {}, "set_anti_starvation_protection"
+    )
+    switch.async_write_ha_state = MagicMock()
+
+    await switch.async_turn_off()
+
+    mock_coordinator_fixture.client.set_anti_starvation_protection.assert_called_once_with(
+        False
+    )
+    assert switch._attr_is_on is False
+    switch.async_write_ha_state.assert_called_once()
+    mock_coordinator_fixture.async_request_refresh.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_anti_starvation_switch_error(mock_coordinator_fixture):
+    """Test error handling for the anti-starvation switch."""
+    switch = switch_mod.HyxiAntiStarvationSwitch(
+        mock_coordinator_fixture, "SN123", {}, "set_anti_starvation"
+    )
+    switch.async_write_ha_state = MagicMock()
+
+    err = switch_mod.HyxiApiClient.ControlError("Network error")
+    mock_coordinator_fixture.client.set_anti_starvation.side_effect = err
+
+    with patch("custom_components.hyxi_cloud.switch._LOGGER.error") as mock_logger:
+        with pytest.raises(switch_mod.HyxiApiClient.ControlError):
+            await switch.async_turn_on()
+
+        mock_logger.assert_called_once_with(
+            "Failed to set anti-starvation protection to %s for %s: %s",
+            True,
+            switch_mod.mask_sn("SN123"),
+            err,
+        )
+
+    switch.async_write_ha_state.assert_not_called()
+    mock_coordinator_fixture.async_request_refresh.assert_not_called()
+    assert switch._attr_is_on is None
 
 
 @pytest.mark.asyncio

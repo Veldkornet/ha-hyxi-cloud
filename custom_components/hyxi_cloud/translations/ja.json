@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "HYXI Cloudに接続",
-        "description": "**開発者API資格情報 (AK/SK)**を入力してください。これらは[HYXIPOWER開発者プラットフォーム]({link})で作成できます。\n\n**注意:** 別途開発者アカウントが必要です。開発者用メールアドレスがアプリ用メールアドレスと異なる場合は、まずアプリから開発者用メールアドレスに**発電所を共有**する必要があります。",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "アクセスキー (AK)",
-          "secret_key": "シークレットキー (SK)",
-          "region": "サーバーリージョン"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "シークレットキー (SK)",
           "region": "サーバーリージョン"
         }
+      },
+      "cloud": {
+        "title": "HYXI Cloudに接続",
+        "description": "**開発者API資格情報 (AK/SK)**を入力してください。これらは[HYXIPOWER開発者プラットフォーム]({link})で作成できます。\n\n**注意:** 別途開発者アカウントが必要です。開発者用メールアドレスがアプリ用メールアドレスと異なる場合は、まずアプリから開発者用メールアドレスに**発電所を共有**する必要があります。",
+        "data": {
+          "access_key": "アクセスキー (AK)",
+          "secret_key": "シークレットキー (SK)",
+          "region": "サーバーリージョン"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "HYXIサーバーへの接続に失敗しました",
       "invalid_auth": "アクセスキーまたはシークレットキーが無効です",
       "unknown": "予期しないエラーが発生しました",
-      "no_devices": "プラントまたはデバイスが見つかりません。開発者用メールアドレスがアプリ用メールアドレスと異なる場合は、まずアプリから開発者用メールアドレスにプラントを共有する必要があります。"
+      "no_devices": "プラントまたはデバイスが見つかりません。開発者用メールアドレスがアプリ用メールアドレスと異なる場合は、まずアプリから開発者用メールアドレスにプラントを共有する必要があります。",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "このHYXIアカウントは既に設定されています。",
-      "reauth_successful": "再認証に成功しました"
+      "reauth_successful": "再認証に成功しました",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXIシステム設定",
-        "description": "統合がHYXI Cloudと通信する方法を調整します。\n\n> ⚠️ **デバイス制御**: インバーターがすでに電力会社によって管理されている場合、または仮想発電所（VPP）プログラムに登録されている場合は、慎重に有効にしてください。電力会社が制御している間にコマンドを送信すると、そのディスパッチスケジュールと競合する可能性があります。\n\n---",
+        "description": "統合がHYXIと通信する方法を調整します。\n\n> ⚠️ **デバイス制御**: インバーターがすでに電力会社によって管理されている場合、または仮想発電所（VPP）プログラムに登録されている場合は、慎重に有効にしてください。電力会社が制御している間にコマンドを送信すると、そのディスパッチスケジュールと競合する可能性があります。\n\n---",
         "data": {
           "update_interval": "ポーリング間隔 (1-60分, デフォルト: 5)",
+          "update_interval_modbus": "ポーリング間隔 (1-60秒, デフォルト: 15)",
           "back_discovery": "アラーム経由の検出を有効にする (高度)",
           "enable_battery_control": "デバイス制御と保護を有効にする",
           "enable_energy_manager": "エネルギーマネージャー スタンドアロンを有効にする (ベータ)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "クラウド状態"
+        "name": "接続状態"
       },
       "device_alarm": {
         "name": "現在のアラーム",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "累計発電量"
       },
+      "totaleb": {
+        "name": "累計発電量B"
+      },
+      "totalec": {
+        "name": "累計発電量C"
+      },
       "bat_charge_total": {
         "name": "累計充電量"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "統合の最終更新"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "バッテリー容量"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "本日の発電量"
       },
+      "etodayin": {
+        "name": "本日の系統輸入電力量"
+      },
       "efpv": {
         "name": "本日のPV発電量"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "第3相負荷"
+      },
+      "ph1loadv": {
+        "name": "第1相負荷電圧"
+      },
+      "ph2loadv": {
+        "name": "第2相負荷電圧"
+      },
+      "ph3loadv": {
+        "name": "第3相負荷電圧"
       },
       "pv1v": {
         "name": "PV1電圧"
@@ -371,6 +458,27 @@
           "1": "電源オン"
         }
       },
+      "meteronline": {
+        "name": "メーターオンライン"
+      },
+      "gridmode": {
+        "name": "グリッドモード"
+      },
+      "runcommand": {
+        "name": "運転コマンド"
+      },
+      "currentoperatingmode": {
+        "name": "動作モード"
+      },
+      "insulationresistance": {
+        "name": "絶縁抵抗"
+      },
+      "leakagecurrent": {
+        "name": "漏れ電流"
+      },
+      "selfteststatus": {
+        "name": "自己診断状態"
+      },
       "pvpower": {
         "name": "PV総電力"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "DC側温度"
+      },
+      "ambienttemper": {
+        "name": "周囲温度"
+      },
+      "boosttemper": {
+        "name": "ブースト温度"
+      },
+      "dsptemper": {
+        "name": "DSP温度"
       },
       "gridf": {
         "name": "系統周波数"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "オフグリッド電力"
+      },
+      "offgridv": {
+        "name": "オフグリッド電圧"
+      },
+      "offgridi": {
+        "name": "オフグリッド電流"
       },
       "offgridq": {
         "name": "オフグリッド無効電力"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "最大放電電流"
+      },
+      "bmsstate": {
+        "name": "BMS状態"
+      },
+      "batoperatingstatus": {
+        "name": "バッテリー動作状態"
+      },
+      "batalarm1": {
+        "name": "バッテリーアラーム1"
+      },
+      "batalarm2": {
+        "name": "バッテリーアラーム2"
+      },
+      "batalarm3": {
+        "name": "バッテリーアラーム3"
+      },
+      "batcapacityah": {
+        "name": "バッテリー容量 (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "バッテリー公称容量"
+      },
+      "llcbusvoltage": {
+        "name": "LLCバス電圧"
+      },
+      "batchargev": {
+        "name": "バッテリー充電電圧"
+      },
+      "batchargei": {
+        "name": "バッテリー充電電流"
+      },
+      "batchargep": {
+        "name": "バッテリー充電電力"
+      },
+      "batdischargev": {
+        "name": "バッテリー放電電圧"
+      },
+      "batdischargei": {
+        "name": "バッテリー放電電流"
+      },
+      "batdischargep": {
+        "name": "バッテリー放電電力"
       },
       "batcharge": {
         "name": "日次充電電力量"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "出力制限"
       },
+      "feed_in_power_limit": {
+        "name": "売電電力制限"
+      },
+      "vpp_min_soc": {
+        "name": "VPP最小SOC"
+      },
+      "force_charge_start_soc": {
+        "name": "強制充電開始SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "強制充電終了SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "オフグリッド最小SOC"
+      },
+      "self_use_soc": {
+        "name": "自家消費予備SOC"
+      },
+      "discharge_min_soc": {
+        "name": "放電最小SOC"
+      },
+      "backup_soc": {
+        "name": "バックアップ予備SOC"
+      },
+      "forced_charge_soc": {
+        "name": "強制充電SOC"
+      },
+      "feed_in_soc": {
+        "name": "売電SOCしきい値"
+      },
+      "off_grid_soc": {
+        "name": "オフグリッドモードSOCしきい値"
+      },
+      "feed_in_power": {
+        "name": "売電電力制限"
+      },
+      "max_charge_current": {
+        "name": "最大充電電流"
+      },
+      "max_discharge_current": {
+        "name": "最大放電電流"
+      },
       "soc_min": {
         "name": "SOC最小値"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "電源"
       },
+      "anti_starvation": {
+        "name": "過放電保護"
+      },
       "em_grid_charge_allowed": {
         "name": "系統充電許可"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "ピークカット: 維持"
+      },
+      "power_on": {
+        "name": "電源オン"
+      },
+      "power_off": {
+        "name": "電源オフ"
+      },
+      "restart": {
+        "name": "再起動"
       },
       "clear_alarms": {
         "name": "アクティブなアラームをクリア"

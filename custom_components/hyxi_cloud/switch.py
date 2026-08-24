@@ -23,6 +23,7 @@ from .const import (
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
+    is_modbus_entry,
     mask_sn,
     normalize_device_type,
 )
@@ -45,6 +46,28 @@ async def async_setup_entry(
 
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
+
+        # Modbus: anti-starvation protection, the one boolean HaloSettings/
+        # HybridSettings field. HALO and Hybrid call different client
+        # methods because the register's polarity is inverted between the
+        # two documents -- see client_hybrid.py's set_anti_starvation_
+        # protection docstring. Handled before the cloud-only branches
+        # below since this has no cloud equivalent and no phase dependency.
+        if is_modbus_entry(entry) and device_type in (
+            "hybrid_inverter",
+            "all_in_one",
+            "micro_ess",
+        ):
+            if is_battery_control_enabled(entry, coordinator):
+                client_method = (
+                    "set_anti_starvation"
+                    if device_type == "micro_ess"
+                    else "set_anti_starvation_protection"
+                )
+                entities.append(
+                    HyxiAntiStarvationSwitch(coordinator, sn, dev_data, client_method)
+                )
+            continue
 
         if device_type in ("hybrid_inverter", "all_in_one"):
             phase = detect_phase_type(dev_data)
@@ -207,6 +230,70 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             raise HomeAssistantError(
                 f"Failed to turn off microinverter: {err}"
             ) from err
+
+
+class HyxiAntiStarvationSwitch(HyxiEntity, SwitchEntity):
+    """Switch entity for battery anti-starvation protection (Modbus only).
+
+    Same "no readback, optimistic state" pattern as
+    HyxiFrequencyControlSwitch above -- neither HaloSettings nor
+    HybridSettings is ever read back from the device, so is_on stays None
+    (unknown) until this session writes it.
+
+    Takes the client method name to call rather than hard-coding one: HALO
+    and Hybrid both present "enabled" with the same meaning here, but call
+    different client methods, since the register's actual polarity is
+    inverted between the two documents (see client_hybrid.py's
+    set_anti_starvation_protection). Hiding that in the client, not here,
+    keeps this entity from needing to know which family it's on.
+    """
+
+    _attr_translation_key = "anti_starvation"
+    _attr_icon = "mdi:battery-heart-variant"
+    _attr_is_on: bool | None = None
+
+    def __init__(
+        self, coordinator, sn: str, dev_data: dict, client_method: str
+    ) -> None:
+        """Initialize the anti-starvation switch."""
+        super().__init__(coordinator, sn, dev_data)
+        self._attr_unique_id = f"hyxi_{sn}_anti_starvation"
+        self._client_method = client_method
+
+    async def _async_set(self, enabled: bool) -> None:
+        client = self.coordinator.client
+        method = getattr(client, self._client_method)
+        _LOGGER.debug(
+            "Switch: setting anti-starvation protection to %s for %s",
+            enabled,
+            mask_sn(self._sn),
+        )
+        try:
+            await method(enabled)
+            self._attr_is_on = enabled
+            self.async_write_ha_state()
+            await self.coordinator.async_request_refresh()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.error(
+                "Failed to set anti-starvation protection to %s for %s: %s",
+                enabled,
+                mask_sn(self._sn),
+                err,
+            )
+            raise
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Enable anti-starvation protection."""
+        await self._async_set(True)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Disable anti-starvation protection."""
+        await self._async_set(False)
+
+    @property
+    def available(self) -> bool:
+        """Unavailable when battery control is not enabled."""
+        return super().available
 
 
 class HyxiMicroEssPowerSwitch(HyxiEntity, SwitchEntity):

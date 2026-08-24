@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Verbind met HYXI Cloud",
-        "description": "Voer jou **Ontwikkelaar API-bewysbriewe (AK/SK)** in. Jy kan dit genereer by die [HYXIPOWER-ontwikkelaarsplatform]({link}).\n\n**Nota:** Dit vereis 'n aparte ontwikkelaarrekening. As jou ontwikkelaar-e-pos verskil van jou app-e-pos, moet jy eers jou **Aanleg Deel** (Share Plant) vanaf die app na die ontwikkelaar-e-pos.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Toegangsleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)",
-          "region": "Bedienerstreek"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Geheime Sleutel (SK)",
           "region": "Bedienerstreek"
         }
+      },
+      "cloud": {
+        "title": "Verbind met HYXI Cloud",
+        "description": "Voer jou **Ontwikkelaar API-bewysbriewe (AK/SK)** in. Jy kan dit genereer by die [HYXIPOWER-ontwikkelaarsplatform]({link}).\n\n**Nota:** Dit vereis 'n aparte ontwikkelaarrekening. As jou ontwikkelaar-e-pos verskil van jou app-e-pos, moet jy eers jou **Aanleg Deel** (Share Plant) vanaf die app na die ontwikkelaar-e-pos.",
+        "data": {
+          "access_key": "Toegangsleutel (AK)",
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Bedienerstreek"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Kon nie met HYXI-bedieners verbind nie",
       "invalid_auth": "Ongeldige Toegangsleutel of Geheime Sleutel",
       "unknown": "Onverwagte fout het voorgekom",
-      "no_devices": "Geen aanlegte of toestelle gevind nie. As u ontwikkelaars-e-posadres verskil van u toepassing-e-posadres, moet u eers u aanleg vanaf die toepassing met die ontwikkelaars-e-posadres deel."
+      "no_devices": "Geen aanlegte of toestelle gevind nie. As u ontwikkelaars-e-posadres verskil van u toepassing-e-posadres, moet u eers u aanleg vanaf die toepassing met die ontwikkelaars-e-posadres deel.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Hierdie HYXI-rekening is reeds opgestel.",
-      "reauth_successful": "Hertoestemming was suksesvol"
+      "reauth_successful": "Hertoestemming was suksesvol",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXI-stelselkonfigurasie",
-        "description": "Pas aan hoe jou integrasie met die HYXI Cloud kommunikeer.\n\n> ⚠️ **Toestelbeheer**: Skakel met omsigtigheid in as jou omsetter reeds deur jou energieverskaffer bestuur word of by 'n Virtuele Kragstasie (VPP)-program ingeskryf is. Die stuur van opdragte terwyl jou verskaffer beheer het, kan met hul dispatch-skedule bots.\n\n---",
+        "description": "Pas aan hoe jou integrasie met HYXI kommunikeer.\n\n> ⚠️ **Toestelbeheer**: Skakel met omsigtigheid in as jou omsetter reeds deur jou energieverskaffer bestuur word of by 'n Virtuele Kragstasie (VPP)-program ingeskryf is. Die stuur van opdragte terwyl jou verskaffer beheer het, kan met hul dispatch-skedule bots.\n\n---",
         "data": {
           "update_interval": "Opvragsinterval (1-60 minute, verstek: 5)",
+          "update_interval_modbus": "Opvragsinterval (1-60 sekondes, verstek: 15)",
           "back_discovery": "Aktiveer ontdekking via alarms (Gevorderd)",
           "enable_battery_control": "Aktiveer toestelbeheer en -beskerming",
           "enable_energy_manager": "Aktiveer Energiebestuurder Alleenstaande (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Wolk-status"
+        "name": "Verbindingstatus"
       },
       "device_alarm": {
         "name": "Aktiewe Probleme",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Totale Energie-opbrengs"
       },
+      "totaleb": {
+        "name": "Totale Energie-opbrengs B"
+      },
+      "totalec": {
+        "name": "Totale Energie-opbrengs C"
+      },
       "bat_charge_total": {
         "name": "Totale Battery-herlaai"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Integrasie Laas Opgedateer"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Battery-kapasiteit"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Energie Vandag"
       },
+      "etodayin": {
+        "name": "Netinvoerenergie Vandag"
+      },
       "efpv": {
         "name": "Opbrengs Vandag (PV)"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Fase 3 Las"
+      },
+      "ph1loadv": {
+        "name": "Fase 1 Lasspanning"
+      },
+      "ph2loadv": {
+        "name": "Fase 2 Lasspanning"
+      },
+      "ph3loadv": {
+        "name": "Fase 3 Lasspanning"
       },
       "pv1v": {
         "name": "PV1 Spanning"
@@ -371,6 +458,27 @@
           "1": "Aanskakel"
         }
       },
+      "meteronline": {
+        "name": "Meter Aanlyn"
+      },
+      "gridmode": {
+        "name": "Netmodus"
+      },
+      "runcommand": {
+        "name": "Loopbevel"
+      },
+      "currentoperatingmode": {
+        "name": "Bedryfsmodus"
+      },
+      "insulationresistance": {
+        "name": "Isolasieweerstand"
+      },
+      "leakagecurrent": {
+        "name": "Lekstroom"
+      },
+      "selfteststatus": {
+        "name": "Selftoetsstatus"
+      },
       "pvpower": {
         "name": "Totale PV-krag"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "DC-kant temperatuur"
+      },
+      "ambienttemper": {
+        "name": "Omgewingstemperatuur"
+      },
+      "boosttemper": {
+        "name": "Boost-temperatuur"
+      },
+      "dsptemper": {
+        "name": "DSP-temperatuur"
       },
       "gridf": {
         "name": "Netfrekwensie"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Af-net krag"
+      },
+      "offgridv": {
+        "name": "Af-net Spanning"
+      },
+      "offgridi": {
+        "name": "Af-net Stroom"
       },
       "offgridq": {
         "name": "Af-net reaktiewe krag"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Maks ontlaaistroom"
+      },
+      "bmsstate": {
+        "name": "BMS-status"
+      },
+      "batoperatingstatus": {
+        "name": "Battery-bedryfstatus"
+      },
+      "batalarm1": {
+        "name": "Battery-alarm 1"
+      },
+      "batalarm2": {
+        "name": "Battery-alarm 2"
+      },
+      "batalarm3": {
+        "name": "Battery-alarm 3"
+      },
+      "batcapacityah": {
+        "name": "Battery-kapasiteit (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominale battery-kapasiteit"
+      },
+      "llcbusvoltage": {
+        "name": "LLC-bus-spanning"
+      },
+      "batchargev": {
+        "name": "Battery-laaispanning"
+      },
+      "batchargei": {
+        "name": "Battery-laaistroom"
+      },
+      "batchargep": {
+        "name": "Battery-laaikrag"
+      },
+      "batdischargev": {
+        "name": "Battery-ontlaaispanning"
+      },
+      "batdischargei": {
+        "name": "Battery-ontlaaistroom"
+      },
+      "batdischargep": {
+        "name": "Battery-ontlaaikrag"
       },
       "batcharge": {
         "name": "Daaglikse laai-energie"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Kragbeperking"
       },
+      "feed_in_power_limit": {
+        "name": "Terugvoerkrag-limiet"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC Minimum"
+      },
+      "force_charge_start_soc": {
+        "name": "Geforseerde Laai Begin-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Geforseerde Laai Stop-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Af-net Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Eie-gebruik Reserwe-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Ontlaai Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Rugsteun Reserwe-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Geforseerde Laai SOC"
+      },
+      "feed_in_soc": {
+        "name": "Terugvoer SOC-drempel"
+      },
+      "off_grid_soc": {
+        "name": "Af-net Modus SOC-drempel"
+      },
+      "feed_in_power": {
+        "name": "Terugvoerkrag-limiet"
+      },
+      "max_charge_current": {
+        "name": "Maks Laaistroom"
+      },
+      "max_discharge_current": {
+        "name": "Maks Ontlaaistroom"
+      },
       "soc_min": {
         "name": "SOC Minimum"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Krag"
       },
+      "anti_starvation": {
+        "name": "Diepontlaai-beskerming"
+      },
       "em_grid_charge_allowed": {
         "name": "Netlading Toegelaat"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Piekbesnoeiing: Hou"
+      },
+      "power_on": {
+        "name": "Skakel Aan"
+      },
+      "power_off": {
+        "name": "Skakel Af"
+      },
+      "restart": {
+        "name": "Herlaai"
       },
       "clear_alarms": {
         "name": "Maak aktiewe alarms skoon"

@@ -23,14 +23,20 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
+    CONF_MODBUS_FRAMER,
+    CONF_MODBUS_TYPE,
     CONF_PUSH_RATE,
+    DEFAULT_MODBUS_FRAMER,
     DOMAIN,
     MANUFACTURER,
+    MODBUS_TYPE_SERIAL,
     NULL_VALUES,
     detect_phase_type,
     get_raw_device_code,
     get_software_version,
     is_battery_control_enabled,
+    is_control_capable_device_type,
+    is_modbus_entry,
     is_null_value,
     is_zero_value,
     mask_sn,
@@ -82,11 +88,56 @@ BATTERY_SENSORS = {
     "batDisCharge",
     "totalEchg",
     "totalEdchg",
+    "bmsState",
+    "batOperatingStatus",
+    "batAlarm1",
+    "batAlarm2",
+    "batAlarm3",
+    "batCapacityAh",
+    "batNominalCapacity",
+    "llcBusVoltage",
+    "batChargeV",
+    "batChargeI",
+    "batChargeP",
+    "batDischargeV",
+    "batDischargeI",
+    "batDischargeP",
 }
 
 
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
 HEARTBEAT_SENSORS = {"last_seen"}
+
+# Keys the cloud API has never produced for any device -- confirmed both
+# by their absence from hyxi_cloud_api's own source and by a real cloud
+# entry showing every one of them stuck on "unknown". The Modbus register
+# maps are the only source for these, and pre-registering them for a
+# cloud entry the same way genuinely webhook-only metrics are
+# pre-registered just means a sensor stuck on "unknown" forever, the same
+# problem this was meant to solve, not avoid. Excluded from
+# pre-registration below; the "process dynamically available valid
+# metrics keys" loop already adds these for Modbus/HALO entries, since
+# that client reads them on every poll.
+CLOUD_NEVER_PRODUCES = {
+    "acE",
+    "acP",
+    "batIcm",
+    "batIdm",
+    "bmsState",
+    "batCapacityAh",
+    "batAlarm1",
+    "batAlarm2",
+    "batAlarm3",
+    "batChargeV",
+    "batChargeI",
+    "batChargeP",
+    "batDischargeV",
+    "batDischargeI",
+    "batDischargeP",
+    "batNominalCapacity",
+    "batOperatingStatus",
+    "llcBusVoltage",
+}
 
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
 BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw", "swVerMaster", "swVerSlave"}
@@ -116,6 +167,30 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:home-lightning-bolt",
         suggested_display_precision=0,
+    ),
+    SensorEntityDescription(
+        key="ph1Loadv",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sine-wave",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="ph2Loadv",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sine-wave",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="ph3Loadv",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sine-wave",
+        suggested_display_precision=1,
     ),
     # PV String Sensors
     SensorEntityDescription(
@@ -554,6 +629,22 @@ SENSOR_TYPES = [
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
+        key="totalEb",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:counter",
+        suggested_display_precision=2,
+    ),
+    SensorEntityDescription(
+        key="totalEc",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:counter",
+        suggested_display_precision=2,
+    ),
+    SensorEntityDescription(
         key="totalEnt",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
@@ -703,6 +794,14 @@ SENSOR_TYPES = [
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
+        key="eTodayIn",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon="mdi:transmission-tower-import",
+        suggested_display_precision=2,
+    ),
+    SensorEntityDescription(
         key="efpv",
         translation_key="efpv",
         native_unit_of_measurement="kWh",
@@ -716,7 +815,12 @@ SENSOR_TYPES = [
         key="invSts",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        options=["0", "1", "2", "3", "4"],
+        # 0-4 have confirmed labels below. 6 is undocumented but observed
+        # on real hardware -- listed with no state translation so it
+        # displays as the raw number rather than "unknown", without
+        # guessing what it means. Extend the same way if another
+        # undocumented value shows up.
+        options=["0", "1", "2", "3", "4", "6"],
         icon="mdi:information",
     ),
     SensorEntityDescription(
@@ -748,6 +852,62 @@ SENSOR_TYPES = [
         icon="mdi:power-switch",
     ),
     SensorEntityDescription(
+        key="meterOnline",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=["0", "1"],
+        icon="mdi:electric-switch",
+    ),
+    SensorEntityDescription(
+        key="gridMode",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=["0", "1"],
+        icon="mdi:transmission-tower",
+    ),
+    SensorEntityDescription(
+        key="runCommand",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=["0", "1"],
+        icon="mdi:power",
+    ),
+    SensorEntityDescription(
+        key="currentOperatingMode",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # 1-7 have confirmed labels below. 15 and 16 are undocumented but
+        # observed on real hardware under two different conditions -- see
+        # invSts above for why they're listed with no translation rather
+        # than guessed or hidden.
+        # pylint: disable-next=fixme
+        # TODO: the vendor's 1-7 table looks more incomplete than a single
+        # stray value would suggest. Keep adding newly observed values
+        # here as they show up, and add a translated label once any of
+        # them gets a confirmed meaning.
+        options=["1", "2", "3", "4", "5", "6", "7", "15", "16"],
+        icon="mdi:state-machine",
+    ),
+    # Raw diagnostic values with no documented unit or value table --
+    # passed through rather than guessed. See docs/modbus-provenance.md.
+    SensorEntityDescription(
+        key="insulationResistance",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:omega",
+    ),
+    SensorEntityDescription(
+        key="leakageCurrent",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:flash-alert",
+    ),
+    SensorEntityDescription(
+        key="selfTestStatus",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:progress-check",
+    ),
+    SensorEntityDescription(
         key="pvPower",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
@@ -770,6 +930,30 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="dcSideTemper",
+        native_unit_of_measurement="°C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:thermometer",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="ambientTemper",
+        native_unit_of_measurement="°C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:thermometer",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="boostTemper",
+        native_unit_of_measurement="°C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:thermometer",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="dspTemper",
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -830,6 +1014,22 @@ SENSOR_TYPES = [
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:power-plug-off",
         suggested_display_precision=0,
+    ),
+    SensorEntityDescription(
+        key="offGridV",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sine-wave",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="offGridI",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:current-ac",
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="offGridQ",
@@ -916,6 +1116,116 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:current-dc",
         suggested_display_precision=2,
+    ),
+    # BMS/battery detail -- one or the other family reports each of these.
+    SensorEntityDescription(
+        key="bmsState",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-sync",
+    ),
+    SensorEntityDescription(
+        key="batOperatingStatus",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=["0", "1", "2", "3"],
+        icon="mdi:battery-sync",
+    ),
+    # Raw BMS alarm words, undecoded -- see HaloFaults for why.
+    SensorEntityDescription(
+        key="batAlarm1",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:alert-circle-outline",
+    ),
+    SensorEntityDescription(
+        key="batAlarm2",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:alert-circle-outline",
+    ),
+    SensorEntityDescription(
+        key="batAlarm3",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:alert-circle-outline",
+    ),
+    SensorEntityDescription(
+        key="batCapacityAh",
+        native_unit_of_measurement="Ah",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-outline",
+        suggested_display_precision=0,
+    ),
+    SensorEntityDescription(
+        key="batNominalCapacity",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:battery-outline",
+    ),
+    SensorEntityDescription(
+        key="llcBusVoltage",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:car-battery",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="batChargeV",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-arrow-up",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="batChargeI",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:current-dc",
+        suggested_display_precision=2,
+    ),
+    SensorEntityDescription(
+        key="batChargeP",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-arrow-up",
+        suggested_display_precision=0,
+    ),
+    SensorEntityDescription(
+        key="batDischargeV",
+        native_unit_of_measurement="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-arrow-down",
+        suggested_display_precision=1,
+    ),
+    SensorEntityDescription(
+        key="batDischargeI",
+        native_unit_of_measurement="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:current-dc",
+        suggested_display_precision=2,
+    ),
+    SensorEntityDescription(
+        key="batDischargeP",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:battery-arrow-down",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="batCharge",
@@ -1012,6 +1322,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         # Pre-calculate base keys to process + specific static keys
         keys_to_add = set(base_keys)
+        if is_modbus_entry(entry):
+            # last_seen is a cloud heartbeat timestamp; neither Modbus
+            # client ever populates it, so it would just sit frozen at
+            # whatever a prior cloud entry for this same device last wrote.
+            keys_to_add.discard("last_seen")
         keys_to_add.add("device_type")
 
         # Process dynamically available valid metrics keys
@@ -1021,8 +1336,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
             ):
                 keys_to_add.add(key)
 
-        # Pre-register standard sensors to ensure webhook-only metrics are successfully registered
-        if not is_collector_or_dmu:
+        # Pre-register standard sensors to ensure webhook-only metrics are
+        # successfully registered. Modbus has no webhook path -- a key
+        # this poll didn't produce will never arrive later the way a cloud
+        # metric can via push, so pre-registering it just means a sensor
+        # that's permanently "unknown" instead of never created. Skipped
+        # entirely for Modbus; the "process dynamically available valid
+        # metrics keys" loop above already adds every key a Modbus client
+        # actually reads, without needing this at all.
+        if not is_collector_or_dmu and not is_modbus_entry(entry):
             # Common inverter sensors (always applicable)
             keys_to_add.update(
                 {
@@ -1051,6 +1373,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     "invSts",
                     "gridSts",
                 }
+                - CLOUD_NEVER_PRODUCES
             )
 
             # Check phase type for Phase 2 & 3 sensors
@@ -1071,7 +1394,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
             # Check if device type supports battery
             if device_type in ("hybrid_inverter", "all_in_one"):
-                keys_to_add.update(local_battery_sensors)
+                keys_to_add.update(local_battery_sensors - CLOUD_NEVER_PRODUCES)
                 keys_to_add.update(
                     {
                         "bat_charging",
@@ -1091,7 +1414,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 entities.append(HyxiSensor(coordinator, sn, description))
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
-    entities.append(HyxiSubscriptionStatusSensor(coordinator, entry))
+    # Push is a HYXI cloud webhook subscription; a point-to-point RS485
+    # link has no equivalent, so a Modbus entry never shows this sensor.
+    if not is_modbus_entry(entry):
+        entities.append(HyxiSubscriptionStatusSensor(coordinator, entry))
+    else:
+        # Connection type/framing is a Modbus-only distinction -- a cloud
+        # entry has no physical link or wire framing of its own to report.
+        entities.append(HyxiModbusConnectionTypeSensor(coordinator, entry))
 
     # 2b. Microinverter Aggregate Sensors
     has_micro_inverter = any(
@@ -1136,11 +1466,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
     if is_battery_control_enabled(entry, coordinator):
         for sn, dev_data in coordinator.data.items():
             device_type = normalize_device_type(get_raw_device_code(dev_data))
-            if device_type not in ("hybrid_inverter", "all_in_one"):
+            if not is_control_capable_device_type(entry, device_type):
                 continue
-            phase = detect_phase_type(dev_data)
-            if phase not in ("three_phase", "single_phase"):
-                continue
+            # Local Modbus always resolves to the mode-control surface,
+            # independent of phase -- HALO has no phase 2/3 registers at
+            # all and would otherwise never pass the phase check below.
+            # Cloud entries keep the original phase-based gate. Mirrors
+            # _async_setup_battery_protection in __init__.py exactly,
+            # which starts the controller that reads this entity's
+            # restored state back on startup (protection.py,
+            # async_start) -- a HALO Modbus device that gets a
+            # controller but not this sensor loses last_sent_mode across
+            # every restart, with nothing to restore it from.
+            if not is_modbus_entry(entry):
+                phase = detect_phase_type(dev_data)
+                if phase not in ("three_phase", "single_phase"):
+                    continue
             entities.append(HyxiLastSentModeSensor(coordinator, sn))
 
     # 4. Energy Manager sensors (EM-only)
@@ -1619,11 +1960,12 @@ class HyxiLastUpdateSensor(
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_integration_last_updated"
+        modbus = is_modbus_entry(entry)
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
+            "name": "HYXI Modbus Service" if modbus else "HYXI Cloud Service",
             "manufacturer": MANUFACTURER,
-            "model": "Cloud API Bridge",
+            "model": "Local Modbus Bridge" if modbus else "Cloud API Bridge",
         }
         self._update_native_value()
 
@@ -1636,6 +1978,46 @@ class HyxiLastUpdateSensor(
         """Handle updated data from the coordinator."""
         self._update_native_value()
         super()._handle_coordinator_update()
+
+
+class HyxiModbusConnectionTypeSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity
+):
+    """Which physical link and wire framing a Modbus entry actually uses.
+
+    Host/port or serial device alone doesn't say whether a TCP gateway is
+    in passthrough or native Modbus-TCP mode -- that's exactly the thing
+    setup auto-detects instead of asking (see
+    config_flow._probe_and_detect_modbus_tcp). Set once from the entry's
+    stored config, not from polled data -- this doesn't change without a
+    reconfigure, which recreates every entity anyway.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "modbus_connection_type"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:lan-connect"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        # Display text lives in the "state" translation for this key, not
+        # here -- these are stable machine values an automation can key
+        # off, independent of however the shown text is later reworded.
+        self._attr_options = ["tcp_rtu", "tcp_socket", "serial"]
+        self._attr_unique_id = f"{entry.entry_id}_modbus_connection_type"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "HYXI Modbus Service",
+            "manufacturer": MANUFACTURER,
+            "model": "Local Modbus Bridge",
+        }
+        if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
+            self._attr_native_value = "serial"
+        elif entry.data.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER) == "socket":
+            self._attr_native_value = "tcp_socket"
+        else:
+            self._attr_native_value = "tcp_rtu"
 
 
 class HyxiSubscriptionStatusSensor(

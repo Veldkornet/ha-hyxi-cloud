@@ -175,6 +175,32 @@ async def test_async_setup_entry_micro_inverter(
 
 
 @pytest.mark.asyncio()
+async def test_async_setup_entry_skips_clear_alarms_button_for_modbus(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """HyxiClearAlarmsButton calls alter_alarm, which neither Modbus client
+    implements, and reads dev_data["alarms"], which neither populates --
+    a Modbus entry must not get this button at all."""
+    hass = MagicMock()
+    mock_entry_fixture.data = {"transport": "modbus"}
+    mock_entry_fixture.options = {}
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {
+        "SN123": {"device_type_code": "1", "model": "H10K-HT", "alarms": []}
+    }
+
+    async_add_entities = MagicMock()
+
+    await button_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    if async_add_entities.called:
+        entities = async_add_entities.call_args[0][0]
+        assert not any(
+            isinstance(e, button_mod.HyxiClearAlarmsButton) for e in entities
+        )
+
+
+@pytest.mark.asyncio()
 async def test_async_setup_entry_three_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -309,7 +335,34 @@ async def test_micro_restart_button_error(mock_coordinator_fixture):
     )
     btn = button_mod.HyxiMicroRestartButton(mock_coordinator_fixture, "SN123", {})
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with pytest.raises(button_mod.HomeAssistantError, match="restart microinverter"):
+        await btn.async_press()
+
+
+@pytest.mark.asyncio()
+async def test_power_command_button_press(mock_coordinator_fixture):
+    """Test pressing each of the three power command buttons."""
+    for action in ("power_on", "power_off", "restart"):
+        btn = button_mod.HyxiPowerCommandButton(
+            mock_coordinator_fixture, "SN123", {}, action
+        )
+        await btn.async_press()
+        getattr(mock_coordinator_fixture.client, action).assert_called_once_with(
+            "SN123"
+        )
+
+
+@pytest.mark.asyncio()
+async def test_power_command_button_error(mock_coordinator_fixture):
+    """Test error handling when a power command write fails."""
+    mock_coordinator_fixture.client.restart.side_effect = (
+        button_mod.HyxiApiClient.ControlError("bus fell over")
+    )
+    btn = button_mod.HyxiPowerCommandButton(
+        mock_coordinator_fixture, "SN123", {}, "restart"
+    )
+
+    with pytest.raises(button_mod.HomeAssistantError, match="power command"):
         await btn.async_press()
 
 
@@ -366,7 +419,7 @@ async def test_mode_button_error(mock_coordinator_fixture):
     )
     btn = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with pytest.raises(button_mod.HomeAssistantError, match="set mode 'idle'"):
         await btn.async_press()
 
 
@@ -395,7 +448,7 @@ async def test_peak_shaving_button_error(mock_coordinator_fixture):
     )
 
     with patch.object(button_mod, "_LOGGER") as mock_logger:
-        with pytest.raises(button_mod.HyxiApiClient.ControlError):
+        with pytest.raises(button_mod.HomeAssistantError, match="peak shaving 'hold'"):
             await btn.async_press()
         mock_logger.error.assert_called_once_with(
             "Failed to send peak shaving '%s' to %s: %s",
@@ -538,7 +591,7 @@ async def test_clear_alarms_button_error(mock_coordinator_fixture):
     )
     btn = button_mod.HyxiClearAlarmsButton(mock_coordinator_fixture, "SN123", {})
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with pytest.raises(button_mod.HomeAssistantError, match="clear active alarms"):
         await btn.async_press()
 
 

@@ -16,7 +16,9 @@
   "requirements": [
     "aiohttp>=3.13.5",
     "voluptuous",
-    "hyxi-cloud-api>=1.4.4"
+    "hyxi-cloud-api>=1.4.4",
+    "modbus-connection[tmodbus]>=4.8.1",
+    "tmodbus[async-serial]>=0.5.1"
   ],
   "version": "1.6.6"
 }

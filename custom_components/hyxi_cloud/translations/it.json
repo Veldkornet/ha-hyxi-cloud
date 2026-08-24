@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connettiti a HYXI Cloud",
-        "description": "Inserisci le tue **credenziali API sviluppatore (AK/SK)**. Puoi generarle sulla [Piattaforma sviluppatori HYXIPOWER]({link}).\n\n**Nota:** È necessario un account sviluppatore separato. Se l'e-mail dello sviluppatore differisce dall'e-mail dell'app, devi prima **Condividere il tuo impianto** dall'app all'e-mail dello sviluppatore.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Chiave di accesso (AK)",
-          "secret_key": "Chiave segreta (SK)",
-          "region": "Regione del server"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Chiave segreta (SK)",
           "region": "Regione del server"
         }
+      },
+      "cloud": {
+        "title": "Connettiti a HYXI Cloud",
+        "description": "Inserisci le tue **credenziali API sviluppatore (AK/SK)**. Puoi generarle sulla [Piattaforma sviluppatori HYXIPOWER]({link}).\n\n**Nota:** È necessario un account sviluppatore separato. Se l'e-mail dello sviluppatore differisce dall'e-mail dell'app, devi prima **Condividere il tuo impianto** dall'app all'e-mail dello sviluppatore.",
+        "data": {
+          "access_key": "Chiave di accesso (AK)",
+          "secret_key": "Chiave segreta (SK)",
+          "region": "Regione del server"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Connessione ai server HYXI non riuscita",
       "invalid_auth": "Chiave di accesso o chiave segreta non valida",
       "unknown": "Si è verificato un errore imprevisto",
-      "no_devices": "Nessun impianto o dispositivo trovato. Se l'e-mail dello sviluppatore differisce da quella dell'app, devi prima condividere il tuo impianto dall'app all'e-mail dello sviluppatore."
+      "no_devices": "Nessun impianto o dispositivo trovato. Se l'e-mail dello sviluppatore differisce da quella dell'app, devi prima condividere il tuo impianto dall'app all'e-mail dello sviluppatore.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Questo account HYXI è già configurato.",
-      "reauth_successful": "La riautenticazione è andata a buon fine"
+      "reauth_successful": "La riautenticazione è andata a buon fine",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Configurazione del sistema HYXI",
-        "description": "Regola il modo in cui la tua integrazione comunica con HYXI Cloud.\n\n> ⚠️ **Controllo del dispositivo**: Abilita con cautela se il tuo inverter è già gestito dal tuo fornitore di energia o è iscritto a un programma di Centrale Elettrica Virtuale (VPP). L'invio di comandi mentre il fornitore ha il controllo potrebbe entrare in conflitto con il suo programma di dispacciamento.\n\n---",
+        "description": "Regola il modo in cui la tua integrazione comunica con HYXI.\n\n> ⚠️ **Controllo del dispositivo**: Abilita con cautela se il tuo inverter è già gestito dal tuo fornitore di energia o è iscritto a un programma di Centrale Elettrica Virtuale (VPP). L'invio di comandi mentre il fornitore ha il controllo potrebbe entrare in conflitto con il suo programma di dispacciamento.\n\n---",
         "data": {
           "update_interval": "Intervallo di aggiornamento (1-60 Minuti, Predefinito: 5)",
+          "update_interval_modbus": "Intervallo di aggiornamento (1-60 Secondi, Predefinito: 15)",
           "back_discovery": "Abilita il rilevamento tramite allarmi (Avanzato)",
           "enable_battery_control": "Abilita controllo e protezione dispositivo",
           "enable_energy_manager": "Abilita Gestore Energia Standalone (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Stato Cloud"
+        "name": "Stato Connessione"
       },
       "device_alarm": {
         "name": "Problemi attivi",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Rendimento energetico totale"
       },
+      "totaleb": {
+        "name": "Rendimento energetico totale B"
+      },
+      "totalec": {
+        "name": "Rendimento energetico totale C"
+      },
       "bat_charge_total": {
         "name": "Carica totale batteria"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Ultimo aggiornamento integrazione"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Capacità batteria"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Energia oggi"
       },
+      "etodayin": {
+        "name": "Energia Importata dalla Rete Oggi"
+      },
       "efpv": {
         "name": "Rendimento oggi (PV)"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Carico Fase 3"
+      },
+      "ph1loadv": {
+        "name": "Tensione di Carico Fase 1"
+      },
+      "ph2loadv": {
+        "name": "Tensione di Carico Fase 2"
+      },
+      "ph3loadv": {
+        "name": "Tensione di Carico Fase 3"
       },
       "pv1v": {
         "name": "Tensione PV1"
@@ -371,6 +458,27 @@
           "1": "Accensione"
         }
       },
+      "meteronline": {
+        "name": "Contatore online"
+      },
+      "gridmode": {
+        "name": "Modalità rete"
+      },
+      "runcommand": {
+        "name": "Comando di avvio"
+      },
+      "currentoperatingmode": {
+        "name": "Modalità operativa"
+      },
+      "insulationresistance": {
+        "name": "Resistenza di isolamento"
+      },
+      "leakagecurrent": {
+        "name": "Corrente di dispersione"
+      },
+      "selfteststatus": {
+        "name": "Stato autotest"
+      },
       "pvpower": {
         "name": "Potenza PV totale"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "Temperatura lato DC"
+      },
+      "ambienttemper": {
+        "name": "Temperatura ambiente"
+      },
+      "boosttemper": {
+        "name": "Temperatura boost"
+      },
+      "dsptemper": {
+        "name": "Temperatura DSP"
       },
       "gridf": {
         "name": "Frequenza di rete"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Potenza fuori rete"
+      },
+      "offgridv": {
+        "name": "Tensione fuori rete"
+      },
+      "offgridi": {
+        "name": "Corrente fuori rete"
       },
       "offgridq": {
         "name": "Potenza reattiva fuori rete"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Corrente massima di scarica"
+      },
+      "bmsstate": {
+        "name": "Stato BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Stato operativo della batteria"
+      },
+      "batalarm1": {
+        "name": "Allarme batteria 1"
+      },
+      "batalarm2": {
+        "name": "Allarme batteria 2"
+      },
+      "batalarm3": {
+        "name": "Allarme batteria 3"
+      },
+      "batcapacityah": {
+        "name": "Capacità batteria (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Capacità nominale della batteria"
+      },
+      "llcbusvoltage": {
+        "name": "Tensione bus LLC"
+      },
+      "batchargev": {
+        "name": "Tensione di carica batteria"
+      },
+      "batchargei": {
+        "name": "Corrente di carica batteria"
+      },
+      "batchargep": {
+        "name": "Potenza di carica batteria"
+      },
+      "batdischargev": {
+        "name": "Tensione di scarica batteria"
+      },
+      "batdischargei": {
+        "name": "Corrente di scarica batteria"
+      },
+      "batdischargep": {
+        "name": "Potenza di scarica batteria"
       },
       "batcharge": {
         "name": "Energia di carica giornaliera"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Limite di potenza"
       },
+      "feed_in_power_limit": {
+        "name": "Limite di potenza di immissione"
+      },
+      "vpp_min_soc": {
+        "name": "SOC Minimo VPP"
+      },
+      "force_charge_start_soc": {
+        "name": "SOC di Inizio Carica Forzata"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC di Fine Carica Forzata"
+      },
+      "off_grid_min_soc": {
+        "name": "SOC Minimo Fuori Rete"
+      },
+      "self_use_soc": {
+        "name": "SOC di Riserva Autoconsumo"
+      },
+      "discharge_min_soc": {
+        "name": "SOC Minimo di Scarica"
+      },
+      "backup_soc": {
+        "name": "SOC di Riserva Backup"
+      },
+      "forced_charge_soc": {
+        "name": "SOC Carica Forzata"
+      },
+      "feed_in_soc": {
+        "name": "Soglia SOC di Immissione"
+      },
+      "off_grid_soc": {
+        "name": "Soglia SOC Modalità Fuori Rete"
+      },
+      "feed_in_power": {
+        "name": "Limite di potenza di immissione"
+      },
+      "max_charge_current": {
+        "name": "Corrente Max Carica"
+      },
+      "max_discharge_current": {
+        "name": "Corrente Max Scarica"
+      },
       "soc_min": {
         "name": "SOC Minimo"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Alimentazione"
       },
+      "anti_starvation": {
+        "name": "Protezione da scarica profonda"
+      },
       "em_grid_charge_allowed": {
         "name": "Carica da Rete Consentita"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Rasatura dei picchi: Mantieni"
+      },
+      "power_on": {
+        "name": "Accendi"
+      },
+      "power_off": {
+        "name": "Spegni"
+      },
+      "restart": {
+        "name": "Riavvia"
       },
       "clear_alarms": {
         "name": "Cancella allarmi attivi"

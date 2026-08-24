@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from homeassistant.const import Platform
 
@@ -72,6 +72,109 @@ _MANIFEST = json.loads(
     (Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
 )
 VERSION = _MANIFEST["version"]
+
+# Transport selection. The integration can reach a device through HYXI's
+# cloud API or over a local RS485 Modbus link. Entries created before this
+# existed have no transport key at all, so absence means cloud.
+CONF_TRANSPORT = "transport"
+TRANSPORT_CLOUD = "cloud"
+TRANSPORT_MODBUS = "modbus"
+DEFAULT_TRANSPORT = TRANSPORT_CLOUD
+
+# Modbus connection settings, stored in entry.data
+CONF_MODBUS_TYPE = "modbus_type"
+MODBUS_TYPE_TCP = "tcp"
+MODBUS_TYPE_SERIAL = "serial"
+CONF_MODBUS_HOST = "modbus_host"
+CONF_MODBUS_PORT = "modbus_port"
+CONF_MODBUS_DEVICE = "modbus_device"
+CONF_MODBUS_BAUDRATE = "modbus_baudrate"
+CONF_MODBUS_UNIT = "modbus_unit"
+
+DEFAULT_MODBUS_PORT = 502
+DEFAULT_MODBUS_BAUDRATE = 115200
+DEFAULT_MODBUS_UNIT = 1
+MODBUS_TIMEOUT = 10.0
+# Sized for reliable operational polling, not for the one-time setup probe
+# (config_flow._probe_and_detect_modbus / _probe_and_detect_modbus_tcp) --
+# a real device on a local network answers in well under a second, and the
+# framer probe already has to try up to two framers x two signature
+# registers each. At MODBUS_TIMEOUT, a device that's unreachable under one
+# framer (a wrong-framer gateway looks exactly like this from here) costs
+# ~20s before the other framer is even tried; at DETECTION_TIMEOUT, ~6s.
+DETECTION_TIMEOUT = 3.0
+# Local polling is cheap compared with the rate-limited cloud API.
+DEFAULT_MODBUS_INTERVAL = 15
+
+# Which wire framing a TCP gateway speaks. Detected automatically during
+# setup (see config_flow._probe_and_detect_modbus_tcp), same as family --
+# nothing in the setup form distinguishes an RS485-to-Ethernet gateway
+# that tunnels raw RTU frames over a plain TCP socket ("rtu", e.g.
+# Waveshare's "Protocol: None") from one that speaks native Modbus-TCP/
+# MBAP framing and translates to RTU on the wire itself ("socket", e.g.
+# Waveshare's "Modbus TCP to RTU"). A serial connection has no such
+# ambiguity -- a USB RS485 adapter only ever carries raw RTU -- so this
+# only applies to TCP entries.
+CONF_MODBUS_FRAMER = "modbus_framer"
+DEFAULT_MODBUS_FRAMER = "rtu"
+# Tried in this order: "rtu" first because it's the more common cheap
+# passthrough gateway, matching the only hardware this transport has been
+# validated against.
+MODBUS_TCP_FRAMERS: tuple[Literal["rtu", "socket"], ...] = ("rtu", "socket")
+
+# Which register map an entry talks. Detected automatically during setup
+# (see config_flow._detect_modbus_family) rather than asked of the user --
+# the two documents' confirmed address ranges don't overlap (hybrid tops
+# out at 3121, HALO starts at 4000), so a real value at either family's
+# signature register is strong, direct evidence.
+CONF_MODBUS_FAMILY = "modbus_family"
+MODBUS_FAMILY_HALO = "halo"
+MODBUS_FAMILY_HYBRID = "hybrid"
+# Falls back here when a device is confirmed reachable but answers neither
+# signature register with a value (an unusual firmware, or a Modbus stack
+# that silently zero-fills undefined addresses instead of raising an
+# exception). Hybrid is the stronger-evidenced document of the two -- the
+# vendor's current one, for the exact hardware this transport was built
+# against -- so it is the safer default to fall back to.
+DEFAULT_MODBUS_FAMILY = MODBUS_FAMILY_HYBRID
+
+# One register from each family that's cheap and safe to read: HALO's BMS
+# SOC (input 4980, from the Micro Storage RS485 document V1.0) and the
+# hybrid's own communication protocol version (input 0, from the RS485_
+# MODBUS RTU Hybrid Inverter Protocol V4.1). A real value at either is
+# treated as identifying evidence; a Modbus exception response there still
+# proves the device is present and speaking Modbus, just not which family.
+MODBUS_FAMILY_SIGNATURES: tuple[tuple[str, str, int], ...] = (
+    (MODBUS_FAMILY_HYBRID, "input", 0),
+    (MODBUS_FAMILY_HALO, "input", 4980),
+)
+
+# Minimum inter-frame spacing per family. The HALO document requires more
+# than 200ms; the hybrid document requires more than 500ms -- a real
+# difference, not a rounding choice, and using the HALO figure against a
+# hybrid device would violate its documented timing. DETECTION_SPACING is
+# used only before a family is known (during setup's probe/detect pass),
+# and is deliberately the more conservative of the two.
+MODBUS_MESSAGE_SPACING: dict[str, float] = {
+    MODBUS_FAMILY_HALO: 0.2,
+    MODBUS_FAMILY_HYBRID: 0.5,
+}
+DETECTION_MESSAGE_SPACING = max(MODBUS_MESSAGE_SPACING.values())
+
+
+def entry_transport(entry: Any) -> str:
+    """Return the transport an entry uses.
+
+    Entries predating local Modbus support carry no transport key, so a
+    missing value means cloud rather than an error.
+    """
+    return (getattr(entry, "data", None) or {}).get(CONF_TRANSPORT, DEFAULT_TRANSPORT)
+
+
+def is_modbus_entry(entry: Any) -> bool:
+    """Return True when an entry talks to its device over local Modbus."""
+    return entry_transport(entry) == TRANSPORT_MODBUS
+
 
 CONF_BACK_DISCOVERY = "back_discovery"
 
@@ -343,6 +446,28 @@ def is_battery_control_enabled(entry: Any, coordinator: Any) -> bool:
     if val is not None:
         return val
 
+    return False
+
+
+def is_control_capable_device_type(entry: Any, device_type: str) -> bool:
+    """Return True if this device type can receive control commands on
+    this entry's transport.
+
+    hybrid_inverter and all_in_one are controllable on either transport.
+    micro_ess (HALO) is controllable over local Modbus -- the register map
+    has a working VPP dispatch block with no permission check -- but not
+    over the cloud, where HYXI's API rejects the write outright (see
+    MICRO_ESS_CONTROL_SUPPORTED's docstring, a few lines above this file's
+    device-type table). This is the one place that distinction is made;
+    every entity platform should call this rather than checking
+    device_type or MICRO_ESS_CONTROL_SUPPORTED directly, so the two
+    transports can never silently disagree about which devices are
+    controllable.
+    """
+    if device_type in ("hybrid_inverter", "all_in_one"):
+        return True
+    if device_type == "micro_ess":
+        return MICRO_ESS_CONTROL_SUPPORTED or is_modbus_entry(entry)
     return False
 
 

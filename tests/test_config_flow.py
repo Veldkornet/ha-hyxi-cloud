@@ -1,5 +1,7 @@
 """Tests for the ConfigFlow _validate_input logic."""
 
+import builtins
+import contextlib
 import sys
 import types
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -46,6 +48,7 @@ def mock_ha_environment():
     mock_ce.OptionsFlow = RealOptionsFlow  # type: ignore[attr-defined]
     mock_ce.ConfigEntry = MagicMock()  # type: ignore[attr-defined]
     mock_ce.exceptions = MagicMock()  # type: ignore[attr-defined]
+    mock_ce.SOURCE_RECONFIGURE = "reconfigure"  # type: ignore[attr-defined]
 
     class IntentionalTermination(Exception):
         pass
@@ -226,27 +229,27 @@ async def test_validate_input_get_all_device_data_none(
 
 
 @pytest.mark.asyncio
-async def test_step_user_show_form(config_flow):
+async def test_step_cloud_show_form(config_flow):
     config_flow.async_show_form = MagicMock(
-        return_value={"type": "form", "step_id": "user", "errors": {}}
+        return_value={"type": "form", "step_id": "cloud", "errors": {}}
     )
-    result = await config_flow.async_step_user(user_input=None)
+    result = await config_flow.async_step_cloud(user_input=None)
 
     assert result["type"] == "form"
-    assert result["step_id"] == "user"
+    assert result["step_id"] == "cloud"
     assert result["errors"] == {}
 
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
-async def test_step_user_success(mock_validate_input, config_flow):
+async def test_step_cloud_success(mock_validate_input, config_flow):
     mock_validate_input.return_value = None
     config_flow.async_set_unique_id = AsyncMock()
     config_flow._abort_if_unique_id_configured = MagicMock()
     config_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
 
     user_input = {"access_key": "x", "secret_key": "y"}
-    result = await config_flow.async_step_user(user_input=user_input)
+    result = await config_flow.async_step_cloud(user_input=user_input)
 
     assert result["type"] == "create_entry"
     config_flow.async_set_unique_id.assert_called_once_with("x")
@@ -259,7 +262,7 @@ async def test_step_user_success(mock_validate_input, config_flow):
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
-async def test_step_user_selected_region_resolves_base_url(
+async def test_step_cloud_selected_region_resolves_base_url(
     mock_validate_input, config_flow
 ):
     """The region picked in the form must resolve to that region's server,
@@ -272,7 +275,7 @@ async def test_step_user_selected_region_resolves_base_url(
     config_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
 
     user_input = {"access_key": "x", "secret_key": "y", "region": "na"}
-    result = await config_flow.async_step_user(user_input=user_input)
+    result = await config_flow.async_step_cloud(user_input=user_input)
 
     assert result["type"] == "create_entry"
     mock_validate_input.assert_called_once_with(
@@ -284,7 +287,7 @@ async def test_step_user_selected_region_resolves_base_url(
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow._build_user_schema")
-async def test_step_user_show_form_suggests_region_from_country(
+async def test_step_cloud_show_form_suggests_region_from_country(
     mock_build_schema, config_flow
 ):
     """The form's default region should follow Home Assistant's configured
@@ -294,33 +297,33 @@ async def test_step_user_show_form_suggests_region_from_country(
     builder rather than inspecting a (mocked) vol.Schema object."""
     config_flow.hass.config.country = "US"
     config_flow.async_show_form = MagicMock(
-        return_value={"type": "form", "step_id": "user", "errors": {}}
+        return_value={"type": "form", "step_id": "cloud", "errors": {}}
     )
 
-    await config_flow.async_step_user(user_input=None)
+    await config_flow.async_step_cloud(user_input=None)
 
     mock_build_schema.assert_called_once_with("na")
 
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
-async def test_step_user_validation_error(mock_validate_input, config_flow):
+async def test_step_cloud_validation_error(mock_validate_input, config_flow):
     mock_validate_input.return_value = "invalid_auth"
     config_flow.async_set_unique_id = AsyncMock()
     config_flow._abort_if_unique_id_configured = MagicMock()
     config_flow.async_show_form = MagicMock(
         return_value={
             "type": "form",
-            "step_id": "user",
+            "step_id": "cloud",
             "errors": {"base": "invalid_auth"},
         }
     )
 
     user_input = {"access_key": "x", "secret_key": "y"}
-    result = await config_flow.async_step_user(user_input=user_input)
+    result = await config_flow.async_step_cloud(user_input=user_input)
 
     assert result["type"] == "form"
-    assert result["step_id"] == "user"
+    assert result["step_id"] == "cloud"
     assert result["errors"] == {"base": "invalid_auth"}
 
 
@@ -858,7 +861,7 @@ def test_get_sns_by_device_type_missing_coordinator(mock_ha_environment):
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._validate_input")
-async def test_step_user_already_configured(mock_validate_input, config_flow):
+async def test_step_cloud_already_configured(mock_validate_input, config_flow):
     """Test step_user when the entry is already configured (Unique ID abort)."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
 
@@ -876,7 +879,7 @@ async def test_step_user_already_configured(mock_validate_input, config_flow):
     with pytest.raises(
         config_flow_mod.config_entries.exceptions.IntentionalTermination
     ):
-        await config_flow.async_step_user(user_input=user_input)
+        await config_flow.async_step_cloud(user_input=user_input)
 
     config_flow.async_set_unique_id.assert_called_once_with("existing_key")
     config_flow._abort_if_unique_id_configured.assert_called_once()
@@ -1079,3 +1082,484 @@ async def test_async_step_energy_manager_keeps_existing_sn_selection(
     args, _kwargs = mock_build_schema.call_args
     assert sorted(args[1]) == ["SN_A", "SN_B"]
     assert args[2] == "SN_B"
+
+
+# --- Transport selection and the local Modbus branch -----------------------
+
+
+@pytest.fixture
+def modbus_flow(config_flow):
+    """A config flow with the unique-id guards stubbed out."""
+    # A real ConfigFlow always has these from __init__; the fake harness's
+    # stub __init__ is a no-op, so they must be set explicitly for anything
+    # that reads them (self.context.get("source"), and
+    # hass.config_entries.async_entry_for_domain_unique_id(self.handler, ...)
+    # in _validate_modbus's own-entry-aware uniqueness check).
+    config_flow.context = {}
+    config_flow.handler = "hyxi_cloud"
+    config_flow.async_set_unique_id = AsyncMock()
+    config_flow._abort_if_unique_id_configured = MagicMock()
+    # No existing entry at this address by default -- config_flow.hass is a
+    # bare MagicMock, and an un-configured call on one returns a truthy
+    # MagicMock, which would make every test look like a collision.
+    config_flow.hass.config_entries.async_entry_for_domain_unique_id = MagicMock(
+        return_value=None
+    )
+    config_flow.async_show_form = MagicMock(
+        side_effect=lambda **kw: {"type": "form", **kw}
+    )
+    config_flow.async_create_entry = MagicMock(
+        side_effect=lambda **kw: {"type": "entry", **kw}
+    )
+    return config_flow
+
+
+class _FakeModbusError(Exception):
+    """Stands in for modbus_connection's exception-response error."""
+
+
+class _FakeModbusTimeout(Exception):
+    """Stands in for modbus_connection's timeout error."""
+
+
+def _fake_modbus_modules(read_side_effect=None):
+    """Build stand-ins for modbus_connection and its tmodbus backend.
+
+    The real package is an optional runtime dependency that CI does not
+    install (tests.yml syncs only the test extra), and config_flow imports
+    it lazily, so the probe is exercised against these instead.
+    """
+    unit = MagicMock()
+    unit.read_input_registers = AsyncMock(side_effect=read_side_effect)
+    unit.read_holding_registers = AsyncMock(side_effect=read_side_effect)
+
+    connection = MagicMock()
+    connection.for_unit = MagicMock(return_value=unit)
+    connection.close = AsyncMock()
+
+    root = types.ModuleType("modbus_connection")
+    root.ModbusExceptionError = _FakeModbusError  # type: ignore[attr-defined]
+    root.ModbusTimeoutError = _FakeModbusTimeout  # type: ignore[attr-defined]
+    root.ModbusSerialParams = lambda **kw: ("serial", kw)  # type: ignore[attr-defined]
+    root.ModbusTcpParams = lambda **kw: ("tcp", kw)  # type: ignore[attr-defined]
+
+    backend = types.ModuleType("modbus_connection.tmodbus")
+    backend.ModbusConnection = MagicMock(  # type: ignore[attr-defined]
+        return_value=connection
+    )
+
+    return types.SimpleNamespace(
+        root=root, backend=backend, connection=connection, unit=unit
+    )
+
+
+@contextlib.contextmanager
+def _install_modbus(root, backend):
+    """Temporarily place the fake modbus modules on sys.modules."""
+    saved = {
+        k: sys.modules.get(k)
+        for k in ("modbus_connection", "modbus_connection.tmodbus")
+    }
+    sys.modules["modbus_connection"] = root
+    sys.modules["modbus_connection.tmodbus"] = backend
+    try:
+        yield
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                sys.modules.pop(key, None)
+            else:
+                sys.modules[key] = value
+
+
+@pytest.mark.asyncio
+async def test_step_user_shows_transport_chooser(modbus_flow):
+    result = await modbus_flow.async_step_user(user_input=None)
+
+    assert result["step_id"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_step_user_cloud_choice_goes_to_credentials(modbus_flow):
+    modbus_flow.async_step_cloud = AsyncMock(return_value={"type": "cloud"})
+
+    result = await modbus_flow.async_step_user(user_input={"transport": "cloud"})
+
+    assert result == {"type": "cloud"}
+
+
+@pytest.mark.asyncio
+async def test_step_user_modbus_choice_goes_to_modbus(modbus_flow):
+    modbus_flow.async_step_modbus = AsyncMock(return_value={"type": "modbus"})
+
+    result = await modbus_flow.async_step_user(user_input={"transport": "modbus"})
+
+    assert result == {"type": "modbus"}
+
+
+@pytest.mark.asyncio
+async def test_step_modbus_shows_connection_type_form(modbus_flow):
+    result = await modbus_flow.async_step_modbus(user_input=None)
+
+    assert result["step_id"] == "modbus"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("modbus_type", "expected_step"),
+    [("tcp", "modbus_tcp"), ("serial", "modbus_serial")],
+)
+async def test_step_modbus_routes_by_connection_type(
+    modbus_flow, modbus_type, expected_step
+):
+    result = await modbus_flow.async_step_modbus(
+        user_input={"modbus_type": modbus_type}
+    )
+
+    assert result["step_id"] == expected_step
+    assert modbus_flow._modbus_type == modbus_type
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_creates_entry_when_device_answers(modbus_flow):
+    fake = _fake_modbus_modules()
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={
+                "modbus_host": "192.168.1.50",
+                "modbus_port": 502,
+                "modbus_unit": 1,
+            }
+        )
+
+    assert result["type"] == "entry"
+    assert result["title"] == "HYXI Modbus (192.168.1.50)"
+    assert result["data"]["transport"] == "modbus"
+    assert result["data"]["modbus_host"] == "192.168.1.50"
+    assert result["data"]["modbus_unit"] == 1
+    # The title is a form field, not entry data.
+    assert "_title" not in result["data"]
+    modbus_flow.async_set_unique_id.assert_awaited_once_with(
+        "192.168.1.50:502:1", raise_on_progress=False
+    )
+    fake.connection.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_modbus_serial_creates_entry_and_coerces_types(modbus_flow):
+    fake = _fake_modbus_modules()
+    modbus_flow._modbus_type = "serial"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_serial(
+            user_input={
+                "modbus_device": "/dev/ttyUSB0",
+                # Selectors hand back strings; the entry must store ints.
+                "modbus_baudrate": "115200",
+                "modbus_unit": "1",
+            }
+        )
+
+    assert result["type"] == "entry"
+    assert result["data"]["modbus_baudrate"] == 115200
+    assert result["data"]["modbus_unit"] == 1
+    assert result["data"]["modbus_type"] == "serial"
+    modbus_flow.async_set_unique_id.assert_awaited_once_with(
+        "/dev/ttyUSB0:1", raise_on_progress=False
+    )
+
+
+@pytest.mark.asyncio
+async def test_modbus_exception_response_still_counts_as_reachable(modbus_flow):
+    """A device that rejects the address has still proven it is on the bus."""
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusError())
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "entry"
+
+
+@pytest.mark.asyncio
+async def test_modbus_all_probe_points_timing_out_reports_no_device(modbus_flow):
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusTimeout())
+    fake.unit.read_holding_registers = AsyncMock(side_effect=_FakeModbusTimeout())
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "no_device"}
+
+
+@pytest.mark.asyncio
+async def test_modbus_connection_failure_reports_cannot_connect(modbus_flow):
+    from custom_components.hyxi_cloud.const import MODBUS_TCP_FRAMERS
+
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=OSError("no route to host"))
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["errors"] == {"base": "cannot_connect"}
+    # A connection-level failure retries under the other framer before
+    # giving up -- one connection (and one close()) per framer tried.
+    assert fake.connection.close.await_count == len(MODBUS_TCP_FRAMERS)
+
+
+@pytest.mark.asyncio
+async def test_modbus_reports_clearly_when_library_is_missing(modbus_flow):
+    """The probe is lazily imported, so a broken install must not traceback."""
+    fake = _fake_modbus_modules()
+    modbus_flow._modbus_type = "tcp"
+
+    real_import = builtins.__import__
+
+    def blocked(name, *args, **kwargs):
+        if name == "modbus_connection.tmodbus":
+            raise ImportError("no backend")
+        return real_import(name, *args, **kwargs)
+
+    with (
+        _install_modbus(fake.root, fake.backend),
+        patch.object(builtins, "__import__", blocked),
+    ):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["errors"] == {"base": "modbus_unavailable"}
+
+
+@pytest.mark.asyncio
+async def test_modbus_shows_form_before_any_input(modbus_flow):
+    result = await modbus_flow.async_step_modbus_tcp(user_input=None)
+
+    assert result["step_id"] == "modbus_tcp"
+    assert result["errors"] == {}
+
+
+# --- Family detection: does a value at either signature register pick the
+# right client, given the two documents' address ranges don't overlap -----
+
+
+@pytest.mark.asyncio
+async def test_modbus_detects_hybrid_family_from_a_real_value(modbus_flow):
+    """A value at register 0 -- the hybrid's protocol version -- is treated
+    as this being a hybrid inverter, without needing to try register 4980."""
+    fake = _fake_modbus_modules()
+
+    async def read(address, _count):
+        if address == 0:
+            return [42]
+        raise AssertionError(f"should not read {address} once 0 succeeded")
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["data"]["modbus_family"] == "hybrid"
+
+
+@pytest.mark.asyncio
+async def test_modbus_detects_halo_family_when_only_its_signature_answers(
+    modbus_flow,
+):
+    """Hybrid's register 0 raises (not this family); HALO's 4980 returns a
+    value. Both signatures must be tried, not just the first."""
+    fake = _fake_modbus_modules()
+
+    async def read(address, _count):
+        if address == 0:
+            raise _FakeModbusError()
+        if address == 4980:
+            return [780]
+        raise AssertionError(f"unexpected address {address}")
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["data"]["modbus_family"] == "halo"
+
+
+@pytest.mark.asyncio
+async def test_modbus_falls_back_to_default_family_when_unidentified(
+    modbus_flow, caplog
+):
+    """A device that answers only with exceptions is confirmed present, but
+    neither signature identifies it -- falls back rather than refusing."""
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=_FakeModbusError())
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "entry"
+    assert result["data"]["modbus_family"] == "hybrid"
+    assert "defaulting to" in caplog.text
+
+
+# --- Wire-framing detection: does a TCP gateway that only answers under the
+# other framer still get identified, without asking the user to know which
+# one their gateway speaks ------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_accepts_first_framer_that_succeeds(modbus_flow):
+    """rtu (tried first) works -- no need to also try socket."""
+    probe = AsyncMock(return_value=(None, "halo"))
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, family, framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
+
+    assert (error, family, framer) == (None, "halo", "rtu")
+    probe.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_falls_back_to_the_other_framer(modbus_flow):
+    """rtu answers nothing at all -- exactly what a gateway actually
+    speaking native Modbus-TCP/MBAP framing looks like from here -- so the
+    probe is retried under socket, which is what the device is on."""
+    probe = AsyncMock(side_effect=[("no_device", "hybrid"), (None, "hybrid")])
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, family, framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
+
+    assert (error, family, framer) == (None, "hybrid", "socket")
+    assert probe.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_reports_the_last_error_when_every_framer_fails(
+    modbus_flow,
+):
+    """Neither framing gets an answer -- nothing left to try, so the second
+    attempt's error is what's shown (both are "unreachable", just phrased
+    from whichever framer was tried last)."""
+    probe = AsyncMock(
+        side_effect=[("no_device", "hybrid"), ("cannot_connect", "hybrid")]
+    )
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, family, _framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
+
+    assert error == "cannot_connect"
+    assert family == "hybrid"
+    assert probe.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_does_not_retry_a_missing_library(modbus_flow):
+    """modbus_unavailable means the dependency itself is missing -- trying
+    the other framer would just fail the exact same way."""
+    probe = AsyncMock(return_value=("modbus_unavailable", "hybrid"))
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, _family, _framer = await modbus_flow._probe_and_detect_modbus_tcp(
+        "h", 502, 1
+    )
+
+    assert error == "modbus_unavailable"
+    probe.assert_awaited_once()
+
+
+def test_transport_schema_defaults_to_cloud(mock_ha_environment):
+    """The chooser must preselect cloud -- it is what almost every existing
+    user wants, and it is the only reason this is a select and not a menu.
+    voluptuous is mocked here, so the recorded vol.Required call args are
+    inspected rather than the returned Schema (same rationale as the other
+    schema tests in this file)."""
+    config_flow_mod = mock_ha_environment
+    config_flow_mod.vol.Required.reset_mock()
+
+    config_flow_mod._build_transport_schema()
+
+    defaults = {
+        c.args[0]: c.kwargs.get("default")
+        for c in config_flow_mod.vol.Required.call_args_list
+    }
+    assert defaults[config_flow_mod.CONF_TRANSPORT] == config_flow_mod.TRANSPORT_CLOUD
+    assert [o["value"] for o in config_flow_mod.TRANSPORT_OPTIONS] == [
+        config_flow_mod.TRANSPORT_CLOUD,
+        config_flow_mod.TRANSPORT_MODBUS,
+    ]
+
+
+def test_modbus_serial_schema_defaults_to_the_documented_baud_rate(
+    mock_ha_environment,
+):
+    """115200 is what the Micro Storage RS485 document fixes the HALO at, so
+    it is the default even though the hybrid units are unconfirmed.
+
+    Baud rate default is asserted as a string: the SelectSelector's option
+    values are strings ("115200", not 115200), and a default of the wrong
+    type simply fails to preselect anything in the form.
+    """
+    config_flow_mod = mock_ha_environment
+    config_flow_mod.vol.Required.reset_mock()
+
+    config_flow_mod._build_modbus_serial_schema()
+
+    defaults = {
+        c.args[0]: c.kwargs.get("default")
+        for c in config_flow_mod.vol.Required.call_args_list
+    }
+    assert defaults[config_flow_mod.CONF_MODBUS_BAUDRATE] == "115200"
+    assert defaults[config_flow_mod.CONF_MODBUS_DEVICE] == "/dev/ttyUSB0"
+    assert defaults[config_flow_mod.CONF_MODBUS_UNIT] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("transport", "cloud_fields_visible"),
+    [("cloud", True), ("modbus", False)],
+)
+async def test_options_hide_cloud_only_settings_for_modbus_entries(
+    mock_ha_environment, transport, cloud_fields_visible
+):
+    """Alarm discovery and real-time push are cloud services with no local
+    equivalent, so a Modbus entry must not offer them."""
+    config_flow_mod = mock_ha_environment
+    config_flow_mod.vol.Optional.reset_mock()
+
+    entry = MagicMock()
+    entry.data = {"transport": transport}
+    entry.options = {"update_interval": 5}
+    entry.entry_id = "abc"
+
+    handler = config_flow_mod.HyxiOptionsFlowHandler(entry)
+    handler.hass = None
+    handler.async_show_form = MagicMock(side_effect=lambda **kw: {"type": "form", **kw})
+
+    await handler.async_step_init(user_input=None)
+
+    offered = {c.args[0] for c in config_flow_mod.vol.Optional.call_args_list}
+    assert (config_flow_mod.CONF_ENABLE_PUSH in offered) is cloud_fields_visible
+    assert (config_flow_mod.CONF_BACK_DISCOVERY in offered) is cloud_fields_visible

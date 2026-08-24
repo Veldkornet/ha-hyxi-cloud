@@ -1,7 +1,7 @@
 # HYXI
 ![HYXI Logo](https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/custom_components/hyxi_cloud/brand/logo.png)
 
-### [HYXIPower](https://www.hyxipower.com/) Cloud Integration for Home Assistant
+### [HYXIPower](https://www.hyxipower.com/) Integration for Home Assistant
 **Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
@@ -24,6 +24,7 @@
 ## ✨ Features
 
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
+- **📟 Local Modbus (RS485) — In Development:** An optional local transport that talks straight to the inverter over RS485 instead of the cloud, for faster polling and control the cloud API can't offer. See [Local Modbus (RS485)](#-local-modbus-rs485--in-development) below.
 - **🔄 Real-Time Push Subscriptions:** Optional support for receiving instantaneous updates for telemetry data and active alarms directly from HYXI Cloud via Home Assistant's webhook endpoints, bypassing polling delays.
 - **🔧 Device Control:** Send supported HYXI Cloud control commands from Home Assistant, including inverter mode buttons, peak shaving buttons, frequency control, and microinverter power controls.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
@@ -85,7 +86,7 @@ Beta releases get the same testing as any other release, but haven't accumulated
 > **Device Controls are Opt-In:** To prevent Home Assistant from interfering with external device management or grid curtailment schedules by default, all control entities (such as Operating Mode buttons, power sliders, and switches) are hidden initially.
 >
 > **How to enable them:**
-> 1. Go to **Settings > Devices & Services** > **HYXI Cloud**.
+> 1. Go to **Settings > Devices & Services** > **HYXI**.
 > 2. Click the **Configure** button on the integration card.
 > 3. Check the box for **"Enable Device Control & Protection"** and save. The integration will reload and all control entities will appear.
 
@@ -129,7 +130,7 @@ The Energy Manager Standalone is an automated battery control engine that runs a
 
 ##### Enabling
 
-1. Go to **Settings > Devices & Services** > **HYXI Cloud** > **Configure**.
+1. Go to **Settings > Devices & Services** > **HYXI** > **Configure**.
 2. Enable **Device Control & Protection** and save.
 3. Re-open **Configure** — the **Enable Energy Manager Standalone (Beta)** toggle is now visible.
 4. Enable it and configure:
@@ -353,7 +354,7 @@ The engine fires a `hyxi_em_mode_changed` event on every mode change, usable in 
 The integration supports subscribing to real-time telemetry and alarm push notifications from the HYXI Cloud. Instead of waiting for the polling interval, HYXI Cloud will push data and alarm changes directly to Home Assistant as soon as they are received.
 
 ##### Configuration
-1. Go to **Settings > Devices & Services** > **HYXI Cloud** > **Configure**.
+1. Go to **Settings > Devices & Services** > **HYXI** > **Configure**.
 2. Toggle **Enable Real-Time Telemetry & Alarm Push**.
 3. Configure the following optional parameters if needed:
    - **Real-Time Push Rate (s):** Telemetry push rate in seconds (default: 10).
@@ -370,7 +371,7 @@ The integration provides a **Subscription Status** sensor on your inverter's dev
 If registration fails due to a lockout (e.g. API error `B004002` indicating that a device serial number has been subscribed to repeatedly), it usually means an active or orphaned subscription remains on the HYXI Cloud server:
 1. Retrieve the active or orphaned subscription code(s) from the **known_subscription_codes** attribute of your inverter's **Subscription Status** sensor (this list is persistent and survives integration reinstalls).
 2. Go to **Developer Tools > Actions** (or **Services** in older Home Assistant versions) in the Home Assistant UI.
-3. Call the **HYXI Cloud: Cancel Subscription** (`hyxi_cloud.cancel_subscription`) service, providing the subscription code. The integration will call the API to manually tear down that subscription from the server.
+3. Call the **HYXI: Cancel Subscription** (`hyxi_cloud.cancel_subscription`) service, providing the subscription code. The integration will call the API to manually tear down that subscription from the server.
 
 ##### Interaction with Polling (Coexistence Loop)
 You do not need to disable or modify the standard polling interval when enabling push subscriptions:
@@ -387,17 +388,41 @@ This integration includes a specialized diagnostic system to help you distinguis
 | **Device Alarm** | Hardware fault tracking. | Binary sensor that turns `On` if the hardware reports active alarms. |
 | **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
 
+## 📟 Local Modbus (RS485) — In Development
+
+As an alternative to the HYXI Cloud API, the integration can talk directly to one inverter over RS485 Modbus — no account, no internet dependency, and (once wired up) the ability to control devices the cloud API refuses. It polls far faster than the cloud allows, at the cost of needing a wired RS485 connection and losing what only makes sense with a cloud account (multi-device discovery, real-time push, remote access). Full provenance for every register — which document it came from, what's confirmed vs. inferred, known caveats — is tracked in [`docs/modbus-provenance.md`](docs/modbus-provenance.md).
+
+**Setup:** Choosing **Add Integration → HYXI** now opens with a connection-type choice — HYXI Cloud (the default) or Local Modbus. Picking Modbus asks for either a TCP gateway (host/port — an RS485-to-Ethernet adapter) or a serial port (a USB RS485 adapter's device path and baud rate), then a slave address. You don't need to know which inverter family you have: the integration probes the bus during setup and picks the right register map automatically. For a TCP gateway, it also doesn't matter which wire framing yours speaks — a transparent/passthrough gateway that tunnels raw RTU frames over TCP (e.g. Waveshare's "Protocol: None") and one that speaks native Modbus-TCP framing and translates to RTU on the wire itself (e.g. Waveshare's "Modbus TCP to RTU") are both detected automatically during the same probe.
+
+### Supported models
+
+| Family | Models | Register map source |
+| :--- | :--- | :--- |
+| **Hybrid Inverter** | HYX-H(5~12)K-HT *(incl. H10K-HT)*, HYX-H(15~25)K-HT, HYX-H(6~15)K-HTA, HYX-H(6~15)K-HTAC | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1 |
+| **Micro ESS (HALO)** | HYX-MS3000AC | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0 |
+
+Both maps cover live telemetry (grid/off-grid power, PV strings, battery/BMS detail, energy counters), charge/discharge control at the client level, and a first slice of hardware settings — feed-in power limit, VPP minimum SOC (HALO) or max charge/discharge current (Hybrid) — exposed as number entities and power on/off/restart buttons on Hybrid. Wiring and serial settings — 115200bps, no parity, 8 data bits, 1 stop bit — are documented per model in `docs/modbus-provenance.md`; the two families use different physical pins and disagree on the minimum spacing between frames, both handled automatically once your model is detected.
+
+**On HALO control specifically:** [above](#-device-control), Micro ESS Power On/Off is described as disabled because the *cloud* API rejects it (`B003026`). That restriction is cloud-specific: over local Modbus, HALO gets the same mode buttons (Idle/Charge/Discharge/Self-Consume) and charge/discharge power numbers a three-phase cloud device gets, driven by the register map's VPP dispatch block rather than the cloud's rejected permission.
+
+**On Hybrid control specifically:** these entities are implemented against the documented register map, but control *writes* have not yet succeeded against real HYX-H hardware — investigation traced it to the physical RS485 link corrupting a write's own transmitted frame, not a protocol or code-level bug. Until that's resolved, expect Hybrid number/button writes to surface as a clean error rather than actually changing the device; reads (telemetry, diagnostics, settings) are unaffected and work reliably.
+
 ## 🎨 Community Examples
 
 * **[HYXi Ultra Dashboard](https://github.com/Robinbraakman/HYXi-Ultra-Dashboard)**: A custom Lovelace card for the HYXi Halo battery. Visualizes SOC, charge/discharge power, cumulative energy, efficiency, cycles, and estimated payback details.
 
 ## ⚙️ Setup & Configuration
 
+Setting up **Local Modbus** instead? It needs neither a developer account nor
+an Access/Secret Key — see [Local Modbus (RS485)](#-local-modbus-rs485--in-development)
+above for its own setup steps. The rest of this section is for the **HYXI
+Cloud** path.
+
 1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXIPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
 
    > **Important:**
    > Use the same email address that your devices are registered to in the HYXI app.
-2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXI Cloud**.
+2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXI**.
 Or alternatively, add the integration with the following:
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=hyxi_cloud)
@@ -425,7 +450,7 @@ This integration prioritizes data integrity and system stability above all else:
 
 If you are opening a bug report, please include **Debug Logs**:
 **How to enable and download debug logs:**
-1. Go to **Settings > Devices & Services** > **HYXI Cloud**.
+1. Go to **Settings > Devices & Services** > **HYXI**.
 2. Click the three dots (⋮) and select **Enable debug logging**.
 3. Wait 5-10 minutes, then click **Disable debug logging** to download the file.
 4. Attach the downloaded log file to your GitHub issue — **no manual editing needed**, serial numbers, plant IDs, and your home address are automatically masked in the logs.

@@ -27,6 +27,8 @@ from .const import (
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
+    is_control_capable_device_type,
+    is_modbus_entry,
     mask_sn,
     normalize_device_type,
 )
@@ -74,6 +76,178 @@ PROTECTION_NUMBER_DEFS: list[dict[str, str | int]] = [
         "default": 2,
         "icon": "mdi:battery-sync-outline",
     },
+]
+
+
+class HyxiSettingNumberDef(NamedTuple):
+    """Definition for a device-hardware setting number entity.
+
+    Unlike HyxiProtectionNumber (pure HA-side automation thresholds, never
+    touches the device) and HyxiPowerNumber (locally stored, sent only when
+    a mode button is pressed), these write straight to the device's own
+    settings register the moment the value changes -- there is no
+    local-only state to hold in between.
+    """
+
+    key: str
+    client_method: str
+    unit: str
+    min_val: float
+    max_val: float
+    step: float
+    icon: str
+
+
+# HaloSettings fields with an unambiguous numeric range and no interaction
+# risk with an existing control method. dispatch_mode/active_power_setpoint
+# is deliberately still not here: a second, untested dispatch path
+# alongside the VPP block set_mode_* already drives, and neither the
+# vendor document nor a public search turned up how the two interact on
+# real hardware -- see docs/modbus-provenance.md. anti_starvation is
+# boolean and lives in switch.py instead.
+HALO_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
+    HyxiSettingNumberDef(
+        "feed_in_power_limit",
+        "set_feed_in_power_limit",
+        "W",
+        0,
+        15000,
+        100,
+        "mdi:transmission-tower-export",
+    ),
+    HyxiSettingNumberDef(
+        "vpp_min_soc",
+        "set_vpp_min_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-alert-variant-outline",
+    ),
+    HyxiSettingNumberDef(
+        "force_charge_start_soc",
+        "set_force_charge_start_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-charging-low",
+    ),
+    HyxiSettingNumberDef(
+        "force_charge_stop_soc",
+        "set_force_charge_stop_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-charging-high",
+    ),
+    HyxiSettingNumberDef(
+        "off_grid_min_soc",
+        "set_off_grid_min_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery-outline",
+    ),
+    HyxiSettingNumberDef(
+        "self_use_soc",
+        "set_self_use_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery",
+    ),
+    HyxiSettingNumberDef(
+        "discharge_min_soc",
+        "set_discharge_min_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-arrow-down-outline",
+    ),
+]
+
+# Same idea for HybridSettings. power_command is deliberately not here --
+# one of its three values restarts the inverter, which is a button.py
+# concern (with a confirmation), not a number box. anti_starvation_protection
+# is boolean and lives in switch.py instead.
+HYBRID_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
+    HyxiSettingNumberDef(
+        "feed_in_power",
+        "set_feed_in_power",
+        "W",
+        0,
+        15000,
+        100,
+        "mdi:transmission-tower-export",
+    ),
+    HyxiSettingNumberDef(
+        "max_charge_current",
+        "set_max_charge_current",
+        "A",
+        0,
+        200,
+        0.1,
+        "mdi:current-dc",
+    ),
+    HyxiSettingNumberDef(
+        "self_use_soc",
+        "set_self_use_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery",
+    ),
+    HyxiSettingNumberDef(
+        "backup_soc",
+        "set_backup_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:home-battery-outline",
+    ),
+    HyxiSettingNumberDef(
+        "forced_charge_soc",
+        "set_forced_charge_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:battery-charging-low",
+    ),
+    HyxiSettingNumberDef(
+        "feed_in_soc",
+        "set_feed_in_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:transmission-tower-export",
+    ),
+    HyxiSettingNumberDef(
+        "off_grid_soc",
+        "set_off_grid_soc",
+        "%",
+        0,
+        100,
+        1,
+        "mdi:transmission-tower-off",
+    ),
+    HyxiSettingNumberDef(
+        "max_discharge_current",
+        "set_max_discharge_current",
+        "A",
+        0,
+        200,
+        0.1,
+        "mdi:current-dc",
+    ),
 ]
 
 
@@ -136,30 +310,54 @@ async def async_setup_entry(
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
 
-        if device_type in ("hybrid_inverter", "all_in_one"):
-            phase = detect_phase_type(dev_data)
-
-            if is_battery_control_enabled(entry, coordinator):
-                # Power numbers pair with mode control (1062-1065) — three-phase only
-                # Peak shaving (single-phase) uses full inverter power, no wattage setting
-                if phase == "three_phase":
-                    entities.append(
-                        HyxiPowerNumber(coordinator, sn, dev_data, "charge")
-                    )
-                    entities.append(
-                        HyxiPowerNumber(coordinator, sn, dev_data, "discharge")
-                    )
-
-                # SOC protection numbers for both three-phase and single-phase
-                if phase in ("three_phase", "single_phase"):
-                    for definition in PROTECTION_NUMBER_DEFS:
-                        entities.append(
-                            HyxiProtectionNumber(coordinator, sn, dev_data, definition)
-                        )
-        elif device_type == "micro_inverter":
+        if device_type == "micro_inverter":
             # Microinverter power limit (controlId 3012)
             if is_battery_control_enabled(entry, coordinator):
                 entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
+            continue
+
+        if not is_control_capable_device_type(entry, device_type):
+            continue
+        if not is_battery_control_enabled(entry, coordinator):
+            continue
+
+        if is_modbus_entry(entry):
+            # Every Modbus mode button (set_mode_charge/discharge) reads its
+            # wattage from these paired numbers -- see button.py's
+            # _mode_buttons for why phase is irrelevant on this transport.
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
+            for definition in PROTECTION_NUMBER_DEFS:
+                entities.append(
+                    HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                )
+            # One device per Modbus entry (see client.py's async_read_all),
+            # so device_type here reliably tells the two register maps
+            # apart -- no need for a separate family lookup.
+            setting_defs = (
+                HALO_SETTING_NUMBER_DEFS
+                if device_type == "micro_ess"
+                else HYBRID_SETTING_NUMBER_DEFS
+            )
+            for setting_def in setting_defs:
+                entities.append(
+                    HyxiSettingNumber(coordinator, sn, dev_data, setting_def)
+                )
+            continue
+
+        phase = detect_phase_type(dev_data)
+        # Power numbers pair with mode control (1062-1065) — three-phase only.
+        # Peak shaving (single-phase) uses full inverter power, no wattage setting.
+        if phase == "three_phase":
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
+            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
+
+        # SOC protection numbers for both three-phase and single-phase
+        if phase in ("three_phase", "single_phase"):
+            for definition in PROTECTION_NUMBER_DEFS:
+                entities.append(
+                    HyxiProtectionNumber(coordinator, sn, dev_data, definition)
+                )
 
     # EM-only numbers — only when Energy Manager is enabled for this inverter
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
@@ -237,6 +435,100 @@ class HyxiPowerNumber(
         )
         self._attr_native_value = int(value)
         self.async_write_ha_state()
+
+
+class HyxiSettingNumber(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], NumberEntity, RestoreEntity
+):
+    """A device-hardware setting, written straight to its Modbus register
+    on every change -- see HyxiSettingNumberDef's docstring for how this
+    differs from the other number entities in this file.
+
+    Starts at the device's own current value, read once at client setup
+    (ModbusClient.async_read_settings) rather than on every regular poll --
+    settings change rarely, so re-reading the whole block forever isn't
+    worth the extra traffic, and every set_* method already keeps this
+    value in sync with what HA itself writes. That one-time read means
+    this entity does not notice a change made outside HA (the app, the
+    cloud) after startup -- only its own writes and its startup snapshot.
+    Falls back to the last value *this* integration wrote (HA's restored
+    state), then to the field's minimum, if the device couldn't be read at
+    startup at all. 0 is never written on its own -- only an explicit
+    change by the user calls the client.
+    """
+
+    _attr_has_entity_name = True
+    _attr_mode = NumberMode.BOX
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        coordinator: HyxiDataUpdateCoordinator,
+        sn: str,
+        dev_data: dict,
+        definition: HyxiSettingNumberDef,
+    ) -> None:
+        """Initialize the setting number."""
+        super().__init__(coordinator)
+        self._sn = sn
+        self._definition = definition
+        self._attr_unique_id = f"hyxi_{sn}_{definition.key}"
+        self._attr_translation_key = definition.key
+        self._attr_native_unit_of_measurement = definition.unit
+        self._attr_native_min_value = definition.min_val
+        self._attr_native_max_value = definition.max_val
+        self._attr_native_step = definition.step
+        self._attr_icon = definition.icon
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": sn,
+        }
+
+        live_value = (dev_data.get("metrics") or {}).get(definition.key)
+        self._has_live_value = live_value is not None
+        self._attr_native_value = (
+            live_value if self._has_live_value else definition.min_val
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last value written, if the device's own current
+        value wasn't available at startup to show instead."""
+        await super().async_added_to_hass()
+        if self._has_live_value:
+            return
+        if (last_state := await self.async_get_last_state()) is not None:
+            try:
+                self._attr_native_value = float(last_state.state)
+            except ValueError, TypeError:
+                _LOGGER.debug(
+                    "Could not restore %s from state %r",
+                    self._attr_unique_id,
+                    last_state.state,
+                )
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Write the new value straight to the device."""
+        client = self.coordinator.client
+        method = getattr(client, self._definition.client_method)
+        _LOGGER.debug(
+            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+        )
+        try:
+            await method(value)
+            self._attr_native_value = value
+            self.async_write_ha_state()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.error(
+                "Failed to set %s to %s for %s: %s",
+                self._definition.key,
+                value,
+                mask_sn(self._sn),
+                err,
+            )
+            raise
 
 
 class HyxiMicroPowerLimit(

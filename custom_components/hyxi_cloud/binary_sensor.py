@@ -18,15 +18,24 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
+
+# NOTE: these values are inferred from the HYXI phone app's APK and have
+# never been confirmed against a device. HYXI's Micro Storage RS485 document
+# gives a different enumeration for the same field. Do not reconcile the two
+# by editing either -- see docs/modbus-provenance.md, rule 1.
 from hyxi_cloud_api import VPP_ACTIVE_MODES
 
 from .const import (
     BASE_URL_DEFAULT,
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
+    CONF_MODBUS_DEVICE,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
     DOMAIN,
     MANUFACTURER,
     get_raw_device_code,
+    is_modbus_entry,
     mask_sn,
     normalize_device_type,
 )
@@ -49,10 +58,28 @@ async def async_setup_entry(
     entities: list[BinarySensorEntity] = [HyxiConnectivitySensor(coordinator, entry)]
 
     for device_sn, dev_data in coordinator.data.items():
-        entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
+        # Cloud only: reads dev_data["alarms"], which neither Modbus client
+        # populates. The raw fault/alarm bit registers both device
+        # families do have are deliberately left undecoded (see rule 3 in
+        # docs/modbus-provenance.md -- HALO's document even contradicts
+        # itself about where its BMS fault words live), so there is no
+        # confirmed data to back this sensor with yet on either transport.
+        if not is_modbus_entry(entry):
+            entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
 
         dev_type = normalize_device_type(get_raw_device_code(dev_data))
-        if dev_type in ("hybrid_inverter", "all_in_one", "micro_ess"):
+        # Not shown for Modbus: it exists to report an active VPP dispatch
+        # via workMode, which neither Modbus client can back with a
+        # verified register -- the hybrid map has no field confirmed to
+        # carry this concept at all, and HALO's local work_mode register
+        # has its own, differently-numbered enumeration that this sensor
+        # would otherwise test against the cloud's meaning by mistake. See
+        # docs/modbus-provenance.md, rule 1.
+        if dev_type in (
+            "hybrid_inverter",
+            "all_in_one",
+            "micro_ess",
+        ) and not is_modbus_entry(entry):
             entities.append(HyxiWorkModeSensor(coordinator, entry, device_sn, dev_data))
 
     # Energy Manager binary sensors (EM-only)
@@ -89,16 +116,35 @@ class HyxiConnectivitySensor(
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_connectivity"
-        self._cloud_endpoint = (
-            urlparse(entry.data.get("base_url") or BASE_URL_DEFAULT).netloc
-            or urlparse(BASE_URL_DEFAULT).netloc
-        )
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
-            "manufacturer": MANUFACTURER,
-            "configuration_url": "https://www.hyxicloud.com",
-        }
+
+        if is_modbus_entry(entry):
+            # No cloud endpoint exists for a point-to-point RS485 link --
+            # show the actual thing this entry talks to instead, rather
+            # than falling back to the cloud's default hostname on a
+            # connection that has nothing to do with it.
+            if entry.data.get(CONF_MODBUS_DEVICE):
+                self._connection_target = entry.data[CONF_MODBUS_DEVICE]
+            else:
+                self._connection_target = (
+                    f"{entry.data.get(CONF_MODBUS_HOST)}:"
+                    f"{entry.data.get(CONF_MODBUS_PORT)}"
+                )
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, entry.entry_id)},
+                "name": "HYXI Modbus Service",
+                "manufacturer": MANUFACTURER,
+            }
+        else:
+            self._connection_target = (
+                urlparse(entry.data.get("base_url") or BASE_URL_DEFAULT).netloc
+                or urlparse(BASE_URL_DEFAULT).netloc
+            )
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, entry.entry_id)},
+                "name": "HYXI Cloud Service",
+                "manufacturer": MANUFACTURER,
+                "configuration_url": "https://www.hyxicloud.com",
+            }
 
     @property
     def is_on(self) -> bool:
@@ -151,7 +197,7 @@ class HyxiConnectivitySensor(
             "connection_quality": quality,
             "last_successful_connection": last_success_str,
             "data_freshness": freshness,
-            "cloud_endpoint": self._cloud_endpoint,
+            "connection_target": self._connection_target,
             "last_error": metadata.get("last_error") or "None",
             "cache_active": bool(metadata.get("cache_active", False)),
             "api_status": metadata.get("api_status") or "Starting",

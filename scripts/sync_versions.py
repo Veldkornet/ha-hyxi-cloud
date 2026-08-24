@@ -21,17 +21,51 @@ MANIFEST_PATH = ROOT / "custom_components" / "hyxi_cloud" / "manifest.json"
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 
 
+def _scan_bracketed_list(text: str, start_pattern: str, label: str) -> tuple[int, int]:
+    """Return (body_start, body_end) for the list opened by `start_pattern`.
+
+    A non-greedy regex to the first "]" is wrong here: a requirement may
+    carry its own brackets, as "modbus-connection[tmodbus]>=4.8.1" does, and
+    the match would stop inside it -- silently truncating the list there.
+    Every "[" and "]" still comes in a matched pair regardless of whether
+    it's structural or embedded in a requirement string, so counting depth
+    across all of them finds the real closing bracket either way.
+    """
+    start = re.search(start_pattern, text)
+    if not start:
+        print(f"Error: could not find {label}")
+        sys.exit(1)
+
+    depth, index = 1, start.end()
+    while index < len(text) and depth:
+        depth += {"[": 1, "]": -1}.get(text[index], 0)
+        index += 1
+    if depth:
+        print(f"Error: unterminated {label}")
+        sys.exit(1)
+
+    return start.end(), index - 1
+
+
+def _extract_dependencies(pyproject_text: str) -> list[str]:
+    """Return [project].dependencies, tolerating extras in the requirement."""
+    body_start, body_end = _scan_bracketed_list(
+        pyproject_text,
+        r"(?m)^dependencies\s*=\s*\[",
+        "[project].dependencies in pyproject.toml",
+    )
+    body = pyproject_text[body_start:body_end]
+    # Requirements are quoted; comments in the list are not.
+    return re.findall(r'"([^"]+)"', re.sub(r"(?m)#.*$", "", body))
+
+
 def main() -> None:
     """Sync manifest.json requirements and pyproject.toml version in place."""
     manifest_text = MANIFEST_PATH.read_text(encoding="utf-8")
     manifest = json.loads(manifest_text)
     pyproject_text = PYPROJECT_PATH.read_text(encoding="utf-8")
 
-    deps_match = re.search(r"dependencies\s*=\s*\[(.*?)\]", pyproject_text, re.DOTALL)
-    if not deps_match:
-        print("Error: could not find [project].dependencies in pyproject.toml")
-        sys.exit(1)
-    dependencies = re.findall(r'"([^"]+)"', deps_match.group(1))
+    dependencies = _extract_dependencies(pyproject_text)
 
     version_match = re.search(r'(?m)^version\s*=\s*"(.*?)"', pyproject_text)
     if not version_match:
@@ -41,17 +75,14 @@ def main() -> None:
     changed = False
 
     if manifest.get("requirements") != dependencies:
-        requirements_match = re.search(
-            r'"requirements":\s*\[.*?\]', manifest_text, re.DOTALL
+        body_start, body_end = _scan_bracketed_list(
+            manifest_text,
+            r'"requirements":\s*\[',
+            '"requirements" array in manifest.json',
         )
-        if not requirements_match:
-            print('Error: could not find "requirements" array in manifest.json')
-            sys.exit(1)
         items = ",\n".join(f'    "{dep}"' for dep in dependencies)
         manifest_text = (
-            manifest_text[: requirements_match.start()]
-            + f'"requirements": [\n{items}\n  ]'
-            + manifest_text[requirements_match.end() :]
+            f"{manifest_text[:body_start]}\n{items}\n  {manifest_text[body_end:]}"
         )
         changed = True
 

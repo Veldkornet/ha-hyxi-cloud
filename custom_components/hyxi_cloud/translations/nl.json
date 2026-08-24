@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Verbinden met HYXI Cloud",
-        "description": "Voer uw **Developer API-gegevens (AK/SK)** in. U kunt deze genereren op het [HYXIPOWER Developer Platform]({link}).\n\n**Opmerking:** Dit vereist een apart ontwikkelaarsaccount. Als uw e-mailadres voor ontwikkelaars afwijkt van uw app-e-mailadres, moet u eerst uw installatie vanuit de app **delen** met het e-mailadres voor ontwikkelaars.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Toegangssleutel (AK)",
-          "secret_key": "Geheime Sleutel (SK)",
-          "region": "Serverregio"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Geheime Sleutel (SK)",
           "region": "Serverregio"
         }
+      },
+      "cloud": {
+        "title": "Verbinden met HYXI Cloud",
+        "description": "Voer uw **Developer API-gegevens (AK/SK)** in. U kunt deze genereren op het [HYXIPOWER Developer Platform]({link}).\n\n**Opmerking:** Dit vereist een apart ontwikkelaarsaccount. Als uw e-mailadres voor ontwikkelaars afwijkt van uw app-e-mailadres, moet u eerst uw installatie vanuit de app **delen** met het e-mailadres voor ontwikkelaars.",
+        "data": {
+          "access_key": "Toegangssleutel (AK)",
+          "secret_key": "Geheime Sleutel (SK)",
+          "region": "Serverregio"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Kan geen verbinding maken met de HYXI servers",
       "invalid_auth": "Ongeldige Access Key of Secret Key",
       "unknown": "Er is een onverwachte fout opgetreden",
-      "no_devices": "Geen installaties of apparaten gevonden. Als je ontwikkelaars-e-mailadres verschilt van je app-e-mailadres, moet je eerst je installatie vanuit de app delen met het ontwikkelaars-e-mailadres."
+      "no_devices": "Geen installaties of apparaten gevonden. Als je ontwikkelaars-e-mailadres verschilt van je app-e-mailadres, moet je eerst je installatie vanuit de app delen met het ontwikkelaars-e-mailadres.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Dit HYXI account is al geconfigureerd.",
-      "reauth_successful": "Herauthenticatie was succesvol"
+      "reauth_successful": "Herauthenticatie was succesvol",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXI Systeemconfiguratie",
-        "description": "Pas aan hoe uw integratie communiceert met de HYXI Cloud.\n\n> ⚠️ **Apparaatbediening**: Schakel dit voorzichtig in als uw omvormer al wordt beheerd door uw energieleverancier of is aangemeld voor een Virtual Power Plant (VPP)-programma. Het verzenden van commando's terwijl uw leverancier de controle heeft, kan in strijd zijn met hun dispatch-schema.\n\n---",
+        "description": "Pas aan hoe uw integratie communiceert met HYXI.\n\n> ⚠️ **Apparaatbediening**: Schakel dit voorzichtig in als uw omvormer al wordt beheerd door uw energieleverancier of is aangemeld voor een Virtual Power Plant (VPP)-programma. Het verzenden van commando's terwijl uw leverancier de controle heeft, kan in strijd zijn met hun dispatch-schema.\n\n---",
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
+          "update_interval_modbus": "Update-interval (1-60 seconden, Standaard: 15)",
           "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)",
           "enable_battery_control": "Apparaatcontrole en -bescherming inschakelen",
           "enable_energy_manager": "Energiebeheer Standalone inschakelen (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud Status"
+        "name": "Verbindingsstatus"
       },
       "device_alarm": {
         "name": "Actieve Problemen",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Totale Energieopbrengst"
       },
+      "totaleb": {
+        "name": "Totale Energieopbrengst B"
+      },
+      "totalec": {
+        "name": "Totale Energieopbrengst C"
+      },
       "bat_charge_total": {
         "name": "Totaal Batterij Opgeladen"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Integratie Laatst Bijgewerkt"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Batterijcapaciteit"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Energie Vandaag"
       },
+      "etodayin": {
+        "name": "Netimport-energie Vandaag"
+      },
       "efpv": {
         "name": "PV-opbrengst Vandaag"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Fase 3 Belasting"
+      },
+      "ph1loadv": {
+        "name": "Fase 1 Belastingsspanning"
+      },
+      "ph2loadv": {
+        "name": "Fase 2 Belastingsspanning"
+      },
+      "ph3loadv": {
+        "name": "Fase 3 Belastingsspanning"
       },
       "pv1v": {
         "name": "PV1 Spanning"
@@ -371,6 +458,27 @@
           "1": "Inschakelen"
         }
       },
+      "meteronline": {
+        "name": "Meter online"
+      },
+      "gridmode": {
+        "name": "Netmodus"
+      },
+      "runcommand": {
+        "name": "Startopdracht"
+      },
+      "currentoperatingmode": {
+        "name": "Bedrijfsmodus"
+      },
+      "insulationresistance": {
+        "name": "Isolatieweerstand"
+      },
+      "leakagecurrent": {
+        "name": "Lekstroom"
+      },
+      "selfteststatus": {
+        "name": "Zelftest status"
+      },
       "pvpower": {
         "name": "Totaal PV-vermogen"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "Temperatuur DC-zijde"
+      },
+      "ambienttemper": {
+        "name": "Omgevingstemperatuur"
+      },
+      "boosttemper": {
+        "name": "Boost-temperatuur"
+      },
+      "dsptemper": {
+        "name": "DSP-temperatuur"
       },
       "gridf": {
         "name": "Netfrequentie"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Off-grid vermogen"
+      },
+      "offgridv": {
+        "name": "Off-grid spanning"
+      },
+      "offgridi": {
+        "name": "Off-grid stroom"
       },
       "offgridq": {
         "name": "Off-grid blindvermogen"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Max ontlaadstroom"
+      },
+      "bmsstate": {
+        "name": "BMS-status"
+      },
+      "batoperatingstatus": {
+        "name": "Bedrijfsstatus batterij"
+      },
+      "batalarm1": {
+        "name": "Batterijalarm 1"
+      },
+      "batalarm2": {
+        "name": "Batterijalarm 2"
+      },
+      "batalarm3": {
+        "name": "Batterijalarm 3"
+      },
+      "batcapacityah": {
+        "name": "Batterijcapaciteit (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominale batterijcapaciteit"
+      },
+      "llcbusvoltage": {
+        "name": "LLC Bus Spanning"
+      },
+      "batchargev": {
+        "name": "Batterij laadspanning"
+      },
+      "batchargei": {
+        "name": "Batterij laadstroom"
+      },
+      "batchargep": {
+        "name": "Batterij laadvermogen"
+      },
+      "batdischargev": {
+        "name": "Batterij ontlaadspanning"
+      },
+      "batdischargei": {
+        "name": "Batterij ontlaadstroom"
+      },
+      "batdischargep": {
+        "name": "Batterij ontlaadvermogen"
       },
       "batcharge": {
         "name": "Dagelijkse laadenergie"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Vermogenslimiet"
       },
+      "feed_in_power_limit": {
+        "name": "Terugleveringsvermogenslimiet"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC Minimum"
+      },
+      "force_charge_start_soc": {
+        "name": "Geforceerd Laden Start-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Geforceerd Laden Stop-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Eigen Verbruik Reserve-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Ontlading Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Back-up Reserve-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Geforceerd Laden SOC"
+      },
+      "feed_in_soc": {
+        "name": "Teruglevering SOC-drempel"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid Modus SOC-drempel"
+      },
+      "feed_in_power": {
+        "name": "Terugleveringsvermogenslimiet"
+      },
+      "max_charge_current": {
+        "name": "Max Laadstroom"
+      },
+      "max_discharge_current": {
+        "name": "Max Ontlaadstroom"
+      },
       "soc_min": {
         "name": "SOC Minimum"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Voeding"
       },
+      "anti_starvation": {
+        "name": "Diepontladingsbeveiliging"
+      },
       "em_grid_charge_allowed": {
         "name": "Netladen Toegestaan"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Piekbesparing: Vasthouden"
+      },
+      "power_on": {
+        "name": "Inschakelen"
+      },
+      "power_off": {
+        "name": "Uitschakelen"
+      },
+      "restart": {
+        "name": "Herstarten"
       },
       "clear_alarms": {
         "name": "Actieve alarmen wissen"

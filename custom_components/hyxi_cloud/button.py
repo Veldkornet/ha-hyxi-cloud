@@ -30,6 +30,8 @@ from .const import (
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
+    is_control_capable_device_type,
+    is_modbus_entry,
     mask_sn,
     mask_subscription_code,
     normalize_device_type,
@@ -55,6 +57,36 @@ PEAK_SHAVING_ICONS: dict[str, str] = {
     "hold": "mdi:pause-circle-outline",
 }
 
+POWER_COMMAND_ICONS: dict[str, str] = {
+    "power_on": "mdi:power",
+    "power_off": "mdi:power-off",
+    "restart": "mdi:restart",
+}
+
+
+def _mode_buttons(coordinator, sn: str, dev_data: dict) -> list[HyxiModeButton]:
+    """The four operating-mode buttons, shared by the three-phase cloud path
+    and the (phase-agnostic) local Modbus path."""
+    return [
+        HyxiModeButton(coordinator, sn, dev_data, "idle"),
+        HyxiModeButton(coordinator, sn, dev_data, "charge"),
+        HyxiModeButton(coordinator, sn, dev_data, "discharge"),
+        HyxiModeButton(coordinator, sn, dev_data, "self_consume"),
+    ]
+
+
+def _power_command_buttons(
+    coordinator, sn: str, dev_data: dict
+) -> list[HyxiPowerCommandButton]:
+    """Power on/off/restart -- register 3002, Hybrid Modbus only. HALO's
+    document has no equivalent write register (see HaloSettings' own
+    docstring), and the cloud API has no power_command controlId either."""
+    return [
+        HyxiPowerCommandButton(coordinator, sn, dev_data, "power_on"),
+        HyxiPowerCommandButton(coordinator, sn, dev_data, "power_off"),
+        HyxiPowerCommandButton(coordinator, sn, dev_data, "restart"),
+    ]
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -69,8 +101,15 @@ async def async_setup_entry(
     entities: list[ButtonEntity] = []
 
     for sn, dev_data in coordinator.data.items():
-        # Clear Active Alarms button is available for every device SN
-        entities.append(HyxiClearAlarmsButton(coordinator, sn, dev_data))
+        # Clear Active Alarms button, available for every device SN --
+        # cloud only. "Clearing" an alarm is bookkeeping in HYXI's own
+        # cloud/account alarm history, not a device operation; neither
+        # Modbus client implements alter_alarm, and no register in either
+        # document represents "acknowledge/clear a fault" at all -- the
+        # fault bits just reflect live device state and only clear
+        # themselves once the underlying condition resolves.
+        if not is_modbus_entry(entry):
+            entities.append(HyxiClearAlarmsButton(coordinator, sn, dev_data))
 
         device_type = normalize_device_type(get_raw_device_code(dev_data))
 
@@ -79,8 +118,24 @@ async def async_setup_entry(
             entities.append(HyxiMicroRestartButton(coordinator, sn, dev_data))
             continue
 
-        # Operating mode + peak shaving: hybrid_inverter and all_in_one only
-        if device_type not in ("hybrid_inverter", "all_in_one"):
+        if not is_control_capable_device_type(entry, device_type):
+            continue
+        if not is_battery_control_enabled(entry, coordinator):
+            continue
+
+        if is_modbus_entry(entry):
+            # Local Modbus has one control surface -- idle/charge/discharge/
+            # self-use -- for every device family this integration supports,
+            # regardless of electrical phase count. HALO (micro_ess) has no
+            # phase 2/3 registers at all and would never resolve past
+            # detect_phase_type's "unknown" otherwise, and neither register
+            # map has a confirmed local equivalent of the cloud's separate
+            # 5-state peak-shaving surface, so that path stays cloud-only.
+            entities.extend(_mode_buttons(coordinator, sn, dev_data))
+            # One device per Modbus entry (see client.py's async_read_all),
+            # so device_type reliably tells the two register maps apart.
+            if device_type == "hybrid_inverter":
+                entities.extend(_power_command_buttons(coordinator, sn, dev_data))
             continue
 
         phase = detect_phase_type(dev_data)
@@ -94,18 +149,11 @@ async def async_setup_entry(
             continue
 
         # Three-phase: operating mode buttons (controlIds 1062-1065)
-        if is_battery_control_enabled(entry, coordinator) and phase == "three_phase":
-            entities.extend(
-                [
-                    HyxiModeButton(coordinator, sn, dev_data, "idle"),
-                    HyxiModeButton(coordinator, sn, dev_data, "charge"),
-                    HyxiModeButton(coordinator, sn, dev_data, "discharge"),
-                    HyxiModeButton(coordinator, sn, dev_data, "self_consume"),
-                ]
-            )
+        if phase == "three_phase":
+            entities.extend(_mode_buttons(coordinator, sn, dev_data))
 
         # Single-phase: peak shaving buttons (controlId 1021)
-        if is_battery_control_enabled(entry, coordinator) and phase == "single_phase":
+        if phase == "single_phase":
             for option in ("close", "charge", "discharge", "stop", "hold"):
                 entities.append(
                     HyxiPeakShavingButton(coordinator, sn, dev_data, option)
@@ -186,7 +234,7 @@ class HyxiClearAlarmsButton(
                 mask_sn(self._sn),
                 err,
             )
-            raise
+            raise HomeAssistantError(f"Failed to clear active alarms: {err}") from err
 
 
 class HyxiMicroRestartButton(
@@ -222,7 +270,7 @@ class HyxiMicroRestartButton(
             _LOGGER.error(
                 "Failed to restart microinverter %s: %s", mask_sn(self._sn), err
             )
-            raise
+            raise HomeAssistantError(f"Failed to restart microinverter: {err}") from err
 
 
 class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity):
@@ -278,7 +326,9 @@ class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntit
             _LOGGER.error(
                 "Failed to set mode '%s' for %s: %s", self._mode, mask_sn(self._sn), err
             )
-            raise
+            raise HomeAssistantError(
+                f"Failed to set mode '{self._mode}': {err}"
+            ) from err
 
     @property
     def available(self) -> bool:
@@ -336,7 +386,66 @@ class HyxiPeakShavingButton(
                 mask_sn(self._sn),
                 err,
             )
-            raise
+            raise HomeAssistantError(
+                f"Failed to send peak shaving '{self._option}': {err}"
+            ) from err
+
+    @property
+    def available(self) -> bool:
+        """Unavailable when battery control is not enabled."""
+        return super().available
+
+
+class HyxiPowerCommandButton(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity
+):
+    """Button to send a power on/off/restart command (Hybrid Modbus, write-
+    only, register 3002).
+
+    Three separate buttons rather than one number entity with values 1-3:
+    one of those values restarts the inverter, and a slider a click away
+    from that is a worse interface than three individually-named,
+    individually-confirmable buttons for the same three actions.
+    """
+
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, sn: str, dev_data: dict, action: str) -> None:
+        """Initialize the power command button."""
+        super().__init__(coordinator)
+        self._sn = sn
+        self._action = action
+        self._attr_unique_id = f"hyxi_{sn}_{action}"
+        self._attr_translation_key = action
+        self._attr_icon = POWER_COMMAND_ICONS.get(action, "mdi:power")
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, sn)},
+            "name": dev_data.get("device_name") or f"Device {sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": sn,
+        }
+
+    async def async_press(self) -> None:
+        """Send the power command to the inverter."""
+        client = self.coordinator.client
+        method = getattr(client, self._action)
+        try:
+            await method(self._sn)
+            _LOGGER.info(
+                "Power command '%s' sent to %s", self._action, mask_sn(self._sn)
+            )
+            await self.coordinator.async_request_refresh()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.error(
+                "Failed to send power command '%s' to %s: %s",
+                self._action,
+                mask_sn(self._sn),
+                err,
+            )
+            raise HomeAssistantError(
+                f"Failed to send power command '{self._action}': {err}"
+            ) from err
 
     @property
     def available(self) -> bool:

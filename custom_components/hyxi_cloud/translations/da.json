@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Forbind til HYXI Cloud",
-        "description": "Indtast dine **Developer API-legitimationsoplysninger (AK/SK)**. Du kan generere disse på [HYXIPOWER Developer Platform]({link}).\n\n**Bemærk:** Dette kræver en separat udviklerkonto. Hvis din udvikler-e-mail er forskellig fra din app-e-post, skal du først **Dele dit anlæg** fra appen til udvikler-e-mailen.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Adgangsnøgle (AK)",
-          "secret_key": "Hemmelig nøgle (SK)",
-          "region": "Serverregion"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Hemmelig nøgle (SK)",
           "region": "Serverregion"
         }
+      },
+      "cloud": {
+        "title": "Forbind til HYXI Cloud",
+        "description": "Indtast dine **Developer API-legitimationsoplysninger (AK/SK)**. Du kan generere disse på [HYXIPOWER Developer Platform]({link}).\n\n**Bemærk:** Dette kræver en separat udviklerkonto. Hvis din udvikler-e-mail er forskellig fra din app-e-post, skal du først **Dele dit anlæg** fra appen til udvikler-e-mailen.",
+        "data": {
+          "access_key": "Adgangsnøgle (AK)",
+          "secret_key": "Hemmelig nøgle (SK)",
+          "region": "Serverregion"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Kunne ikke forbinde til HYXI-servere",
       "invalid_auth": "Ugyldig adgangsnøgle eller hemmelig nøgle",
       "unknown": "Uventet fejl opstod",
-      "no_devices": "Ingen anlæg eller enheder fundet. Hvis din udvikler-e-mail er forskellig fra din app-e-mail, skal du først dele dit anlæg fra appen til udvikler-e-mailen."
+      "no_devices": "Ingen anlæg eller enheder fundet. Hvis din udvikler-e-mail er forskellig fra din app-e-mail, skal du først dele dit anlæg fra appen til udvikler-e-mailen.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Denne HYXI-konto er allerede konfigureret.",
-      "reauth_successful": "Gen-godkendelse lykkedes"
+      "reauth_successful": "Gen-godkendelse lykkedes",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXI Systemkonfiguration",
-        "description": "Juster hvordan din integration kommunikerer med HYXI Cloud.\n\n> ⚠️ **Enhedsstyring**: Aktivér med forsigtighed, hvis din inverter allerede administreres af din energileverandør eller er tilmeldt et Virtuelt Kraftværk (VPP)-program. Afsendelse af kommandoer, mens din leverandør har kontrol, kan komme i konflikt med deres dispatch-plan.\n\n---",
+        "description": "Juster hvordan din integration kommunikerer med HYXI.\n\n> ⚠️ **Enhedsstyring**: Aktivér med forsigtighed, hvis din inverter allerede administreres af din energileverandør eller er tilmeldt et Virtuelt Kraftværk (VPP)-program. Afsendelse af kommandoer, mens din leverandør har kontrol, kan komme i konflikt med deres dispatch-plan.\n\n---",
         "data": {
           "update_interval": "Opdateringsinterval (1-60 minutter, standard: 5)",
+          "update_interval_modbus": "Opdateringsinterval (1-60 sekunder, standard: 15)",
           "back_discovery": "Aktiver opdagelse via alarmer (avanceret)",
           "enable_battery_control": "Aktiver enhedskontrol og -beskyttelse",
           "enable_energy_manager": "Aktivér Energistyring Standalone (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud Status"
+        "name": "Forbindelsesstatus"
       },
       "device_alarm": {
         "name": "Aktive problemer",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Samlet energiudbytte"
       },
+      "totaleb": {
+        "name": "Samlet energiudbytte B"
+      },
+      "totalec": {
+        "name": "Samlet energiudbytte C"
+      },
       "bat_charge_total": {
         "name": "Samlet batteriopladning"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Integrationen sidst opdateret"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Batterikapacitet"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Energi i dag"
       },
+      "etodayin": {
+        "name": "Netimportenergi i dag"
+      },
       "efpv": {
         "name": "Udbytte i dag (PV)"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Fase 3 Belastning"
+      },
+      "ph1loadv": {
+        "name": "Fase 1 Belastningsspænding"
+      },
+      "ph2loadv": {
+        "name": "Fase 2 Belastningsspænding"
+      },
+      "ph3loadv": {
+        "name": "Fase 3 Belastningsspænding"
       },
       "pv1v": {
         "name": "PV1 Spænding"
@@ -371,6 +458,27 @@
           "1": "Tændt"
         }
       },
+      "meteronline": {
+        "name": "Måler online"
+      },
+      "gridmode": {
+        "name": "Nettilstand"
+      },
+      "runcommand": {
+        "name": "Kørselskommando"
+      },
+      "currentoperatingmode": {
+        "name": "Driftstilstand"
+      },
+      "insulationresistance": {
+        "name": "Isolationsmodstand"
+      },
+      "leakagecurrent": {
+        "name": "Lækstrøm"
+      },
+      "selfteststatus": {
+        "name": "Selvtest-status"
+      },
       "pvpower": {
         "name": "Total PV-effekt"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "DC-sidetemperatur"
+      },
+      "ambienttemper": {
+        "name": "Omgivelsestemperatur"
+      },
+      "boosttemper": {
+        "name": "Boost-temperatur"
+      },
+      "dsptemper": {
+        "name": "DSP-temperatur"
       },
       "gridf": {
         "name": "Netfrekvens"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Off-grid-effekt"
+      },
+      "offgridv": {
+        "name": "Off-grid-spænding"
+      },
+      "offgridi": {
+        "name": "Off-grid-strøm"
       },
       "offgridq": {
         "name": "Off-grid reaktiv effekt"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Maks afladningsstrøm"
+      },
+      "bmsstate": {
+        "name": "BMS-status"
+      },
+      "batoperatingstatus": {
+        "name": "Batteriets driftsstatus"
+      },
+      "batalarm1": {
+        "name": "Batterialarm 1"
+      },
+      "batalarm2": {
+        "name": "Batterialarm 2"
+      },
+      "batalarm3": {
+        "name": "Batterialarm 3"
+      },
+      "batcapacityah": {
+        "name": "Batterikapacitet (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominel batterikapacitet"
+      },
+      "llcbusvoltage": {
+        "name": "LLC-busspænding"
+      },
+      "batchargev": {
+        "name": "Batteri ladespænding"
+      },
+      "batchargei": {
+        "name": "Batteri ladestrøm"
+      },
+      "batchargep": {
+        "name": "Batteri ladeeffekt"
+      },
+      "batdischargev": {
+        "name": "Batteri afladningsspænding"
+      },
+      "batdischargei": {
+        "name": "Batteri afladningsstrøm"
+      },
+      "batdischargep": {
+        "name": "Batteri afladningseffekt"
       },
       "batcharge": {
         "name": "Daglig opladningsenergi"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Effektgrænse"
       },
+      "feed_in_power_limit": {
+        "name": "Eksport effektgrænse"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC Minimum"
+      },
+      "force_charge_start_soc": {
+        "name": "Tvungen Opladning Start-SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Tvungen Opladning Stop-SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Off-grid Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Eget Forbrug Reserve-SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Afladning Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Backup Reserve-SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Tvungen Opladning SOC"
+      },
+      "feed_in_soc": {
+        "name": "Eksport SOC-tærskel"
+      },
+      "off_grid_soc": {
+        "name": "Off-grid Tilstand SOC-tærskel"
+      },
+      "feed_in_power": {
+        "name": "Eksport effektgrænse"
+      },
+      "max_charge_current": {
+        "name": "Maks Ladestrøm"
+      },
+      "max_discharge_current": {
+        "name": "Maks Afladestrøm"
+      },
       "soc_min": {
         "name": "SOC Minimum"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Strøm"
       },
+      "anti_starvation": {
+        "name": "Dybafladningsbeskyttelse"
+      },
       "em_grid_charge_allowed": {
         "name": "Netopladning Tilladt"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Spidsbelastningsudjævning: Hold"
+      },
+      "power_on": {
+        "name": "Tænd"
+      },
+      "power_off": {
+        "name": "Sluk"
+      },
+      "restart": {
+        "name": "Genstart"
       },
       "clear_alarms": {
         "name": "Ryd aktive alarmer"

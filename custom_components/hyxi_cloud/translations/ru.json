@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Подключиться к HYXI Cloud",
-        "description": "Введите ваши **учетные данные API разработчика (AK/SK)**. Вы можете создать их на [Платформе разработчиков HYXIPOWER]({link}).\n\n**Примечание:** Требуется отдельный аккаунт разработчика. Если адрес электронной почты разработчика отличается от адреса в приложении, вы должны сначала **Поделиться своей станцией** из приложения на адрес разработчика.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Ключ доступа (AK)",
-          "secret_key": "Секретный ключ (SK)",
-          "region": "Регион сервера"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Секретный ключ (SK)",
           "region": "Регион сервера"
         }
+      },
+      "cloud": {
+        "title": "Подключиться к HYXI Cloud",
+        "description": "Введите ваши **учетные данные API разработчика (AK/SK)**. Вы можете создать их на [Платформе разработчиков HYXIPOWER]({link}).\n\n**Примечание:** Требуется отдельный аккаунт разработчика. Если адрес электронной почты разработчика отличается от адреса в приложении, вы должны сначала **Поделиться своей станцией** из приложения на адрес разработчика.",
+        "data": {
+          "access_key": "Ключ доступа (AK)",
+          "secret_key": "Секретный ключ (SK)",
+          "region": "Регион сервера"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Не удалось подключиться к серверам HYXI",
       "invalid_auth": "Неверный ключ доступа или секретный ключ",
       "unknown": "Произошла непредвиденная ошибка",
-      "no_devices": "Не найдено электростанций или устройств. Если ваш email разработчика отличается от email приложения, сначала необходимо поделиться своей электростанцией из приложения на email разработчика."
+      "no_devices": "Не найдено электростанций или устройств. Если ваш email разработчика отличается от email приложения, сначала необходимо поделиться своей электростанцией из приложения на email разработчика.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Этот аккаунт HYXI уже настроен.",
-      "reauth_successful": "Повторная авторизация прошла успешно"
+      "reauth_successful": "Повторная авторизация прошла успешно",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Настройка системы HYXI",
-        "description": "Настройте способ взаимодействия вашей интеграции с облаком HYXI Cloud.\n\n> ⚠️ **Управление устройством**: Включайте с осторожностью, если ваш инвертор уже управляется вашим поставщиком энергии или зарегистрирован в программе Виртуальной электростанции (VPP). Отправка команд, пока поставщик имеет управление, может конфликтовать с его графиком диспетчеризации.\n\n---",
+        "description": "Настройте способ взаимодействия вашей интеграции с HYXI.\n\n> ⚠️ **Управление устройством**: Включайте с осторожностью, если ваш инвертор уже управляется вашим поставщиком энергии или зарегистрирован в программе Виртуальной электростанции (VPP). Отправка команд, пока поставщик имеет управление, может конфликтовать с его графиком диспетчеризации.\n\n---",
         "data": {
           "update_interval": "Интервал обновления (1-60 минут, по умолчанию: 5)",
+          "update_interval_modbus": "Интервал обновления (1-60 секунд, по умолчанию: 15)",
           "back_discovery": "Включить обнаружение через аварийные сигналы (расширенный режим)",
           "enable_battery_control": "Включить управление и защиту устройства",
           "enable_energy_manager": "Включить автономный Энергоменеджер (Бета)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Статус облака"
+        "name": "Статус подключения"
       },
       "device_alarm": {
         "name": "Активные проблемы",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Общая выработка энергии"
       },
+      "totaleb": {
+        "name": "Общая выработка энергии B"
+      },
+      "totalec": {
+        "name": "Общая выработка энергии C"
+      },
       "bat_charge_total": {
         "name": "Общий заряд батареи"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Последнее обновление интеграции"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Емкость батареи"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Энергия за сегодня"
       },
+      "etodayin": {
+        "name": "Потреблённая из сети энергия сегодня"
+      },
       "efpv": {
         "name": "Выработка сегодня (СЭС)"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Нагрузка фазы 3"
+      },
+      "ph1loadv": {
+        "name": "Напряжение нагрузки фазы 1"
+      },
+      "ph2loadv": {
+        "name": "Напряжение нагрузки фазы 2"
+      },
+      "ph3loadv": {
+        "name": "Напряжение нагрузки фазы 3"
       },
       "pv1v": {
         "name": "Напряжение PV1"
@@ -371,6 +458,27 @@
           "1": "Включено"
         }
       },
+      "meteronline": {
+        "name": "Счётчик онлайн"
+      },
+      "gridmode": {
+        "name": "Режим сети"
+      },
+      "runcommand": {
+        "name": "Команда запуска"
+      },
+      "currentoperatingmode": {
+        "name": "Рабочий режим"
+      },
+      "insulationresistance": {
+        "name": "Сопротивление изоляции"
+      },
+      "leakagecurrent": {
+        "name": "Ток утечки"
+      },
+      "selfteststatus": {
+        "name": "Статус самодиагностики"
+      },
       "pvpower": {
         "name": "Общая мощность PV"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "Температура на стороне DC"
+      },
+      "ambienttemper": {
+        "name": "Температура окружающей среды"
+      },
+      "boosttemper": {
+        "name": "Температура бустера"
+      },
+      "dsptemper": {
+        "name": "Температура DSP"
       },
       "gridf": {
         "name": "Частота сети"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Мощность вне сети"
+      },
+      "offgridv": {
+        "name": "Напряжение вне сети"
+      },
+      "offgridi": {
+        "name": "Ток вне сети"
       },
       "offgridq": {
         "name": "Реактивная мощность вне сети"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Макс. ток разряда"
+      },
+      "bmsstate": {
+        "name": "Статус BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Рабочее состояние батареи"
+      },
+      "batalarm1": {
+        "name": "Тревога батареи 1"
+      },
+      "batalarm2": {
+        "name": "Тревога батареи 2"
+      },
+      "batalarm3": {
+        "name": "Тревога батареи 3"
+      },
+      "batcapacityah": {
+        "name": "Ёмкость батареи (Ач)"
+      },
+      "batnominalcapacity": {
+        "name": "Номинальная ёмкость батареи"
+      },
+      "llcbusvoltage": {
+        "name": "Напряжение шины LLC"
+      },
+      "batchargev": {
+        "name": "Напряжение заряда батареи"
+      },
+      "batchargei": {
+        "name": "Ток заряда батареи"
+      },
+      "batchargep": {
+        "name": "Мощность заряда батареи"
+      },
+      "batdischargev": {
+        "name": "Напряжение разряда батареи"
+      },
+      "batdischargei": {
+        "name": "Ток разряда батареи"
+      },
+      "batdischargep": {
+        "name": "Мощность разряда батареи"
       },
       "batcharge": {
         "name": "Ежедневная энергия заряда"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Ограничение мощности"
       },
+      "feed_in_power_limit": {
+        "name": "Ограничение мощности экспорта"
+      },
+      "vpp_min_soc": {
+        "name": "Минимальный SOC VPP"
+      },
+      "force_charge_start_soc": {
+        "name": "SOC начала принудительной зарядки"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC окончания принудительной зарядки"
+      },
+      "off_grid_min_soc": {
+        "name": "Минимальный SOC вне сети"
+      },
+      "self_use_soc": {
+        "name": "Резервный SOC собственного потребления"
+      },
+      "discharge_min_soc": {
+        "name": "Минимальный SOC разряда"
+      },
+      "backup_soc": {
+        "name": "Резервный SOC резервного питания"
+      },
+      "forced_charge_soc": {
+        "name": "SOC принудительной зарядки"
+      },
+      "feed_in_soc": {
+        "name": "Порог SOC экспорта"
+      },
+      "off_grid_soc": {
+        "name": "Порог SOC режима вне сети"
+      },
+      "feed_in_power": {
+        "name": "Ограничение мощности экспорта"
+      },
+      "max_charge_current": {
+        "name": "Макс. ток зарядки"
+      },
+      "max_discharge_current": {
+        "name": "Макс. ток разрядки"
+      },
       "soc_min": {
         "name": "Минимальный SOC"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Питание"
       },
+      "anti_starvation": {
+        "name": "Защита от глубокого разряда"
+      },
       "em_grid_charge_allowed": {
         "name": "Разрешена зарядка от сети"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Сглаживание пиков: Удерживать"
+      },
+      "power_on": {
+        "name": "Включить"
+      },
+      "power_off": {
+        "name": "Выключить"
+      },
+      "restart": {
+        "name": "Перезагрузить"
       },
       "clear_alarms": {
         "name": "Очистить активные аварии"

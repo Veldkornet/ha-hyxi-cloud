@@ -26,20 +26,54 @@ from .const import (
     CONF_EM_LOOP_INTERVAL,
     CONF_EM_P1_ENTITY,
     CONF_ENABLE_PUSH,
+    CONF_MODBUS_BAUDRATE,
+    CONF_MODBUS_DEVICE,
+    CONF_MODBUS_FAMILY,
+    CONF_MODBUS_FRAMER,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_TYPE,
+    CONF_MODBUS_UNIT,
     CONF_PUSH_RATE,
     CONF_PUSH_URL,
     CONF_REGION,
     CONF_SECRET_KEY,
+    CONF_TRANSPORT,
+    DEFAULT_MODBUS_BAUDRATE,
+    DEFAULT_MODBUS_FAMILY,
+    DEFAULT_MODBUS_INTERVAL,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DEFAULT_REGION,
+    DEFAULT_TRANSPORT,
+    DETECTION_MESSAGE_SPACING,
+    DETECTION_TIMEOUT,
     DOMAIN,
     MICRO_ESS_CONTROL_SUPPORTED,
+    MODBUS_FAMILY_SIGNATURES,
+    MODBUS_TCP_FRAMERS,
+    MODBUS_TYPE_SERIAL,
+    MODBUS_TYPE_TCP,
+    TRANSPORT_CLOUD,
+    TRANSPORT_MODBUS,
     default_region_for_country,
     get_raw_device_code,
+    is_modbus_entry,
     normalize_device_type,
     region_for_base_url,
     resolve_base_url,
 )
+
+TRANSPORT_OPTIONS: list[selector.SelectOptionDict] = [
+    {"value": TRANSPORT_CLOUD, "label": "HYXI Cloud (online account)"},
+    {"value": TRANSPORT_MODBUS, "label": "Local Modbus (RS485, no account)"},
+]
+
+MODBUS_TYPE_OPTIONS: list[selector.SelectOptionDict] = [
+    {"value": MODBUS_TYPE_TCP, "label": "Modbus TCP gateway (RS485-to-Ethernet)"},
+    {"value": MODBUS_TYPE_SERIAL, "label": "Serial port (USB RS485 adapter)"},
+]
 
 REGION_OPTIONS: list[selector.SelectOptionDict] = [
     {"value": "eu", "label": "Europe"},
@@ -73,6 +107,116 @@ def _build_user_schema(default_region: str = DEFAULT_REGION) -> vol.Schema:
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
+        }
+    )
+
+
+def _build_transport_schema() -> vol.Schema:
+    """Build the transport chooser shown before anything else.
+
+    A select rather than a menu, because the cloud path is what almost every
+    existing user wants and a menu cannot express a default.
+    """
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_TRANSPORT, default=DEFAULT_TRANSPORT
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=TRANSPORT_OPTIONS,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
+    )
+
+
+def _build_modbus_type_schema(*, default: str = MODBUS_TYPE_TCP) -> vol.Schema:
+    """Build the Modbus connection-type chooser.
+
+    `default` is the current entry's type on reconfigure, so switching from
+    a USB adapter to a network gateway (or back) is offered as an edit
+    rather than forcing a remove-and-re-add for that kind of change.
+    """
+    return vol.Schema(
+        {
+            vol.Required(CONF_MODBUS_TYPE, default=default): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=MODBUS_TYPE_OPTIONS,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
+    )
+
+
+def _build_unit_field(current: Mapping[str, Any] | None = None) -> dict:
+    """Build the slave-address field shared by both Modbus connection types."""
+    current = current or {}
+    return {
+        vol.Required(
+            CONF_MODBUS_UNIT, default=current.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT)
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1, max=247, step=1, mode=selector.NumberSelectorMode.BOX
+            )
+        )
+    }
+
+
+def _build_modbus_tcp_schema(current: Mapping[str, Any] | None = None) -> vol.Schema:
+    """Build the schema for an RS485-to-Ethernet gateway.
+
+    `current` pre-fills from an existing entry's data on reconfigure;
+    omitted (or a key missing from it) falls back to the same defaults
+    used for a brand new entry.
+    """
+    current = current or {}
+    host_field = (
+        vol.Required(CONF_MODBUS_HOST, default=current[CONF_MODBUS_HOST])
+        if CONF_MODBUS_HOST in current
+        else vol.Required(CONF_MODBUS_HOST)
+    )
+    return vol.Schema(
+        {
+            host_field: str,
+            vol.Required(
+                CONF_MODBUS_PORT,
+                default=current.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=1, max=65535, step=1, mode=selector.NumberSelectorMode.BOX
+                )
+            ),
+            **_build_unit_field(current),
+        }
+    )
+
+
+def _build_modbus_serial_schema(current: Mapping[str, Any] | None = None) -> vol.Schema:
+    """Build the schema for a directly attached USB RS485 adapter.
+
+    See _build_modbus_tcp_schema for what `current` is for.
+    """
+    current = current or {}
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_MODBUS_DEVICE,
+                default=current.get(CONF_MODBUS_DEVICE, "/dev/ttyUSB0"),
+            ): str,
+            vol.Required(
+                CONF_MODBUS_BAUDRATE,
+                # SelectSelector option values are strings; the entry stores
+                # an int, so it must be coerced back for the default to match.
+                default=str(current.get(CONF_MODBUS_BAUDRATE, DEFAULT_MODBUS_BAUDRATE)),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["9600", "19200", "38400", "57600", "115200"],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            **_build_unit_field(current),
         }
     )
 
@@ -153,6 +297,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
     def __init__(self):
         """Initialize the flow."""
         self.reauth_entry = None
+        self._modbus_type = MODBUS_TYPE_TCP
 
     async def _validate_input(self, data, base_url: str = BASE_URL_DEFAULT):
         """Validate the user input allows us to connect."""
@@ -193,10 +338,343 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return None
 
+    async def _probe_and_detect_modbus(
+        self, params, unit_id: int
+    ) -> tuple[str | None, str]:
+        """Confirm a device answers, and guess which register map it speaks.
+
+        Returns (error, family). error is None on success.
+
+        A Modbus exception response still counts as the device being
+        present -- it means something replied and simply does not carry
+        that register. But a real *value* at one of MODBUS_FAMILY_SIGNATURES
+        is stronger: those two addresses were chosen because the HALO and
+        hybrid documents' confirmed ranges don't overlap (hybrid tops out at
+        3121, HALO starts at 4000), so a value at either is direct evidence
+        for that family, not just for "a device is here".
+
+        Every signature is tried before giving up, rather than returning on
+        the first exception, so a device that happens to reject its own
+        family's earlier-tried signature but answer a later one is still
+        identified correctly instead of falling through to the default.
+        """
+        try:
+            from modbus_connection import ModbusExceptionError, ModbusTimeoutError
+            from modbus_connection.tmodbus import ModbusConnection
+        except ImportError:
+            _LOGGER.error("modbus-connection is not installed")
+            return "modbus_unavailable", DEFAULT_MODBUS_FAMILY
+
+        connection = ModbusConnection(
+            params, timeout=DETECTION_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
+        )
+        unit = connection.for_unit(unit_id)
+        reachable = False
+        try:
+            for family, space, address in MODBUS_FAMILY_SIGNATURES:
+                read = (
+                    unit.read_input_registers
+                    if space == "input"
+                    else unit.read_holding_registers
+                )
+                try:
+                    await read(address, 1)
+                except ModbusExceptionError as err:
+                    reachable = True
+                    _LOGGER.debug(
+                        "Modbus probe: unit %s rejected %s register %s (%s) "
+                        "for family %s -- device present, not this family",
+                        unit_id,
+                        space,
+                        address,
+                        type(err).__name__,
+                        family,
+                    )
+                    continue
+                except ModbusTimeoutError:
+                    _LOGGER.debug(
+                        "Modbus probe: no answer from unit %s at %s register %s "
+                        "(family %s)",
+                        unit_id,
+                        space,
+                        address,
+                        family,
+                    )
+                    continue
+                _LOGGER.debug(
+                    "Modbus probe: unit %s returned a value for %s register %s "
+                    "-- detected as %s",
+                    unit_id,
+                    space,
+                    address,
+                    family,
+                )
+                return None, family
+
+            if reachable:
+                _LOGGER.warning(
+                    "Modbus device on unit %s is reachable but answered no "
+                    "known signature register with a value; defaulting to "
+                    "%s. If sensors look wrong, this guess may be why.",
+                    unit_id,
+                    DEFAULT_MODBUS_FAMILY,
+                )
+                return None, DEFAULT_MODBUS_FAMILY
+
+            _LOGGER.debug(
+                "Modbus probe: unit %s answered none of %d signature registers",
+                unit_id,
+                len(MODBUS_FAMILY_SIGNATURES),
+            )
+            return "no_device", DEFAULT_MODBUS_FAMILY
+        except Exception:  # pylint: disable=broad-exception-caught
+            _LOGGER.exception("Could not reach the Modbus device")
+            return "cannot_connect", DEFAULT_MODBUS_FAMILY
+        finally:
+            await connection.close()
+
+    async def _probe_and_detect_modbus_tcp(
+        self, host: str, port: int, unit_id: int
+    ) -> tuple[str | None, str, str]:
+        """Probe a TCP gateway, trying every wire framing it might speak.
+
+        Returns (error, family, framer). error is None on success; framer
+        is meaningless when error is set.
+
+        Nothing in the setup form distinguishes a gateway that tunnels raw
+        RTU frames over a plain TCP socket from one that speaks native
+        Modbus-TCP/MBAP framing and translates to RTU on the wire itself
+        (see MODBUS_TCP_FRAMERS's definition for concrete examples), and
+        getting it wrong doesn't degrade gracefully into "wrong family" the
+        way a real device answering an unexpected register does -- it's a
+        hard framing mismatch, so every read behaves as if the device
+        weren't there at all (a timeout) or as a transport-level failure.
+        Both of those are exactly the signals _probe_and_detect_modbus
+        already reports as "no_device" or "cannot_connect", so retrying
+        under the next framer on either one -- rather than only on a
+        harder failure -- is what actually distinguishes "wrong framer"
+        from "no device at this address".
+        """
+        from modbus_connection import ModbusTcpParams
+
+        error, family = None, DEFAULT_MODBUS_FAMILY
+        for framer in MODBUS_TCP_FRAMERS:
+            params = ModbusTcpParams(host=host, port=port, framer=framer)
+            error, family = await self._probe_and_detect_modbus(params, unit_id)
+            if error not in ("cannot_connect", "no_device"):
+                return error, family, framer
+        return error, family, MODBUS_TCP_FRAMERS[-1]
+
+    async def _validate_modbus(
+        self, user_input, *, reconfiguring_entry_id: str | None = None
+    ) -> tuple[str | None, dict]:
+        """Validate a Modbus connection and return (error, entry data).
+
+        `reconfiguring_entry_id` is the entry a reconfigure flow is editing.
+        The unique ID is connection-address-derived here (unlike the cloud
+        path's account-key one), so editing an entry back to its own
+        current address must not read as "already configured" against
+        itself -- only a collision with a genuinely different entry should
+        abort.
+        """
+        from modbus_connection import ModbusSerialParams
+
+        unit_id = int(user_input[CONF_MODBUS_UNIT])
+        _LOGGER.debug(
+            "Config flow: validating %s Modbus connection, unit %s",
+            self._modbus_type,
+            unit_id,
+        )
+        # A plain local, not a repeated self._modbus_type comparison --
+        # both branches below are separated by an await, and narrowing an
+        # attribute read across one isn't something mypy can be relied on
+        # to carry over.
+        is_serial = self._modbus_type == MODBUS_TYPE_SERIAL
+        if is_serial:
+            device = user_input[CONF_MODBUS_DEVICE]
+            baudrate = int(user_input[CONF_MODBUS_BAUDRATE])
+            params = ModbusSerialParams(
+                device=device, baudrate=baudrate, bytesize=8, parity="N", stopbits=1
+            )
+            unique_id = f"{device}:{unit_id}"
+            title = f"HYXI Modbus ({device})"
+            data = {
+                CONF_MODBUS_DEVICE: device,
+                CONF_MODBUS_BAUDRATE: baudrate,
+            }
+        else:
+            host = user_input[CONF_MODBUS_HOST]
+            port = int(user_input[CONF_MODBUS_PORT])
+            unique_id = f"{host}:{port}:{unit_id}"
+            title = f"HYXI Modbus ({host})"
+            data = {CONF_MODBUS_HOST: host, CONF_MODBUS_PORT: port}
+
+        await self.async_set_unique_id(unique_id, raise_on_progress=False)
+        existing = self.hass.config_entries.async_entry_for_domain_unique_id(
+            self.handler, unique_id
+        )
+        if existing and existing.entry_id != reconfiguring_entry_id:
+            # Definitely a different entry at this address -- raises AbortFlow,
+            # same as the plain _abort_if_unique_id_configured() call this
+            # replaces. Only reached when it will actually raise, so a
+            # reconfigure that leaves the address unchanged never aborts
+            # against its own entry.
+            self._abort_if_unique_id_configured()
+
+        if is_serial:
+            error, family = await self._probe_and_detect_modbus(params, unit_id)
+        else:
+            error, family, framer = await self._probe_and_detect_modbus_tcp(
+                host, port, unit_id
+            )
+            data[CONF_MODBUS_FRAMER] = framer
+
+        return error, {
+            **data,
+            CONF_TRANSPORT: TRANSPORT_MODBUS,
+            CONF_MODBUS_TYPE: self._modbus_type,
+            CONF_MODBUS_UNIT: unit_id,
+            CONF_MODBUS_FAMILY: family,
+            "_title": title,
+        }
+
     async def async_step_user(self, user_input=None):
-        """Handle the initial setup step."""
+        """Choose between the cloud API and a local Modbus link."""
         _LOGGER.debug(
             "Config flow: entering step_user (input provided=%s)",
+            user_input is not None,
+        )
+        if user_input is not None:
+            if user_input[CONF_TRANSPORT] == TRANSPORT_MODBUS:
+                return await self.async_step_modbus()
+            return await self.async_step_cloud()
+
+        return self.async_show_form(
+            step_id="user", data_schema=_build_transport_schema()
+        )
+
+    async def async_step_modbus(self, user_input=None):
+        """Choose how the RS485 bus is attached."""
+        _LOGGER.debug(
+            "Config flow: entering step_modbus (input provided=%s)",
+            user_input is not None,
+        )
+        if user_input is not None:
+            self._modbus_type = user_input[CONF_MODBUS_TYPE]
+            if self._modbus_type == MODBUS_TYPE_SERIAL:
+                return await self.async_step_modbus_serial()
+            return await self.async_step_modbus_tcp()
+
+        return self.async_show_form(
+            step_id="modbus", data_schema=_build_modbus_type_schema()
+        )
+
+    async def _async_modbus_connection_step(self, step_id, schema, user_input):
+        """Validate a Modbus connection type step.
+
+        Shared by both fresh setup and reconfigure -- the two differ only in
+        what happens on success, so that is the only thing branched here.
+        Reconfigure is detected from the flow's own source rather than a
+        separate parameter, since HA already tracks that distinction and a
+        second signal saying the same thing would just be a way for the two
+        to quietly disagree later.
+        """
+        # self.context.get("source") rather than the real ConfigFlow's
+        # .source property they are equivalent (that property is exactly
+        # this) -- direct access matches how this file already reads
+        # self.context["entry_id"] in async_step_reauth.
+        reconfiguring = self.context.get("source") == config_entries.SOURCE_RECONFIGURE
+        reconfigure_entry = self._get_reconfigure_entry() if reconfiguring else None
+
+        errors = {}
+        if user_input is not None:
+            error, data = await self._validate_modbus(
+                user_input,
+                reconfiguring_entry_id=(
+                    reconfigure_entry.entry_id if reconfigure_entry else None
+                ),
+            )
+            if not error:
+                title = data.pop("_title")
+                if reconfigure_entry is not None:
+                    # _validate_modbus already set self.unique_id (via
+                    # async_set_unique_id) to whatever the new address
+                    # computes to -- passed through explicitly here, or
+                    # the entry keeps its pre-edit unique_id forever: the
+                    # old address stays reserved, and the new one was
+                    # only ever checked for collisions, never actually
+                    # persisted as this entry's identity.
+                    return self.async_update_reload_and_abort(
+                        reconfigure_entry,
+                        title=title,
+                        data=data,
+                        unique_id=self.unique_id,
+                    )
+                return self.async_create_entry(title=title, data=data)
+            errors["base"] = error
+
+        return self.async_show_form(step_id=step_id, data_schema=schema, errors=errors)
+
+    async def async_step_modbus_tcp(self, user_input=None):
+        """Configure an RS485-to-Ethernet gateway."""
+        return await self._async_modbus_connection_step(
+            "modbus_tcp", _build_modbus_tcp_schema(), user_input
+        )
+
+    async def async_step_modbus_serial(self, user_input=None):
+        """Configure a directly attached USB RS485 adapter."""
+        return await self._async_modbus_connection_step(
+            "modbus_serial", _build_modbus_serial_schema(), user_input
+        )
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Change an existing Modbus entry's connection details.
+
+        Scoped to connection details only -- host/port, device/baud, and the
+        slave address -- not the transport itself. A cloud entry's unique ID
+        is an account key; a Modbus entry's is a connection address. Those
+        are different enough kinds of identity that "reconfigure into a
+        different transport" would really be a different entry, not an edit
+        of this one, so this step only ever runs for entries that were
+        already Modbus.
+
+        Re-runs the same probe-and-detect used at setup, on purpose: if the
+        device at the new address is a different family than the one
+        stored, that gets caught and corrected here rather than left wrong
+        until someone notices the sensors look off.
+        """
+        entry = self._get_reconfigure_entry()
+        self._modbus_type = entry.data.get(CONF_MODBUS_TYPE, MODBUS_TYPE_TCP)
+
+        if user_input is not None:
+            self._modbus_type = user_input[CONF_MODBUS_TYPE]
+            if self._modbus_type == MODBUS_TYPE_SERIAL:
+                return await self.async_step_reconfigure_serial()
+            return await self.async_step_reconfigure_tcp()
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=_build_modbus_type_schema(default=self._modbus_type),
+        )
+
+    async def async_step_reconfigure_tcp(self, user_input=None):
+        """Edit an RS485-to-Ethernet gateway's connection details."""
+        entry = self._get_reconfigure_entry()
+        return await self._async_modbus_connection_step(
+            "reconfigure_tcp", _build_modbus_tcp_schema(entry.data), user_input
+        )
+
+    async def async_step_reconfigure_serial(self, user_input=None):
+        """Edit a USB RS485 adapter's connection details."""
+        entry = self._get_reconfigure_entry()
+        return await self._async_modbus_connection_step(
+            "reconfigure_serial", _build_modbus_serial_schema(entry.data), user_input
+        )
+
+    async def async_step_cloud(self, user_input=None):
+        """Handle credentials for the HYXI Cloud API."""
+        _LOGGER.debug(
+            "Config flow: entering step_cloud (input provided=%s)",
             user_input is not None,
         )
         errors = {}
@@ -215,13 +693,14 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                     data={
                         **user_input,
                         "base_url": base_url,
+                        CONF_TRANSPORT: TRANSPORT_CLOUD,
                     },
                 )
 
             errors["base"] = error
 
         return self.async_show_form(
-            step_id="user",
+            step_id="cloud",
             data_schema=_build_user_schema(default_region),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
@@ -297,7 +776,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 if self._options
                 else dict(self._config_entry.options)
             )
-            self._options["update_interval"] = user_input["update_interval"]
+            self._options["update_interval"] = user_input.get(
+                "update_interval", user_input.get("update_interval_modbus")
+            )
             self._options[CONF_BACK_DISCOVERY] = user_input.get(
                 CONF_BACK_DISCOVERY, False
             )
@@ -373,27 +854,47 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         # Pull current values or defaults
         options = self._options if self._options else self._config_entry.options
-        current_interval = options.get("update_interval", 5)
+        is_modbus = is_modbus_entry(self._config_entry)
+        # Modbus and cloud both store this as "update_interval", but a
+        # rate-limited cloud API and a wire mean very different numbers
+        # (minutes vs seconds -- see modbus_coordinator.py), so each
+        # transport gets its own schema key with a label that says which,
+        # rather than one field whose unit silently depends on transport.
+        interval_key = "update_interval_modbus" if is_modbus else "update_interval"
+        current_interval = options.get(
+            "update_interval", DEFAULT_MODBUS_INTERVAL if is_modbus else 5
+        )
         em_enabled = options.get(CONF_EM_ENABLED, False)
         has_em_capable = self._has_controllable_inverter()
         has_control_capable = self._has_control_capable_device()
 
-        schema_dict = {
+        # Annotated explicitly -- without it, mypy narrows both the key and
+        # value types to this first entry (Required, All) and rejects the
+        # Optional keys and selector values added conditionally below.
+        schema_dict: dict[vol.Marker, Any] = {
             # Slider for Interval
-            vol.Required("update_interval", default=current_interval): vol.All(
+            vol.Required(interval_key, default=current_interval): vol.All(
                 vol.Coerce(int), vol.Range(min=1, max=60)
             ),
-            # Toggle for Alarm-based discovery
-            vol.Optional(
-                CONF_BACK_DISCOVERY,
-                default=options.get(CONF_BACK_DISCOVERY, False),
-            ): selector.BooleanSelector(),
-            # Toggle for Real-Time Push
-            vol.Optional(
-                CONF_ENABLE_PUSH,
-                default=options.get(CONF_ENABLE_PUSH, False),
-            ): selector.BooleanSelector(),
         }
+
+        # Alarm-based discovery and real-time push are both cloud services:
+        # discovery walks the account's alarm records, and push is a webhook
+        # subscription registered with HYXI's servers. A point-to-point RS485
+        # link has neither, so a Modbus entry never shows them.
+        if not is_modbus_entry(self._config_entry):
+            schema_dict[
+                vol.Optional(
+                    CONF_BACK_DISCOVERY,
+                    default=options.get(CONF_BACK_DISCOVERY, False),
+                )
+            ] = selector.BooleanSelector()
+            schema_dict[
+                vol.Optional(
+                    CONF_ENABLE_PUSH,
+                    default=options.get(CONF_ENABLE_PUSH, False),
+                )
+            ] = selector.BooleanSelector()
 
         # If push is enabled, show the rate and url inputs
         if options.get(CONF_ENABLE_PUSH, False):
@@ -503,11 +1004,16 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
     def _get_control_capable_sns(self) -> list[str]:
         """Get serial numbers of any device control (not just EM) supports.
 
-        Includes EM-eligible inverters plus, when MICRO_ESS_CONTROL_SUPPORTED
-        is enabled, micro_ess/HALO devices (Power On/Off, controlId 1011).
+        Includes EM-eligible inverters, plus micro_ess/HALO devices when
+        either MICRO_ESS_CONTROL_SUPPORTED is enabled (cloud, currently
+        never) or this entry is Modbus (local, where the mode buttons and
+        protection numbers this toggle unlocks work today -- see
+        is_control_capable_device_type in const.py; the Power On/Off switch,
+        controlId 1011, has no confirmed local register and stays gated by
+        MICRO_ESS_CONTROL_SUPPORTED alone regardless of transport).
         """
         allowed_types: tuple[str, ...] = ("hybrid_inverter", "all_in_one")
-        if MICRO_ESS_CONTROL_SUPPORTED:
+        if MICRO_ESS_CONTROL_SUPPORTED or is_modbus_entry(self._config_entry):
             allowed_types += ("micro_ess",)
         return self._get_sns_by_device_type(allowed_types)
 

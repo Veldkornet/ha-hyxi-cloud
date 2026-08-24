@@ -1,7 +1,7 @@
 """Tests for the initial setup of the HYXI Cloud integration."""
 
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -378,7 +378,7 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
 
             assert "Connection error: Timeout" in str(exc.value)
             mock_logger.assert_called_with(
-                "HYXI Cloud not ready: %s",
+                "HYXI not ready: %s",
                 mock_coordinator.async_config_entry_first_refresh.side_effect,
             )
 
@@ -409,7 +409,7 @@ async def test_async_setup_entry_client_error(mock_hass, mock_entry):
 
             assert "Connection error: API connection error" in str(exc.value)
             mock_logger.assert_called_with(
-                "HYXI Cloud not ready: %s",
+                "HYXI not ready: %s",
                 mock_coordinator.async_config_entry_first_refresh.side_effect,
             )
 
@@ -438,7 +438,7 @@ async def test_async_setup_entry_timeout_error(mock_hass, mock_entry):
 
             assert "Connection error: Connection timed out" in str(exc.value)
             mock_logger.assert_called_with(
-                "HYXI Cloud not ready: %s",
+                "HYXI not ready: %s",
                 mock_coordinator.async_config_entry_first_refresh.side_effect,
             )
 
@@ -595,12 +595,16 @@ async def test_async_remove_entry_no_credentials_is_noop(mock_hass, mock_entry):
 
 
 @pytest.mark.asyncio
-async def test_async_setup_battery_protection_cleans_up_on_start_failure(
-    mock_hass, mock_entry
+async def test_async_setup_battery_protection_logs_and_continues_on_start_failure(
+    mock_hass, mock_entry, caplog
 ):
-    """If a protection controller fails to start, every controller created
-    in this batch is stopped and removed, and the exception propagates
-    rather than leaving half-started controllers behind."""
+    """If a protection controller's initial start fails (bus contention, a
+    provider-controlled battery that will never accept a local write, a
+    transient timeout), that must not take the whole config entry down --
+    the controller stays registered and a warning is logged instead, so it
+    can retry naturally on the next coordinator refresh."""
+    import logging
+
     from custom_components.hyxi_cloud import _async_setup_battery_protection
     from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 
@@ -617,8 +621,18 @@ async def test_async_setup_battery_protection_cleans_up_on_start_failure(
         "async_start",
         AsyncMock(side_effect=RuntimeError("listener setup failed")),
     ):
-        with pytest.raises(RuntimeError, match="listener setup failed"):
-            await _async_setup_battery_protection(mock_hass, coordinator)
+        caplog.set_level(logging.WARNING)
+        # Must not raise -- a single device's failed start no longer takes
+        # the whole config entry down.
+        await _async_setup_battery_protection(mock_hass, coordinator)
+
+    # The controller stays registered (not cleaned up) so the coordinator's
+    # own listener keeps it retrying on future refreshes.
+    assert "SN123" in coordinator.protection_controllers
+    assert any(
+        "failed to start" in rec.message and "listener setup failed" in rec.message
+        for rec in caplog.records
+    )
 
 
 @pytest.mark.asyncio
@@ -638,14 +652,12 @@ async def test_async_setup_battery_protection_disabled_is_noop(mock_hass, mock_e
 
 
 @pytest.mark.asyncio
-async def test_async_setup_battery_protection_cancels_still_pending_tasks(
+async def test_async_setup_battery_protection_isolates_sibling_failures(
     mock_hass, mock_entry
 ):
-    """When one controller fails to start while a sibling controller is
-    still starting, the still-running task is explicitly cancelled during
-    cleanup rather than left dangling."""
-    import asyncio
-
+    """One device's controller failing to start must not affect a sibling
+    device's controller in the same setup batch -- each stays registered
+    independently of whether its own start succeeded."""
     from custom_components.hyxi_cloud import _async_setup_battery_protection
     from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 
@@ -655,22 +667,19 @@ async def test_async_setup_battery_protection_cancels_still_pending_tasks(
     coordinator.protection_controllers = {}
     coordinator.data = {
         "SN_FAIL": {"device_type_code": "1", "model": "H10K-HT"},  # three-phase
-        "SN_SLOW": {"device_type_code": "1", "model": "H5K-HS"},  # single-phase
+        "SN_OK": {"device_type_code": "1", "model": "H5K-HS"},  # single-phase
     }
 
     async def fake_start(self):
         if self._sn == "SN_FAIL":  # pylint: disable=protected-access
             raise RuntimeError("boom")
-        await asyncio.sleep(3600)  # still "starting" when cleanup runs
 
-    with (
-        patch.object(HyxiBatteryProtectionController, "async_start", fake_start),
-        patch.object(HyxiBatteryProtectionController, "async_stop", new=AsyncMock()),
-    ):
-        with pytest.raises(RuntimeError, match="boom"):
-            await _async_setup_battery_protection(mock_hass, coordinator)
+    with patch.object(HyxiBatteryProtectionController, "async_start", fake_start):
+        # Must not raise -- SN_FAIL's failure is isolated to itself.
+        await _async_setup_battery_protection(mock_hass, coordinator)
 
-    assert not coordinator.protection_controllers
+    assert "SN_FAIL" in coordinator.protection_controllers
+    assert "SN_OK" in coordinator.protection_controllers
 
 
 @pytest.mark.asyncio
@@ -906,6 +915,106 @@ async def test_migrate_vpp_dispatch_to_work_mode_unique_id_collision(
         mock_registry.async_remove.assert_called_once_with(
             "binary_sensor.hyx_123_vpp_dispatch"
         )
+
+
+@pytest.mark.asyncio
+async def test_remove_work_mode_sensor_for_modbus(mock_hass, mock_entry):
+    """A Modbus entry's pre-existing work_mode entity (from before it was
+    gated out, or from switching a device from cloud to Modbus) is removed
+    from the registry rather than left dangling."""
+    from custom_components.hyxi_cloud.__init__ import (
+        _remove_work_mode_sensor_for_modbus,
+    )
+
+    mock_entry.entry_id = "test_id"
+    mock_entry.data = {"transport": "modbus"}
+
+    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+        mock_registry = MagicMock()
+        mock_er_get.return_value = mock_registry
+
+        def mock_get_entity_id(domain, component, unique_id):
+            if unique_id == "test_id_123_work_mode":
+                return "binary_sensor.hyx_123_work_mode"
+            return None
+
+        mock_registry.async_get_entity_id.side_effect = mock_get_entity_id
+
+        devices: dict[str, dict] = {"123": {}, "456": {}}
+
+        _remove_work_mode_sensor_for_modbus(mock_hass, mock_entry, devices)
+
+        mock_registry.async_remove.assert_called_once_with(
+            "binary_sensor.hyx_123_work_mode"
+        )
+
+
+@pytest.mark.asyncio
+async def test_remove_work_mode_sensor_for_modbus_is_noop_for_cloud(
+    mock_hass, mock_entry
+):
+    """A cloud entry still gets HyxiWorkModeSensor -- this must never touch
+    the registry for one, not even to check whether the entity exists."""
+    from custom_components.hyxi_cloud.__init__ import (
+        _remove_work_mode_sensor_for_modbus,
+    )
+
+    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+        _remove_work_mode_sensor_for_modbus(mock_hass, mock_entry, {"123": {}})
+
+        mock_er_get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_remove_alarm_entities_for_modbus(mock_hass, mock_entry):
+    """A Modbus entry's pre-existing device_alarm/clear_alarms entities
+    (from before they were gated out, or from switching a device from
+    cloud to Modbus) are removed from the registry rather than left
+    dangling."""
+    from custom_components.hyxi_cloud.__init__ import (
+        _remove_alarm_entities_for_modbus,
+    )
+
+    mock_entry.entry_id = "test_id"
+    mock_entry.data = {"transport": "modbus"}
+
+    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+        mock_registry = MagicMock()
+        mock_er_get.return_value = mock_registry
+
+        def mock_get_entity_id(domain, component, unique_id):
+            if (domain, unique_id) == ("binary_sensor", "test_id_123_device_alarm"):
+                return "binary_sensor.hyx_123_device_alarm"
+            if (domain, unique_id) == ("button", "hyxi_123_clear_alarms"):
+                return "button.hyxi_123_clear_alarms"
+            return None
+
+        mock_registry.async_get_entity_id.side_effect = mock_get_entity_id
+
+        devices: dict[str, dict] = {"123": {}, "456": {}}
+
+        _remove_alarm_entities_for_modbus(mock_hass, mock_entry, devices)
+
+        assert mock_registry.async_remove.call_args_list == [
+            call("binary_sensor.hyx_123_device_alarm"),
+            call("button.hyxi_123_clear_alarms"),
+        ]
+
+
+@pytest.mark.asyncio
+async def test_remove_alarm_entities_for_modbus_is_noop_for_cloud(
+    mock_hass, mock_entry
+):
+    """A cloud entry still gets both alarm entities -- this must never
+    touch the registry for either, not even to check whether they exist."""
+    from custom_components.hyxi_cloud.__init__ import (
+        _remove_alarm_entities_for_modbus,
+    )
+
+    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+        _remove_alarm_entities_for_modbus(mock_hass, mock_entry, {"123": {}})
+
+        mock_er_get.assert_not_called()
 
 
 # --- __init__.py Platform Tests ---

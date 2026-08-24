@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import hmac
 import logging
+from typing import TYPE_CHECKING
 
 from aiohttp import ClientError, web
 from homeassistant.components import webhook
@@ -32,16 +33,35 @@ from .const import (
     CONF_EM_INVERTER_SN,
     CONF_EM_P1_ENTITY,
     CONF_ENABLE_PUSH,
+    CONF_MODBUS_BAUDRATE,
+    CONF_MODBUS_DEVICE,
+    CONF_MODBUS_FAMILY,
+    CONF_MODBUS_FRAMER,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_TYPE,
+    CONF_MODBUS_UNIT,
     CONF_PUSH_RATE,
     CONF_PUSH_URL,
     CONF_SECRET_KEY,
+    DEFAULT_MODBUS_BAUDRATE,
+    DEFAULT_MODBUS_FAMILY,
+    DEFAULT_MODBUS_FRAMER,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DOMAIN,
     MANUFACTURER,
+    MODBUS_FAMILY_HYBRID,
+    MODBUS_MESSAGE_SPACING,
+    MODBUS_TIMEOUT,
+    MODBUS_TYPE_SERIAL,
     PLATFORMS,
     VERSION,
     detect_phase_type,
     get_raw_device_code,
+    is_control_capable_device_type,
+    is_modbus_entry,
     mask_sensitive_key_value,
     mask_sn,
     mask_subscription_code,
@@ -51,7 +71,85 @@ from .const import (
 from .coordinator import HyxiDataUpdateCoordinator
 from .protection import HyxiBatteryProtectionController
 
+if TYPE_CHECKING:
+    from .modbus_coordinator import HyxiModbusCoordinator
+
 _LOGGER = logging.getLogger(__name__)
+
+
+async def _async_build_modbus_coordinator(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> HyxiModbusCoordinator:
+    """Build a coordinator that reaches the device over local RS485.
+
+    Which register map and client class to use was decided once, during
+    setup, by config_flow's family detection (a real value at a
+    family-specific signature register -- the confirmed HALO and hybrid
+    address ranges don't overlap, so that's strong evidence). It is not
+    re-detected here on every load: an entry created before this concept
+    existed carries no CONF_MODBUS_FAMILY at all, and DEFAULT_MODBUS_FAMILY
+    covers that case the same way entry_transport() covers pre-Modbus
+    entries -- absence means the newer, stronger-evidenced default.
+    """
+    from modbus_connection import ModbusSerialParams, ModbusTcpParams
+    from modbus_connection.tmodbus import ModbusConnection
+
+    from .modbus.client import ModbusClient
+    from .modbus_coordinator import HyxiModbusCoordinator
+
+    unit_id = int(entry.data.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT))
+    family = entry.data.get(CONF_MODBUS_FAMILY, DEFAULT_MODBUS_FAMILY)
+
+    # Annotated explicitly -- without it, mypy narrows params to whichever
+    # branch assigns it first and rejects the other as incompatible.
+    params: ModbusSerialParams | ModbusTcpParams
+    if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
+        params = ModbusSerialParams(
+            device=entry.data[CONF_MODBUS_DEVICE],
+            baudrate=int(entry.data.get(CONF_MODBUS_BAUDRATE, DEFAULT_MODBUS_BAUDRATE)),
+            bytesize=8,
+            parity="N",
+            stopbits=1,
+        )
+    else:
+        params = ModbusTcpParams(
+            host=entry.data[CONF_MODBUS_HOST],
+            port=int(entry.data.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)),
+            # Detected during setup (config_flow._probe_and_detect_modbus_tcp)
+            # -- falls back to the pre-detection default for an entry
+            # created before that existed.
+            framer=entry.data.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER),
+        )
+
+    # Minimum inter-frame spacing differs by document: HALO asks for
+    # >200ms, the hybrid protocol for >500ms. Using the wrong one against a
+    # hybrid device would violate its documented timing.
+    spacing = MODBUS_MESSAGE_SPACING[family]
+    _LOGGER.debug(
+        "Building Modbus connection for entry %s: %s, unit %s, family %s, "
+        "timeout %ss, message spacing %ss",
+        entry.entry_id,
+        params,
+        unit_id,
+        family,
+        MODBUS_TIMEOUT,
+        spacing,
+    )
+    connection = ModbusConnection(
+        params, timeout=MODBUS_TIMEOUT, message_spacing=spacing
+    )
+
+    client: ModbusClient
+    if family == MODBUS_FAMILY_HYBRID:
+        from .modbus.client_hybrid import HyxiHybridModbusClient
+
+        client = HyxiHybridModbusClient(connection, unit_id)
+    else:
+        from .modbus.client import HyxiModbusClient
+
+        client = HyxiModbusClient(connection, unit_id)
+
+    return HyxiModbusCoordinator(hass, client, entry)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -62,29 +160,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         API_VERSION,
     )
 
-    access_key = entry.data.get(CONF_ACCESS_KEY)
-    secret_key = entry.data.get(CONF_SECRET_KEY)
+    modbus = is_modbus_entry(entry)
+    _LOGGER.debug(
+        "Entry %s uses the %s transport",
+        entry.entry_id,
+        "local Modbus" if modbus else "HYXI Cloud",
+    )
 
-    if not access_key or not secret_key:
-        _LOGGER.error("HYXI Integration could not find Access/Secret keys.")
-        return False
+    # Annotated explicitly as the common base -- without it, mypy narrows
+    # coordinator to whichever branch assigns it first and rejects the
+    # other as incompatible. HyxiModbusCoordinator is itself a
+    # HyxiDataUpdateCoordinator subclass, so the base type covers both.
+    coordinator: HyxiDataUpdateCoordinator
+    if modbus:
+        coordinator = await _async_build_modbus_coordinator(hass, entry)
+    else:
+        access_key = entry.data.get(CONF_ACCESS_KEY)
+        secret_key = entry.data.get(CONF_SECRET_KEY)
 
-    # Base URL always defaults to global OpenAPI.
-    base_url = entry.data.get("base_url") or BASE_URL_DEFAULT
+        if not access_key or not secret_key:
+            _LOGGER.error("HYXI Integration could not find Access/Secret keys.")
+            return False
 
-    session = async_get_clientsession(hass)
-    client = HyxiApiClient(access_key, secret_key, base_url, session)
+        # Base URL always defaults to global OpenAPI.
+        base_url = entry.data.get("base_url") or BASE_URL_DEFAULT
 
-    coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
-    coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
+        session = async_get_clientsession(hass)
+        client = HyxiApiClient(access_key, secret_key, base_url, session)
+
+        coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
+        coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
 
     # Pre-seed coordinator.data from persistent cache so that if the API is slow
     # or unreachable at startup, data is immediately available and the fallback
     # in _async_update_data requires no additional disk read.
     await coordinator.async_preload_cache()
 
+    refreshed = False
     try:
         await coordinator.async_config_entry_first_refresh()
+        refreshed = True
     except ConfigEntryAuthFailed:
         _LOGGER.error("Authentication failed during setup")
         raise
@@ -93,20 +208,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ClientError,
         TimeoutError,
     ) as err:
-        _LOGGER.warning("HYXI Cloud not ready: %s", err)
+        _LOGGER.warning("HYXI not ready: %s", err)
         raise ConfigEntryNotReady(f"Connection error: {err}") from err
+    finally:
+        # Release the bus on any failed setup. A flag rather than an except
+        # clause because the coordinator's own first-refresh handling raises
+        # ConfigEntryNotReady, which no clause above catches -- so a serial
+        # port would stay held through every retry.
+        if modbus and not refreshed:
+            await coordinator.client.async_close()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    # Set up real-time push subscription (handles enablement checks and cleanup of orphaned codes)
-    await _async_setup_push_subscription(hass, entry, coordinator)
-    # Set up alarm push subscription (handles enablement checks and cleanup of orphaned codes)
-    await _async_setup_alarm_subscription(hass, entry, coordinator)
+    # Push subscriptions register a webhook with HYXI's servers so the cloud
+    # can call back. RS485 has no such channel -- it is polled -- so a Modbus
+    # entry skips both entirely rather than subscribing on a device it does
+    # not reach through the cloud at all.
+    if not modbus:
+        # Both handle enablement checks and cleanup of orphaned codes.
+        await _async_setup_push_subscription(hass, entry, coordinator)
+        await _async_setup_alarm_subscription(hass, entry, coordinator)
 
     _async_register_devices(hass, entry, coordinator)
 
     _remove_legacy_select_entities(hass, coordinator.data)
     _migrate_vpp_dispatch_to_work_mode(hass, entry, coordinator.data)
+    _remove_work_mode_sensor_for_modbus(hass, entry, coordinator.data)
+    _remove_alarm_entities_for_modbus(hass, entry, coordinator.data)
     _cleanup_control_entities(hass, entry, coordinator)
     await _async_setup_battery_protection(hass, coordinator)
     _async_setup_energy_manager(hass, entry, coordinator)
@@ -141,17 +269,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await coordinator.engine.async_stop()
         for controller in coordinator.protection_controllers.values():
             await controller.async_stop()
-        # Leave the subscriptions alive on the server (cancel_remote=False):
-        # the persisted code + fingerprint let the next setup reuse them,
-        # avoiding a cancel/resubscribe cycle on every restart and reload.
-        # Permanent cleanup happens in async_remove_entry when the entry is
-        # actually deleted.
-        await _async_teardown_push_subscription(
-            hass, coordinator, entry, cancel_remote=False
-        )
-        await _async_teardown_alarm_subscription(
-            hass, coordinator, entry, cancel_remote=False
-        )
+        if is_modbus_entry(entry):
+            # Release the serial port or socket, or a reload leaves the bus
+            # held and the next setup cannot open it.
+            await coordinator.client.async_close()
+        else:
+            # Leave the subscriptions alive on the server (cancel_remote=False):
+            # the persisted code + fingerprint let the next setup reuse them,
+            # avoiding a cancel/resubscribe cycle on every restart and reload.
+            # Permanent cleanup happens in async_remove_entry when the entry is
+            # actually deleted.
+            await _async_teardown_push_subscription(
+                hass, coordinator, entry, cancel_remote=False
+            )
+            await _async_teardown_alarm_subscription(
+                hass, coordinator, entry, cancel_remote=False
+            )
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
@@ -375,6 +508,59 @@ def _migrate_vpp_dispatch_to_work_mode(
         registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
 
 
+def _remove_work_mode_sensor_for_modbus(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Remove HyxiWorkModeSensor's registry entry for Modbus entries.
+
+    The sensor reports an active VPP dispatch via workMode, which neither
+    Modbus client can back with a verified register -- see
+    binary_sensor.py's async_setup_entry for why it's no longer created
+    for Modbus. Without this, anyone who already had it (from before that
+    change, or from switching a device from cloud to Modbus) keeps a
+    dangling, permanently-unavailable entity in the registry instead of it
+    actually going away. Cheap and safe to run on every setup: a no-op
+    once the entity no longer exists.
+    """
+    if not is_modbus_entry(entry):
+        return
+    registry = er.async_get(hass)
+    for sn in devices:
+        unique_id = f"{entry.entry_id}_{sn}_work_mode"
+        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
+        if entity_id is not None:
+            _LOGGER.debug("Removing work_mode entity %s for Modbus entry", entity_id)
+            registry.async_remove(entity_id)
+
+
+def _remove_alarm_entities_for_modbus(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Remove HyxiDeviceAlarmSensor's and HyxiClearAlarmsButton's registry
+    entries for Modbus entries.
+
+    Both read/act on dev_data["alarms"], which neither Modbus client
+    populates -- see binary_sensor.py's and button.py's async_setup_entry
+    for why neither is created for Modbus. Without this, anyone who
+    already had them (from before that change, or from switching a device
+    from cloud to Modbus) keeps dangling, permanently-unavailable entities
+    in the registry instead of them actually going away. Cheap and safe to
+    run on every setup: a no-op once neither entity exists.
+    """
+    if not is_modbus_entry(entry):
+        return
+    registry = er.async_get(hass)
+    for sn in devices:
+        for domain, unique_id in (
+            ("binary_sensor", f"{entry.entry_id}_{sn}_device_alarm"),
+            ("button", f"hyxi_{sn}_clear_alarms"),
+        ):
+            entity_id = registry.async_get_entity_id(domain, DOMAIN, unique_id)
+            if entity_id is not None:
+                _LOGGER.debug("Removing alarm entity %s for Modbus entry", entity_id)
+                registry.async_remove(entity_id)
+
+
 def _cleanup_control_entities(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -440,43 +626,62 @@ async def _async_setup_battery_protection(
         return
 
     tasks = []
+    task_sns = []
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
-        if device_type not in ("hybrid_inverter", "all_in_one"):
+        if not is_control_capable_device_type(coordinator.entry, device_type):
             _LOGGER.debug(
                 "Skipping protection for %s: device_type=%s not controllable",
                 mask_sn(sn),
                 device_type,
             )
             continue
-        phase = detect_phase_type(dev_data)
-        if phase not in ("three_phase", "single_phase"):
-            _LOGGER.debug(
-                "Skipping protection for %s: unrecognized phase=%s", mask_sn(sn), phase
-            )
-            continue
+
+        # Local Modbus always resolves to the mode-control surface
+        # (protection.py's _uses_mode_control), independent of phase --
+        # HALO has no phase 2/3 registers at all and would otherwise never
+        # pass the phase check below. Cloud entries keep the original
+        # phase-based gate: an unrecognized phase there means the cloud
+        # phase-specific controlId to use can't be determined, so no
+        # controller is started (safety-first).
+        if not is_modbus_entry(coordinator.entry):
+            phase = detect_phase_type(dev_data)
+            if phase not in ("three_phase", "single_phase"):
+                _LOGGER.debug(
+                    "Skipping protection for %s: unrecognized phase=%s",
+                    mask_sn(sn),
+                    phase,
+                )
+                continue
 
         controller = HyxiBatteryProtectionController(hass, coordinator, sn)
         coordinator.protection_controllers[sn] = controller
+        task_sns.append(sn)
         tasks.append(hass.async_create_task(controller.async_start()))
 
     if tasks:
-        try:
-            await asyncio.gather(*tasks)
-        except Exception, asyncio.CancelledError:
-            _LOGGER.debug(
-                "Battery protection startup failed, cleaning up controllers",
-                exc_info=True,
-            )
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
-
-            for controller in coordinator.protection_controllers.values():
-                await controller.async_stop()
-            coordinator.protection_controllers.clear()
-            raise
+        # return_exceptions=True rather than a bare gather(): a single
+        # device's initial control write failing (bus contention, a
+        # provider-controlled battery that will never accept local writes,
+        # a transient timeout) must not take the whole config entry down.
+        # HyxiBatteryProtectionController.async_start() registers its
+        # coordinator listener before attempting that write, so the
+        # controller stays "started" and retries naturally on the next
+        # coordinator refresh even when this first attempt fails --
+        # nothing further to clean up here. task_sns is tracked alongside
+        # tasks explicitly, rather than zipping against
+        # coordinator.protection_controllers, so pairing stays correct even
+        # if this function is ever called again on a coordinator that
+        # already holds controllers from an earlier call.
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for sn, result in zip(task_sns, results, strict=True):
+            if isinstance(result, Exception):
+                _LOGGER.warning(
+                    "Battery protection for %s failed to start (will retry on "
+                    "the next update): %s",
+                    mask_sn(sn),
+                    result,
+                )
 
 
 async def _async_resolve_webhook_url(

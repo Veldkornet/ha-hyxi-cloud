@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Połącz z HYXI Cloud",
-        "description": "Wprowadź swoje **poświadczenia API programisty (AK/SK)**. Możesz je wygenerować na [Platformie programistycznej HYXIPOWER]({link}).\n\n**Uwaga:** Wymagane jest oddzielne konto programisty. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw **Udostępnić swój obiekt (Plant)** z aplikacji na e-mail programisty.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Klucz dostępu (AK)",
-          "secret_key": "Tajny klucz (SK)",
-          "region": "Region serwera"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Tajny klucz (SK)",
           "region": "Region serwera"
         }
+      },
+      "cloud": {
+        "title": "Połącz z HYXI Cloud",
+        "description": "Wprowadź swoje **poświadczenia API programisty (AK/SK)**. Możesz je wygenerować na [Platformie programistycznej HYXIPOWER]({link}).\n\n**Uwaga:** Wymagane jest oddzielne konto programisty. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw **Udostępnić swój obiekt (Plant)** z aplikacji na e-mail programisty.",
+        "data": {
+          "access_key": "Klucz dostępu (AK)",
+          "secret_key": "Tajny klucz (SK)",
+          "region": "Region serwera"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Nie udało się połączyć z serwerami HYXI",
       "invalid_auth": "Nieprawidłowy klucz dostępu lub tajny klucz",
       "unknown": "Wystąpił nieoczekiwany błąd",
-      "no_devices": "Nie znaleziono żadnych instalacji ani urządzeń. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw udostępnić swoją instalację z aplikacji na e-mail programisty."
+      "no_devices": "Nie znaleziono żadnych instalacji ani urządzeń. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw udostępnić swoją instalację z aplikacji na e-mail programisty.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "To konto HYXI jest już skonfigurowane.",
-      "reauth_successful": "Ponowne uwierzytelnianie zakończyło się pomyślnie"
+      "reauth_successful": "Ponowne uwierzytelnianie zakończyło się pomyślnie",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Konfiguracja systemu HYXI",
-        "description": "Dostosuj sposób komunikacji integracji z HYXI Cloud.\n\n> ⚠️ **Sterowanie urządzeniem**: Włączaj ostrożnie, jeśli twój falownik jest już zarządzany przez dostawcę energii lub jest zapisany do programu Wirtualnej Elektrowni (VPP). Wysyłanie poleceń, gdy kontrolę ma twój dostawca, może kolidować z jego harmonogramem dyspozytorskim.\n\n---",
+        "description": "Dostosuj sposób komunikacji integracji z HYXI.\n\n> ⚠️ **Sterowanie urządzeniem**: Włączaj ostrożnie, jeśli twój falownik jest już zarządzany przez dostawcę energii lub jest zapisany do programu Wirtualnej Elektrowni (VPP). Wysyłanie poleceń, gdy kontrolę ma twój dostawca, może kolidować z jego harmonogramem dyspozytorskim.\n\n---",
         "data": {
           "update_interval": "Interwał odpytywania (1-60 minut, domyślnie: 5)",
+          "update_interval_modbus": "Interwał odpytywania (1-60 sekund, domyślnie: 15)",
           "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)",
           "enable_battery_control": "Włącz kontrolę i ochronę urządzenia",
           "enable_energy_manager": "Włącz samodzielny Menedżer Energii (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Status chmury"
+        "name": "Status połączenia"
       },
       "device_alarm": {
         "name": "Aktywne problemy",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Całkowity uzysk energii"
       },
+      "totaleb": {
+        "name": "Całkowity uzysk energii B"
+      },
+      "totalec": {
+        "name": "Całkowity uzysk energii C"
+      },
       "bat_charge_total": {
         "name": "Całkowite naładowanie akumulatora"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Ostatnia aktualizacja integracji"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Pojemność akumulatora"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Energia dzisiaj"
       },
+      "etodayin": {
+        "name": "Dzisiejsza energia pobrana z sieci"
+      },
       "efpv": {
         "name": "Uzysk PV dzisiaj"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Obciążenie fazy 3"
+      },
+      "ph1loadv": {
+        "name": "Napięcie obciążenia fazy 1"
+      },
+      "ph2loadv": {
+        "name": "Napięcie obciążenia fazy 2"
+      },
+      "ph3loadv": {
+        "name": "Napięcie obciążenia fazy 3"
       },
       "pv1v": {
         "name": "Napięcie PV1"
@@ -371,6 +458,27 @@
           "1": "Włączony"
         }
       },
+      "meteronline": {
+        "name": "Licznik online"
+      },
+      "gridmode": {
+        "name": "Tryb sieci"
+      },
+      "runcommand": {
+        "name": "Polecenie uruchomienia"
+      },
+      "currentoperatingmode": {
+        "name": "Tryb pracy"
+      },
+      "insulationresistance": {
+        "name": "Rezystancja izolacji"
+      },
+      "leakagecurrent": {
+        "name": "Prąd upływu"
+      },
+      "selfteststatus": {
+        "name": "Stan autotestu"
+      },
       "pvpower": {
         "name": "Całkowita moc PV"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "Temperatura po stronie DC"
+      },
+      "ambienttemper": {
+        "name": "Temperatura otoczenia"
+      },
+      "boosttemper": {
+        "name": "Temperatura boost"
+      },
+      "dsptemper": {
+        "name": "Temperatura DSP"
       },
       "gridf": {
         "name": "Częstotliwość sieci"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Moc off-grid"
+      },
+      "offgridv": {
+        "name": "Napięcie off-grid"
+      },
+      "offgridi": {
+        "name": "Prąd off-grid"
       },
       "offgridq": {
         "name": "Moc bierna off-grid"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Maks. prąd rozładowania"
+      },
+      "bmsstate": {
+        "name": "Stan BMS"
+      },
+      "batoperatingstatus": {
+        "name": "Stan pracy akumulatora"
+      },
+      "batalarm1": {
+        "name": "Alarm baterii 1"
+      },
+      "batalarm2": {
+        "name": "Alarm baterii 2"
+      },
+      "batalarm3": {
+        "name": "Alarm baterii 3"
+      },
+      "batcapacityah": {
+        "name": "Pojemność akumulatora (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Znamionowa pojemność akumulatora"
+      },
+      "llcbusvoltage": {
+        "name": "Napięcie szyny LLC"
+      },
+      "batchargev": {
+        "name": "Napięcie ładowania baterii"
+      },
+      "batchargei": {
+        "name": "Prąd ładowania baterii"
+      },
+      "batchargep": {
+        "name": "Moc ładowania baterii"
+      },
+      "batdischargev": {
+        "name": "Napięcie rozładowania baterii"
+      },
+      "batdischargei": {
+        "name": "Prąd rozładowania baterii"
+      },
+      "batdischargep": {
+        "name": "Moc rozładowania baterii"
       },
       "batcharge": {
         "name": "Dzienna energia ładowania"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Limit mocy"
       },
+      "feed_in_power_limit": {
+        "name": "Limit mocy eksportu"
+      },
+      "vpp_min_soc": {
+        "name": "Minimalny SOC VPP"
+      },
+      "force_charge_start_soc": {
+        "name": "SOC rozpoczęcia wymuszonego ładowania"
+      },
+      "force_charge_stop_soc": {
+        "name": "SOC zakończenia wymuszonego ładowania"
+      },
+      "off_grid_min_soc": {
+        "name": "Minimalny SOC off-grid"
+      },
+      "self_use_soc": {
+        "name": "Rezerwowy SOC autokonsumpcji"
+      },
+      "discharge_min_soc": {
+        "name": "Minimalny SOC rozładowania"
+      },
+      "backup_soc": {
+        "name": "Rezerwowy SOC zasilania awaryjnego"
+      },
+      "forced_charge_soc": {
+        "name": "SOC wymuszonego ładowania"
+      },
+      "feed_in_soc": {
+        "name": "Próg SOC eksportu"
+      },
+      "off_grid_soc": {
+        "name": "Próg SOC trybu off-grid"
+      },
+      "feed_in_power": {
+        "name": "Limit mocy eksportu"
+      },
+      "max_charge_current": {
+        "name": "Maks. prąd ładowania"
+      },
+      "max_discharge_current": {
+        "name": "Maks. prąd rozładowania"
+      },
       "soc_min": {
         "name": "Minimalny SOC"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Zasilanie"
       },
+      "anti_starvation": {
+        "name": "Ochrona przed głębokim rozładowaniem"
+      },
       "em_grid_charge_allowed": {
         "name": "Dozwolone Ładowanie z Sieci"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Redukcja szczytów: Wstrzymaj"
+      },
+      "power_on": {
+        "name": "Włącz"
+      },
+      "power_off": {
+        "name": "Wyłącz"
+      },
+      "restart": {
+        "name": "Uruchom ponownie"
       },
       "clear_alarms": {
         "name": "Wyczyść aktywne alarmy"

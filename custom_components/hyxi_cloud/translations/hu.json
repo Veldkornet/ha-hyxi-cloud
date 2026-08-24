@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Csatlakozás a HYXI Cloudhoz",
-        "description": "Adja meg **fejlesztői API hitelesítő adatait (AK/SK)**. Ezeket a [HYXIPOWER fejlesztői platformon]({link}) hozhatja létre.\n\n**Megjegyzés:** Ehhez külön fejlesztői fiókra van szükség. Ha a fejlesztői e-mail-címe eltér az alkalmazásban használt e-mail-címétől, először **meg kell osztania az üzemét (Plant)** az alkalmazásból a fejlesztői e-mail-címre.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Hozzáférési kulcs (AK)",
-          "secret_key": "Titkos kulcs (SK)",
-          "region": "Szerver régiója"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Titkos kulcs (SK)",
           "region": "Szerver régiója"
         }
+      },
+      "cloud": {
+        "title": "Csatlakozás a HYXI Cloudhoz",
+        "description": "Adja meg **fejlesztői API hitelesítő adatait (AK/SK)**. Ezeket a [HYXIPOWER fejlesztői platformon]({link}) hozhatja létre.\n\n**Megjegyzés:** Ehhez külön fejlesztői fiókra van szükség. Ha a fejlesztői e-mail-címe eltér az alkalmazásban használt e-mail-címétől, először **meg kell osztania az üzemét (Plant)** az alkalmazásból a fejlesztői e-mail-címre.",
+        "data": {
+          "access_key": "Hozzáférési kulcs (AK)",
+          "secret_key": "Titkos kulcs (SK)",
+          "region": "Szerver régiója"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "Nem sikerült csatlakozni a HYXI szerverekhez",
       "invalid_auth": "Érvénytelen hozzáférési kulcs vagy titkos kulcs",
       "unknown": "Váratlan hiba történt",
-      "no_devices": "Nem található erőmű vagy eszköz. Ha a fejlesztői e-mail-címe eltér az alkalmazás e-mail-címétől, először meg kell osztania az erőművét az alkalmazásból a fejlesztői e-mail-címmel."
+      "no_devices": "Nem található erőmű vagy eszköz. Ha a fejlesztői e-mail-címe eltér az alkalmazás e-mail-címétől, először meg kell osztania az erőművét az alkalmazásból a fejlesztői e-mail-címmel.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Ez a HYXI fiók már be van konfigurálva.",
-      "reauth_successful": "Az újrahitelesítés sikeres volt"
+      "reauth_successful": "Az újrahitelesítés sikeres volt",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXI rendszerkonfiguráció",
-        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI Clouddal.\n\n> ⚠️ **Eszközvezérlés**: Óvatosan engedélyezze, ha az invertert már az energiaszolgáltatója kezeli, vagy részt vesz egy Virtuális Erőmű (VPP) programban. A parancsok küldése, amíg a szolgáltatója rendelkezik az irányítással, ütközhet az ő diszpécseri ütemezésével.\n\n---",
+        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI-val.\n\n> ⚠️ **Eszközvezérlés**: Óvatosan engedélyezze, ha az invertert már az energiaszolgáltatója kezeli, vagy részt vesz egy Virtuális Erőmű (VPP) programban. A parancsok küldése, amíg a szolgáltatója rendelkezik az irányítással, ütközhet az ő diszpécseri ütemezésével.\n\n---",
         "data": {
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
+          "update_interval_modbus": "Lekérdezési időköz (1-60 másodperc, alapértelmezett: 15)",
           "back_discovery": "Eszközfelderítés engedélyezése riasztásokon keresztül (haladó)",
           "enable_battery_control": "Eszközvezérlés és -védelem engedélyezése",
           "enable_energy_manager": "Önálló Energiakezelő engedélyezése (Béta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Felhő állapota"
+        "name": "Kapcsolat állapota"
       },
       "device_alarm": {
         "name": "Aktív problémák",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Teljes energiahozam"
       },
+      "totaleb": {
+        "name": "Teljes energiahozam B"
+      },
+      "totalec": {
+        "name": "Teljes energiahozam C"
+      },
       "bat_charge_total": {
         "name": "Teljes akkumulátor töltés"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Integráció utoljára frissítve"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Akkumulátor kapacitás"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Mai energia"
       },
+      "etodayin": {
+        "name": "Mai hálózati importenergia"
+      },
       "efpv": {
         "name": "Mai PV-hozam"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "3. fázis terhelés"
+      },
+      "ph1loadv": {
+        "name": "1. fázis terhelési feszültség"
+      },
+      "ph2loadv": {
+        "name": "2. fázis terhelési feszültség"
+      },
+      "ph3loadv": {
+        "name": "3. fázis terhelési feszültség"
       },
       "pv1v": {
         "name": "PV1 feszültség"
@@ -371,6 +458,27 @@
           "1": "Bekapcsolás"
         }
       },
+      "meteronline": {
+        "name": "Mérő online"
+      },
+      "gridmode": {
+        "name": "Hálózati mód"
+      },
+      "runcommand": {
+        "name": "Futtatási parancs"
+      },
+      "currentoperatingmode": {
+        "name": "Üzemmód"
+      },
+      "insulationresistance": {
+        "name": "Szigetelési ellenállás"
+      },
+      "leakagecurrent": {
+        "name": "Szivárgási áram"
+      },
+      "selfteststatus": {
+        "name": "Önteszt állapota"
+      },
       "pvpower": {
         "name": "PV teljesítmény"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "DC oldali hőmérséklet"
+      },
+      "ambienttemper": {
+        "name": "Környezeti hőmérséklet"
+      },
+      "boosttemper": {
+        "name": "Boost hőmérséklet"
+      },
+      "dsptemper": {
+        "name": "DSP hőmérséklet"
       },
       "gridf": {
         "name": "Hálózati frekvencia"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Hálózaton kívüli teljesítmény"
+      },
+      "offgridv": {
+        "name": "Hálózaton kívüli feszültség"
+      },
+      "offgridi": {
+        "name": "Hálózaton kívüli áram"
       },
       "offgridq": {
         "name": "Hálózaton kívüli reaktív teljesítmény"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Max. kisütési áram"
+      },
+      "bmsstate": {
+        "name": "BMS állapota"
+      },
+      "batoperatingstatus": {
+        "name": "Akkumulátor üzemállapota"
+      },
+      "batalarm1": {
+        "name": "Akkumulátor riasztás 1"
+      },
+      "batalarm2": {
+        "name": "Akkumulátor riasztás 2"
+      },
+      "batalarm3": {
+        "name": "Akkumulátor riasztás 3"
+      },
+      "batcapacityah": {
+        "name": "Akkumulátor kapacitás (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Akkumulátor névleges kapacitása"
+      },
+      "llcbusvoltage": {
+        "name": "LLC busz feszültség"
+      },
+      "batchargev": {
+        "name": "Akkumulátor töltési feszültség"
+      },
+      "batchargei": {
+        "name": "Akkumulátor töltőáram"
+      },
+      "batchargep": {
+        "name": "Akkumulátor töltési teljesítmény"
+      },
+      "batdischargev": {
+        "name": "Akkumulátor kisütési feszültség"
+      },
+      "batdischargei": {
+        "name": "Akkumulátor kisütési áram"
+      },
+      "batdischargep": {
+        "name": "Akkumulátor kisütési teljesítmény"
       },
       "batcharge": {
         "name": "Napi töltési energia"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Teljesítménykorlát"
       },
+      "feed_in_power_limit": {
+        "name": "Betáplálási teljesítménykorlát"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC minimum"
+      },
+      "force_charge_start_soc": {
+        "name": "Kényszertöltés kezdő SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Kényszertöltés befejező SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Hálózaton kívüli minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Saját fogyasztás tartalék SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Kisütés minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Tartalék energia tartalék SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Kényszertöltés SOC"
+      },
+      "feed_in_soc": {
+        "name": "Betáplálási SOC küszöb"
+      },
+      "off_grid_soc": {
+        "name": "Hálózaton kívüli mód SOC küszöb"
+      },
+      "feed_in_power": {
+        "name": "Betáplálási teljesítménykorlát"
+      },
+      "max_charge_current": {
+        "name": "Max töltőáram"
+      },
+      "max_discharge_current": {
+        "name": "Max kisütési áram"
+      },
       "soc_min": {
         "name": "SOC minimum"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Tápellátás"
       },
+      "anti_starvation": {
+        "name": "Mélykisütés elleni védelem"
+      },
       "em_grid_charge_allowed": {
         "name": "Hálózati Töltés Engedélyezve"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Csúcskisímítás: Tartás"
+      },
+      "power_on": {
+        "name": "Bekapcsolás"
+      },
+      "power_off": {
+        "name": "Kikapcsolás"
+      },
+      "restart": {
+        "name": "Újraindítás"
       },
       "clear_alarms": {
         "name": "Aktív riasztások törlése"

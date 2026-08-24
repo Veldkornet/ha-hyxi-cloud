@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "连接到 HYXI Cloud",
-        "description": "请输入您的 **开发者 API 凭据 (AK/SK)**。您可以在 [HYXIPOWER 开发者平台]({link}) 生成这些凭据。\n\n**注意：** 这需要一个单独的开发者账号。如果您的开发者邮箱与应用邮箱不同，您必须先通过应用将您的 **电站分享** 给开发者邮箱。",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "访问密钥 (AK)",
-          "secret_key": "加密密钥 (SK)",
-          "region": "服务器区域"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "加密密钥 (SK)",
           "region": "服务器区域"
         }
+      },
+      "cloud": {
+        "title": "连接到 HYXI Cloud",
+        "description": "请输入您的 **开发者 API 凭据 (AK/SK)**。您可以在 [HYXIPOWER 开发者平台]({link}) 生成这些凭据。\n\n**注意：** 这需要一个单独的开发者账号。如果您的开发者邮箱与应用邮箱不同，您必须先通过应用将您的 **电站分享** 给开发者邮箱。",
+        "data": {
+          "access_key": "访问密钥 (AK)",
+          "secret_key": "加密密钥 (SK)",
+          "region": "服务器区域"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "连接 HYXI 服务器失败",
       "invalid_auth": "无效的访问密钥或加密密钥",
       "unknown": "发生未知错误",
-      "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。"
+      "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "该 HYXI 账号已配置。",
-      "reauth_successful": "重新认证成功"
+      "reauth_successful": "重新认证成功",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXI 系统配置",
-        "description": "调整插件与 HYXI Cloud 的通信方式。\n\n> ⚠️ **设备控制**：如果您的逆变器已由您的电力供应商管理，或已加入虚拟电厂（VPP）计划，请谨慎启用。在供应商掌控期间发送命令可能与其调度计划冲突。\n\n---",
+        "description": "调整插件与 HYXI 的通信方式。\n\n> ⚠️ **设备控制**：如果您的逆变器已由您的电力供应商管理，或已加入虚拟电厂（VPP）计划，请谨慎启用。在供应商掌控期间发送命令可能与其调度计划冲突。\n\n---",
         "data": {
           "update_interval": "轮询间隔 (1-60 分钟, 默认: 5)",
+          "update_interval_modbus": "轮询间隔 (1-60 秒, 默认: 15)",
           "back_discovery": "启用通过报警发现设备 (高级)",
           "enable_battery_control": "启用设备控制与保护",
           "enable_energy_manager": "启用独立能源管理器 (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "云端状态"
+        "name": "连接状态"
       },
       "device_alarm": {
         "name": "当前故障",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "总生成能量"
       },
+      "totaleb": {
+        "name": "总生成能量B"
+      },
+      "totalec": {
+        "name": "总生成能量C"
+      },
       "bat_charge_total": {
         "name": "总累计充电"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "插件最后更新"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "电池容量"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "今日能量"
       },
+      "etodayin": {
+        "name": "今日电网输入电量"
+      },
       "efpv": {
         "name": "今日PV发电量"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "第三相负载"
+      },
+      "ph1loadv": {
+        "name": "第一相负载电压"
+      },
+      "ph2loadv": {
+        "name": "第二相负载电压"
+      },
+      "ph3loadv": {
+        "name": "第三相负载电压"
       },
       "pv1v": {
         "name": "PV1 电压"
@@ -371,6 +458,27 @@
           "1": "开机"
         }
       },
+      "meteronline": {
+        "name": "电表在线"
+      },
+      "gridmode": {
+        "name": "电网模式"
+      },
+      "runcommand": {
+        "name": "运行命令"
+      },
+      "currentoperatingmode": {
+        "name": "运行模式"
+      },
+      "insulationresistance": {
+        "name": "绝缘电阻"
+      },
+      "leakagecurrent": {
+        "name": "漏电流"
+      },
+      "selfteststatus": {
+        "name": "自检状态"
+      },
       "pvpower": {
         "name": "光伏总功率"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "直流侧温度"
+      },
+      "ambienttemper": {
+        "name": "环境温度"
+      },
+      "boosttemper": {
+        "name": "升压温度"
+      },
+      "dsptemper": {
+        "name": "DSP温度"
       },
       "gridf": {
         "name": "并网频率"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "离网功率"
+      },
+      "offgridv": {
+        "name": "离网电压"
+      },
+      "offgridi": {
+        "name": "离网电流"
       },
       "offgridq": {
         "name": "离网无功功率"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "最大放电电流"
+      },
+      "bmsstate": {
+        "name": "BMS状态"
+      },
+      "batoperatingstatus": {
+        "name": "电池运行状态"
+      },
+      "batalarm1": {
+        "name": "电池报警1"
+      },
+      "batalarm2": {
+        "name": "电池报警2"
+      },
+      "batalarm3": {
+        "name": "电池报警3"
+      },
+      "batcapacityah": {
+        "name": "电池容量 (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "电池标称容量"
+      },
+      "llcbusvoltage": {
+        "name": "LLC母线电压"
+      },
+      "batchargev": {
+        "name": "电池充电电压"
+      },
+      "batchargei": {
+        "name": "电池充电电流"
+      },
+      "batchargep": {
+        "name": "电池充电功率"
+      },
+      "batdischargev": {
+        "name": "电池放电电压"
+      },
+      "batdischargei": {
+        "name": "电池放电电流"
+      },
+      "batdischargep": {
+        "name": "电池放电功率"
       },
       "batcharge": {
         "name": "日充电量"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "功率限制"
       },
+      "feed_in_power_limit": {
+        "name": "上网功率限制"
+      },
+      "vpp_min_soc": {
+        "name": "VPP最小SOC"
+      },
+      "force_charge_start_soc": {
+        "name": "强制充电起始SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "强制充电结束SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "离网最小SOC"
+      },
+      "self_use_soc": {
+        "name": "自用备用SOC"
+      },
+      "discharge_min_soc": {
+        "name": "放电最小SOC"
+      },
+      "backup_soc": {
+        "name": "备用电源备用SOC"
+      },
+      "forced_charge_soc": {
+        "name": "强制充电SOC"
+      },
+      "feed_in_soc": {
+        "name": "上网SOC阈值"
+      },
+      "off_grid_soc": {
+        "name": "离网模式SOC阈值"
+      },
+      "feed_in_power": {
+        "name": "上网功率限制"
+      },
+      "max_charge_current": {
+        "name": "最大充电电流"
+      },
+      "max_discharge_current": {
+        "name": "最大放电电流"
+      },
       "soc_min": {
         "name": "SOC 最小值"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "电源"
       },
+      "anti_starvation": {
+        "name": "防过放保护"
+      },
       "em_grid_charge_allowed": {
         "name": "允许电网充电"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "削峰填谷：保持"
+      },
+      "power_on": {
+        "name": "开机"
+      },
+      "power_off": {
+        "name": "关机"
+      },
+      "restart": {
+        "name": "重启"
       },
       "clear_alarms": {
         "name": "清除活动告警"

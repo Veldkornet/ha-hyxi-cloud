@@ -15,9 +15,25 @@ dependencies = [
     "aiohttp>=3.13.5",
     "voluptuous",
     "hyxi-cloud-api>=1.4.4",
+    # Local RS485 transport (imported lazily; a cloud-only entry never loads it).
+    "modbus-connection[tmodbus]>=4.8.1",
+    # Listed explicitly too: HA's requirement installer checks package+version
+    # only, not extras, so a bare modbus-connection pulled in by something
+    # else can mask this and leave tmodbus itself uninstalled.
+    "tmodbus[async-serial]>=0.5.1",
 ]
 
 [project.optional-dependencies]
+# Dev-only: tools/modbus_probe.py needs a Modbus stack to talk to hardware.
+# modbus-connection[tmodbus] is already a runtime dependency above; it's
+# repeated here so this extra is self-contained. pymodbus is not a runtime
+# dependency -- it's only for tools/fake_hyxi.py, which needs a Modbus
+# *server* that tmodbus does not provide.
+modbus = [
+    "modbus-connection[tmodbus]>=4.8.1",
+    # tools/fake_hyxi.py needs a Modbus *server*, which tmodbus does not provide.
+    "pymodbus>=3.15.0",
+]
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
@@ -100,5 +116,6 @@ disable = [
     "unsupported-membership-test",
     "too-many-statements",
     "too-many-lines",
+    "too-many-public-methods",
     "consider-using-from-import",
 ]

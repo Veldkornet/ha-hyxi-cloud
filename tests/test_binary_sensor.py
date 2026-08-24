@@ -162,6 +162,59 @@ async def test_async_setup_entry_adds_vpp_dispatch_sensor(mock_coordinator, mock
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_skips_work_mode_sensor_for_modbus(mock_coordinator):
+    """Neither Modbus client can back an active-VPP-dispatch reading with a
+    verified register (see docs/modbus-provenance.md, rule 1) -- a Modbus
+    entry must not get this sensor at all."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus"}
+    entry.options = {}
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "deviceCode": "1",  # hybrid_inverter
+            "alarms": [],
+        }
+    }
+    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    await bs_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, bs_mod.HyxiWorkModeSensor) for e in entities)
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_skips_device_alarm_sensor_for_modbus(
+    mock_coordinator,
+):
+    """HyxiDeviceAlarmSensor reads dev_data["alarms"], which neither
+    Modbus client populates -- a Modbus entry must not get it at all."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus"}
+    entry.options = {}
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "deviceCode": "1",  # hybrid_inverter
+            "alarms": [],
+        }
+    }
+    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    await bs_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, bs_mod.HyxiDeviceAlarmSensor) for e in entities)
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_adds_em_binary_sensors(mock_coordinator, mock_entry):
     """Test EM binary sensors (night_mode_active, high_load_detected) are added
     when the Energy Manager is enabled for an inverter present in coordinator data."""
@@ -202,6 +255,44 @@ def test_connectivity_sensor_diagnostics(mock_coordinator, mock_entry):
     mock_coordinator.hyxi_metadata["last_error"] = "Failed to pulse"
     attrs = sensor.extra_state_attributes
     assert attrs["last_error"] == "Failed to pulse"
+
+
+def test_connectivity_sensor_cloud_device_info(mock_coordinator, mock_entry):
+    """A cloud entry names the device after HYXI's cloud service and shows
+    the cloud API hostname as the connection target."""
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
+
+    assert sensor._attr_device_info["name"] == "HYXI Cloud Service"
+    assert "configuration_url" in sensor._attr_device_info
+    assert sensor.extra_state_attributes["connection_target"] == "open.hyxicloud.com"
+
+
+def test_connectivity_sensor_modbus_tcp_device_info(mock_coordinator):
+    """A Modbus TCP entry names the device after the local service and
+    shows host:port as the connection target, not a cloud hostname."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {
+        "transport": "modbus",
+        "modbus_host": "192.168.133.9",
+        "modbus_port": 4196,
+    }
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, entry)
+
+    assert sensor._attr_device_info["name"] == "HYXI Modbus Service"
+    assert "configuration_url" not in sensor._attr_device_info
+    assert sensor.extra_state_attributes["connection_target"] == "192.168.133.9:4196"
+
+
+def test_connectivity_sensor_modbus_serial_device_info(mock_coordinator):
+    """A Modbus serial entry shows the serial device path as the
+    connection target."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus", "modbus_device": "/dev/ttyUSB0"}
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, entry)
+
+    assert sensor.extra_state_attributes["connection_target"] == "/dev/ttyUSB0"
 
     # Connection Quality
     mock_coordinator.hyxi_metadata["last_attempts"] = 1

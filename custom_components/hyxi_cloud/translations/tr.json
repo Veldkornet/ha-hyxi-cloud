@@ -2,12 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "HYXI Cloud'a Bağlan",
-        "description": "**Geliştirici API kimlik bilgilerinizi (AK/SK)** girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) üzerinden oluşturabilirsiniz.\n\n**Not:** Bu işlem ayrı bir geliştirici hesabı gerektirir. Geliştirici e-postanız uygulama e-postanızdan farklıysa, önce uygulamadan geliştirici e-postasına **Tesisinizi Paylaşmanız** gerekir.",
+        "title": "How should Home Assistant reach your HYXI system?",
+        "description": "**HYXI Cloud** works anywhere and covers every device on your account, but depends on HYXI's servers and your internet connection.\n\n**Local Modbus** talks straight to one inverter over RS485. It needs wiring and an adapter, but it polls far faster, keeps working when the internet doesn't, and can control devices the cloud API refuses.",
         "data": {
-          "access_key": "Erişim Anahtarı (AK)",
-          "secret_key": "Gizli Anahtar (SK)",
-          "region": "Sunucu Bölgesi"
+          "transport": "Connection method"
         }
       },
       "reauth_confirm": {
@@ -18,26 +16,89 @@
           "secret_key": "Gizli Anahtar (SK)",
           "region": "Sunucu Bölgesi"
         }
+      },
+      "cloud": {
+        "title": "HYXI Cloud'a Bağlan",
+        "description": "**Geliştirici API kimlik bilgilerinizi (AK/SK)** girin. Bunları [HYXIPOWER Geliştirici Platformu]({link}) üzerinden oluşturabilirsiniz.\n\n**Not:** Bu işlem ayrı bir geliştirici hesabı gerektirir. Geliştirici e-postanız uygulama e-postanızdan farklıysa, önce uygulamadan geliştirici e-postasına **Tesisinizi Paylaşmanız** gerekir.",
+        "data": {
+          "access_key": "Erişim Anahtarı (AK)",
+          "secret_key": "Gizli Anahtar (SK)",
+          "region": "Sunucu Bölgesi"
+        }
+      },
+      "modbus": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Choose how Home Assistant reaches the inverter's RS485 terminals.\n\nA **Modbus TCP gateway** sits near the inverter and is reached over your network. A **serial port** is a USB RS485 adapter plugged into the machine running Home Assistant.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "modbus_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Enter the address of the RS485-to-Ethernet gateway.\n\nThe **slave address** is the inverter's Modbus ID, which is 1 unless you have changed it. If several devices share the bus, each needs its own.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "modbus_serial": {
+        "title": "Serial port",
+        "description": "Enter the serial device for your USB RS485 adapter, for example `/dev/ttyUSB0`.\n\nKeep the factory baud rate unless you have changed it on the inverter. The **slave address** is the inverter's Modbus ID, which is 1 by default.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure": {
+        "title": "How is the RS485 bus connected?",
+        "description": "Change the connection type if you've switched between a network gateway and a USB adapter, or keep the current one to continue.",
+        "data": {
+          "modbus_type": "Connection type"
+        }
+      },
+      "reconfigure_tcp": {
+        "title": "Modbus TCP gateway",
+        "description": "Update the RS485-to-Ethernet gateway's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_host": "Gateway host or IP address",
+          "modbus_port": "Port",
+          "modbus_unit": "Slave address"
+        }
+      },
+      "reconfigure_serial": {
+        "title": "Serial port",
+        "description": "Update the USB RS485 adapter's details. The connection is re-tested and the device re-identified before saving.",
+        "data": {
+          "modbus_device": "Serial device",
+          "modbus_baudrate": "Baud rate",
+          "modbus_unit": "Slave address"
+        }
       }
     },
     "error": {
       "cannot_connect": "HYXI sunucularına bağlanılamadı",
       "invalid_auth": "Geçersiz Erişim Anahtarı veya Gizli Anahtar",
       "unknown": "Beklenmedik bir hata oluştu",
-      "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız."
+      "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız.",
+      "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again."
     },
     "abort": {
       "already_configured": "Bu HYXI hesabı zaten yapılandırılmış.",
-      "reauth_successful": "Kimlik yeniden doğrulaması başarılı oldu"
+      "reauth_successful": "Kimlik yeniden doğrulaması başarılı oldu",
+      "reconfigure_successful": "The Modbus connection was updated successfully."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "HYXI Sistem Yapılandırması",
-        "description": "Entegrasyonunuzun HYXI Cloud ile nasıl iletişim kuracağını ayarlayın.\n\n> ⚠️ **Cihaz Kontrolü**: İnverteriniz zaten enerji sağlayıcınız tarafından yönetiliyorsa veya bir Sanal Güç Santrali (VPP) programına kayıtlıysa dikkatli bir şekilde etkinleştirin. Sağlayıcınız kontrol sahibiyken komut göndermek, onların sevkiyat programıyla çakışabilir.\n\n---",
+        "description": "Entegrasyonunuzun HYXI ile nasıl iletişim kuracağını ayarlayın.\n\n> ⚠️ **Cihaz Kontrolü**: İnverteriniz zaten enerji sağlayıcınız tarafından yönetiliyorsa veya bir Sanal Güç Santrali (VPP) programına kayıtlıysa dikkatli bir şekilde etkinleştirin. Sağlayıcınız kontrol sahibiyken komut göndermek, onların sevkiyat programıyla çakışabilir.\n\n---",
         "data": {
           "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
+          "update_interval_modbus": "Sorgulama Aralığı (1-60 Saniye, Varsayılan: 15)",
           "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)",
           "enable_battery_control": "Cihaz kontrolünü ve korumasını etkinleştir",
           "enable_energy_manager": "Bağımsız Enerji Yöneticisini Etkinleştir (Beta)",
@@ -65,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Bulut Durumu"
+        "name": "Bağlantı Durumu"
       },
       "device_alarm": {
         "name": "Aktif Sorunlar",
@@ -140,6 +201,12 @@
       "totale": {
         "name": "Toplam Enerji Verimi"
       },
+      "totaleb": {
+        "name": "Toplam Enerji Verimi B"
+      },
+      "totalec": {
+        "name": "Toplam Enerji Verimi C"
+      },
       "bat_charge_total": {
         "name": "Toplam Batarya Şarjı"
       },
@@ -160,6 +227,14 @@
       },
       "integration_last_updated": {
         "name": "Entegrasyon Son Güncelleme"
+      },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
       },
       "batcap": {
         "name": "Batarya Kapasitesi"
@@ -206,6 +281,9 @@
       "etoday": {
         "name": "Bugünkü Enerji"
       },
+      "etodayin": {
+        "name": "Bugünkü Şebeke İthal Enerjisi"
+      },
       "efpv": {
         "name": "Bugünkü PV Verimi"
       },
@@ -217,6 +295,15 @@
       },
       "ph3loadp": {
         "name": "Faz 3 Yükü"
+      },
+      "ph1loadv": {
+        "name": "Faz 1 Yük Voltajı"
+      },
+      "ph2loadv": {
+        "name": "Faz 2 Yük Voltajı"
+      },
+      "ph3loadv": {
+        "name": "Faz 3 Yük Voltajı"
       },
       "pv1v": {
         "name": "PV1 Voltajı"
@@ -371,6 +458,27 @@
           "1": "Açma"
         }
       },
+      "meteronline": {
+        "name": "Sayaç Çevrimiçi"
+      },
+      "gridmode": {
+        "name": "Şebeke Modu"
+      },
+      "runcommand": {
+        "name": "Çalıştırma Komutu"
+      },
+      "currentoperatingmode": {
+        "name": "Çalışma Modu"
+      },
+      "insulationresistance": {
+        "name": "Yalıtım Direnci"
+      },
+      "leakagecurrent": {
+        "name": "Kaçak Akım"
+      },
+      "selfteststatus": {
+        "name": "Kendi Kendini Test Durumu"
+      },
       "pvpower": {
         "name": "Toplam PV Gücü"
       },
@@ -382,6 +490,15 @@
       },
       "dcsidetemper": {
         "name": "DC Tarafı Sıcaklığı"
+      },
+      "ambienttemper": {
+        "name": "Ortam Sıcaklığı"
+      },
+      "boosttemper": {
+        "name": "Boost Sıcaklığı"
+      },
+      "dsptemper": {
+        "name": "DSP Sıcaklığı"
       },
       "gridf": {
         "name": "Şebeke Frekansı"
@@ -403,6 +520,12 @@
       },
       "offgridp": {
         "name": "Şebeke Dışı Güç"
+      },
+      "offgridv": {
+        "name": "Şebeke Dışı Voltaj"
+      },
+      "offgridi": {
+        "name": "Şebeke Dışı Akım"
       },
       "offgridq": {
         "name": "Şebeke Dışı Reaktif Güç"
@@ -430,6 +553,48 @@
       },
       "batidm": {
         "name": "Maks Deşarj Akımı"
+      },
+      "bmsstate": {
+        "name": "BMS Durumu"
+      },
+      "batoperatingstatus": {
+        "name": "Batarya Çalışma Durumu"
+      },
+      "batalarm1": {
+        "name": "Batarya Alarmı 1"
+      },
+      "batalarm2": {
+        "name": "Batarya Alarmı 2"
+      },
+      "batalarm3": {
+        "name": "Batarya Alarmı 3"
+      },
+      "batcapacityah": {
+        "name": "Batarya Kapasitesi (Ah)"
+      },
+      "batnominalcapacity": {
+        "name": "Nominal Batarya Kapasitesi"
+      },
+      "llcbusvoltage": {
+        "name": "LLC Bus Voltajı"
+      },
+      "batchargev": {
+        "name": "Batarya Şarj Voltajı"
+      },
+      "batchargei": {
+        "name": "Batarya Şarj Akımı"
+      },
+      "batchargep": {
+        "name": "Batarya Şarj Gücü"
+      },
+      "batdischargev": {
+        "name": "Batarya Deşarj Voltajı"
+      },
+      "batdischargei": {
+        "name": "Batarya Deşarj Akımı"
+      },
+      "batdischargep": {
+        "name": "Batarya Deşarj Gücü"
       },
       "batcharge": {
         "name": "Günlük Şarj Enerjisi"
@@ -510,6 +675,48 @@
       "micro_power_limit": {
         "name": "Güç Sınırı"
       },
+      "feed_in_power_limit": {
+        "name": "Şebekeye Verilen Güç Sınırı"
+      },
+      "vpp_min_soc": {
+        "name": "VPP SOC Minimum"
+      },
+      "force_charge_start_soc": {
+        "name": "Zorunlu Şarj Başlangıç SOC"
+      },
+      "force_charge_stop_soc": {
+        "name": "Zorunlu Şarj Durdurma SOC"
+      },
+      "off_grid_min_soc": {
+        "name": "Şebeke Dışı Minimum SOC"
+      },
+      "self_use_soc": {
+        "name": "Öz Tüketim Rezerv SOC"
+      },
+      "discharge_min_soc": {
+        "name": "Deşarj Minimum SOC"
+      },
+      "backup_soc": {
+        "name": "Yedek Güç Rezerv SOC"
+      },
+      "forced_charge_soc": {
+        "name": "Zorunlu Şarj SOC"
+      },
+      "feed_in_soc": {
+        "name": "Şebekeye Verme SOC Eşiği"
+      },
+      "off_grid_soc": {
+        "name": "Şebeke Dışı Mod SOC Eşiği"
+      },
+      "feed_in_power": {
+        "name": "Şebekeye Verilen Güç Sınırı"
+      },
+      "max_charge_current": {
+        "name": "Maks Şarj Akımı"
+      },
+      "max_discharge_current": {
+        "name": "Maks Deşarj Akımı"
+      },
       "soc_min": {
         "name": "SOC Minimum"
       },
@@ -578,6 +785,9 @@
       "micro_ess_power": {
         "name": "Güç"
       },
+      "anti_starvation": {
+        "name": "Aşırı Deşarj Koruması"
+      },
       "em_grid_charge_allowed": {
         "name": "Şebeke Şarjına İzin Verildi"
       },
@@ -624,6 +834,15 @@
       },
       "peak_shaving_hold": {
         "name": "Pik Tıraşlama: Tut"
+      },
+      "power_on": {
+        "name": "Gücü Aç"
+      },
+      "power_off": {
+        "name": "Gücü Kapat"
+      },
+      "restart": {
+        "name": "Yeniden Başlat"
       },
       "clear_alarms": {
         "name": "Aktif alarmları temizle"
