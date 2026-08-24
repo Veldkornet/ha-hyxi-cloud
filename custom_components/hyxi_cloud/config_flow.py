@@ -29,6 +29,7 @@ from .const import (
     CONF_MODBUS_BAUDRATE,
     CONF_MODBUS_DEVICE,
     CONF_MODBUS_FAMILY,
+    CONF_MODBUS_FRAMER,
     CONF_MODBUS_HOST,
     CONF_MODBUS_PORT,
     CONF_MODBUS_TYPE,
@@ -47,10 +48,11 @@ from .const import (
     DEFAULT_REGION,
     DEFAULT_TRANSPORT,
     DETECTION_MESSAGE_SPACING,
+    DETECTION_TIMEOUT,
     DOMAIN,
     MICRO_ESS_CONTROL_SUPPORTED,
     MODBUS_FAMILY_SIGNATURES,
-    MODBUS_TIMEOUT,
+    MODBUS_TCP_FRAMERS,
     MODBUS_TYPE_SERIAL,
     MODBUS_TYPE_TCP,
     TRANSPORT_CLOUD,
@@ -364,7 +366,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             return "modbus_unavailable", DEFAULT_MODBUS_FAMILY
 
         connection = ModbusConnection(
-            params, timeout=MODBUS_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
+            params, timeout=DETECTION_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
         )
         unit = connection.for_unit(unit_id)
         reachable = False
@@ -431,6 +433,38 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         finally:
             await connection.close()
 
+    async def _probe_and_detect_modbus_tcp(
+        self, host: str, port: int, unit_id: int
+    ) -> tuple[str | None, str, str]:
+        """Probe a TCP gateway, trying every wire framing it might speak.
+
+        Returns (error, family, framer). error is None on success; framer
+        is meaningless when error is set.
+
+        Nothing in the setup form distinguishes a gateway that tunnels raw
+        RTU frames over a plain TCP socket from one that speaks native
+        Modbus-TCP/MBAP framing and translates to RTU on the wire itself
+        (see MODBUS_TCP_FRAMERS's definition for concrete examples), and
+        getting it wrong doesn't degrade gracefully into "wrong family" the
+        way a real device answering an unexpected register does -- it's a
+        hard framing mismatch, so every read behaves as if the device
+        weren't there at all (a timeout) or as a transport-level failure.
+        Both of those are exactly the signals _probe_and_detect_modbus
+        already reports as "no_device" or "cannot_connect", so retrying
+        under the next framer on either one -- rather than only on a
+        harder failure -- is what actually distinguishes "wrong framer"
+        from "no device at this address".
+        """
+        from modbus_connection import ModbusTcpParams
+
+        error, family = None, DEFAULT_MODBUS_FAMILY
+        for framer in MODBUS_TCP_FRAMERS:
+            params = ModbusTcpParams(host=host, port=port, framer=framer)
+            error, family = await self._probe_and_detect_modbus(params, unit_id)
+            if error not in ("cannot_connect", "no_device"):
+                return error, family, framer
+        return error, family, MODBUS_TCP_FRAMERS[-1]
+
     async def _validate_modbus(
         self, user_input, *, reconfiguring_entry_id: str | None = None
     ) -> tuple[str | None, dict]:
@@ -443,7 +477,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         itself -- only a collision with a genuinely different entry should
         abort.
         """
-        from modbus_connection import ModbusSerialParams, ModbusTcpParams
+        from modbus_connection import ModbusSerialParams
 
         unit_id = int(user_input[CONF_MODBUS_UNIT])
         _LOGGER.debug(
@@ -451,11 +485,12 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             self._modbus_type,
             unit_id,
         )
-        # Annotated explicitly -- without it, mypy narrows params to
-        # whichever branch assigns it first and rejects the other as
-        # incompatible.
-        params: ModbusSerialParams | ModbusTcpParams
-        if self._modbus_type == MODBUS_TYPE_SERIAL:
+        # A plain local, not a repeated self._modbus_type comparison --
+        # both branches below are separated by an await, and narrowing an
+        # attribute read across one isn't something mypy can be relied on
+        # to carry over.
+        is_serial = self._modbus_type == MODBUS_TYPE_SERIAL
+        if is_serial:
             device = user_input[CONF_MODBUS_DEVICE]
             baudrate = int(user_input[CONF_MODBUS_BAUDRATE])
             params = ModbusSerialParams(
@@ -470,9 +505,6 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         else:
             host = user_input[CONF_MODBUS_HOST]
             port = int(user_input[CONF_MODBUS_PORT])
-            # RS485-to-Ethernet gateways almost always tunnel RTU frames
-            # rather than speaking native Modbus TCP framing.
-            params = ModbusTcpParams(host=host, port=port, framer="rtu")
             unique_id = f"{host}:{port}:{unit_id}"
             title = f"HYXI Modbus ({host})"
             data = {CONF_MODBUS_HOST: host, CONF_MODBUS_PORT: port}
@@ -489,7 +521,14 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             # against its own entry.
             self._abort_if_unique_id_configured()
 
-        error, family = await self._probe_and_detect_modbus(params, unit_id)
+        if is_serial:
+            error, family = await self._probe_and_detect_modbus(params, unit_id)
+        else:
+            error, family, framer = await self._probe_and_detect_modbus_tcp(
+                host, port, unit_id
+            )
+            data[CONF_MODBUS_FRAMER] = framer
+
         return error, {
             **data,
             CONF_TRANSPORT: TRANSPORT_MODBUS,

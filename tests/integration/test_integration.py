@@ -13,6 +13,7 @@ from custom_components.hyxi_cloud.const import (
     CONF_MODBUS_BAUDRATE,
     CONF_MODBUS_DEVICE,
     CONF_MODBUS_FAMILY,
+    CONF_MODBUS_FRAMER,
     CONF_MODBUS_HOST,
     CONF_MODBUS_PORT,
     CONF_MODBUS_TYPE,
@@ -423,6 +424,9 @@ async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
         CONF_MODBUS_PORT: 502,
         CONF_MODBUS_UNIT: 1,
         CONF_MODBUS_FAMILY: "halo",
+        # _probe_and_detect_modbus is patched to succeed unconditionally, so
+        # the wire-framing probe accepts the first framer it tries.
+        CONF_MODBUS_FRAMER: "rtu",
     }
 
 

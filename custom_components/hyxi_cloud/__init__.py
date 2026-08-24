@@ -35,6 +35,7 @@ from .const import (
     CONF_MODBUS_BAUDRATE,
     CONF_MODBUS_DEVICE,
     CONF_MODBUS_FAMILY,
+    CONF_MODBUS_FRAMER,
     CONF_MODBUS_HOST,
     CONF_MODBUS_PORT,
     CONF_MODBUS_TYPE,
@@ -44,6 +45,7 @@ from .const import (
     CONF_SECRET_KEY,
     DEFAULT_MODBUS_BAUDRATE,
     DEFAULT_MODBUS_FAMILY,
+    DEFAULT_MODBUS_FRAMER,
     DEFAULT_MODBUS_PORT,
     DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
@@ -107,9 +109,10 @@ async def _async_build_modbus_coordinator(hass: HomeAssistant, entry: ConfigEntr
         params = ModbusTcpParams(
             host=entry.data[CONF_MODBUS_HOST],
             port=int(entry.data.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)),
-            # RS485-to-Ethernet gateways tunnel RTU frames rather than
-            # speaking native Modbus TCP framing.
-            framer="rtu",
+            # Detected during setup (config_flow._probe_and_detect_modbus_tcp)
+            # -- falls back to the pre-detection default for an entry
+            # created before that existed.
+            framer=entry.data.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER),
         )
 
     # Minimum inter-frame spacing differs by document: HALO asks for

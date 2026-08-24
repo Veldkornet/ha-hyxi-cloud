@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from homeassistant.const import Platform
 
@@ -95,8 +95,32 @@ DEFAULT_MODBUS_PORT = 502
 DEFAULT_MODBUS_BAUDRATE = 115200
 DEFAULT_MODBUS_UNIT = 1
 MODBUS_TIMEOUT = 10.0
+# Sized for reliable operational polling, not for the one-time setup probe
+# (config_flow._probe_and_detect_modbus / _probe_and_detect_modbus_tcp) --
+# a real device on a local network answers in well under a second, and the
+# framer probe already has to try up to two framers x two signature
+# registers each. At MODBUS_TIMEOUT, a device that's unreachable under one
+# framer (a wrong-framer gateway looks exactly like this from here) costs
+# ~20s before the other framer is even tried; at DETECTION_TIMEOUT, ~6s.
+DETECTION_TIMEOUT = 3.0
 # Local polling is cheap compared with the rate-limited cloud API.
 DEFAULT_MODBUS_INTERVAL = 15
+
+# Which wire framing a TCP gateway speaks. Detected automatically during
+# setup (see config_flow._probe_and_detect_modbus_tcp), same as family --
+# nothing in the setup form distinguishes an RS485-to-Ethernet gateway
+# that tunnels raw RTU frames over a plain TCP socket ("rtu", e.g.
+# Waveshare's "Protocol: None") from one that speaks native Modbus-TCP/
+# MBAP framing and translates to RTU on the wire itself ("socket", e.g.
+# Waveshare's "Modbus TCP to RTU"). A serial connection has no such
+# ambiguity -- a USB RS485 adapter only ever carries raw RTU -- so this
+# only applies to TCP entries.
+CONF_MODBUS_FRAMER = "modbus_framer"
+DEFAULT_MODBUS_FRAMER = "rtu"
+# Tried in this order: "rtu" first because it's the more common cheap
+# passthrough gateway, matching the only hardware this transport has been
+# validated against.
+MODBUS_TCP_FRAMERS: tuple[Literal["rtu", "socket"], ...] = ("rtu", "socket")
 
 # Which register map an entry talks. Detected automatically during setup
 # (see config_flow._detect_modbus_family) rather than asked of the user --

@@ -1304,6 +1304,8 @@ async def test_modbus_all_probe_points_timing_out_reports_no_device(modbus_flow)
 
 @pytest.mark.asyncio
 async def test_modbus_connection_failure_reports_cannot_connect(modbus_flow):
+    from custom_components.hyxi_cloud.const import MODBUS_TCP_FRAMERS
+
     fake = _fake_modbus_modules()
     fake.unit.read_input_registers = AsyncMock(side_effect=OSError("no route to host"))
     modbus_flow._modbus_type = "tcp"
@@ -1314,7 +1316,9 @@ async def test_modbus_connection_failure_reports_cannot_connect(modbus_flow):
         )
 
     assert result["errors"] == {"base": "cannot_connect"}
-    fake.connection.close.assert_awaited_once()
+    # A connection-level failure retries under the other framer before
+    # giving up -- one connection (and one close()) per framer tried.
+    assert fake.connection.close.await_count == len(MODBUS_TCP_FRAMERS)
 
 
 @pytest.mark.asyncio
@@ -1419,6 +1423,71 @@ async def test_modbus_falls_back_to_default_family_when_unidentified(
     assert result["type"] == "entry"
     assert result["data"]["modbus_family"] == "hybrid"
     assert "defaulting to" in caplog.text
+
+
+# --- Wire-framing detection: does a TCP gateway that only answers under the
+# other framer still get identified, without asking the user to know which
+# one their gateway speaks ------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_accepts_first_framer_that_succeeds(modbus_flow):
+    """rtu (tried first) works -- no need to also try socket."""
+    probe = AsyncMock(return_value=(None, "halo"))
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, family, framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
+
+    assert (error, family, framer) == (None, "halo", "rtu")
+    probe.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_falls_back_to_the_other_framer(modbus_flow):
+    """rtu answers nothing at all -- exactly what a gateway actually
+    speaking native Modbus-TCP/MBAP framing looks like from here -- so the
+    probe is retried under socket, which is what the device is on."""
+    probe = AsyncMock(side_effect=[("no_device", "hybrid"), (None, "hybrid")])
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, family, framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
+
+    assert (error, family, framer) == (None, "hybrid", "socket")
+    assert probe.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_reports_the_last_error_when_every_framer_fails(
+    modbus_flow,
+):
+    """Neither framing gets an answer -- nothing left to try, so the second
+    attempt's error is what's shown (both are "unreachable", just phrased
+    from whichever framer was tried last)."""
+    probe = AsyncMock(
+        side_effect=[("no_device", "hybrid"), ("cannot_connect", "hybrid")]
+    )
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, family, _framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
+
+    assert error == "cannot_connect"
+    assert family == "hybrid"
+    assert probe.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_does_not_retry_a_missing_library(modbus_flow):
+    """modbus_unavailable means the dependency itself is missing -- trying
+    the other framer would just fail the exact same way."""
+    probe = AsyncMock(return_value=("modbus_unavailable", "hybrid"))
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, _family, _framer = await modbus_flow._probe_and_detect_modbus_tcp(
+        "h", 502, 1
+    )
+
+    assert error == "modbus_unavailable"
+    probe.assert_awaited_once()
 
 
 def test_transport_schema_defaults_to_cloud(mock_ha_environment):
