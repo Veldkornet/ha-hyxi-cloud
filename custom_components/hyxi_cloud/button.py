@@ -101,8 +101,15 @@ async def async_setup_entry(
     entities: list[ButtonEntity] = []
 
     for sn, dev_data in coordinator.data.items():
-        # Clear Active Alarms button is available for every device SN
-        entities.append(HyxiClearAlarmsButton(coordinator, sn, dev_data))
+        # Clear Active Alarms button, available for every device SN --
+        # cloud only. "Clearing" an alarm is bookkeeping in HYXI's own
+        # cloud/account alarm history, not a device operation; neither
+        # Modbus client implements alter_alarm, and no register in either
+        # document represents "acknowledge/clear a fault" at all -- the
+        # fault bits just reflect live device state and only clear
+        # themselves once the underlying condition resolves.
+        if not is_modbus_entry(entry):
+            entities.append(HyxiClearAlarmsButton(coordinator, sn, dev_data))
 
         device_type = normalize_device_type(get_raw_device_code(dev_data))
 

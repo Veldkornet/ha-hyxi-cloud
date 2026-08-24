@@ -841,11 +841,18 @@ SENSOR_TYPES = [
         key="currentOperatingMode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # 1-7 have confirmed labels below. 15 is a value observed live on a
-        # real hybrid inverter (2026-08-24, while discharging at high SOC)
-        # with no documented meaning -- see invSts above for why it's
-        # listed with no translation rather than guessed or hidden.
-        options=["1", "2", "3", "4", "5", "6", "7", "15"],
+        # 1-7 have confirmed labels below. 15 and 16 are values observed
+        # live on a real hybrid inverter (2026-08-24 -- 15 while
+        # discharging at high SOC, 16 later at 69% SOC) with no documented
+        # meaning -- see invSts above for why they're listed with no
+        # translation rather than guessed or hidden.
+        # pylint: disable-next=fixme
+        # TODO: the vendor's 1-7 table is looking more incomplete than a
+        # single stray value would suggest -- two different undocumented
+        # values under two different real conditions so far. Keep adding
+        # newly observed values here as they show up, and add a translated
+        # label once any of them gets a confirmed meaning.
+        options=["1", "2", "3", "4", "5", "6", "7", "15", "16"],
         icon="mdi:state-machine",
     ),
     # Raw diagnostic values with no documented unit or value table --
@@ -1296,8 +1303,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
             ):
                 keys_to_add.add(key)
 
-        # Pre-register standard sensors to ensure webhook-only metrics are successfully registered
-        if not is_collector_or_dmu:
+        # Pre-register standard sensors to ensure webhook-only metrics are
+        # successfully registered. Modbus has no webhook path -- a key
+        # this poll didn't produce will never arrive later the way a cloud
+        # metric can via push, so pre-registering it just means a sensor
+        # that's permanently "unknown" instead of never created. Skipped
+        # entirely for Modbus; the "process dynamically available valid
+        # metrics keys" loop above already adds every key a Modbus client
+        # actually reads, without needing this at all.
+        if not is_collector_or_dmu and not is_modbus_entry(entry):
             # Common inverter sensors (always applicable)
             keys_to_add.update(
                 {

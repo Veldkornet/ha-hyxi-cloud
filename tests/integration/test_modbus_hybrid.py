@@ -247,6 +247,30 @@ async def test_grid_power_is_converted_to_kilowatts(client):
 
 
 @pytest.mark.asyncio
+async def test_total_pv_power_is_summed_from_both_strings(client):
+    """No single "total PV" register on this hardware family -- ppv is
+    summed locally from pv1p/pv2p rather than left permanently unknown."""
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    assert metrics["ppv"] == metrics["pv1p"] + metrics["pv2p"]
+
+
+@pytest.mark.asyncio
+async def test_total_pv_power_is_absent_not_zero_when_unreadable(client):
+    """A device that answers neither PV string reports no ppv at all --
+    distinct from a real 0 (no panels, nighttime), which must still show."""
+    client._unit.fail_read(
+        600, IllegalDataAddressError(2, "nope"), register_type="input"
+    )
+
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    assert "ppv" not in metrics
+
+
+@pytest.mark.asyncio
 async def test_three_phase_fields_are_kept_separate(client):
     """detect_phase_type's -HT/-HTA suffix check is what turns these on;
     this only proves the values land in the right per-phase keys."""

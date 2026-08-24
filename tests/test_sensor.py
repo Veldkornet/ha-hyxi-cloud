@@ -214,6 +214,52 @@ async def test_async_setup_entry(mock_coordinator, mock_entry):
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_modbus_skips_unread_pre_registered_keys():
+    """Modbus has no webhook path, so a key this poll didn't produce will
+    never arrive later the way it can for cloud -- pre-registering it just
+    means a sensor stuck on "unknown" forever. A Modbus entry must only get
+    sensors for keys its own metrics actually contain, while a key that IS
+    present (even one that's normally in the pre-registered set) still
+    gets its sensor, same as any other transport."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus"}
+    entry.options = {}
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN123": {
+            "deviceCode": "1",  # hybrid_inverter
+            "metrics": {
+                "batSoc": "82",  # present -- must still get a sensor
+                # acE, totalEnt, bmsState etc. are absent: neither Modbus
+                # client ever produces them for this device family.
+            },
+            "model": "HYX-H10K-HT",
+            "device_name": "Test Hybrid",
+        }
+    }
+    coordinator.hyxi_metadata = {"last_success": "2026-03-11T12:00:00Z"}
+    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    async_add_entities = MagicMock()
+
+    with unittest.mock.patch(
+        "custom_components.hyxi_cloud.sensor.is_battery_control_enabled",
+        return_value=False,
+    ):
+        await sensor_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    keys = {
+        e.entity_description.key
+        for e in entities
+        if isinstance(e, sensor_mod.HyxiSensor)
+    }
+    assert "batSoc" in keys
+    assert keys.isdisjoint({"acE", "acP", "totalEnt", "totalEpt", "bmsState"})
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_adds_microinverter_summary(mock_entry):
     """When the plant has microinverters, the two aggregate summary sensors
     (total AC power, total daily yield) must be created alongside the

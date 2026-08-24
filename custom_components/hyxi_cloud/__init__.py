@@ -216,6 +216,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _remove_legacy_select_entities(hass, coordinator.data)
     _migrate_vpp_dispatch_to_work_mode(hass, entry, coordinator.data)
+    _remove_work_mode_sensor_for_modbus(hass, entry, coordinator.data)
+    _remove_alarm_entities_for_modbus(hass, entry, coordinator.data)
     _cleanup_control_entities(hass, entry, coordinator)
     await _async_setup_battery_protection(hass, coordinator)
     _async_setup_energy_manager(hass, entry, coordinator)
@@ -487,6 +489,59 @@ def _migrate_vpp_dispatch_to_work_mode(
             "Migrating %s from vpp_dispatch to work_mode unique_id", entity_id
         )
         registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
+
+
+def _remove_work_mode_sensor_for_modbus(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Remove HyxiWorkModeSensor's registry entry for Modbus entries.
+
+    The sensor reports an active VPP dispatch via workMode, which neither
+    Modbus client can back with a verified register -- see
+    binary_sensor.py's async_setup_entry for why it's no longer created
+    for Modbus. Without this, anyone who already had it (from before that
+    change, or from switching a device from cloud to Modbus) keeps a
+    dangling, permanently-unavailable entity in the registry instead of it
+    actually going away. Cheap and safe to run on every setup: a no-op
+    once the entity no longer exists.
+    """
+    if not is_modbus_entry(entry):
+        return
+    registry = er.async_get(hass)
+    for sn in devices:
+        unique_id = f"{entry.entry_id}_{sn}_work_mode"
+        entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
+        if entity_id is not None:
+            _LOGGER.debug("Removing work_mode entity %s for Modbus entry", entity_id)
+            registry.async_remove(entity_id)
+
+
+def _remove_alarm_entities_for_modbus(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Remove HyxiDeviceAlarmSensor's and HyxiClearAlarmsButton's registry
+    entries for Modbus entries.
+
+    Both read/act on dev_data["alarms"], which neither Modbus client
+    populates -- see binary_sensor.py's and button.py's async_setup_entry
+    for why neither is created for Modbus. Without this, anyone who
+    already had them (from before that change, or from switching a device
+    from cloud to Modbus) keeps dangling, permanently-unavailable entities
+    in the registry instead of them actually going away. Cheap and safe to
+    run on every setup: a no-op once neither entity exists.
+    """
+    if not is_modbus_entry(entry):
+        return
+    registry = er.async_get(hass)
+    for sn in devices:
+        for domain, unique_id in (
+            ("binary_sensor", f"{entry.entry_id}_{sn}_device_alarm"),
+            ("button", f"hyxi_{sn}_clear_alarms"),
+        ):
+            entity_id = registry.async_get_entity_id(domain, DOMAIN, unique_id)
+            if entity_id is not None:
+                _LOGGER.debug("Removing alarm entity %s for Modbus entry", entity_id)
+                registry.async_remove(entity_id)
 
 
 def _cleanup_control_entities(

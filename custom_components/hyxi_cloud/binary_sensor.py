@@ -58,10 +58,28 @@ async def async_setup_entry(
     entities: list[BinarySensorEntity] = [HyxiConnectivitySensor(coordinator, entry)]
 
     for device_sn, dev_data in coordinator.data.items():
-        entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
+        # Cloud only: reads dev_data["alarms"], which neither Modbus client
+        # populates. The raw fault/alarm bit registers both device
+        # families do have are deliberately left undecoded (see rule 3 in
+        # docs/modbus-provenance.md -- HALO's document even contradicts
+        # itself about where its BMS fault words live), so there is no
+        # confirmed data to back this sensor with yet on either transport.
+        if not is_modbus_entry(entry):
+            entities.append(HyxiDeviceAlarmSensor(coordinator, entry, device_sn))
 
         dev_type = normalize_device_type(get_raw_device_code(dev_data))
-        if dev_type in ("hybrid_inverter", "all_in_one", "micro_ess"):
+        # Not shown for Modbus: it exists to report an active VPP dispatch
+        # via workMode, which neither Modbus client can back with a
+        # verified register -- the hybrid map has no field confirmed to
+        # carry this concept at all, and HALO's local work_mode register
+        # has its own, differently-numbered enumeration that this sensor
+        # would otherwise test against the cloud's meaning by mistake. See
+        # docs/modbus-provenance.md, rule 1.
+        if dev_type in (
+            "hybrid_inverter",
+            "all_in_one",
+            "micro_ess",
+        ) and not is_modbus_entry(entry):
             entities.append(HyxiWorkModeSensor(coordinator, entry, device_sn, dev_data))
 
     # Energy Manager binary sensors (EM-only)

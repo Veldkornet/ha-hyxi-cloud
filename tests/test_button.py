@@ -175,6 +175,32 @@ async def test_async_setup_entry_micro_inverter(
 
 
 @pytest.mark.asyncio()
+async def test_async_setup_entry_skips_clear_alarms_button_for_modbus(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """HyxiClearAlarmsButton calls alter_alarm, which neither Modbus client
+    implements, and reads dev_data["alarms"], which neither populates --
+    a Modbus entry must not get this button at all."""
+    hass = MagicMock()
+    mock_entry_fixture.data = {"transport": "modbus"}
+    mock_entry_fixture.options = {}
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {
+        "SN123": {"device_type_code": "1", "model": "H10K-HT", "alarms": []}
+    }
+
+    async_add_entities = MagicMock()
+
+    await button_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    if async_add_entities.called:
+        entities = async_add_entities.call_args[0][0]
+        assert not any(
+            isinstance(e, button_mod.HyxiClearAlarmsButton) for e in entities
+        )
+
+
+@pytest.mark.asyncio()
 async def test_async_setup_entry_three_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):

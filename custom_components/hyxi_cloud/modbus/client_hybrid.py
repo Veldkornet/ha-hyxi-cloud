@@ -54,6 +54,15 @@ HYBRID_DEVICE_CODE = "HYBRID_INVERTER"
 CONTROL_MODE_BATTERY_POWER = 0
 
 
+def _sum_or_none(*values: float | None) -> float | None:
+    """Sum values that are present, treating an all-None input as unknown
+    rather than a real 0 -- a device that answered with a genuine 0 for
+    every input still sums to a real 0, only "nothing answered" is None.
+    """
+    present = [v for v in values if v is not None]
+    return sum(present) if present else None
+
+
 class HyxiHybridModbusClient:
     """Talks to one HYX-H hybrid inverter over Modbus, cloud client shaped."""
 
@@ -269,6 +278,12 @@ class HyxiHybridModbusClient:
             "pv2v": self.pv.pv2_voltage,
             "pv2i": self.pv.pv2_current,
             "pv2p": self.pv.pv2_power,
+            # No single "total PV power" register on this hardware family --
+            # summed locally from the two strings above. None only when
+            # both strings are unreadable, not when either genuinely reads
+            # 0 (no panels, nighttime), so a real zero still shows as 0
+            # rather than being hidden as "unknown".
+            "ppv": _sum_or_none(self.pv.pv1_power, self.pv.pv2_power),
             "vbus": self.pv.bus_voltage,
             # main_program is the primary control processor, main_dsp a
             # real-time co-processor for power electronics -- the same

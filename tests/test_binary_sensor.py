@@ -162,6 +162,59 @@ async def test_async_setup_entry_adds_vpp_dispatch_sensor(mock_coordinator, mock
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_skips_work_mode_sensor_for_modbus(mock_coordinator):
+    """Neither Modbus client can back an active-VPP-dispatch reading with a
+    verified register (see docs/modbus-provenance.md, rule 1) -- a Modbus
+    entry must not get this sensor at all."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus"}
+    entry.options = {}
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "deviceCode": "1",  # hybrid_inverter
+            "alarms": [],
+        }
+    }
+    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    await bs_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, bs_mod.HyxiWorkModeSensor) for e in entities)
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_skips_device_alarm_sensor_for_modbus(
+    mock_coordinator,
+):
+    """HyxiDeviceAlarmSensor reads dev_data["alarms"], which neither
+    Modbus client populates -- a Modbus entry must not get it at all."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus"}
+    entry.options = {}
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "deviceCode": "1",  # hybrid_inverter
+            "alarms": [],
+        }
+    }
+    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    await bs_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, bs_mod.HyxiDeviceAlarmSensor) for e in entities)
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_adds_em_binary_sensors(mock_coordinator, mock_entry):
     """Test EM binary sensors (night_mode_active, high_load_detected) are added
     when the Energy Manager is enabled for an inverter present in coordinator data."""

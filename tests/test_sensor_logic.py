@@ -887,15 +887,15 @@ def test_enum_empty_options_accepts_any_value(enum_status_sensor):
 
 
 def test_observed_undocumented_enum_values_are_declared_not_hidden():
-    """invSts=6 and currentOperatingMode=15 were observed live on real
+    """invSts=6 and currentOperatingMode=15/16 were observed live on real
     hybrid inverter hardware with no documented meaning (2026-08-24).
     Declared with no state translation -- shown as the raw number rather
-    than "unknown" -- without guessing what either one actually means."""
+    than "unknown" -- without guessing what any of them actually means."""
     invsts = sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
     assert invsts.options == ["0", "1", "2", "3", "4", "6"]
 
     mode = sensor_mod.SENSOR_TYPES_BY_KEY["currentOperatingMode"]
-    assert mode.options == ["1", "2", "3", "4", "5", "6", "7", "15"]
+    assert mode.options == ["1", "2", "3", "4", "5", "6", "7", "15", "16"]
 
 
 @pytest.mark.asyncio
