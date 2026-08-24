@@ -219,7 +219,7 @@ def to_simdata(words: dict[int, int]) -> list[SimData]:
 def build_device(args: argparse.Namespace) -> SimDevice:
     """Assemble the simulated device from a profile or a snapshot."""
     if args.snapshot:
-        path = Path(args.snapshot)
+        path = Path(args.snapshot).expanduser().resolve()
         input_words = words_from_snapshot(path, "input")
         holding_words = words_from_snapshot(path, "holding")
         source = f"snapshot {path.name}"

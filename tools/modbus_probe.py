@@ -354,8 +354,9 @@ async def run_sweep(args: argparse.Namespace) -> int:
         "absent": probe.absent,
         "failed": probe.failed,
     }
-    Path(args.out).write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {args.out} ({total} registers)", file=sys.stderr)
+    out_path = Path(args.out).expanduser().resolve()
+    out_path.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {out_path} ({total} registers)", file=sys.stderr)
     return 0
 
 
@@ -393,11 +394,13 @@ def _report_appearance(
 
 def run_diff(args: argparse.Namespace) -> int:
     """Report registers that differ between two snapshots."""
-    before = json.loads(Path(args.before).read_text(encoding="utf-8"))
-    after = json.loads(Path(args.after).read_text(encoding="utf-8"))
+    before_path = Path(args.before).expanduser().resolve()
+    after_path = Path(args.after).expanduser().resolve()
+    before = json.loads(before_path.read_text(encoding="utf-8"))
+    after = json.loads(after_path.read_text(encoding="utf-8"))
 
-    b_label = before["meta"].get("label") or Path(args.before).stem
-    a_label = after["meta"].get("label") or Path(args.after).stem
+    b_label = before["meta"].get("label") or before_path.stem
+    a_label = after["meta"].get("label") or after_path.stem
 
     total = 0
     for space in SPACES:
@@ -440,7 +443,8 @@ def run_diff(args: argparse.Namespace) -> int:
 
 def run_show(args: argparse.Namespace) -> int:
     """Print every decoding of one address in a snapshot."""
-    snapshot = json.loads(Path(args.snapshot).read_text(encoding="utf-8"))
+    snapshot_path = Path(args.snapshot).expanduser().resolve()
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
     shown = False
     for space in SPACES:
         words = _words_at(snapshot, space, args.addr)
