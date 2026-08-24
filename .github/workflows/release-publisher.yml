@@ -36,6 +36,7 @@ jobs:
           TAG_NAME="${{ github.event.release.tag_name }}"
           CLEAN_VERSION="${TAG_NAME#v}"
           echo "CLEAN_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+          export CLEAN_VERSION
 
           echo "Checking/Injecting version $CLEAN_VERSION into manifest and pyproject.toml..."
           python3 -c "
