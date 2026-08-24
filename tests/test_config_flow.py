@@ -1122,6 +1122,17 @@ class _FakeModbusTimeout(Exception):
     """Stands in for modbus_connection's timeout error."""
 
 
+class _FakeGatewayPathUnavailable(_FakeModbusError):
+    """Mirrors modbus_connection's real hierarchy: a ModbusExceptionError
+    subclass, but the *gateway* reporting it couldn't reach anything past
+    itself, not the target device rejecting a register."""
+
+
+class _FakeGatewayTarget(_FakeModbusError):
+    """Same as _FakeGatewayPathUnavailable -- the other gateway target-
+    failure exception code."""
+
+
 def _fake_modbus_modules(read_side_effect=None):
     """Build stand-ins for modbus_connection and its tmodbus backend.
 
@@ -1140,6 +1151,8 @@ def _fake_modbus_modules(read_side_effect=None):
     root = types.ModuleType("modbus_connection")
     root.ModbusExceptionError = _FakeModbusError  # type: ignore[attr-defined]
     root.ModbusTimeoutError = _FakeModbusTimeout  # type: ignore[attr-defined]
+    root.GatewayPathUnavailableError = _FakeGatewayPathUnavailable  # type: ignore[attr-defined]
+    root.GatewayTargetError = _FakeGatewayTarget  # type: ignore[attr-defined]
     root.ModbusSerialParams = lambda **kw: ("serial", kw)  # type: ignore[attr-defined]
     root.ModbusTcpParams = lambda **kw: ("tcp", kw)  # type: ignore[attr-defined]
 
@@ -1410,6 +1423,33 @@ async def test_modbus_refuses_to_guess_family_when_unidentified(modbus_flow, cap
     assert result["type"] == "form"
     assert result["errors"] == {"base": "unidentified_family"}
     assert "refusing to guess" in caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("exc_cls", [_FakeGatewayPathUnavailable, _FakeGatewayTarget])
+async def test_modbus_gateway_target_failure_is_not_treated_as_reachable(
+    exc_cls, modbus_flow, caplog
+):
+    """A gateway target-failure exception (GatewayPathUnavailableError,
+    GatewayTargetError) is a ModbusExceptionError subclass, but it's the
+    *gateway* saying it couldn't reach anything past itself -- not a real
+    device rejecting this specific register. Must not count as
+    "reachable" the way a genuine exception response does, or a gateway
+    with nothing wired to it reports the misleading unidentified_family
+    ("check the slave address, or that this is a supported model")
+    instead of no_device ("check the wiring")."""
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=exc_cls())
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "no_device"}
+    assert "treated as no answer" in caplog.text
 
 
 # --- Wire-framing detection: does a TCP gateway that only answers under the

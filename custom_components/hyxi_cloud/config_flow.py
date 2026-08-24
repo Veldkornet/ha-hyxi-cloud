@@ -350,11 +350,16 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         A Modbus exception response still counts as the device being
         present -- it means something replied and simply does not carry
-        that register. But a real *value* at one of MODBUS_FAMILY_SIGNATURES
-        is stronger: those two addresses were chosen because the HALO and
-        hybrid documents' confirmed ranges don't overlap (hybrid tops out at
-        3121, HALO starts at 4000), so a value at either is direct evidence
-        for that family, not just for "a device is here".
+        that register. The exception being a *gateway* target-failure
+        (GatewayPathUnavailableError, GatewayTargetError) is the one case
+        that doesn't count: that's the gateway saying it couldn't reach
+        anything past itself, not a device rejecting this specific
+        register, so it's treated the same as no answer at all. A real
+        *value* at one of MODBUS_FAMILY_SIGNATURES is stronger evidence
+        still: those two addresses were chosen because the HALO and
+        hybrid documents' confirmed ranges don't overlap (hybrid tops out
+        at 3121, HALO starts at 4000), so a value at either is direct
+        evidence for that family, not just for "a device is here".
 
         Every signature is tried before giving up, rather than returning on
         the first exception, so a device that happens to reject its own
@@ -371,7 +376,12 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         line to say so.
         """
         try:
-            from modbus_connection import ModbusExceptionError, ModbusTimeoutError
+            from modbus_connection import (
+                GatewayPathUnavailableError,
+                GatewayTargetError,
+                ModbusExceptionError,
+                ModbusTimeoutError,
+            )
             from modbus_connection.tmodbus import ModbusConnection
         except ImportError:
             _LOGGER.error("modbus-connection is not installed")
@@ -391,6 +401,23 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                 )
                 try:
                     await read(address, 1)
+                # Both are ModbusExceptionError subclasses -- caught ahead of
+                # it on purpose. They're the *gateway* reporting it couldn't
+                # reach its target, not the target device rejecting this
+                # specific register, so unlike a real exception response
+                # they're not evidence anything answered.
+                except GatewayPathUnavailableError, GatewayTargetError:
+                    _LOGGER.debug(
+                        "Modbus probe: gateway for unit %s could not reach "
+                        "its target for %s register %s (family %s) -- "
+                        "treated as no answer, not proof a device is "
+                        "present",
+                        unit_id,
+                        space,
+                        address,
+                        family,
+                    )
+                    continue
                 except ModbusExceptionError as err:
                     reachable = True
                     _LOGGER.debug(
