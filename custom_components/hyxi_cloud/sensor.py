@@ -1119,7 +1119,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             HyxiMicroinverterSumSensor(
                 coordinator,
                 entry,
-                metric_key="eToday",
+                metric_key="efpv",
                 description=SensorEntityDescription(
                     key="micro_daily_yield_total",
                     translation_key="micro_daily_yield_total",
