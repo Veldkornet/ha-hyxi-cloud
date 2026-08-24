@@ -343,7 +343,10 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
     ) -> tuple[str | None, str]:
         """Confirm a device answers, and guess which register map it speaks.
 
-        Returns (error, family). error is None on success.
+        Returns (error, family). error is None on success; family is
+        meaningless when error is set -- every error path still returns
+        DEFAULT_MODBUS_FAMILY alongside it purely to keep the return type
+        consistent, not because it's used for anything.
 
         A Modbus exception response still counts as the device being
         present -- it means something replied and simply does not carry
