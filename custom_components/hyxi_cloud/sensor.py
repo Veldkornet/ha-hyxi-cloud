@@ -103,15 +103,16 @@ BATTERY_SENSORS = {
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
 HEARTBEAT_SENSORS = {"last_seen"}
 
-# Keys the cloud API has never produced for any device (confirmed absent
-# from hyxi_cloud_api's own source, not just unobserved) -- HALO's Modbus
-# map is the only source for these, and pre-registering them for a cloud
-# entry the same way genuinely webhook-only metrics are pre-registered
-# just means a sensor stuck on "unknown" forever, the same problem this
-# was meant to solve, not avoid. Excluded from pre-registration below;
-# the "process dynamically available valid metrics keys" loop already
-# adds these for Modbus/HALO entries, since that client reads them on
-# every poll.
+# Keys the cloud API has never produced for any device -- confirmed both
+# by their absence from hyxi_cloud_api's own source and by a real cloud
+# entry showing every one of them stuck on "unknown". The Modbus register
+# maps are the only source for these, and pre-registering them for a
+# cloud entry the same way genuinely webhook-only metrics are
+# pre-registered just means a sensor stuck on "unknown" forever, the same
+# problem this was meant to solve, not avoid. Excluded from
+# pre-registration below; the "process dynamically available valid
+# metrics keys" loop already adds these for Modbus/HALO entries, since
+# that client reads them on every poll.
 CLOUD_NEVER_PRODUCES = {
     "acE",
     "acP",
@@ -122,6 +123,15 @@ CLOUD_NEVER_PRODUCES = {
     "batAlarm1",
     "batAlarm2",
     "batAlarm3",
+    "batChargeV",
+    "batChargeI",
+    "batChargeP",
+    "batDischargeV",
+    "batDischargeI",
+    "batDischargeP",
+    "batNominalCapacity",
+    "batOperatingStatus",
+    "llcBusVoltage",
 }
 
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
