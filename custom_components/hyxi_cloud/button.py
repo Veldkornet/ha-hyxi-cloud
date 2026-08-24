@@ -227,7 +227,7 @@ class HyxiClearAlarmsButton(
                 mask_sn(self._sn),
                 err,
             )
-            raise
+            raise HomeAssistantError(f"Failed to clear active alarms: {err}") from err
 
 
 class HyxiMicroRestartButton(
@@ -263,7 +263,7 @@ class HyxiMicroRestartButton(
             _LOGGER.error(
                 "Failed to restart microinverter %s: %s", mask_sn(self._sn), err
             )
-            raise
+            raise HomeAssistantError(f"Failed to restart microinverter: {err}") from err
 
 
 class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntity):
@@ -319,7 +319,9 @@ class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntit
             _LOGGER.error(
                 "Failed to set mode '%s' for %s: %s", self._mode, mask_sn(self._sn), err
             )
-            raise
+            raise HomeAssistantError(
+                f"Failed to set mode '{self._mode}': {err}"
+            ) from err
 
     @property
     def available(self) -> bool:
@@ -377,7 +379,9 @@ class HyxiPeakShavingButton(
                 mask_sn(self._sn),
                 err,
             )
-            raise
+            raise HomeAssistantError(
+                f"Failed to send peak shaving '{self._option}': {err}"
+            ) from err
 
     @property
     def available(self) -> bool:
@@ -432,7 +436,9 @@ class HyxiPowerCommandButton(
                 mask_sn(self._sn),
                 err,
             )
-            raise
+            raise HomeAssistantError(
+                f"Failed to send power command '{self._action}': {err}"
+            ) from err
 
     @property
     def available(self) -> bool:

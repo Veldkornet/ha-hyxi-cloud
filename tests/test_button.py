@@ -309,7 +309,7 @@ async def test_micro_restart_button_error(mock_coordinator_fixture):
     )
     btn = button_mod.HyxiMicroRestartButton(mock_coordinator_fixture, "SN123", {})
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with pytest.raises(button_mod.HomeAssistantError, match="restart microinverter"):
         await btn.async_press()
 
 
@@ -336,7 +336,7 @@ async def test_power_command_button_error(mock_coordinator_fixture):
         mock_coordinator_fixture, "SN123", {}, "restart"
     )
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with pytest.raises(button_mod.HomeAssistantError, match="power command"):
         await btn.async_press()
 
 
@@ -393,7 +393,7 @@ async def test_mode_button_error(mock_coordinator_fixture):
     )
     btn = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with pytest.raises(button_mod.HomeAssistantError, match="set mode 'idle'"):
         await btn.async_press()
 
 
@@ -422,7 +422,7 @@ async def test_peak_shaving_button_error(mock_coordinator_fixture):
     )
 
     with patch.object(button_mod, "_LOGGER") as mock_logger:
-        with pytest.raises(button_mod.HyxiApiClient.ControlError):
+        with pytest.raises(button_mod.HomeAssistantError, match="peak shaving 'hold'"):
             await btn.async_press()
         mock_logger.error.assert_called_once_with(
             "Failed to send peak shaving '%s' to %s: %s",
@@ -565,7 +565,7 @@ async def test_clear_alarms_button_error(mock_coordinator_fixture):
     )
     btn = button_mod.HyxiClearAlarmsButton(mock_coordinator_fixture, "SN123", {})
 
-    with pytest.raises(button_mod.HyxiApiClient.ControlError):
+    with pytest.raises(button_mod.HomeAssistantError, match="clear active alarms"):
         await btn.async_press()
 
 

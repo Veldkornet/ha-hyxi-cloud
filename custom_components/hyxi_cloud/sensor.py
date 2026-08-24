@@ -779,7 +779,13 @@ SENSOR_TYPES = [
         key="invSts",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        options=["0", "1", "2", "3", "4"],
+        # 0-4 have confirmed labels below. 6 is a value observed live on a
+        # real hybrid inverter (2026-08-24) with no documented meaning --
+        # listed with no state translation so it displays as the raw
+        # number rather than "unknown", without guessing what it means.
+        # Extend here (and add a translated label, once confirmed) the
+        # same way the next undocumented value shows up.
+        options=["0", "1", "2", "3", "4", "6"],
         icon="mdi:information",
     ),
     SensorEntityDescription(
@@ -835,7 +841,11 @@ SENSOR_TYPES = [
         key="currentOperatingMode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        options=["1", "2", "3", "4", "5", "6", "7"],
+        # 1-7 have confirmed labels below. 15 is a value observed live on a
+        # real hybrid inverter (2026-08-24, while discharging at high SOC)
+        # with no documented meaning -- see invSts above for why it's
+        # listed with no translation rather than guessed or hidden.
+        options=["1", "2", "3", "4", "5", "6", "7", "15"],
         icon="mdi:state-machine",
     ),
     # Raw diagnostic values with no documented unit or value table --
