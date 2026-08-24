@@ -597,8 +597,18 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             if not error:
                 title = data.pop("_title")
                 if reconfigure_entry is not None:
+                    # _validate_modbus already set self.unique_id (via
+                    # async_set_unique_id) to whatever the new address
+                    # computes to -- passed through explicitly here, or
+                    # the entry keeps its pre-edit unique_id forever: the
+                    # old address stays reserved, and the new one was
+                    # only ever checked for collisions, never actually
+                    # persisted as this entry's identity.
                     return self.async_update_reload_and_abort(
-                        reconfigure_entry, title=title, data=data
+                        reconfigure_entry,
+                        title=title,
+                        data=data,
+                        unique_id=self.unique_id,
                     )
                 return self.async_create_entry(title=title, data=data)
             errors["base"] = error

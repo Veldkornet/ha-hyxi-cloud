@@ -558,6 +558,10 @@ async def test_reconfigure_updates_the_entry_and_reloads(hass: HomeAssistant):
     # Re-detected from the new address, not left as the pre-edit "halo".
     assert entry.data[CONF_MODBUS_FAMILY] == "hybrid"
     assert entry.title == "HYXI Modbus (192.168.1.51)"
+    # The entry's real identity, not just its data -- left stale here, the
+    # old address (192.168.1.50) stays permanently reserved and the new
+    # one was only ever checked for collisions, never actually persisted.
+    assert entry.unique_id == "192.168.1.51:502:1"
 
 
 @pytest.mark.asyncio

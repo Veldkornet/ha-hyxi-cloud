@@ -378,6 +378,74 @@ async def test_async_setup_entry_skips_last_sent_mode_for_unknown_phase(
     assert not any(isinstance(e, sensor_mod.HyxiLastSentModeSensor) for e in entities)
 
 
+@pytest.mark.asyncio
+async def test_async_setup_entry_modbus_halo_gets_last_sent_mode_sensor(
+    mock_coordinator,
+):
+    """A Modbus micro_ess (HALO) device is control-capable over local
+    Modbus (is_control_capable_device_type) and gets a
+    HyxiBatteryProtectionController started for it
+    (_async_setup_battery_protection in __init__.py) -- without this
+    sensor, that controller has no entity to restore last_sent_mode from
+    after a restart. HALO has no phase 2/3 registers at all, so the phase
+    check that gates cloud entries must not apply here either."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus"}
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test HALO",
+            "deviceCode": "15",  # micro_ess
+            "model": "HYX-MS3000AC",
+            "metrics": {},  # HALO has no phase-indicating metrics
+            "alarms": [],
+        }
+    }
+    hass = MagicMock()
+    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    with unittest.mock.patch(
+        "custom_components.hyxi_cloud.sensor.is_battery_control_enabled",
+        return_value=True,
+    ):
+        await sensor_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert any(isinstance(e, sensor_mod.HyxiLastSentModeSensor) for e in entities)
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_cloud_halo_skips_last_sent_mode_sensor(
+    mock_coordinator, mock_entry
+):
+    """A cloud micro_ess (HALO) device stays excluded -- HYXI's cloud API
+    rejects the control write outright (MICRO_ESS_CONTROL_SUPPORTED),
+    so no controller is ever started for it and this sensor would have
+    nothing to report."""
+    mock_coordinator.data = {
+        "SN123": {
+            "device_name": "Test HALO",
+            "deviceCode": "15",  # micro_ess
+            "model": "HYX-MS3000AC",
+            "metrics": {},
+            "alarms": [],
+        }
+    }
+    hass = MagicMock()
+    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    async_add_entities = MagicMock()
+
+    with unittest.mock.patch(
+        "custom_components.hyxi_cloud.sensor.is_battery_control_enabled",
+        return_value=True,
+    ):
+        await sensor_mod.async_setup_entry(hass, mock_entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, sensor_mod.HyxiLastSentModeSensor) for e in entities)
+
+
 def test_process_numeric_value_normal():
     """Test standard numeric processing."""
 

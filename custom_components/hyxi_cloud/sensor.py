@@ -35,6 +35,7 @@ from .const import (
     get_raw_device_code,
     get_software_version,
     is_battery_control_enabled,
+    is_control_capable_device_type,
     is_modbus_entry,
     is_null_value,
     is_zero_value,
@@ -1465,11 +1466,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
     if is_battery_control_enabled(entry, coordinator):
         for sn, dev_data in coordinator.data.items():
             device_type = normalize_device_type(get_raw_device_code(dev_data))
-            if device_type not in ("hybrid_inverter", "all_in_one"):
+            if not is_control_capable_device_type(entry, device_type):
                 continue
-            phase = detect_phase_type(dev_data)
-            if phase not in ("three_phase", "single_phase"):
-                continue
+            # Local Modbus always resolves to the mode-control surface,
+            # independent of phase -- HALO has no phase 2/3 registers at
+            # all and would otherwise never pass the phase check below.
+            # Cloud entries keep the original phase-based gate. Mirrors
+            # _async_setup_battery_protection in __init__.py exactly,
+            # which starts the controller that reads this entity's
+            # restored state back on startup (protection.py,
+            # async_start) -- a HALO Modbus device that gets a
+            # controller but not this sensor loses last_sent_mode across
+            # every restart, with nothing to restore it from.
+            if not is_modbus_entry(entry):
+                phase = detect_phase_type(dev_data)
+                if phase not in ("three_phase", "single_phase"):
+                    continue
             entities.append(HyxiLastSentModeSensor(coordinator, sn))
 
     # 4. Energy Manager sensors (EM-only)

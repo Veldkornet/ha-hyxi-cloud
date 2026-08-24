@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import hmac
 import logging
+from typing import TYPE_CHECKING
 
 from aiohttp import ClientError, web
 from homeassistant.components import webhook
@@ -70,10 +71,15 @@ from .const import (
 from .coordinator import HyxiDataUpdateCoordinator
 from .protection import HyxiBatteryProtectionController
 
+if TYPE_CHECKING:
+    from .modbus_coordinator import HyxiModbusCoordinator
+
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _async_build_modbus_coordinator(hass: HomeAssistant, entry: ConfigEntry):
+async def _async_build_modbus_coordinator(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> HyxiModbusCoordinator:
     """Build a coordinator that reaches the device over local RS485.
 
     Which register map and client class to use was decided once, during
@@ -161,6 +167,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "local Modbus" if modbus else "HYXI Cloud",
     )
 
+    # Annotated explicitly as the common base -- without it, mypy narrows
+    # coordinator to whichever branch assigns it first and rejects the
+    # other as incompatible. HyxiModbusCoordinator is itself a
+    # HyxiDataUpdateCoordinator subclass, so the base type covers both.
+    coordinator: HyxiDataUpdateCoordinator
     if modbus:
         coordinator = await _async_build_modbus_coordinator(hass, entry)
     else:
