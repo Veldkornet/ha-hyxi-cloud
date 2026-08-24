@@ -103,6 +103,27 @@ BATTERY_SENSORS = {
 COLLECTOR_SENSORS = {"signalIntensity", "signalVal", "wifiVer", "comMode", "app_sw"}
 HEARTBEAT_SENSORS = {"last_seen"}
 
+# Keys the cloud API has never produced for any device (confirmed absent
+# from hyxi_cloud_api's own source, not just unobserved) -- HALO's Modbus
+# map is the only source for these, and pre-registering them for a cloud
+# entry the same way genuinely webhook-only metrics are pre-registered
+# just means a sensor stuck on "unknown" forever, the same problem this
+# was meant to solve, not avoid. Excluded from pre-registration below;
+# the "process dynamically available valid metrics keys" loop already
+# adds these for Modbus/HALO entries, since that client reads them on
+# every poll.
+CLOUD_NEVER_PRODUCES = {
+    "acE",
+    "acP",
+    "batIcm",
+    "batIdm",
+    "bmsState",
+    "batCapacityAh",
+    "batAlarm1",
+    "batAlarm2",
+    "batAlarm3",
+}
+
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
 BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw", "swVerMaster", "swVerSlave"}
 
@@ -1337,6 +1358,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     "invSts",
                     "gridSts",
                 }
+                - CLOUD_NEVER_PRODUCES
             )
 
             # Check phase type for Phase 2 & 3 sensors
@@ -1357,7 +1379,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
             # Check if device type supports battery
             if device_type in ("hybrid_inverter", "all_in_one"):
-                keys_to_add.update(local_battery_sensors)
+                keys_to_add.update(local_battery_sensors - CLOUD_NEVER_PRODUCES)
                 keys_to_add.update(
                     {
                         "bat_charging",
