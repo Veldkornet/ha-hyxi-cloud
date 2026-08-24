@@ -228,6 +228,14 @@
       "integration_last_updated": {
         "name": "Integrationen sidst opdateret"
       },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
+      },
       "batcap": {
         "name": "Batterikapacitet"
       },

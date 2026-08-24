@@ -23,9 +23,13 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
+    CONF_MODBUS_FRAMER,
+    CONF_MODBUS_TYPE,
     CONF_PUSH_RATE,
+    DEFAULT_MODBUS_FRAMER,
     DOMAIN,
     MANUFACTURER,
+    MODBUS_TYPE_SERIAL,
     NULL_VALUES,
     detect_phase_type,
     get_raw_device_code,
@@ -1413,6 +1417,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # link has no equivalent, so a Modbus entry never shows this sensor.
     if not is_modbus_entry(entry):
         entities.append(HyxiSubscriptionStatusSensor(coordinator, entry))
+    else:
+        # Connection type/framing is a Modbus-only distinction -- a cloud
+        # entry has no physical link or wire framing of its own to report.
+        entities.append(HyxiModbusConnectionTypeSensor(coordinator, entry))
 
     # 2b. Microinverter Aggregate Sensors
     has_micro_inverter = any(
@@ -1958,6 +1966,46 @@ class HyxiLastUpdateSensor(
         """Handle updated data from the coordinator."""
         self._update_native_value()
         super()._handle_coordinator_update()
+
+
+class HyxiModbusConnectionTypeSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity
+):
+    """Which physical link and wire framing a Modbus entry actually uses.
+
+    Host/port or serial device alone doesn't say whether a TCP gateway is
+    in passthrough or native Modbus-TCP mode -- that's exactly the thing
+    setup auto-detects instead of asking (see
+    config_flow._probe_and_detect_modbus_tcp). Set once from the entry's
+    stored config, not from polled data -- this doesn't change without a
+    reconfigure, which recreates every entity anyway.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "modbus_connection_type"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:lan-connect"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        # Display text lives in the "state" translation for this key, not
+        # here -- these are stable machine values an automation can key
+        # off, independent of however the shown text is later reworded.
+        self._attr_options = ["tcp_rtu", "tcp_socket", "serial"]
+        self._attr_unique_id = f"{entry.entry_id}_modbus_connection_type"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "HYXI Modbus Service",
+            "manufacturer": MANUFACTURER,
+            "model": "Local Modbus Bridge",
+        }
+        if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
+            self._attr_native_value = "serial"
+        elif entry.data.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER) == "socket":
+            self._attr_native_value = "tcp_socket"
+        else:
+            self._attr_native_value = "tcp_rtu"
 
 
 class HyxiSubscriptionStatusSensor(

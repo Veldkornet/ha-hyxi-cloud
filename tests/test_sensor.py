@@ -202,6 +202,13 @@ async def test_async_setup_entry(mock_coordinator, mock_entry):
     ]
     assert len(subscription_sensors) == 1
 
+    # Connection type/framing is a Modbus-only distinction -- a cloud entry
+    # has none of its own to report.
+    connection_type_sensors = [
+        e for e in entities if isinstance(e, sensor_mod.HyxiModbusConnectionTypeSensor)
+    ]
+    assert len(connection_type_sensors) == 0
+
     # Check that device sensors are added
     device_sensors = [e for e in entities if isinstance(e, sensor_mod.HyxiSensor)]
     assert len(device_sensors) > 0
@@ -543,3 +550,80 @@ def test_subscription_status_sensor_handle_coordinator_update(
     mock_coordinator.push_status = "inactive"
     sensor._handle_coordinator_update()
     assert sensor.native_value == "inactive"
+
+
+def test_connection_type_sensor_serial(mock_coordinator):
+    """A serial entry reports "serial", regardless of any framer key --
+    wire framing is a TCP-only distinction."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus", "modbus_type": "serial"}
+
+    sensor = sensor_mod.HyxiModbusConnectionTypeSensor(mock_coordinator, entry)
+
+    assert sensor.native_value == "serial"
+
+
+def test_connection_type_sensor_tcp_socket(mock_coordinator):
+    """A TCP entry detected as native Modbus-TCP framing reports "tcp_socket"."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {
+        "transport": "modbus",
+        "modbus_type": "tcp",
+        "modbus_framer": "socket",
+    }
+
+    sensor = sensor_mod.HyxiModbusConnectionTypeSensor(mock_coordinator, entry)
+
+    assert sensor.native_value == "tcp_socket"
+
+
+def test_connection_type_sensor_tcp_rtu_default(mock_coordinator):
+    """A TCP entry with no stored framer (created before auto-detection
+    existed) falls back to "tcp_rtu" -- the old hardcoded behavior."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus", "modbus_type": "tcp"}
+
+    sensor = sensor_mod.HyxiModbusConnectionTypeSensor(mock_coordinator, entry)
+
+    assert sensor.native_value == "tcp_rtu"
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_modbus_adds_connection_type_sensor():
+    """The connection-type sensor is Modbus-only -- a cloud entry has no
+    physical link or wire framing of its own to report (see
+    test_async_setup_entry for the cloud-entry case, where it must be
+    absent)."""
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus", "modbus_type": "serial"}
+    entry.options = {}
+    coordinator = MagicMock()
+    coordinator.data = {
+        "SN123": {
+            "deviceCode": "1",  # hybrid_inverter
+            "metrics": {"batSoc": "82"},
+            "model": "HYX-H10K-HT",
+            "device_name": "Test Hybrid",
+        }
+    }
+    coordinator.hyxi_metadata = {"last_success": "2026-03-11T12:00:00Z"}
+    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    async_add_entities = MagicMock()
+
+    with unittest.mock.patch(
+        "custom_components.hyxi_cloud.sensor.is_battery_control_enabled",
+        return_value=False,
+    ):
+        await sensor_mod.async_setup_entry(hass, entry, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    connection_type_sensors = [
+        e for e in entities if isinstance(e, sensor_mod.HyxiModbusConnectionTypeSensor)
+    ]
+    assert len(connection_type_sensors) == 1
+    assert connection_type_sensors[0].native_value == "serial"

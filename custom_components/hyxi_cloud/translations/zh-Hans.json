@@ -228,6 +228,14 @@
       "integration_last_updated": {
         "name": "插件最后更新"
       },
+      "modbus_connection_type": {
+        "name": "Connection Type",
+        "state": {
+          "tcp_rtu": "TCP Gateway (RTU passthrough)",
+          "tcp_socket": "TCP Gateway (Native Modbus-TCP)",
+          "serial": "USB Serial"
+        }
+      },
       "batcap": {
         "name": "电池容量"
       },
