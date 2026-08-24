@@ -161,6 +161,7 @@ class HyxiModbusClient:
         }
         self._serial: str | None = None
         self._identity_read = False
+        self._settings_read = False
 
     @property
     def serial_number(self) -> str:
@@ -218,6 +219,30 @@ class HyxiModbusClient:
             )
         self._identity_read = True
 
+    async def async_read_settings(self) -> None:
+        """Read the settings block once, so number entities can show the
+        device's actual current value instead of always starting at 0.
+
+        Not in TELEMETRY_COMPONENTS: settings change rarely, an extra block
+        read on every poll forever isn't worth it, and every set_* method
+        already keeps HA's own state in sync with what it writes. Read-once
+        only fills the gap that matters -- an entity's first value after HA
+        (re)starts. Tolerates failure the same way identity does: number
+        entities fall back to their restored or minimum value instead.
+        """
+        if self._settings_read:
+            return
+        try:
+            await self.settings.async_update()
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus settings block unreadable on unit %s, number entities "
+                "will fall back to their restored or minimum value: %s",
+                self._unit_id,
+                err,
+            )
+        self._settings_read = True
+
     async def async_read_all(self) -> dict[str, dict]:
         """Poll the device and return it in the coordinator's data shape.
 
@@ -226,6 +251,7 @@ class HyxiModbusClient:
         loses only that block rather than the whole poll.
         """
         await self.async_read_identity()
+        await self.async_read_settings()
 
         failed: list[str] = []
         started = time.monotonic()
@@ -376,6 +402,20 @@ class HyxiModbusClient:
             "batCapacityAh": self.battery.capacity_ah,
             "maxChargePower": _to_watts(self.battery.max_charge_power),
             "maxDischargePower": _to_watts(self.battery.max_discharge_power),
+            # Current settings-register values, for number entities to show
+            # on load instead of always starting at their minimum -- see
+            # async_read_settings. Keyed to match HyxiSettingNumberDef.key
+            # in number.py exactly. feed_in_power_limit is the one field
+            # whose entity unit (W) differs from the register's own scale
+            # (kW, see HaloSettings) -- set_feed_in_power_limit divides by
+            # 1000 on write, so this multiplies back on read.
+            "feed_in_power_limit": _to_watts(self.settings.feed_in_power_limit),
+            "vpp_min_soc": self.settings.vpp_min_soc,
+            "force_charge_start_soc": self.settings.force_charge_start_soc,
+            "force_charge_stop_soc": self.settings.force_charge_stop_soc,
+            "off_grid_min_soc": self.settings.off_grid_min_soc,
+            "self_use_soc": self.settings.self_use_soc,
+            "discharge_min_soc": self.settings.discharge_min_soc,
         }
         return {key: value for key, value in raw.items() if value is not None}
 

@@ -487,6 +487,39 @@ def test_hyxi_setting_number_init():
     assert entity._attr_native_value == 0
     assert entity._attr_native_min_value == 0
     assert entity._attr_native_max_value == 15000
+    assert entity._has_live_value is False
+
+
+def test_hyxi_setting_number_init_with_live_value():
+    """A value already present in the coordinator's metrics (read once at
+    client setup) is shown immediately, not the field's minimum."""
+    coordinator = MagicMock()
+    dev_data: dict = {"metrics": {"feed_in_power_limit": 3500}}
+    definition = number_mod.HALO_SETTING_NUMBER_DEFS[0]  # feed_in_power_limit
+
+    entity = number_mod.HyxiSettingNumber(coordinator, "SN1", dev_data, definition)
+    assert entity._attr_native_value == 3500
+    assert entity._has_live_value is True
+
+
+@pytest.mark.asyncio
+async def test_hyxi_setting_number_live_value_is_not_overridden_by_restored_state():
+    """The device's own current value at startup wins over HA's restored
+    history of what this integration last wrote -- the device is the more
+    authoritative answer to "what is this setting actually set to"."""
+    coordinator = MagicMock()
+    dev_data: dict = {"metrics": {"vpp_min_soc": 15}}
+    definition = number_mod.HALO_SETTING_NUMBER_DEFS[1]  # vpp_min_soc
+    entity = number_mod.HyxiSettingNumber(coordinator, "SN1", dev_data, definition)
+
+    mock_state = MagicMock()
+    mock_state.state = "99"
+    entity.async_get_last_state = AsyncMock(return_value=mock_state)
+
+    await entity.async_added_to_hass()
+
+    assert entity._attr_native_value == 15
+    entity.async_get_last_state.assert_not_called()
 
 
 @pytest.mark.asyncio

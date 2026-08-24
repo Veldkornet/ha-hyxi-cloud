@@ -444,13 +444,17 @@ class HyxiSettingNumber(
     on every change -- see HyxiSettingNumberDef's docstring for how this
     differs from the other number entities in this file.
 
-    Starts at each field's minimum (0 for all of them so far) rather than a
-    guessed "typical" value: this integration never reads settings
-    registers back from the device (registers.py's HaloSettings/
-    HybridSettings are holding-space and outside the regular poll), so
-    there is no way to know what the device is actually set to, and
-    showing a guess would misrepresent it as observed. 0 is never written
-    on its own -- only an explicit change by the user calls the client.
+    Starts at the device's own current value, read once at client setup
+    (ModbusClient.async_read_settings) rather than on every regular poll --
+    settings change rarely, so re-reading the whole block forever isn't
+    worth the extra traffic, and every set_* method already keeps this
+    value in sync with what HA itself writes. That one-time read means
+    this entity does not notice a change made outside HA (the app, the
+    cloud) after startup -- only its own writes and its startup snapshot.
+    Falls back to the last value *this* integration wrote (HA's restored
+    state), then to the field's minimum, if the device couldn't be read at
+    startup at all. 0 is never written on its own -- only an explicit
+    change by the user calls the client.
     """
 
     _attr_has_entity_name = True
@@ -474,7 +478,6 @@ class HyxiSettingNumber(
         self._attr_native_min_value = definition.min_val
         self._attr_native_max_value = definition.max_val
         self._attr_native_step = definition.step
-        self._attr_native_value = definition.min_val
         self._attr_icon = definition.icon
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
@@ -484,9 +487,18 @@ class HyxiSettingNumber(
             "serial_number": sn,
         }
 
+        live_value = (dev_data.get("metrics") or {}).get(definition.key)
+        self._has_live_value = live_value is not None
+        self._attr_native_value = (
+            live_value if self._has_live_value else definition.min_val
+        )
+
     async def async_added_to_hass(self) -> None:
-        """Restore the last value written, if any."""
+        """Restore the last value written, if the device's own current
+        value wasn't available at startup to show instead."""
         await super().async_added_to_hass()
+        if self._has_live_value:
+            return
         if (last_state := await self.async_get_last_state()) is not None:
             try:
                 self._attr_native_value = float(last_state.state)

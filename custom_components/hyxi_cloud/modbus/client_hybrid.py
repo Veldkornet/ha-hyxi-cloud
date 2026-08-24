@@ -88,6 +88,7 @@ class HyxiHybridModbusClient:
         }
         self._serial: str | None = None
         self._identity_read = False
+        self._settings_read = False
 
     @property
     def serial_number(self) -> str:
@@ -128,9 +129,30 @@ class HyxiHybridModbusClient:
             )
         self._identity_read = True
 
+    async def async_read_settings(self) -> None:
+        """Read the settings block once, so number entities can show the
+        device's actual current value instead of always starting at 0.
+
+        See HyxiModbusClient.async_read_settings for why this is read-once
+        rather than part of the regular poll.
+        """
+        if self._settings_read:
+            return
+        try:
+            await self.settings.async_update()
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus settings block unreadable on unit %s, number entities "
+                "will fall back to their restored or minimum value: %s",
+                self._unit_id,
+                err,
+            )
+        self._settings_read = True
+
     async def async_read_all(self) -> dict[str, dict]:
         """Poll the device and return it in the coordinator's data shape."""
         await self.async_read_identity()
+        await self.async_read_settings()
 
         failed: list[str] = []
         started = time.monotonic()
@@ -283,6 +305,20 @@ class HyxiHybridModbusClient:
             "batDisCharge": self.energy.discharge_total,
             "bat_charge_total": self.energy.charge_total,
             "bat_discharge_total": self.energy.discharge_total,
+            # Current settings-register values, for number entities to show
+            # on load instead of always starting at their minimum -- see
+            # async_read_settings. Keyed to match HyxiSettingNumberDef.key
+            # in number.py exactly. Every field here is already in its
+            # entity's own unit (gauge()/plain integer, no extra scale to
+            # invert) -- unlike HALO's feed_in_power_limit.
+            "feed_in_power": self.settings.feed_in_power,
+            "max_charge_current": self.settings.max_charge_current,
+            "max_discharge_current": self.settings.max_discharge_current,
+            "self_use_soc": self.settings.self_use_soc,
+            "backup_soc": self.settings.backup_soc,
+            "forced_charge_soc": self.settings.forced_charge_soc,
+            "feed_in_soc": self.settings.feed_in_soc,
+            "off_grid_soc": self.settings.off_grid_soc,
         }
         return {key: value for key, value in raw.items() if value is not None}
 

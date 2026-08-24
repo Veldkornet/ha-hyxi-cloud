@@ -334,6 +334,32 @@ async def test_identity_is_read_only_once(client):
 
 
 @pytest.mark.asyncio
+async def test_unreadable_settings_falls_back_gracefully(client, caplog):
+    """A device that rejects the settings block still gets every other
+    sensor -- number entities just fall back to their restored or
+    minimum value instead of the device's own current value."""
+    client._unit.fail_read(
+        4048, IllegalDataAddressError(2, "nope"), register_type="holding"
+    )
+
+    devices = await client.async_read_all()
+
+    metrics = devices["10201234567810"]["metrics"]
+    assert "vpp_min_soc" not in metrics
+    assert "feed_in_power_limit" not in metrics
+    assert "will fall back to their restored or minimum value" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_settings_are_read_only_once(client):
+    await client.async_read_all()
+    with patch.object(client.settings, "async_update") as second:
+        await client.async_read_all()
+
+    second.assert_not_called()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("call", "args", "expected_mode", "power_field", "expected_power"),
     [
