@@ -50,7 +50,9 @@ from .const import (
     DETECTION_MESSAGE_SPACING,
     DETECTION_TIMEOUT,
     DOMAIN,
+    HALO_SOC_SIGNATURE_MAX_RAW,
     MICRO_ESS_CONTROL_SUPPORTED,
+    MODBUS_FAMILY_HALO,
     MODBUS_FAMILY_SIGNATURES,
     MODBUS_TCP_FRAMERS,
     MODBUS_TYPE_SERIAL,
@@ -359,7 +361,14 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         still: those two addresses were chosen because the HALO and
         hybrid documents' confirmed ranges don't overlap (hybrid tops out
         at 3121, HALO starts at 4000), so a value at either is direct
-        evidence for that family, not just for "a device is here".
+        evidence for that family, not just for "a device is here" --
+        *if* the value itself is plausible. HALO's signature is a
+        documented 0-100% gauge, so a raw value outside 0-1000 can't
+        really be that field; it's some other device having *something*
+        at that address, not HALO answering oddly, so it doesn't count
+        as identifying evidence either (see HALO_SOC_SIGNATURE_MAX_RAW).
+        The hybrid signature has no documented range to check the same
+        way, so any non-error value there is still accepted as-is.
 
         Every signature is tried before giving up, rather than returning on
         the first exception, so a device that happens to reject its own
@@ -400,7 +409,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                     else unit.read_holding_registers
                 )
                 try:
-                    await read(address, 1)
+                    result = await read(address, 1)
                 # Both are ModbusExceptionError subclasses -- caught ahead of
                 # it on purpose. They're the *gateway* reporting it couldn't
                 # reach its target, not the target device rejecting this
@@ -438,6 +447,32 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                         space,
                         address,
                         family,
+                    )
+                    continue
+                value = result[0]
+                if family == MODBUS_FAMILY_HALO and not (
+                    0 <= value <= HALO_SOC_SIGNATURE_MAX_RAW
+                ):
+                    # A value came back, but it can't be a real SOC reading
+                    # -- soc is documented as an unsigned 0-100% gauge at
+                    # x0.1 scale, so anything outside 0-1000 raw isn't
+                    # evidence of HALO, just evidence *something* answered
+                    # (an unrelated device with something at this address,
+                    # for instance). Unlike an exception response, this
+                    # can't be trusted as identifying evidence, but it's
+                    # still not nothing -- treated the same as one.
+                    reachable = True
+                    _LOGGER.debug(
+                        "Modbus probe: unit %s returned an implausible "
+                        "value %s for %s register %s (family %s, expected "
+                        "0-%s as a raw SOC reading) -- not treated as "
+                        "identifying evidence",
+                        unit_id,
+                        value,
+                        space,
+                        address,
+                        family,
+                        HALO_SOC_SIGNATURE_MAX_RAW,
                     )
                     continue
                 _LOGGER.debug(

@@ -1404,6 +1404,35 @@ async def test_modbus_detects_halo_family_when_only_its_signature_answers(
 
 
 @pytest.mark.asyncio
+async def test_modbus_rejects_implausible_value_at_halo_signature(modbus_flow, caplog):
+    """HALO's SOC signature is a documented 0-100% gauge, so its raw value
+    can only ever be 0-1000. A value far outside that isn't HALO answering
+    oddly -- it's some other device having *something* at register 4980,
+    which the document gives no reason to expect. Must not be accepted as
+    identifying evidence just because a value came back at all."""
+    fake = _fake_modbus_modules()
+
+    async def read(address, _count):
+        if address == 0:
+            raise _FakeModbusError()
+        if address == 4980:
+            return [50000]  # far outside the documented 0-1000 raw range
+        raise AssertionError(f"unexpected address {address}")
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"base": "unidentified_family"}
+    assert "implausible" in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_modbus_refuses_to_guess_family_when_unidentified(modbus_flow, caplog):
     """A device that answers only with exceptions is confirmed present, but
     neither signature identifies it -- these two registers are the only

@@ -149,13 +149,24 @@ DEFAULT_MODBUS_FAMILY = MODBUS_FAMILY_HYBRID
 # One register from each family that's cheap and safe to read: HALO's BMS
 # SOC (input 4980, from the Micro Storage RS485 document V1.0) and the
 # hybrid's own communication protocol version (input 0, from the RS485_
-# MODBUS RTU Hybrid Inverter Protocol V4.1). A real value at either is
+# MODBUS RTU Hybrid Inverter Protocol V4.1). A plausible value at either is
 # treated as identifying evidence; a Modbus exception response there still
 # proves the device is present and speaking Modbus, just not which family.
 MODBUS_FAMILY_SIGNATURES: tuple[tuple[str, str, int], ...] = (
     (MODBUS_FAMILY_HYBRID, "input", 0),
     (MODBUS_FAMILY_HALO, "input", 4980),
 )
+
+# HALO's soc field (registers.py) is a documented unsigned 0-100% gauge at
+# x0.1 scale, so its raw register value can only ever be 0-1000. A value
+# outside that range at the SOC signature register isn't a HALO answering
+# with an odd reading -- it's some other device having *something* at that
+# address, which the document gives no reason to expect. There's no
+# equivalent bound for the hybrid signature (protocol_version, input 0):
+# the document doesn't define an expected range for it, and inventing one
+# would be exactly the kind of guess docs/modbus-provenance.md exists to
+# avoid presenting as fact.
+HALO_SOC_SIGNATURE_MAX_RAW = 1000
 
 # Minimum inter-frame spacing per family. The HALO document requires more
 # than 200ms; the hybrid document requires more than 500ms -- a real
