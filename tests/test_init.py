@@ -595,12 +595,16 @@ async def test_async_remove_entry_no_credentials_is_noop(mock_hass, mock_entry):
 
 
 @pytest.mark.asyncio
-async def test_async_setup_battery_protection_cleans_up_on_start_failure(
-    mock_hass, mock_entry
+async def test_async_setup_battery_protection_logs_and_continues_on_start_failure(
+    mock_hass, mock_entry, caplog
 ):
-    """If a protection controller fails to start, every controller created
-    in this batch is stopped and removed, and the exception propagates
-    rather than leaving half-started controllers behind."""
+    """If a protection controller's initial start fails (bus contention, a
+    provider-controlled battery that will never accept a local write, a
+    transient timeout), that must not take the whole config entry down --
+    the controller stays registered and a warning is logged instead, so it
+    can retry naturally on the next coordinator refresh."""
+    import logging
+
     from custom_components.hyxi_cloud import _async_setup_battery_protection
     from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 
@@ -617,8 +621,18 @@ async def test_async_setup_battery_protection_cleans_up_on_start_failure(
         "async_start",
         AsyncMock(side_effect=RuntimeError("listener setup failed")),
     ):
-        with pytest.raises(RuntimeError, match="listener setup failed"):
-            await _async_setup_battery_protection(mock_hass, coordinator)
+        caplog.set_level(logging.WARNING)
+        # Must not raise -- a single device's failed start no longer takes
+        # the whole config entry down.
+        await _async_setup_battery_protection(mock_hass, coordinator)
+
+    # The controller stays registered (not cleaned up) so the coordinator's
+    # own listener keeps it retrying on future refreshes.
+    assert "SN123" in coordinator.protection_controllers
+    assert any(
+        "failed to start" in rec.message and "listener setup failed" in rec.message
+        for rec in caplog.records
+    )
 
 
 @pytest.mark.asyncio
@@ -638,14 +652,12 @@ async def test_async_setup_battery_protection_disabled_is_noop(mock_hass, mock_e
 
 
 @pytest.mark.asyncio
-async def test_async_setup_battery_protection_cancels_still_pending_tasks(
+async def test_async_setup_battery_protection_isolates_sibling_failures(
     mock_hass, mock_entry
 ):
-    """When one controller fails to start while a sibling controller is
-    still starting, the still-running task is explicitly cancelled during
-    cleanup rather than left dangling."""
-    import asyncio
-
+    """One device's controller failing to start must not affect a sibling
+    device's controller in the same setup batch -- each stays registered
+    independently of whether its own start succeeded."""
     from custom_components.hyxi_cloud import _async_setup_battery_protection
     from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 
@@ -655,22 +667,19 @@ async def test_async_setup_battery_protection_cancels_still_pending_tasks(
     coordinator.protection_controllers = {}
     coordinator.data = {
         "SN_FAIL": {"device_type_code": "1", "model": "H10K-HT"},  # three-phase
-        "SN_SLOW": {"device_type_code": "1", "model": "H5K-HS"},  # single-phase
+        "SN_OK": {"device_type_code": "1", "model": "H5K-HS"},  # single-phase
     }
 
     async def fake_start(self):
         if self._sn == "SN_FAIL":  # pylint: disable=protected-access
             raise RuntimeError("boom")
-        await asyncio.sleep(3600)  # still "starting" when cleanup runs
 
-    with (
-        patch.object(HyxiBatteryProtectionController, "async_start", fake_start),
-        patch.object(HyxiBatteryProtectionController, "async_stop", new=AsyncMock()),
-    ):
-        with pytest.raises(RuntimeError, match="boom"):
-            await _async_setup_battery_protection(mock_hass, coordinator)
+    with patch.object(HyxiBatteryProtectionController, "async_start", fake_start):
+        # Must not raise -- SN_FAIL's failure is isolated to itself.
+        await _async_setup_battery_protection(mock_hass, coordinator)
 
-    assert not coordinator.protection_controllers
+    assert "SN_FAIL" in coordinator.protection_controllers
+    assert "SN_OK" in coordinator.protection_controllers
 
 
 @pytest.mark.asyncio

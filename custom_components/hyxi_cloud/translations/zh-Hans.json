@@ -98,6 +98,7 @@
         "description": "调整插件与 HYXI 的通信方式。\n\n> ⚠️ **设备控制**：如果您的逆变器已由您的电力供应商管理，或已加入虚拟电厂（VPP）计划，请谨慎启用。在供应商掌控期间发送命令可能与其调度计划冲突。\n\n---",
         "data": {
           "update_interval": "轮询间隔 (1-60 分钟, 默认: 5)",
+          "update_interval_modbus": "轮询间隔 (1-60 秒, 默认: 15)",
           "back_discovery": "启用通过报警发现设备 (高级)",
           "enable_battery_control": "启用设备控制与保护",
           "enable_energy_manager": "启用独立能源管理器 (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "云端状态"
+        "name": "连接状态"
       },
       "device_alarm": {
         "name": "当前故障",

@@ -40,6 +40,7 @@ from .const import (
     CONF_TRANSPORT,
     DEFAULT_MODBUS_BAUDRATE,
     DEFAULT_MODBUS_FAMILY,
+    DEFAULT_MODBUS_INTERVAL,
     DEFAULT_MODBUS_PORT,
     DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
@@ -723,7 +724,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 if self._options
                 else dict(self._config_entry.options)
             )
-            self._options["update_interval"] = user_input["update_interval"]
+            self._options["update_interval"] = user_input.get(
+                "update_interval", user_input.get("update_interval_modbus")
+            )
             self._options[CONF_BACK_DISCOVERY] = user_input.get(
                 CONF_BACK_DISCOVERY, False
             )
@@ -799,14 +802,23 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         # Pull current values or defaults
         options = self._options if self._options else self._config_entry.options
-        current_interval = options.get("update_interval", 5)
+        is_modbus = is_modbus_entry(self._config_entry)
+        # Modbus and cloud both store this as "update_interval", but a
+        # rate-limited cloud API and a wire mean very different numbers
+        # (minutes vs seconds -- see modbus_coordinator.py), so each
+        # transport gets its own schema key with a label that says which,
+        # rather than one field whose unit silently depends on transport.
+        interval_key = "update_interval_modbus" if is_modbus else "update_interval"
+        current_interval = options.get(
+            "update_interval", DEFAULT_MODBUS_INTERVAL if is_modbus else 5
+        )
         em_enabled = options.get(CONF_EM_ENABLED, False)
         has_em_capable = self._has_controllable_inverter()
         has_control_capable = self._has_control_capable_device()
 
         schema_dict = {
             # Slider for Interval
-            vol.Required("update_interval", default=current_interval): vol.All(
+            vol.Required(interval_key, default=current_interval): vol.All(
                 vol.Coerce(int), vol.Range(min=1, max=60)
             ),
         }

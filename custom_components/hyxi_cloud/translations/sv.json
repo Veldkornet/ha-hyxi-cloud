@@ -98,6 +98,7 @@
         "description": "Justera hur din integration kommunicerar med HYXI.\n\n> ⚠️ **Enhetskontroll**: Aktivera med försiktighet om din växelriktare redan hanteras av din energileverantör eller är ansluten till ett Virtuellt Kraftverk (VPP)-program. Att skicka kommandon medan leverantören har kontroll kan komma i konflikt med deras dispatch-schema.\n\n---",
         "data": {
           "update_interval": "Uppdateringsintervall (1-60 minuter, standard: 5)",
+          "update_interval_modbus": "Uppdateringsintervall (1-60 sekunder, standard: 15)",
           "back_discovery": "Aktivera upptäckt via larm (Avancerat)",
           "enable_battery_control": "Aktivera enhetskontroll och -skydd",
           "enable_energy_manager": "Aktivera Energihantering Fristående (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Molnstatus"
+        "name": "Anslutningsstatus"
       },
       "device_alarm": {
         "name": "Aktiva problem",

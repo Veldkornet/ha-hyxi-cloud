@@ -31,6 +31,7 @@ from .const import (
     get_raw_device_code,
     get_software_version,
     is_battery_control_enabled,
+    is_modbus_entry,
     is_null_value,
     is_zero_value,
     mask_sn,
@@ -1351,7 +1352,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 entities.append(HyxiSensor(coordinator, sn, description))
     # 2. Integration Health
     entities.append(HyxiLastUpdateSensor(coordinator, entry))
-    entities.append(HyxiSubscriptionStatusSensor(coordinator, entry))
+    # Push is a HYXI cloud webhook subscription; a point-to-point RS485
+    # link has no equivalent, so a Modbus entry never shows this sensor.
+    if not is_modbus_entry(entry):
+        entities.append(HyxiSubscriptionStatusSensor(coordinator, entry))
 
     # 2b. Microinverter Aggregate Sensors
     has_micro_inverter = any(
@@ -1879,11 +1883,12 @@ class HyxiLastUpdateSensor(
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_integration_last_updated"
+        modbus = is_modbus_entry(entry)
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
+            "name": "HYXI Modbus Service" if modbus else "HYXI Cloud Service",
             "manufacturer": MANUFACTURER,
-            "model": "Cloud API Bridge",
+            "model": "Local Modbus Bridge" if modbus else "Cloud API Bridge",
         }
         self._update_native_value()
 

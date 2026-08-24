@@ -98,6 +98,7 @@
         "description": "Juster hvordan din integration kommunikerer med HYXI.\n\n> ⚠️ **Enhedsstyring**: Aktivér med forsigtighed, hvis din inverter allerede administreres af din energileverandør eller er tilmeldt et Virtuelt Kraftværk (VPP)-program. Afsendelse af kommandoer, mens din leverandør har kontrol, kan komme i konflikt med deres dispatch-plan.\n\n---",
         "data": {
           "update_interval": "Opdateringsinterval (1-60 minutter, standard: 5)",
+          "update_interval_modbus": "Opdateringsinterval (1-60 sekunder, standard: 15)",
           "back_discovery": "Aktiver opdagelse via alarmer (avanceret)",
           "enable_battery_control": "Aktiver enhedskontrol og -beskyttelse",
           "enable_energy_manager": "Aktivér Energistyring Standalone (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud Status"
+        "name": "Forbindelsesstatus"
       },
       "device_alarm": {
         "name": "Aktive problemer",

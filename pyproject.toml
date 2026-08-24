@@ -15,10 +15,12 @@ dependencies = [
     "aiohttp>=3.13.5",
     "voluptuous",
     "hyxi-cloud-api>=1.4.4",
-    # Local RS485 transport. Home Assistant's own Modbus abstraction, with
-    # the tmodbus backend so nothing here contends with core's pinned
-    # pymodbus. Imported lazily -- a cloud-only entry never loads it.
+    # Local RS485 transport (imported lazily; a cloud-only entry never loads it).
     "modbus-connection[tmodbus]>=4.8.1",
+    # Listed explicitly too: HA's requirement installer checks package+version
+    # only, not extras, so a bare modbus-connection pulled in by something
+    # else can mask this and leave tmodbus itself uninstalled.
+    "tmodbus[async-serial]>=0.5.1",
 ]
 
 [project.optional-dependencies]

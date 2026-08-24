@@ -98,6 +98,7 @@
         "description": "Adjust how your integration communicates with HYXI.\n\n> ⚠️ **Device Control**: Enable with caution if your inverter is already managed by your energy provider or enrolled in a Virtual Power Plant (VPP) programme. Sending commands while your provider has control may conflict with their dispatch schedule.\n\n---",
         "data": {
           "update_interval": "Polling Interval (1-60 Minutes, Default: 5)",
+          "update_interval_modbus": "Polling Interval (1-60 Seconds, Default: 15)",
           "back_discovery": "Enable discovery via alarms (Advanced)",
           "enable_battery_control": "Enable Device Control & Protection",
           "enable_energy_manager": "Enable Energy Manager Standalone (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud Status"
+        "name": "Connection Status"
       },
       "device_alarm": {
         "name": "Active Problems",

@@ -98,6 +98,7 @@
         "description": "Säädä, miten integraatiosi kommunikoi HYXIn kanssa.\n\n> ⚠️ **Laitteen ohjaus**: Ota käyttöön varoen, jos energiantoimittajasi jo hallitsee invertteriäsi tai se on liitetty virtuaalivoimalaohjelmaan (VPP). Komentojen lähettäminen, kun toimittajallasi on hallinta, voi olla ristiriidassa heidän ohjausaikataulunsa kanssa.\n\n---",
         "data": {
           "update_interval": "Päivitysväli (1-60 minuuttia, oletus: 5)",
+          "update_interval_modbus": "Päivitysväli (1-60 sekuntia, oletus: 15)",
           "back_discovery": "Ota löytäminen käyttöön hällytysten kautta (edistynyt)",
           "enable_battery_control": "Ota laitteen ohjaus ja suojaus käyttöön",
           "enable_energy_manager": "Ota käyttöön itsenäinen Energianhallinta (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Pilvipalvelun tila"
+        "name": "Yhteyden tila"
       },
       "device_alarm": {
         "name": "Aktiiviset ongelmat",

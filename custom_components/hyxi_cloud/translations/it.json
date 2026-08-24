@@ -98,6 +98,7 @@
         "description": "Regola il modo in cui la tua integrazione comunica con HYXI.\n\n> ⚠️ **Controllo del dispositivo**: Abilita con cautela se il tuo inverter è già gestito dal tuo fornitore di energia o è iscritto a un programma di Centrale Elettrica Virtuale (VPP). L'invio di comandi mentre il fornitore ha il controllo potrebbe entrare in conflitto con il suo programma di dispacciamento.\n\n---",
         "data": {
           "update_interval": "Intervallo di aggiornamento (1-60 Minuti, Predefinito: 5)",
+          "update_interval_modbus": "Intervallo di aggiornamento (1-60 Secondi, Predefinito: 15)",
           "back_discovery": "Abilita il rilevamento tramite allarmi (Avanzato)",
           "enable_battery_control": "Abilita controllo e protezione dispositivo",
           "enable_energy_manager": "Abilita Gestore Energia Standalone (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Stato Cloud"
+        "name": "Stato Connessione"
       },
       "device_alarm": {
         "name": "Problemi attivi",

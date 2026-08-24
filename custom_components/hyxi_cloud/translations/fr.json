@@ -98,6 +98,7 @@
         "description": "Ajustez la façon dont votre intégration communique avec HYXI.\n\n> ⚠️ **Contrôle de l'appareil** : Activez avec prudence si votre onduleur est déjà géré par votre fournisseur d'énergie ou inscrit à un programme de centrale électrique virtuelle (VPP). L'envoi de commandes pendant que votre fournisseur a le contrôle peut entrer en conflit avec son calendrier de répartition.\n\n---",
         "data": {
           "update_interval": "Intervalle de mise à jour (1-60 minutes, Défaut : 5)",
+          "update_interval_modbus": "Intervalle de mise à jour (1-60 secondes, Défaut : 15)",
           "back_discovery": "Activer la découverte via les alarmes (Avancé)",
           "enable_battery_control": "Activer le contrôle et la protection de l'appareil",
           "enable_energy_manager": "Activer le Gestionnaire d'énergie autonome (Bêta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Statut du Cloud"
+        "name": "État de la Connexion"
       },
       "device_alarm": {
         "name": "Problèmes Actifs",

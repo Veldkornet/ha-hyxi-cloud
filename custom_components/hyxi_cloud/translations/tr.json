@@ -98,6 +98,7 @@
         "description": "Entegrasyonunuzun HYXI ile nasıl iletişim kuracağını ayarlayın.\n\n> ⚠️ **Cihaz Kontrolü**: İnverteriniz zaten enerji sağlayıcınız tarafından yönetiliyorsa veya bir Sanal Güç Santrali (VPP) programına kayıtlıysa dikkatli bir şekilde etkinleştirin. Sağlayıcınız kontrol sahibiyken komut göndermek, onların sevkiyat programıyla çakışabilir.\n\n---",
         "data": {
           "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
+          "update_interval_modbus": "Sorgulama Aralığı (1-60 Saniye, Varsayılan: 15)",
           "back_discovery": "Alarmlar aracılığıyla keşfi etkinleştir (Gelişmiş)",
           "enable_battery_control": "Cihaz kontrolünü ve korumasını etkinleştir",
           "enable_energy_manager": "Bağımsız Enerji Yöneticisini Etkinleştir (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Bulut Durumu"
+        "name": "Bağlantı Durumu"
       },
       "device_alarm": {
         "name": "Aktif Sorunlar",

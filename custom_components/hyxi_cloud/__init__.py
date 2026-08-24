@@ -554,6 +554,7 @@ async def _async_setup_battery_protection(
         return
 
     tasks = []
+    task_sns = []
     for sn, dev_data in coordinator.data.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if not is_control_capable_device_type(coordinator.entry, device_type):
@@ -583,25 +584,32 @@ async def _async_setup_battery_protection(
 
         controller = HyxiBatteryProtectionController(hass, coordinator, sn)
         coordinator.protection_controllers[sn] = controller
+        task_sns.append(sn)
         tasks.append(hass.async_create_task(controller.async_start()))
 
     if tasks:
-        try:
-            await asyncio.gather(*tasks)
-        except Exception, asyncio.CancelledError:
-            _LOGGER.debug(
-                "Battery protection startup failed, cleaning up controllers",
-                exc_info=True,
-            )
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
-
-            for controller in coordinator.protection_controllers.values():
-                await controller.async_stop()
-            coordinator.protection_controllers.clear()
-            raise
+        # return_exceptions=True rather than a bare gather(): a single
+        # device's initial control write failing (bus contention, a
+        # provider-controlled battery that will never accept local writes,
+        # a transient timeout) must not take the whole config entry down.
+        # HyxiBatteryProtectionController.async_start() registers its
+        # coordinator listener before attempting that write, so the
+        # controller stays "started" and retries naturally on the next
+        # coordinator refresh even when this first attempt fails --
+        # nothing further to clean up here. task_sns is tracked alongside
+        # tasks explicitly, rather than zipping against
+        # coordinator.protection_controllers, so pairing stays correct even
+        # if this function is ever called again on a coordinator that
+        # already holds controllers from an earlier call.
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for sn, result in zip(task_sns, results, strict=True):
+            if isinstance(result, Exception):
+                _LOGGER.warning(
+                    "Battery protection for %s failed to start (will retry on "
+                    "the next update): %s",
+                    mask_sn(sn),
+                    result,
+                )
 
 
 async def _async_resolve_webhook_url(

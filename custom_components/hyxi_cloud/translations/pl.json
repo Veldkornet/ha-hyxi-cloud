@@ -98,6 +98,7 @@
         "description": "Dostosuj sposób komunikacji integracji z HYXI.\n\n> ⚠️ **Sterowanie urządzeniem**: Włączaj ostrożnie, jeśli twój falownik jest już zarządzany przez dostawcę energii lub jest zapisany do programu Wirtualnej Elektrowni (VPP). Wysyłanie poleceń, gdy kontrolę ma twój dostawca, może kolidować z jego harmonogramem dyspozytorskim.\n\n---",
         "data": {
           "update_interval": "Interwał odpytywania (1-60 minut, domyślnie: 5)",
+          "update_interval_modbus": "Interwał odpytywania (1-60 sekund, domyślnie: 15)",
           "back_discovery": "Włącz wykrywanie przez alarmy (zaawansowane)",
           "enable_battery_control": "Włącz kontrolę i ochronę urządzenia",
           "enable_energy_manager": "Włącz samodzielny Menedżer Energii (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Status chmury"
+        "name": "Status połączenia"
       },
       "device_alarm": {
         "name": "Aktywne problemy",

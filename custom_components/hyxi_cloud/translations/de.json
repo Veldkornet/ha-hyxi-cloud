@@ -98,6 +98,7 @@
         "description": "Passen Sie an, wie Ihre Integration mit HYXI kommuniziert.\n\n> ⚠️ **Gerätesteuerung**: Aktivieren Sie dies mit Vorsicht, wenn Ihr Wechselrichter bereits von Ihrem Energieversorger verwaltet wird oder an einem Virtual-Power-Plant-Programm (VPP) teilnimmt. Das Senden von Befehlen, während Ihr Versorger die Kontrolle hat, kann mit dessen Dispatch-Zeitplan in Konflikt geraten.\n\n---",
         "data": {
           "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
+          "update_interval_modbus": "Abfrageintervall (1-60 Sekunden, Standard: 15)",
           "back_discovery": "Discovery über Alarme aktivieren (Erweitert)",
           "enable_battery_control": "Gerätesteuerung und -schutz aktivieren",
           "enable_energy_manager": "Energie-Manager Standalone aktivieren (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud Status"
+        "name": "Verbindungsstatus"
       },
       "device_alarm": {
         "name": "Aktive Probleme",

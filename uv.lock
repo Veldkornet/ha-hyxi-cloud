@@ -994,6 +994,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "hyxi-cloud-api" },
     { name = "modbus-connection", extra = ["tmodbus"] },
+    { name = "tmodbus", extra = ["async-serial"] },
     { name = "voluptuous" },
 ]
 
@@ -1024,6 +1025,7 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.4.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=7.1.0" },
     { name = "pytest-homeassistant-custom-component", marker = "extra == 'test'", specifier = ">=0.13.355" },
+    { name = "tmodbus", extras = ["async-serial"], specifier = ">=0.5.1" },
     { name = "voluptuous" },
 ]
 provides-extras = ["modbus", "test"]

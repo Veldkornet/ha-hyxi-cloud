@@ -98,6 +98,7 @@
         "description": "Ajuste como a integração se comunica com HYXI.\n\n> ⚠️ **Controlo do Dispositivo**: Ative com cautela se o seu inversor já estiver a ser gerido pelo seu fornecedor de energia ou estiver inscrito num programa de Central Elétrica Virtual (VPP). O envio de comandos enquanto o fornecedor tem o controlo pode entrar em conflito com o seu calendário de despacho.\n\n---",
         "data": {
           "update_interval": "Intervalo de Atualização (1-60 minutos, padrão: 5)",
+          "update_interval_modbus": "Intervalo de Atualização (1-60 segundos, padrão: 15)",
           "back_discovery": "Habilitar descoberta via alarmes (Avançado)",
           "enable_battery_control": "Ativar controle e proteção do dispositivo",
           "enable_energy_manager": "Ativar Gestor de Energia Autónomo (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Status da Nuvem"
+        "name": "Estado da Ligação"
       },
       "device_alarm": {
         "name": "Problemas Ativos",

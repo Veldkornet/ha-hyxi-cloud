@@ -29,9 +29,13 @@ from .const import (
     BASE_URL_DEFAULT,
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
+    CONF_MODBUS_DEVICE,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
     DOMAIN,
     MANUFACTURER,
     get_raw_device_code,
+    is_modbus_entry,
     mask_sn,
     normalize_device_type,
 )
@@ -94,16 +98,35 @@ class HyxiConnectivitySensor(
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_connectivity"
-        self._cloud_endpoint = (
-            urlparse(entry.data.get("base_url") or BASE_URL_DEFAULT).netloc
-            or urlparse(BASE_URL_DEFAULT).netloc
-        )
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
-            "manufacturer": MANUFACTURER,
-            "configuration_url": "https://www.hyxicloud.com",
-        }
+
+        if is_modbus_entry(entry):
+            # No cloud endpoint exists for a point-to-point RS485 link --
+            # show the actual thing this entry talks to instead, rather
+            # than falling back to the cloud's default hostname on a
+            # connection that has nothing to do with it.
+            if entry.data.get(CONF_MODBUS_DEVICE):
+                self._connection_target = entry.data[CONF_MODBUS_DEVICE]
+            else:
+                self._connection_target = (
+                    f"{entry.data.get(CONF_MODBUS_HOST)}:"
+                    f"{entry.data.get(CONF_MODBUS_PORT)}"
+                )
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, entry.entry_id)},
+                "name": "HYXI Modbus Service",
+                "manufacturer": MANUFACTURER,
+            }
+        else:
+            self._connection_target = (
+                urlparse(entry.data.get("base_url") or BASE_URL_DEFAULT).netloc
+                or urlparse(BASE_URL_DEFAULT).netloc
+            )
+            self._attr_device_info = {
+                "identifiers": {(DOMAIN, entry.entry_id)},
+                "name": "HYXI Cloud Service",
+                "manufacturer": MANUFACTURER,
+                "configuration_url": "https://www.hyxicloud.com",
+            }
 
     @property
     def is_on(self) -> bool:
@@ -156,7 +179,7 @@ class HyxiConnectivitySensor(
             "connection_quality": quality,
             "last_successful_connection": last_success_str,
             "data_freshness": freshness,
-            "cloud_endpoint": self._cloud_endpoint,
+            "connection_target": self._connection_target,
             "last_error": metadata.get("last_error") or "None",
             "cache_active": bool(metadata.get("cache_active", False)),
             "api_status": metadata.get("api_status") or "Starting",

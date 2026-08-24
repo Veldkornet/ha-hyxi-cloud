@@ -98,6 +98,7 @@
         "description": "Pas aan hoe uw integratie communiceert met HYXI.\n\n> ⚠️ **Apparaatbediening**: Schakel dit voorzichtig in als uw omvormer al wordt beheerd door uw energieleverancier of is aangemeld voor een Virtual Power Plant (VPP)-programma. Het verzenden van commando's terwijl uw leverancier de controle heeft, kan in strijd zijn met hun dispatch-schema.\n\n---",
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
+          "update_interval_modbus": "Update-interval (1-60 seconden, Standaard: 15)",
           "back_discovery": "Ontdekking via alarmen inschakelen (Geavanceerd)",
           "enable_battery_control": "Apparaatcontrole en -bescherming inschakelen",
           "enable_energy_manager": "Energiebeheer Standalone inschakelen (Beta)",
@@ -125,7 +126,7 @@
   "entity": {
     "binary_sensor": {
       "connectivity": {
-        "name": "Cloud Status"
+        "name": "Verbindingsstatus"
       },
       "device_alarm": {
         "name": "Actieve Problemen",

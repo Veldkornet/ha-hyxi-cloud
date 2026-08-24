@@ -203,6 +203,44 @@ def test_connectivity_sensor_diagnostics(mock_coordinator, mock_entry):
     attrs = sensor.extra_state_attributes
     assert attrs["last_error"] == "Failed to pulse"
 
+
+def test_connectivity_sensor_cloud_device_info(mock_coordinator, mock_entry):
+    """A cloud entry names the device after HYXI's cloud service and shows
+    the cloud API hostname as the connection target."""
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, mock_entry)
+
+    assert sensor._attr_device_info["name"] == "HYXI Cloud Service"
+    assert "configuration_url" in sensor._attr_device_info
+    assert sensor.extra_state_attributes["connection_target"] == "open.hyxicloud.com"
+
+
+def test_connectivity_sensor_modbus_tcp_device_info(mock_coordinator):
+    """A Modbus TCP entry names the device after the local service and
+    shows host:port as the connection target, not a cloud hostname."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {
+        "transport": "modbus",
+        "modbus_host": "192.168.133.9",
+        "modbus_port": 4196,
+    }
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, entry)
+
+    assert sensor._attr_device_info["name"] == "HYXI Modbus Service"
+    assert "configuration_url" not in sensor._attr_device_info
+    assert sensor.extra_state_attributes["connection_target"] == "192.168.133.9:4196"
+
+
+def test_connectivity_sensor_modbus_serial_device_info(mock_coordinator):
+    """A Modbus serial entry shows the serial device path as the
+    connection target."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {"transport": "modbus", "modbus_device": "/dev/ttyUSB0"}
+    sensor = bs_mod.HyxiConnectivitySensor(mock_coordinator, entry)
+
+    assert sensor.extra_state_attributes["connection_target"] == "/dev/ttyUSB0"
+
     # Connection Quality
     mock_coordinator.hyxi_metadata["last_attempts"] = 1
     attrs = sensor.extra_state_attributes
