@@ -1589,6 +1589,21 @@ async def test_tcp_reachable_true_on_successful_connect(mock_open, config_flow):
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow.asyncio.open_connection")
+async def test_tcp_reachable_true_even_if_close_races(mock_open, config_flow):
+    """The connect itself succeeded -- that's what's being reported here --
+    so a close-time race (the remote end already gone) must not flip the
+    result to False."""
+    writer = MagicMock()
+    writer.wait_closed = AsyncMock(side_effect=OSError("connection already gone"))
+    mock_open.return_value = (MagicMock(), writer)
+
+    result = await config_flow._tcp_reachable("192.168.1.50", 502)
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.asyncio.open_connection")
 async def test_tcp_reachable_false_on_connection_refused(mock_open, config_flow):
     mock_open.side_effect = ConnectionRefusedError("no listener on that port")
 
