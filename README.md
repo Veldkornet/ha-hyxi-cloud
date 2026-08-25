@@ -398,7 +398,7 @@ As an alternative to the HYXI Cloud API, the integration can talk directly to on
 
 | Family | Models | Register map source |
 | :--- | :--- | :--- |
-| **Hybrid Inverter** | HYX-H(5~12)K-HT *(incl. H10K-HT)*, HYX-H(15~25)K-HT, HYX-H(6~15)K-HTA, HYX-H(6~15)K-HTAC | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1 |
+| **Hybrid Inverter** | HYX-H(5\~12)K-HT *(incl. H10K-HT)*, HYX-H(15\~25)K-HT, HYX-H(6\~15)K-HTA, HYX-H(6\~15)K-HTAC | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1 |
 | **Micro ESS (HALO)** | HYX-MS3000AC | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0 |
 
 Both maps cover live telemetry (grid/off-grid power, PV strings, battery/BMS detail, energy counters), charge/discharge control at the client level, and a first slice of hardware settings — feed-in power limit, VPP minimum SOC (HALO) or max charge/discharge current (Hybrid) — exposed as number entities and power on/off/restart buttons on Hybrid. Wiring and serial settings — 115200bps, no parity, 8 data bits, 1 stop bit — are documented per model in `docs/modbus-provenance.md`; the two families use different physical pins and disagree on the minimum spacing between frames, both handled automatically once your model is detected.
