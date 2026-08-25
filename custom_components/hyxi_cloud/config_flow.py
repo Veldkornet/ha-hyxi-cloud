@@ -569,7 +569,11 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             return "modbus_unavailable", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
 
         if not await self._tcp_reachable(host, port):
-            return "cannot_connect", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
+            # A dedicated key, not "cannot_connect" -- that string is
+            # worded for the cloud path ("Failed to connect to HYXI
+            # servers"), shared across every locale, and wrong for a local
+            # gateway. See PR #675 review discussion.
+            return "gateway_unreachable", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
 
         from modbus_connection import ModbusTcpParams
 

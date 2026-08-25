@@ -83,6 +83,7 @@
       "unknown": "Uventet fejl opstod",
       "no_devices": "Ingen anlæg eller enheder fundet. Hvis din udvikler-e-mail er forskellig fra din app-e-mail, skal du først dele dit anlæg fra appen til udvikler-e-mailen.",
       "no_device": "Intet svarede på bussen. Tjek kablingen, slaveadressen og baudraten.",
+      "gateway_unreachable": "Kunne ikke oprette forbindelse til gatewayen. Tjek værten og porten, og at den er tændt og tilgængelig på dit netværk.",
       "modbus_unavailable": "Modbus-understøttelse er ikke installeret. Genstart Home Assistant, og prøv igen.",
       "unidentified_family": "En enhed svarede, men kunne ikke bekræftes som en understøttet HALO- eller hybrid-vekselretter. Tjek slaveadressen, eller om dette er en understøttet model."
     },

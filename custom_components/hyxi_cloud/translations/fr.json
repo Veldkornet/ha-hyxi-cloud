@@ -83,6 +83,7 @@
       "unknown": "Une erreur inattendue est survenue",
       "no_devices": "Aucune centrale ni aucun appareil trouvé. Si votre adresse e-mail de développeur diffère de celle de votre application, vous devez d'abord partager votre centrale depuis l'application avec l'adresse e-mail de développeur.",
       "no_device": "Rien n'a répondu sur le bus. Vérifiez le câblage, l'adresse esclave et le débit en bauds.",
+      "gateway_unreachable": "Échec de la connexion à la passerelle. Vérifiez l'hôte et le port, ainsi que son alimentation et son accessibilité sur votre réseau.",
       "modbus_unavailable": "La prise en charge de Modbus n'est pas installée. Redémarrez Home Assistant et réessayez.",
       "unidentified_family": "Un appareil a répondu, mais il n'a pas pu être confirmé comme un onduleur HALO ou hybride pris en charge. Vérifiez l'adresse esclave, ou qu'il s'agit bien d'un modèle pris en charge."
     },

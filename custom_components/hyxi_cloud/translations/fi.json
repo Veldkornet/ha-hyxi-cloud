@@ -83,6 +83,7 @@
       "unknown": "Tapahtui odottamaton virhe",
       "no_devices": "Laitoksia tai laitteita ei löytynyt. Jos kehittäjän sähköpostiosoitteesi eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin jaettava laitoksesi sovelluksesta kehittäjän sähköpostiosoitteeseen.",
       "no_device": "Väylässä ei vastannut mikään. Tarkista johdotus, orjaosoite ja baudinopeus.",
+      "gateway_unreachable": "Yhteys yhdyskäytävään epäonnistui. Tarkista isäntä ja portti sekä se, että se on päällä ja tavoitettavissa verkossasi.",
       "modbus_unavailable": "Modbus-tukea ei ole asennettu. Käynnistä Home Assistant uudelleen ja yritä uudestaan.",
       "unidentified_family": "Laite vastasi, mutta sitä ei voitu vahvistaa tuetuksi HALO- tai hybridi-invertteriksi. Tarkista orjaosoite, tai onko tämä tuettu malli."
     },

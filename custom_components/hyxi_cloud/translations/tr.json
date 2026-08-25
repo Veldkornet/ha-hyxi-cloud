@@ -83,6 +83,7 @@
       "unknown": "Beklenmedik bir hata oluştu",
       "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız.",
       "no_device": "Hatta hiçbir şey yanıt vermedi. Kablolamayı, slave adresini ve baud hızını kontrol edin.",
+      "gateway_unreachable": "Ağ geçidine bağlanılamadı. Ana bilgisayarı ve bağlantı noktasını, cihazın açık ve ağınızda erişilebilir olduğunu kontrol edin.",
       "modbus_unavailable": "Modbus desteği yüklü değil. Home Assistant'ı yeniden başlatıp tekrar deneyin.",
       "unidentified_family": "Bir cihaz yanıt verdi, ancak desteklenen bir HALO veya hibrit invertör olduğu doğrulanamadı. Slave adresini veya desteklenen bir model olup olmadığını kontrol edin."
     },

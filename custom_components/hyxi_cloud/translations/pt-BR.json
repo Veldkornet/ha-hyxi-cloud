@@ -83,6 +83,7 @@
       "unknown": "Ocorreu um erro inesperado",
       "no_devices": "Nenhuma planta ou dispositivo encontrado. Se o seu e-mail de desenvolvedor for diferente do e-mail do aplicativo, você deve primeiro compartilhar sua Planta do aplicativo para o e-mail de desenvolvedor.",
       "no_device": "Nada respondeu no barramento. Verifique o cabeamento, o endereço escravo e a taxa de baud.",
+      "gateway_unreachable": "Falha ao conectar ao gateway. Verifique o host e a porta, e se ele está ligado e acessível na sua rede.",
       "modbus_unavailable": "O suporte a Modbus não está instalado. Reinicie o Home Assistant e tente novamente.",
       "unidentified_family": "Um dispositivo respondeu, mas não foi possível confirmá-lo como um inversor HALO ou híbrido compatível. Verifique o endereço escravo, ou se este é um modelo compatível."
     },

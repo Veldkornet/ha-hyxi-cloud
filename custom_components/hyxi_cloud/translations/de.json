@@ -83,6 +83,7 @@
       "unknown": "Ein unerwarteter Fehler ist aufgetreten",
       "no_devices": "Keine Anlagen oder Geräte gefunden. Wenn sich Ihre Entwickler-E-Mail von Ihrer App-E-Mail unterscheidet, müssen Sie zuerst Ihre Anlage aus der App für die Entwickler-E-Mail freigeben.",
       "no_device": "Auf dem Bus hat nichts geantwortet. Prüfen Sie die Verkabelung, die Slave-Adresse und die Baudrate.",
+      "gateway_unreachable": "Verbindung zum Gateway fehlgeschlagen. Prüfen Sie Host und Port sowie, dass es eingeschaltet und in Ihrem Netzwerk erreichbar ist.",
       "modbus_unavailable": "Die Modbus-Unterstützung ist nicht installiert. Starten Sie Home Assistant neu und versuchen Sie es erneut.",
       "unidentified_family": "Ein Gerät hat geantwortet, konnte aber nicht als unterstützter HALO- oder Hybrid-Wechselrichter bestätigt werden. Prüfen Sie die Slave-Adresse, oder ob es sich um ein unterstütztes Modell handelt."
     },

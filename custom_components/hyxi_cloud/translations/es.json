@@ -83,6 +83,7 @@
       "unknown": "Ocurrió un error inesperado",
       "no_devices": "No se encontraron plantas ni dispositivos. Si su correo electrónico de desarrollador es diferente al de su aplicación, primero debe compartir su planta desde la aplicación al correo electrónico de desarrollador.",
       "no_device": "Nada respondió en el bus. Compruebe el cableado, la dirección esclava y la velocidad en baudios.",
+      "gateway_unreachable": "No se pudo conectar con la pasarela. Compruebe el host y el puerto, y que esté encendida y accesible en su red.",
       "modbus_unavailable": "La compatibilidad con Modbus no está instalada. Reinicie Home Assistant e inténtelo de nuevo.",
       "unidentified_family": "Un dispositivo respondió, pero no se pudo confirmar que fuera un inversor HALO o híbrido compatible. Compruebe la dirección esclava, o que se trate de un modelo compatible."
     },

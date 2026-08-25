@@ -1590,7 +1590,7 @@ async def test_modbus_tcp_short_circuits_when_host_is_unreachable(modbus_flow):
 
     error, family, _framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
 
-    assert error == "cannot_connect"
+    assert error == "gateway_unreachable"
     assert family == "hybrid"  # DEFAULT_MODBUS_FAMILY
     probe.assert_not_awaited()
 

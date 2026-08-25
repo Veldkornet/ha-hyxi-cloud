@@ -83,6 +83,7 @@
       "unknown": "Wystąpił nieoczekiwany błąd",
       "no_devices": "Nie znaleziono żadnych instalacji ani urządzeń. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw udostępnić swoją instalację z aplikacji na e-mail programisty.",
       "no_device": "Nic nie odpowiedziało na magistrali. Sprawdź okablowanie, adres podrzędny i prędkość transmisji.",
+      "gateway_unreachable": "Nie udało się połączyć z bramą. Sprawdź hosta i port oraz czy urządzenie jest włączone i dostępne w Twojej sieci.",
       "modbus_unavailable": "Obsługa Modbus nie jest zainstalowana. Uruchom ponownie Home Assistant i spróbuj ponownie.",
       "unidentified_family": "Urządzenie odpowiedziało, ale nie udało się potwierdzić, że jest to obsługiwany falownik HALO lub hybrydowy. Sprawdź adres podrzędny, lub czy jest to obsługiwany model."
     },

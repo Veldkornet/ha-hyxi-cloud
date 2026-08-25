@@ -83,6 +83,7 @@
       "unknown": "Si è verificato un errore imprevisto",
       "no_devices": "Nessun impianto o dispositivo trovato. Se l'e-mail dello sviluppatore differisce da quella dell'app, devi prima condividere il tuo impianto dall'app all'e-mail dello sviluppatore.",
       "no_device": "Nessuna risposta sul bus. Controlla il cablaggio, l'indirizzo slave e il baud rate.",
+      "gateway_unreachable": "Impossibile connettersi al gateway. Controlla l'host e la porta, e che sia acceso e raggiungibile sulla tua rete.",
       "modbus_unavailable": "Il supporto Modbus non è installato. Riavvia Home Assistant e riprova.",
       "unidentified_family": "Un dispositivo ha risposto, ma non è stato possibile confermarlo come inverter HALO o ibrido supportato. Controlla l'indirizzo slave, o che si tratti di un modello supportato."
     },

@@ -83,6 +83,7 @@
       "unknown": "Došlo k neočekávané chybě",
       "no_devices": "Nebyly nalezeny žádné elektrárny ani zařízení. Pokud se váš vývojářský e-mail liší od e-mailu aplikace, musíte nejprve sdílet svou elektrárnu z aplikace na vývojářský e-mail.",
       "no_device": "Na sběrnici nikdo neodpověděl. Zkontrolujte kabeláž, adresu slave a přenosovou rychlost.",
+      "gateway_unreachable": "Nepodařilo se připojit k bráně. Zkontrolujte hostitele a port a to, že je zapnutá a dostupná ve vaší síti.",
       "modbus_unavailable": "Podpora Modbus není nainstalována. Restartujte Home Assistant a zkuste to znovu.",
       "unidentified_family": "Zařízení odpovědělo, ale nepodařilo se potvrdit, že jde o podporovaný měnič HALO nebo hybridní měnič. Zkontrolujte adresu slave, nebo zda jde o podporovaný model."
     },
