@@ -1111,6 +1111,12 @@ def modbus_flow(config_flow):
     config_flow.async_create_entry = MagicMock(
         side_effect=lambda **kw: {"type": "entry", **kw}
     )
+    # _tcp_reachable does a real asyncio.open_connection -- the test harness
+    # disables DNS/socket access outright, and every test in this module
+    # except the ones for _tcp_reachable itself is exercising the framer/
+    # family probe past that point, not reachability. Stubbed reachable by
+    # default; the unreachable-host tests override this back to False.
+    config_flow._tcp_reachable = AsyncMock(return_value=True)
     return config_flow
 
 
@@ -1488,27 +1494,27 @@ async def test_modbus_gateway_target_failure_is_not_treated_as_reachable(
 
 @pytest.mark.asyncio
 async def test_modbus_tcp_accepts_first_framer_that_succeeds(modbus_flow):
-    """rtu (tried first) works -- no need to also try socket."""
+    """socket (tried first) works -- no need to also try rtu."""
     probe = AsyncMock(return_value=(None, "halo"))
     modbus_flow._probe_and_detect_modbus = probe
 
     error, family, framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
 
-    assert (error, family, framer) == (None, "halo", "rtu")
+    assert (error, family, framer) == (None, "halo", "socket")
     probe.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_modbus_tcp_falls_back_to_the_other_framer(modbus_flow):
-    """rtu answers nothing at all -- exactly what a gateway actually
-    speaking native Modbus-TCP/MBAP framing looks like from here -- so the
-    probe is retried under socket, which is what the device is on."""
+    """socket answers nothing at all -- exactly what a gateway that only
+    tunnels raw RTU frames over a plain TCP socket looks like from here --
+    so the probe is retried under rtu, which is what the device is on."""
     probe = AsyncMock(side_effect=[("no_device", "hybrid"), (None, "hybrid")])
     modbus_flow._probe_and_detect_modbus = probe
 
     error, family, framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
 
-    assert (error, family, framer) == (None, "hybrid", "socket")
+    assert (error, family, framer) == (None, "hybrid", "rtu")
     assert probe.await_count == 2
 
 
@@ -1544,6 +1550,66 @@ async def test_modbus_tcp_does_not_retry_a_missing_library(modbus_flow):
 
     assert error == "modbus_unavailable"
     probe.assert_awaited_once()
+
+
+# --- TCP reachability: fail fast on a host nothing answers at all, before
+# spending a framer probe on it ---------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_modbus_tcp_short_circuits_when_host_is_unreachable(modbus_flow):
+    """An unreachable host must not even try a framer -- that's the whole
+    point of checking first."""
+    modbus_flow._tcp_reachable = AsyncMock(return_value=False)
+    probe = AsyncMock()
+    modbus_flow._probe_and_detect_modbus = probe
+
+    error, family, _framer = await modbus_flow._probe_and_detect_modbus_tcp("h", 502, 1)
+
+    assert error == "cannot_connect"
+    assert family == "hybrid"  # DEFAULT_MODBUS_FAMILY
+    probe.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.asyncio.open_connection")
+async def test_tcp_reachable_true_on_successful_connect(mock_open, config_flow):
+    """config_flow, not modbus_flow -- that fixture stubs _tcp_reachable
+    itself, which is exactly the method under test here."""
+    writer = MagicMock()
+    writer.wait_closed = AsyncMock()
+    mock_open.return_value = (MagicMock(), writer)
+
+    result = await config_flow._tcp_reachable("192.168.1.50", 502)
+
+    assert result is True
+    writer.close.assert_called_once()
+    writer.wait_closed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.asyncio.open_connection")
+async def test_tcp_reachable_false_on_connection_refused(mock_open, config_flow):
+    mock_open.side_effect = ConnectionRefusedError("no listener on that port")
+
+    result = await config_flow._tcp_reachable("192.168.1.50", 502)
+
+    assert result is False
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.asyncio.open_connection")
+async def test_tcp_reachable_false_on_timeout(mock_open, config_flow):
+    """A host that silently drops packets (no route, wrong VLAN) times out
+    rather than refusing -- this is the case DETECTION_CONNECT_TIMEOUT
+    exists for, distinct from DETECTION_TIMEOUT. TimeoutError is an OSError
+    subclass, so _tcp_reachable's except OSError already covers it -- this
+    just confirms that."""
+    mock_open.side_effect = TimeoutError()
+
+    result = await config_flow._tcp_reachable("192.168.1.50", 502)
+
+    assert result is False
 
 
 def test_transport_schema_defaults_to_cloud(mock_ha_environment):

@@ -103,6 +103,16 @@ MODBUS_TIMEOUT = 10.0
 # framer (a wrong-framer gateway looks exactly like this from here) costs
 # ~20s before the other framer is even tried; at DETECTION_TIMEOUT, ~6s.
 DETECTION_TIMEOUT = 3.0
+# A bare TCP reachability check, tried before any framer -- tmodbus's own
+# TCP connect timeout defaults to 10s and modbus_connection never overrides
+# it, so it is not reachable through DETECTION_TIMEOUT (which only bounds
+# the read/response wait *after* a connection exists). Without this, a
+# gateway that's simply unreachable (wrong IP, powered off, wrong VLAN --
+# anything where packets are silently dropped rather than actively
+# refused) costs up to that hidden 10s once per framer tried. A real
+# device on a local network completes a TCP handshake in a few
+# milliseconds, so this has ample margin without inheriting that cost.
+DETECTION_CONNECT_TIMEOUT = 2.0
 # Local polling is cheap compared with the rate-limited cloud API.
 DEFAULT_MODBUS_INTERVAL = 15
 
@@ -117,10 +127,18 @@ DEFAULT_MODBUS_INTERVAL = 15
 # only applies to TCP entries.
 CONF_MODBUS_FRAMER = "modbus_framer"
 DEFAULT_MODBUS_FRAMER = "rtu"
-# Tried in this order: "rtu" first because it's the more common cheap
-# passthrough gateway, matching the only hardware this transport has been
-# validated against.
-MODBUS_TCP_FRAMERS: tuple[Literal["rtu", "socket"], ...] = ("rtu", "socket")
+# Tried in this order: "socket" first. Home Assistant's own built-in
+# `modbus` integration treats plain "tcp" as real Modbus-TCP/MBAP framing
+# and raw RTU-over-TCP as the separate, explicitly-named "rtuovertcp"
+# option, and vendor tutorials for these cheap RS485-Ethernet gateways
+# generally push "Modbus TCP to RTU" (-> "socket" here) as the intended
+# mode for talking to a smart-home platform -- passthrough ("rtu" here) is
+# more of a niche "make a remote serial port look local" setup. Previously
+# "rtu" was tried first, matching the one gateway this transport had been
+# validated against at the time; a second, independent real-world gateway
+# turned out to be "socket", matching this reasoning rather than that
+# original assumption.
+MODBUS_TCP_FRAMERS: tuple[Literal["rtu", "socket"], ...] = ("socket", "rtu")
 
 # Which register map an entry talks. Detected automatically during setup
 # (see config_flow._detect_modbus_family) rather than asked of the user --

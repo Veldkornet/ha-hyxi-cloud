@@ -398,6 +398,13 @@ async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
     # makes Home Assistant set it up, which would open a real socket to the
     # gateway. This test is about the flow, not the transport.
     with (
+        # _tcp_reachable does a real asyncio.open_connection, which the test
+        # harness blocks outright (no sockets/DNS in tests) -- stubbed
+        # reachable so this test exercises the flow, not connectivity.
+        patch(
+            "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._tcp_reachable",
+            return_value=True,
+        ),
         patch(
             "custom_components.hyxi_cloud.config_flow."
             "HyxiConfigFlow._probe_and_detect_modbus",
@@ -426,7 +433,7 @@ async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
         CONF_MODBUS_FAMILY: "halo",
         # _probe_and_detect_modbus is patched to succeed unconditionally, so
         # the wire-framing probe accepts the first framer it tries.
-        CONF_MODBUS_FRAMER: "rtu",
+        CONF_MODBUS_FRAMER: "socket",
     }
 
 
@@ -443,10 +450,16 @@ async def test_config_flow_modbus_probe_failure_shows_error(hass: HomeAssistant)
         result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
     )
 
-    with patch(
-        "custom_components.hyxi_cloud.config_flow."
-        "HyxiConfigFlow._probe_and_detect_modbus",
-        return_value=("no_device", "hybrid"),
+    with (
+        patch(
+            "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._tcp_reachable",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.config_flow."
+            "HyxiConfigFlow._probe_and_detect_modbus",
+            return_value=("no_device", "hybrid"),
+        ),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -536,6 +549,10 @@ async def test_reconfigure_updates_the_entry_and_reloads(hass: HomeAssistant):
 
     with (
         patch(
+            "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._tcp_reachable",
+            return_value=True,
+        ),
+        patch(
             "custom_components.hyxi_cloud.config_flow."
             "HyxiConfigFlow._probe_and_detect_modbus",
             return_value=(None, "hybrid"),
@@ -608,10 +625,16 @@ async def test_reconfigure_reprobe_failure_redisplays_the_form(hass: HomeAssista
         result["flow_id"], {CONF_MODBUS_TYPE: MODBUS_TYPE_TCP}
     )
 
-    with patch(
-        "custom_components.hyxi_cloud.config_flow."
-        "HyxiConfigFlow._probe_and_detect_modbus",
-        return_value=("no_device", "halo"),
+    with (
+        patch(
+            "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._tcp_reachable",
+            return_value=True,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.config_flow."
+            "HyxiConfigFlow._probe_and_detect_modbus",
+            return_value=("no_device", "halo"),
+        ),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -643,6 +666,10 @@ async def test_reconfigure_with_the_address_unchanged_does_not_abort_on_itself(
     )
 
     with (
+        patch(
+            "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow._tcp_reachable",
+            return_value=True,
+        ),
         patch(
             "custom_components.hyxi_cloud.config_flow."
             "HyxiConfigFlow._probe_and_detect_modbus",
