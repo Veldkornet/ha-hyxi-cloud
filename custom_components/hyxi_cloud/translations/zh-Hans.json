@@ -83,7 +83,7 @@
       "unknown": "发生未知错误",
       "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。",
       "no_device": "总线上没有任何响应。请检查布线、从站地址和波特率。",
-      "gateway_unreachable": "无法连接到网关。请检查主机和端口,并确认设备已开启且可在您的网络中访问。",
+      "gateway_unreachable": "无法连接到网关。请检查主机和端口，确认设备已开启且可在您的网络中访问。",
       "modbus_unavailable": "未安装 Modbus 支持。请重启 Home Assistant 后重试。",
       "unidentified_family": "设备已响应，但无法确认其为受支持的 HALO 或混合逆变器。请检查从站地址，或确认这是否为受支持的型号。"
     },
