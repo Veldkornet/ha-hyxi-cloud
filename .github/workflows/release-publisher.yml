@@ -24,7 +24,18 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
+            files.pythonhosted.org:443
+            fulcio.sigstore.dev:443
+            ghcr.io:443
+            github-releases.s3.amazonaws.com:443
             github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            raw.githubusercontent.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            releases.astral.sh:443
+            tuf-repo-cdn.sigstore.dev:443
             uploads.github.com:443
 
       - name: 📥 Checkout Code
@@ -58,8 +69,6 @@ jobs:
               pyproject_path.write_text(new_pyproject_text, encoding='utf-8')
           "
 
-
-
       - name: 📦 Create Zip Archive
         run: |
           # Go INSIDE the integration folder and zip the contents
@@ -74,6 +83,21 @@ jobs:
           files: hyxi_cloud.zip
           tag_name: ${{ github.event.release.tag_name }}
           overwrite_files: true
+
+      - name: 🔧 Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.14'
+          enable-cache: true
+          cache-python: true
+
+      - name: 🔒 Refresh uv.lock
+        # pyproject.toml's version may have just changed above; uv.lock
+        # records that version too (in its own [[package]] entry for this
+        # project), so it needs regenerating in lockstep or CI's later
+        # `uv sync --locked` and pre-commit.ci's uv-lock hook both reject
+        # the drifted lockfile.
+        run: uv lock
 
       - name: 🔄 Verify Version Parity
         run: |
@@ -90,13 +114,22 @@ jobs:
           delete-branch: true
           base: main
           labels: "chore"
+          # Explicit allowlist rather than the default "commit everything
+          # that changed" -- hyxi_cloud.zip built above is a release asset,
+          # not something that belongs in this PR, and this keeps it (or
+          # any other future stray build output) out of the commit.
+          add-paths: |
+            custom_components/hyxi_cloud/manifest.json
+            pyproject.toml
+            uv.lock
           body: |
             ## Summary
-            Automated pull request triggered by release publishing to synchronize `manifest.json` and `pyproject.toml` in `main`.
+            Automated pull request triggered by release publishing to synchronize `manifest.json`, `pyproject.toml`, and `uv.lock` in `main`.
 
             ## Key Changes
             - Updated `custom_components/hyxi_cloud/manifest.json` version to `${{ env.CLEAN_VERSION }}`.
             - Synced `pyproject.toml` version to `${{ env.CLEAN_VERSION }}`.
+            - Refreshed `uv.lock` to match.
 
             ## Why this is needed
-            Maintains source-of-truth version parity across `manifest.json`, `pyproject.toml`, and GitHub Releases after a release is published.
+            Maintains source-of-truth version parity across `manifest.json`, `pyproject.toml`, `uv.lock`, and GitHub Releases after a release is published.
