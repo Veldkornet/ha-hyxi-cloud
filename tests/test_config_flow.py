@@ -1350,6 +1350,30 @@ async def test_modbus_reports_clearly_when_library_is_missing(modbus_flow):
 
 
 @pytest.mark.asyncio
+async def test_modbus_probe_reports_missing_library_directly(modbus_flow):
+    """_probe_and_detect_modbus's own ImportError guard, exercised directly.
+
+    The TCP wrapper (_probe_and_detect_modbus_tcp) now checks this ahead of
+    the reachability check and short-circuits before ever reaching this
+    method -- see test_modbus_reports_clearly_when_library_is_missing above.
+    The serial path calls this method straight, though, so its own guard
+    must still work standalone.
+    """
+    real_import = builtins.__import__
+
+    def blocked(name, *args, **kwargs):
+        if name == "modbus_connection.tmodbus":
+            raise ImportError("no backend")
+        return real_import(name, *args, **kwargs)
+
+    with patch.object(builtins, "__import__", blocked):
+        error, family = await modbus_flow._probe_and_detect_modbus(MagicMock(), 1)
+
+    assert error == "modbus_unavailable"
+    assert family == "hybrid"  # DEFAULT_MODBUS_FAMILY
+
+
+@pytest.mark.asyncio
 async def test_modbus_shows_form_before_any_input(modbus_flow):
     result = await modbus_flow.async_step_modbus_tcp(user_input=None)
 

@@ -556,10 +556,18 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         response, which only a *correctly* framed exchange can produce --
         retrying it under the other framer would not change the outcome.
 
-        A bare TCP reachability check runs first, ahead of any framer --
-        see _tcp_reachable's docstring for why that's a separate step
-        rather than something DETECTION_TIMEOUT already covers.
+        The dependency is checked before the bare TCP reachability check,
+        not after -- a missing install must be reported as
+        "modbus_unavailable" even when the configured host also happens to
+        be unreachable, not masked behind "cannot_connect" (and the real
+        socket attempt that implies) for a problem that has nothing to do
+        with the network.
         """
+        try:
+            import modbus_connection.tmodbus  # noqa: F401  # pylint: disable=unused-import
+        except ImportError:
+            return "modbus_unavailable", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
+
         if not await self._tcp_reachable(host, port):
             return "cannot_connect", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
 
