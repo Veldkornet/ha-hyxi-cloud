@@ -83,6 +83,7 @@
       "unknown": "Onverwagte fout het voorgekom",
       "no_devices": "Geen aanlegte of toestelle gevind nie. As u ontwikkelaars-e-posadres verskil van u toepassing-e-posadres, moet u eers u aanleg vanaf die toepassing met die ontwikkelaars-e-posadres deel.",
       "no_device": "Niks het op die bus geantwoord nie. Kontroleer die bedrading, die slaaf-adres en die baudtempo.",
+      "gateway_unreachable": "Kon nie met die gateway verbind nie. Kontroleer die gasheer en poort, en dat dit aan is en op jou netwerk bereikbaar is.",
       "modbus_unavailable": "Modbus-ondersteuning is nie geïnstalleer nie. Herbegin Home Assistant en probeer weer.",
       "unidentified_family": "'n Toestel het geantwoord, maar kon nie bevestig word as 'n ondersteunde HALO- of hibriede omsetter nie. Kontroleer die slaaf-adres, of dat dit 'n ondersteunde model is."
     },

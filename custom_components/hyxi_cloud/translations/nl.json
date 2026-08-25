@@ -83,6 +83,7 @@
       "unknown": "Er is een onverwachte fout opgetreden",
       "no_devices": "Geen installaties of apparaten gevonden. Als je ontwikkelaars-e-mailadres verschilt van je app-e-mailadres, moet je eerst je installatie vanuit de app delen met het ontwikkelaars-e-mailadres.",
       "no_device": "Niets antwoordde op de bus. Controleer de bekabeling, het slave-adres en de baudrate.",
+      "gateway_unreachable": "Kan geen verbinding maken met de gateway. Controleer het host-adres en de poort, en of deze is ingeschakeld en bereikbaar op uw netwerk.",
       "modbus_unavailable": "Modbus-ondersteuning is niet geïnstalleerd. Start Home Assistant opnieuw en probeer het opnieuw.",
       "unidentified_family": "Een apparaat heeft geantwoord, maar kon niet worden bevestigd als een ondersteunde HALO- of hybride omvormer. Controleer het slave-adres, of dat dit een ondersteund model is."
     },

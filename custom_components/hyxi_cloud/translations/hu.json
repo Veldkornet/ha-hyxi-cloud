@@ -83,6 +83,7 @@
       "unknown": "Váratlan hiba történt",
       "no_devices": "Nem található erőmű vagy eszköz. Ha a fejlesztői e-mail-címe eltér az alkalmazás e-mail-címétől, először meg kell osztania az erőművét az alkalmazásból a fejlesztői e-mail-címmel.",
       "no_device": "Semmi sem válaszolt a buszon. Ellenőrizd a vezetékezést, a slave címet és az átviteli sebességet.",
+      "gateway_unreachable": "Nem sikerült csatlakozni az átjáróhoz. Ellenőrizd a gazdagépet és a portot, valamint hogy be van-e kapcsolva és elérhető-e a hálózatodon.",
       "modbus_unavailable": "A Modbus támogatás nincs telepítve. Indítsd újra a Home Assistantot, és próbáld újra.",
       "unidentified_family": "Egy eszköz válaszolt, de nem sikerült megerősíteni, hogy támogatott HALO vagy hibrid inverter. Ellenőrizd a slave címet, vagy hogy ez egy támogatott modell-e."
     },

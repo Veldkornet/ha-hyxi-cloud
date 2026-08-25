@@ -84,6 +84,7 @@
       "no_devices": "No plants or devices found. If your developer email differs from your app email, you must share your Plant from the app to the developer email first.",
       "unknown": "Unexpected error occurred",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
+      "gateway_unreachable": "Failed to connect to the gateway. Check the host and port, and that it's powered on and reachable on your network.",
       "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
       "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
     },

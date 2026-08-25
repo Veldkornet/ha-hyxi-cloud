@@ -1,5 +1,6 @@
 """Config flow for HYXI Cloud integration."""
 
+import asyncio
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -47,6 +48,7 @@ from .const import (
     DEFAULT_PUSH_RATE,
     DEFAULT_REGION,
     DEFAULT_TRANSPORT,
+    DETECTION_CONNECT_TIMEOUT,
     DETECTION_MESSAGE_SPACING,
     DETECTION_TIMEOUT,
     DOMAIN,
@@ -506,6 +508,31 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         finally:
             await connection.close()
 
+    async def _tcp_reachable(self, host: str, port: int) -> bool:
+        """A bare TCP connect, no Modbus involved -- just "is anything there".
+
+        Exists to fail fast on a host that's simply unreachable (wrong IP,
+        gateway powered off, wrong VLAN) before paying for a full framer
+        probe. See DETECTION_CONNECT_TIMEOUT's definition for why this
+        can't be folded into _probe_and_detect_modbus_tcp's own timeout.
+        """
+        try:
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port), timeout=DETECTION_CONNECT_TIMEOUT
+            )
+        # TimeoutError (asyncio.wait_for's own) is already an OSError subclass.
+        except OSError as err:
+            _LOGGER.debug(
+                "Modbus TCP reachability check failed for %s:%s: %s", host, port, err
+            )
+            return False
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except OSError:
+            pass  # already gone; nothing left to clean up
+        return True
+
     async def _probe_and_detect_modbus_tcp(
         self, host: str, port: int, unit_id: int
     ) -> tuple[str | None, str, str]:
@@ -528,7 +555,26 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         from that retry: it requires a well-formed Modbus exception
         response, which only a *correctly* framed exchange can produce --
         retrying it under the other framer would not change the outcome.
+
+        The dependency is checked before the bare TCP reachability check,
+        not after -- a missing install must be reported as
+        "modbus_unavailable" even when the configured host also happens to
+        be unreachable, not masked behind "cannot_connect" (and the real
+        socket attempt that implies) for a problem that has nothing to do
+        with the network.
         """
+        try:
+            import modbus_connection.tmodbus  # noqa: F401  # pylint: disable=unused-import
+        except ImportError:
+            return "modbus_unavailable", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
+
+        if not await self._tcp_reachable(host, port):
+            # A dedicated key, not "cannot_connect" -- that string is
+            # worded for the cloud path ("Failed to connect to HYXI
+            # servers"), shared across every locale, and wrong for a local
+            # gateway. See PR #675 review discussion.
+            return "gateway_unreachable", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
+
         from modbus_connection import ModbusTcpParams
 
         error, family = None, DEFAULT_MODBUS_FAMILY

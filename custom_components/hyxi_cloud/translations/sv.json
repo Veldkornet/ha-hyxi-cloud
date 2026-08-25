@@ -83,6 +83,7 @@
       "unknown": "Oväntat fel uppstod",
       "no_devices": "Inga anläggningar eller enheter hittades. Om din e-postadress för utvecklare skiljer sig från din app-e-postadress måste du först dela din anläggning från appen till utvecklarens e-postadress.",
       "no_device": "Inget svarade på bussen. Kontrollera kablaget, slavadressen och baudhastigheten.",
+      "gateway_unreachable": "Det gick inte att ansluta till gatewayen. Kontrollera värden och porten, samt att den är påslagen och nåbar på ditt nätverk.",
       "modbus_unavailable": "Modbus-stöd är inte installerat. Starta om Home Assistant och försök igen.",
       "unidentified_family": "En enhet svarade, men kunde inte bekräftas som en HALO- eller hybridväxelriktare som stöds. Kontrollera slavadressen, eller att detta är en modell som stöds."
     },
