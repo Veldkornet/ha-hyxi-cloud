@@ -174,22 +174,23 @@ def test_translation_values_not_empty():
         binary_translations = translations.get("entity", {}).get("binary_sensor", {})
         for key, val in binary_translations.items():
             name = val.get("name")
-            assert name and name.strip(), (
-                f"Empty binary sensor name for '{key}' in {lang_file}"
-            )
+            assert name, f"Missing binary sensor name for '{key}' in {lang_file}"
+            assert name.strip(), f"Empty binary sensor name for '{key}' in {lang_file}"
 
         # Regular Sensors
         sensor_translations = translations.get("entity", {}).get("sensor", {})
         for key, val in sensor_translations.items():
             name = val.get("name")
-            assert name and name.strip(), (
-                f"Empty sensor name for '{key}' in {lang_file}"
-            )
+            assert name, f"Missing sensor name for '{key}' in {lang_file}"
+            assert name.strip(), f"Empty sensor name for '{key}' in {lang_file}"
 
             # Check state enums if present
             if "state" in val:
                 for state_key, state_val in val["state"].items():
-                    assert state_val and state_val.strip(), (
+                    assert state_val, (
+                        f"Missing state translation for '{key}:{state_key}' in {lang_file}"
+                    )
+                    assert state_val.strip(), (
                         f"Empty state translation for '{key}:{state_key}' in {lang_file}"
                     )
 

@@ -391,7 +391,7 @@ async def test_frequency_control_switch_error(mock_coordinator_fixture):
     err = switch_mod.HyxiApiClient.ControlError("Network error")
     mock_coordinator_fixture.client.set_frequency_control.side_effect = err
 
-    with patch("custom_components.hyxi_cloud.switch._LOGGER.error") as mock_logger:
+    with patch("custom_components.hyxi_cloud.switch._LOGGER.exception") as mock_logger:
         with pytest.raises(switch_mod.HyxiApiClient.ControlError):
             await switch.async_turn_on()
 
@@ -405,7 +405,7 @@ async def test_frequency_control_switch_error(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
     assert switch._attr_is_on is None
 
-    with patch("custom_components.hyxi_cloud.switch._LOGGER.error") as mock_logger:
+    with patch("custom_components.hyxi_cloud.switch._LOGGER.exception") as mock_logger:
         with pytest.raises(switch_mod.HyxiApiClient.ControlError):
             await switch.async_turn_off()
 
@@ -465,7 +465,7 @@ async def test_anti_starvation_switch_error(mock_coordinator_fixture):
     err = switch_mod.HyxiApiClient.ControlError("Network error")
     mock_coordinator_fixture.client.set_anti_starvation.side_effect = err
 
-    with patch("custom_components.hyxi_cloud.switch._LOGGER.error") as mock_logger:
+    with patch("custom_components.hyxi_cloud.switch._LOGGER.exception") as mock_logger:
         with pytest.raises(switch_mod.HyxiApiClient.ControlError):
             await switch.async_turn_on()
 

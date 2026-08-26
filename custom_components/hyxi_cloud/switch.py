@@ -45,90 +45,131 @@ async def async_setup_entry(
     entities: list[SwitchEntity] = []
 
     for sn, dev_data in coordinator.data.items():
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
+        entities.extend(_build_device_switches(entry, coordinator, sn, dev_data))
 
-        # Modbus: anti-starvation protection, the one boolean HaloSettings/
-        # HybridSettings field. HALO and Hybrid call different client
-        # methods because the register's polarity is inverted between the
-        # two documents -- see client_hybrid.py's set_anti_starvation_
-        # protection docstring. Handled before the cloud-only branches
-        # below since this has no cloud equivalent and no phase dependency.
-        if is_modbus_entry(entry) and device_type in (
-            "hybrid_inverter",
-            "all_in_one",
-            "micro_ess",
-        ):
-            if is_battery_control_enabled(entry, coordinator):
-                client_method = (
-                    "set_anti_starvation"
-                    if device_type == "micro_ess"
-                    else "set_anti_starvation_protection"
-                )
-                entities.append(
-                    HyxiAntiStarvationSwitch(coordinator, sn, dev_data, client_method)
-                )
-            continue
+    entities.extend(_build_em_switches(entry, coordinator))
 
-        if device_type in ("hybrid_inverter", "all_in_one"):
-            phase = detect_phase_type(dev_data)
+    if entities:
+        async_add_entities(entities)
 
-            # Frequency control (controlId 1020) — single-phase devices only
-            if (
-                is_battery_control_enabled(entry, coordinator)
-                and phase == "single_phase"
-            ):
-                entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
-        elif device_type == "micro_inverter":
-            if is_battery_control_enabled(entry, coordinator):
-                entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
-        elif device_type == "micro_ess":
-            if MICRO_ESS_CONTROL_SUPPORTED and is_battery_control_enabled(
-                entry, coordinator
-            ):
-                entities.append(HyxiMicroEssPowerSwitch(coordinator, sn, dev_data))
 
-    # EM-only switches — only when EM is enabled for this inverter
+def _build_device_switches(
+    entry: ConfigEntry,
+    coordinator,
+    sn: str,
+    dev_data: dict,
+) -> list[SwitchEntity]:
+    """Build the switch entities for one device SN."""
+    device_type = normalize_device_type(get_raw_device_code(dev_data))
+
+    # Modbus: anti-starvation protection, the one boolean HaloSettings/
+    # HybridSettings field. HALO and Hybrid call different client
+    # methods because the register's polarity is inverted between the
+    # two documents -- see client_hybrid.py's set_anti_starvation_
+    # protection docstring. Handled before the cloud-only branches
+    # below since this has no cloud equivalent and no phase dependency.
+    if is_modbus_entry(entry) and device_type in (
+        "hybrid_inverter",
+        "all_in_one",
+        "micro_ess",
+    ):
+        return _anti_starvation_switch(entry, coordinator, sn, dev_data, device_type)
+
+    return _cloud_phase_switches(entry, coordinator, sn, dev_data, device_type)
+
+
+def _anti_starvation_switch(
+    entry: ConfigEntry,
+    coordinator,
+    sn: str,
+    dev_data: dict,
+    device_type: str,
+) -> list[SwitchEntity]:
+    """Modbus-only anti-starvation protection switch, if battery control is
+    enabled.
+    """
+    if not is_battery_control_enabled(entry):
+        return []
+    client_method = (
+        "set_anti_starvation"
+        if device_type == "micro_ess"
+        else "set_anti_starvation_protection"
+    )
+    return [HyxiAntiStarvationSwitch(coordinator, sn, dev_data, client_method)]
+
+
+def _cloud_phase_switches(
+    entry: ConfigEntry,
+    coordinator,
+    sn: str,
+    dev_data: dict,
+    device_type: str,
+) -> list[SwitchEntity]:
+    """Cloud-path switches, gated by device type and electrical phase."""
+    entities: list[SwitchEntity] = []
+
+    if device_type in ("hybrid_inverter", "all_in_one"):
+        phase = detect_phase_type(dev_data)
+
+        # Frequency control (controlId 1020) — single-phase devices only
+        if is_battery_control_enabled(entry) and phase == "single_phase":
+            entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
+    elif device_type == "micro_inverter":
+        if is_battery_control_enabled(entry):
+            entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
+    elif (
+        device_type == "micro_ess"
+        and MICRO_ESS_CONTROL_SUPPORTED
+        and is_battery_control_enabled(entry)
+    ):
+        entities.append(HyxiMicroEssPowerSwitch(coordinator, sn, dev_data))
+
+    return entities
+
+
+def _build_em_switches(entry: ConfigEntry, coordinator) -> list[SwitchEntity]:
+    """Build the EM-only toggle switches, if EM is enabled for this inverter."""
+    entities: list[SwitchEntity] = []
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data:
-        # Grid charge toggle on inverter device
-        entities.append(
-            EMToggleSwitch(
-                coordinator, em_sn, EMToggleDef("grid_charge_allowed"), em_device=False
-            )
+    if not (entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data):
+        return entities
+
+    # Grid charge toggle on inverter device
+    entities.append(
+        EMToggleSwitch(
+            coordinator, em_sn, EMToggleDef("grid_charge_allowed"), em_device=False
         )
-        # EM engine toggles on EM virtual device
-        entities.append(
-            EMToggleSwitch(coordinator, em_sn, EMToggleDef("enabled"), em_device=True)
+    )
+    # EM engine toggles on EM virtual device
+    entities.append(
+        EMToggleSwitch(coordinator, em_sn, EMToggleDef("enabled"), em_device=True)
+    )
+    entities.append(
+        EMToggleSwitch(coordinator, em_sn, EMToggleDef("night_mode"), em_device=True)
+    )
+    entities.append(
+        EMToggleSwitch(
+            coordinator,
+            em_sn,
+            EMToggleDef("high_load_battery_assist"),
+            em_device=True,
         )
-        entities.append(
-            EMToggleSwitch(
-                coordinator, em_sn, EMToggleDef("night_mode"), em_device=True
-            )
-        )
+    )
+
+    # Export limiting — single-phase only (uses peak shaving controlId 1021)
+    em_dev_data = coordinator.data.get(em_sn, {})
+    em_phase = detect_phase_type(em_dev_data)
+    if em_phase == "single_phase":
         entities.append(
             EMToggleSwitch(
                 coordinator,
                 em_sn,
-                EMToggleDef("high_load_battery_assist"),
+                EMToggleDef("export_limiting"),
                 em_device=True,
             )
         )
 
-        # Export limiting — single-phase only (uses peak shaving controlId 1021)
-        em_dev_data = coordinator.data.get(em_sn, {})
-        em_phase = detect_phase_type(em_dev_data)
-        if em_phase == "single_phase":
-            entities.append(
-                EMToggleSwitch(
-                    coordinator,
-                    em_sn,
-                    EMToggleDef("export_limiting"),
-                    em_device=True,
-                )
-            )
-
-    if entities:
-        async_add_entities(entities)
+    return entities
 
 
 class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
@@ -157,7 +198,7 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to enable frequency control for %s: %s", mask_sn(self._sn), err
             )
             raise
@@ -172,7 +213,7 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to disable frequency control for %s: %s", mask_sn(self._sn), err
             )
             raise
@@ -209,7 +250,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to turn on microinverter %s: %s", mask_sn(self._sn), err
             )
             raise HomeAssistantError(f"Failed to turn on microinverter: {err}") from err
@@ -224,7 +265,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to turn off microinverter %s: %s", mask_sn(self._sn), err
             )
             raise HomeAssistantError(
@@ -274,7 +315,7 @@ class HyxiAntiStarvationSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to set anti-starvation protection to %s for %s: %s",
                 enabled,
                 mask_sn(self._sn),
@@ -322,7 +363,9 @@ class HyxiMicroEssPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
-            _LOGGER.error("Failed to turn on Micro ESS %s: %s", mask_sn(self._sn), err)
+            _LOGGER.exception(
+                "Failed to turn on Micro ESS %s: %s", mask_sn(self._sn), err
+            )
             raise HomeAssistantError(f"Failed to turn on Micro ESS: {err}") from err
 
     async def async_turn_off(self, **kwargs) -> None:
@@ -335,7 +378,9 @@ class HyxiMicroEssPowerSwitch(HyxiEntity, SwitchEntity):
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except Exception as err:
-            _LOGGER.error("Failed to turn off Micro ESS %s: %s", mask_sn(self._sn), err)
+            _LOGGER.exception(
+                "Failed to turn off Micro ESS %s: %s", mask_sn(self._sn), err
+            )
             raise HomeAssistantError(f"Failed to turn off Micro ESS: {err}") from err
 
 

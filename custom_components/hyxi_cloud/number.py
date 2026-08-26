@@ -38,10 +38,17 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Shared debug log formats, repeated across several restore/set-value methods below.
+_LOG_RESTORE_FAILED = "Could not restore %s from state %r"
+_LOG_VALUE_CHANGED = "%s changed: %s -> %s"
+
 _MAX_POWER_KEYS = {
     "charge": "maxChargePower",
     "discharge": "maxDischargePower",
 }
+
+# Shared by multiple HyxiSettingNumberDef entries below.
+_ICON_TRANSMISSION_TOWER_EXPORT = "mdi:transmission-tower-export"
 
 PROTECTION_NUMBER_DEFS: list[dict[str, str | int]] = [
     {
@@ -113,7 +120,7 @@ HALO_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
         0,
         15000,
         100,
-        "mdi:transmission-tower-export",
+        _ICON_TRANSMISSION_TOWER_EXPORT,
     ),
     HyxiSettingNumberDef(
         "vpp_min_soc",
@@ -183,7 +190,7 @@ HYBRID_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
         0,
         15000,
         100,
-        "mdi:transmission-tower-export",
+        _ICON_TRANSMISSION_TOWER_EXPORT,
     ),
     HyxiSettingNumberDef(
         "max_charge_current",
@@ -228,7 +235,7 @@ HYBRID_SETTING_NUMBER_DEFS: list[HyxiSettingNumberDef] = [
         0,
         100,
         1,
-        "mdi:transmission-tower-export",
+        _ICON_TRANSMISSION_TOWER_EXPORT,
     ),
     HyxiSettingNumberDef(
         "off_grid_soc",
@@ -291,7 +298,7 @@ EM_NUMBER_DEFS: list[EMNumberDef] = [
     EMNumberDef("charge_reentry_delay", "s", 30, 600, 15, "mdi:timer-lock"),
     EMNumberDef("bottomout_cooldown", "s", 60, 900, 30, "mdi:timer-alert"),
     EMNumberDef("p1_smoothing_period", "s", 1, 300, 1, "mdi:chart-timeline-variant"),
-    EMNumberDef("max_grid_export", "W", 0, 10000, 100, "mdi:transmission-tower-export"),
+    EMNumberDef("max_grid_export", "W", 0, 10000, 100, _ICON_TRANSMISSION_TOWER_EXPORT),
 ]
 
 
@@ -308,70 +315,106 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
 
     for sn, dev_data in coordinator.data.items():
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
+        entities.extend(_build_device_numbers(entry, coordinator, sn, dev_data))
 
-        if device_type == "micro_inverter":
-            # Microinverter power limit (controlId 3012)
-            if is_battery_control_enabled(entry, coordinator):
-                entities.append(HyxiMicroPowerLimit(coordinator, sn, dev_data))
-            continue
-
-        if not is_control_capable_device_type(entry, device_type):
-            continue
-        if not is_battery_control_enabled(entry, coordinator):
-            continue
-
-        if is_modbus_entry(entry):
-            # Every Modbus mode button (set_mode_charge/discharge) reads its
-            # wattage from these paired numbers -- see button.py's
-            # _mode_buttons for why phase is irrelevant on this transport.
-            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
-            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
-            for definition in PROTECTION_NUMBER_DEFS:
-                entities.append(
-                    HyxiProtectionNumber(coordinator, sn, dev_data, definition)
-                )
-            # One device per Modbus entry (see client.py's async_read_all),
-            # so device_type here reliably tells the two register maps
-            # apart -- no need for a separate family lookup.
-            setting_defs = (
-                HALO_SETTING_NUMBER_DEFS
-                if device_type == "micro_ess"
-                else HYBRID_SETTING_NUMBER_DEFS
-            )
-            for setting_def in setting_defs:
-                entities.append(
-                    HyxiSettingNumber(coordinator, sn, dev_data, setting_def)
-                )
-            continue
-
-        phase = detect_phase_type(dev_data)
-        # Power numbers pair with mode control (1062-1065) — three-phase only.
-        # Peak shaving (single-phase) uses full inverter power, no wattage setting.
-        if phase == "three_phase":
-            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
-            entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
-
-        # SOC protection numbers for both three-phase and single-phase
-        if phase in ("three_phase", "single_phase"):
-            for definition in PROTECTION_NUMBER_DEFS:
-                entities.append(
-                    HyxiProtectionNumber(coordinator, sn, dev_data, definition)
-                )
-
-    # EM-only numbers — only when Energy Manager is enabled for this inverter
-    em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data:
-        em_dev_data = coordinator.data.get(em_sn, {})
-        em_is_single_phase = detect_phase_type(em_dev_data) == "single_phase"
-        for numdef in EM_NUMBER_DEFS:
-            # max_grid_export only relevant for single-phase export limiting
-            if numdef.key == "max_grid_export" and not em_is_single_phase:
-                continue
-            entities.append(EMParameterNumber(coordinator, em_sn, numdef))
+    entities.extend(_build_em_numbers(entry, coordinator))
 
     if entities:
         async_add_entities(entities)
+
+
+def _build_device_numbers(
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+    sn: str,
+    dev_data: dict,
+) -> list[NumberEntity]:
+    """Build the number entities for one device SN."""
+    device_type = normalize_device_type(get_raw_device_code(dev_data))
+
+    if device_type == "micro_inverter":
+        # Microinverter power limit (controlId 3012)
+        if is_battery_control_enabled(entry):
+            return [HyxiMicroPowerLimit(coordinator, sn, dev_data)]
+        return []
+
+    if not is_control_capable_device_type(entry, device_type):
+        return []
+    if not is_battery_control_enabled(entry):
+        return []
+
+    if is_modbus_entry(entry):
+        return _modbus_numbers(coordinator, sn, dev_data, device_type)
+
+    return _cloud_phase_numbers(coordinator, sn, dev_data)
+
+
+def _modbus_numbers(
+    coordinator: HyxiDataUpdateCoordinator, sn: str, dev_data: dict, device_type: str
+) -> list[NumberEntity]:
+    """Modbus-path number entities: mode power pair, protection thresholds,
+    and device-hardware settings. Every Modbus mode button
+    (set_mode_charge/discharge) reads its wattage from the power number pair
+    -- see button.py's _mode_buttons for why phase is irrelevant on this
+    transport.
+    """
+    entities: list[NumberEntity] = [
+        HyxiPowerNumber(coordinator, sn, dev_data, "charge"),
+        HyxiPowerNumber(coordinator, sn, dev_data, "discharge"),
+    ]
+    for definition in PROTECTION_NUMBER_DEFS:
+        entities.append(HyxiProtectionNumber(coordinator, sn, dev_data, definition))
+
+    # One device per Modbus entry (see client.py's async_read_all), so
+    # device_type here reliably tells the two register maps apart -- no
+    # need for a separate family lookup.
+    setting_defs = (
+        HALO_SETTING_NUMBER_DEFS
+        if device_type == "micro_ess"
+        else HYBRID_SETTING_NUMBER_DEFS
+    )
+    for setting_def in setting_defs:
+        entities.append(HyxiSettingNumber(coordinator, sn, dev_data, setting_def))
+    return entities
+
+
+def _cloud_phase_numbers(
+    coordinator: HyxiDataUpdateCoordinator, sn: str, dev_data: dict
+) -> list[NumberEntity]:
+    """Cloud-path number entities, gated by electrical phase."""
+    entities: list[NumberEntity] = []
+    phase = detect_phase_type(dev_data)
+    # Power numbers pair with mode control (1062-1065) — three-phase only.
+    # Peak shaving (single-phase) uses full inverter power, no wattage setting.
+    if phase == "three_phase":
+        entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "charge"))
+        entities.append(HyxiPowerNumber(coordinator, sn, dev_data, "discharge"))
+
+    # SOC protection numbers for both three-phase and single-phase
+    if phase in ("three_phase", "single_phase"):
+        for definition in PROTECTION_NUMBER_DEFS:
+            entities.append(HyxiProtectionNumber(coordinator, sn, dev_data, definition))
+
+    return entities
+
+
+def _build_em_numbers(
+    entry: ConfigEntry, coordinator: HyxiDataUpdateCoordinator
+) -> list[NumberEntity]:
+    """Build the EM-only number entities, if EM is enabled for this inverter."""
+    entities: list[NumberEntity] = []
+    em_sn = entry.options.get(CONF_EM_INVERTER_SN)
+    if not (entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data):
+        return entities
+
+    em_dev_data = coordinator.data.get(em_sn, {})
+    em_is_single_phase = detect_phase_type(em_dev_data) == "single_phase"
+    for numdef in EM_NUMBER_DEFS:
+        # max_grid_export only relevant for single-phase export limiting
+        if numdef.key == "max_grid_export" and not em_is_single_phase:
+            continue
+        entities.append(EMParameterNumber(coordinator, em_sn, numdef))
+    return entities
 
 
 class HyxiPowerNumber(
@@ -423,7 +466,7 @@ class HyxiPowerNumber(
                 self._attr_native_value = int(float(last_state.state))
             except ValueError, TypeError:
                 _LOGGER.debug(
-                    "Could not restore %s from state %r",
+                    _LOG_RESTORE_FAILED,
                     self._attr_unique_id,
                     last_state.state,
                 )
@@ -431,7 +474,7 @@ class HyxiPowerNumber(
     async def async_set_native_value(self, value: float) -> None:
         """Set the power value."""
         _LOGGER.debug(
-            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+            _LOG_VALUE_CHANGED, self._attr_unique_id, self._attr_native_value, value
         )
         self._attr_native_value = int(value)
         self.async_write_ha_state()
@@ -504,7 +547,7 @@ class HyxiSettingNumber(
                 self._attr_native_value = float(last_state.state)
             except ValueError, TypeError:
                 _LOGGER.debug(
-                    "Could not restore %s from state %r",
+                    _LOG_RESTORE_FAILED,
                     self._attr_unique_id,
                     last_state.state,
                 )
@@ -514,14 +557,14 @@ class HyxiSettingNumber(
         client = self.coordinator.client
         method = getattr(client, self._definition.client_method)
         _LOGGER.debug(
-            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+            _LOG_VALUE_CHANGED, self._attr_unique_id, self._attr_native_value, value
         )
         try:
             await method(value)
             self._attr_native_value = value
             self.async_write_ha_state()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to set %s to %s for %s: %s",
                 self._definition.key,
                 value,
@@ -573,7 +616,7 @@ class HyxiMicroPowerLimit(
                 self._attr_native_value = float(last_state.state)
             except ValueError, TypeError:
                 _LOGGER.debug(
-                    "Could not restore %s from state %r",
+                    _LOG_RESTORE_FAILED,
                     self._attr_unique_id,
                     last_state.state,
                 )
@@ -589,7 +632,7 @@ class HyxiMicroPowerLimit(
             self._attr_native_value = value
             self.async_write_ha_state()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to set power limit to %d%% for %s: %s",
                 int(value),
                 mask_sn(self._sn),
@@ -662,7 +705,7 @@ class HyxiProtectionNumber(
     async def async_set_native_value(self, value: float) -> None:
         """Set the protection threshold value."""
         _LOGGER.debug(
-            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+            _LOG_VALUE_CHANGED, self._attr_unique_id, self._attr_native_value, value
         )
         self._attr_native_value = int(value)
         self.async_write_ha_state()
@@ -727,7 +770,7 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
                 self._attr_native_value = float(last_state.state)
             except ValueError, TypeError:
                 _LOGGER.debug(
-                    "Could not restore %s from state %r",
+                    _LOG_RESTORE_FAILED,
                     self._attr_unique_id,
                     last_state.state,
                 )
@@ -735,7 +778,7 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Set the parameter value."""
         _LOGGER.debug(
-            "%s changed: %s -> %s", self._attr_unique_id, self._attr_native_value, value
+            _LOG_VALUE_CHANGED, self._attr_unique_id, self._attr_native_value, value
         )
         self._attr_native_value = value
         self.async_write_ha_state()

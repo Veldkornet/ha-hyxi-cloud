@@ -154,19 +154,11 @@ def test_is_battery_control_enabled_helper():
     entry = MagicMock()
     # Case 1: Explicitly set in options
     entry.options = {"enable_battery_control": True}
-    assert is_battery_control_enabled(entry, None) is True
+    assert is_battery_control_enabled(entry) is True
 
     entry.options = {"enable_battery_control": False}
-    assert is_battery_control_enabled(entry, None) is False
+    assert is_battery_control_enabled(entry) is False
 
     # Case 2: Not set — always defaults to False regardless of workMode
     entry.options = {}
-    coordinator = MagicMock()
-    coordinator.data = {"SN123": {"metrics": {"workMode": "0"}}}
-    assert is_battery_control_enabled(entry, coordinator) is False
-
-    coordinator.data["SN123"]["metrics"]["workMode"] = "16"
-    assert is_battery_control_enabled(entry, coordinator) is False
-
-    # Case 3: Coordinator is None
-    assert is_battery_control_enabled(entry, None) is False
+    assert is_battery_control_enabled(entry) is False

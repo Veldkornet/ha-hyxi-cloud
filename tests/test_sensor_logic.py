@@ -1451,15 +1451,15 @@ def test_same_quantity_fallback_table(base_sensor):
 
 
 @pytest.mark.asyncio
-async def test_async_setup_entry_em_and_battery_options():
+async def test_async_setup_entry_em_and_battery_options(monkeypatch):
     """Verify async_setup_entry registers EM and last_sent_mode sensors when enabled."""
     from custom_components.hyxi_cloud.const import DOMAIN
 
     # Stub dependencies directly on the module dictionary to bypass MagicMock discrepancies
-    sensor_mod.is_battery_control_enabled = lambda e, c: True
-    sensor_mod.detect_phase_type = lambda d: "three_phase"
-    sensor_mod.CONF_EM_ENABLED = "em_enabled"
-    sensor_mod.CONF_EM_INVERTER_SN = "em_inverter_sn"
+    monkeypatch.setattr(sensor_mod, "is_battery_control_enabled", lambda entry: True)
+    monkeypatch.setattr(sensor_mod, "detect_phase_type", lambda d: "three_phase")
+    monkeypatch.setattr(sensor_mod, "CONF_EM_ENABLED", "em_enabled")
+    monkeypatch.setattr(sensor_mod, "CONF_EM_INVERTER_SN", "em_inverter_sn")
 
     hass = MagicMock()
     entry = MagicMock()

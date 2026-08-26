@@ -101,63 +101,7 @@ async def async_setup_entry(
     entities: list[ButtonEntity] = []
 
     for sn, dev_data in coordinator.data.items():
-        # Clear Active Alarms button, available for every device SN --
-        # cloud only. "Clearing" an alarm is bookkeeping in HYXI's own
-        # cloud/account alarm history, not a device operation; neither
-        # Modbus client implements alter_alarm, and no register in either
-        # document represents "acknowledge/clear a fault" at all -- the
-        # fault bits just reflect live device state and only clear
-        # themselves once the underlying condition resolves.
-        if not is_modbus_entry(entry):
-            entities.append(HyxiClearAlarmsButton(coordinator, sn, dev_data))
-
-        device_type = normalize_device_type(get_raw_device_code(dev_data))
-
-        # Microinverter: Restart button (controlId 3013)
-        if device_type == "micro_inverter":
-            entities.append(HyxiMicroRestartButton(coordinator, sn, dev_data))
-            continue
-
-        if not is_control_capable_device_type(entry, device_type):
-            continue
-        if not is_battery_control_enabled(entry, coordinator):
-            continue
-
-        if is_modbus_entry(entry):
-            # Local Modbus has one control surface -- idle/charge/discharge/
-            # self-use -- for every device family this integration supports,
-            # regardless of electrical phase count. HALO (micro_ess) has no
-            # phase 2/3 registers at all and would never resolve past
-            # detect_phase_type's "unknown" otherwise, and neither register
-            # map has a confirmed local equivalent of the cloud's separate
-            # 5-state peak-shaving surface, so that path stays cloud-only.
-            entities.extend(_mode_buttons(coordinator, sn, dev_data))
-            # One device per Modbus entry (see client.py's async_read_all),
-            # so device_type reliably tells the two register maps apart.
-            if device_type == "hybrid_inverter":
-                entities.extend(_power_command_buttons(coordinator, sn, dev_data))
-            continue
-
-        phase = detect_phase_type(dev_data)
-        if phase == "unknown":
-            _LOGGER.debug(
-                "Cannot determine phase type for %s (model=%s) — "
-                "skipping control entities",
-                mask_sn(sn),
-                dev_data.get("model"),
-            )
-            continue
-
-        # Three-phase: operating mode buttons (controlIds 1062-1065)
-        if phase == "three_phase":
-            entities.extend(_mode_buttons(coordinator, sn, dev_data))
-
-        # Single-phase: peak shaving buttons (controlId 1021)
-        if phase == "single_phase":
-            for option in ("close", "charge", "discharge", "stop", "hold"):
-                entities.append(
-                    HyxiPeakShavingButton(coordinator, sn, dev_data, option)
-                )
+        entities.extend(_build_device_buttons(entry, coordinator, sn, dev_data))
 
     # Expose the Renew Push Subscription and Purge Buttons if push is enabled
     if entry.options.get(CONF_ENABLE_PUSH, False) is True:
@@ -166,6 +110,98 @@ async def async_setup_entry(
 
     if entities:
         async_add_entities(entities)
+
+
+def _build_device_buttons(
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+    sn: str,
+    dev_data: dict,
+) -> list[ButtonEntity]:
+    """Build the button entities for one device SN."""
+    entities: list[ButtonEntity] = []
+
+    # Clear Active Alarms button, available for every device SN --
+    # cloud only. "Clearing" an alarm is bookkeeping in HYXI's own
+    # cloud/account alarm history, not a device operation; neither
+    # Modbus client implements alter_alarm, and no register in either
+    # document represents "acknowledge/clear a fault" at all -- the
+    # fault bits just reflect live device state and only clear
+    # themselves once the underlying condition resolves.
+    if not is_modbus_entry(entry):
+        entities.append(HyxiClearAlarmsButton(coordinator, sn, dev_data))
+
+    device_type = normalize_device_type(get_raw_device_code(dev_data))
+
+    # Microinverter: Restart button (controlId 3013)
+    if device_type == "micro_inverter":
+        entities.append(HyxiMicroRestartButton(coordinator, sn, dev_data))
+        return entities
+
+    if not is_control_capable_device_type(entry, device_type):
+        return entities
+    if not is_battery_control_enabled(entry):
+        return entities
+
+    if is_modbus_entry(entry):
+        # Local Modbus has one control surface -- idle/charge/discharge/
+        # self-use -- for every device family this integration supports,
+        # regardless of electrical phase count. HALO (micro_ess) has no
+        # phase 2/3 registers at all and would never resolve past
+        # detect_phase_type's "unknown" otherwise, and neither register
+        # map has a confirmed local equivalent of the cloud's separate
+        # 5-state peak-shaving surface, so that path stays cloud-only.
+        entities.extend(_mode_buttons(coordinator, sn, dev_data))
+        # One device per Modbus entry (see client.py's async_read_all),
+        # so device_type reliably tells the two register maps apart.
+        if device_type == "hybrid_inverter":
+            entities.extend(_power_command_buttons(coordinator, sn, dev_data))
+        return entities
+
+    phase = detect_phase_type(dev_data)
+    if phase == "unknown":
+        _LOGGER.debug(
+            "Cannot determine phase type for %s (model=%s) — skipping control entities",
+            mask_sn(sn),
+            dev_data.get("model"),
+        )
+        return entities
+
+    # Three-phase: operating mode buttons (controlIds 1062-1065)
+    if phase == "three_phase":
+        entities.extend(_mode_buttons(coordinator, sn, dev_data))
+
+    # Single-phase: peak shaving buttons (controlId 1021)
+    if phase == "single_phase":
+        for option in ("close", "charge", "discharge", "stop", "hold"):
+            entities.append(HyxiPeakShavingButton(coordinator, sn, dev_data, option))
+
+    return entities
+
+
+def _active_alarm_ids(alarms: list, sn: str) -> list[int]:
+    """Collect integer alarm IDs for currently-active, unresolved alarms."""
+    active_ids = []
+    for alarm in alarms:
+        alarm_state = alarm.get("alarmState")
+        if alarm_state is None:
+            alarm_state = alarm.get("alarmstate")
+        if alarm_state not in ACTIVE_ALARM_STATES:
+            continue
+        if alarm.get("endTime") or alarm.get("endtime"):
+            continue
+        alarm_id = alarm.get("id") or alarm.get("alarmId") or alarm.get("alarmid")
+        if alarm_id is None:
+            continue
+        try:
+            active_ids.append(int(alarm_id))
+        except ValueError, TypeError:
+            _LOGGER.debug(
+                "Skipping alarm with non-integer id %r for device %s",
+                alarm_id,
+                mask_sn(sn),
+            )
+    return active_ids
 
 
 class HyxiClearAlarmsButton(
@@ -196,27 +232,7 @@ class HyxiClearAlarmsButton(
         """Press the button to clear active alarms."""
         client = self.coordinator.client
         alarms = (self.coordinator.data.get(self._sn) or {}).get("alarms") or []
-
-        active_ids = []
-        for alarm in alarms:
-            alarm_state = alarm.get("alarmState")
-            if alarm_state is None:
-                alarm_state = alarm.get("alarmstate")
-            if alarm_state in ACTIVE_ALARM_STATES:
-                if alarm.get("endTime") or alarm.get("endtime"):
-                    continue
-                alarm_id = (
-                    alarm.get("id") or alarm.get("alarmId") or alarm.get("alarmid")
-                )
-                if alarm_id is not None:
-                    try:
-                        active_ids.append(int(alarm_id))
-                    except ValueError, TypeError:
-                        _LOGGER.debug(
-                            "Skipping alarm with non-integer id %r for device %s",
-                            alarm_id,
-                            mask_sn(self._sn),
-                        )
+        active_ids = _active_alarm_ids(alarms, self._sn)
 
         if not active_ids:
             _LOGGER.info("No active alarms to clear for device %s", mask_sn(self._sn))
@@ -229,7 +245,7 @@ class HyxiClearAlarmsButton(
             )
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to clear active alarms for device %s: %s",
                 mask_sn(self._sn),
                 err,
@@ -267,7 +283,7 @@ class HyxiMicroRestartButton(
             _LOGGER.info("Restart command sent to microinverter %s", mask_sn(self._sn))
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to restart microinverter %s: %s", mask_sn(self._sn), err
             )
             raise HomeAssistantError(f"Failed to restart microinverter: {err}") from err
@@ -323,7 +339,7 @@ class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntit
             _LOGGER.info("Mode '%s' command sent to %s", self._mode, mask_sn(self._sn))
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to set mode '%s' for %s: %s", self._mode, mask_sn(self._sn), err
             )
             raise HomeAssistantError(
@@ -380,7 +396,7 @@ class HyxiPeakShavingButton(
             )
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to send peak shaving '%s' to %s: %s",
                 self._option,
                 mask_sn(self._sn),
@@ -437,7 +453,7 @@ class HyxiPowerCommandButton(
             )
             await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Failed to send power command '%s' to %s: %s",
                 self._action,
                 mask_sn(self._sn),
@@ -588,8 +604,83 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
             # Notify coordinator entities of change
             self.coordinator.async_update_listeners()
         except Exception as err:
-            _LOGGER.error("Failed to renew HYXI push subscriptions: %s", err)
+            _LOGGER.exception("Failed to renew HYXI push subscriptions: %s", err)
             raise HomeAssistantError(f"Subscription renewal failed: {err}") from err
+
+
+def _active_subscription_codes(hass) -> set[str]:
+    """Collect active subscription codes across all loaded coordinators."""
+    active_codes = set()
+    for coord in hass.data.get(DOMAIN, {}).values():
+        if getattr(coord, "subscribe_code", None):
+            active_codes.add(coord.subscribe_code)
+        if getattr(coord, "alarm_subscribe_code", None):
+            active_codes.add(coord.alarm_subscribe_code)
+    return active_codes
+
+
+async def _purge_subscription_codes(
+    hass, coordinator, to_purge: list[str]
+) -> tuple[int, int, int]:
+    """Cancel each inactive subscription code concurrently, falling back to a
+    local-only removal when the remote cancel fails.
+
+    Returns (success_count, remote_failed, failure_count).
+    """
+    from . import (
+        async_cancel_and_unregister_subscription,
+        async_get_subscription_codes,
+        async_unregister_subscription_code,
+    )
+
+    tasks = [
+        async_cancel_and_unregister_subscription(hass, coordinator.client, code)
+        for code in to_purge
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    success_count = 0
+    failed_codes = []
+    for code, result in zip(to_purge, results, strict=True):
+        if isinstance(result, asyncio.CancelledError):
+            raise result
+        if isinstance(result, Exception):
+            failed_codes.append((code, result))
+        else:
+            success_count += 1
+
+    remote_failed = 0
+    failure_count = 0
+    if failed_codes:
+        all_known_after = await async_get_subscription_codes(hass)
+        for code, err in failed_codes:
+            if code not in all_known_after:
+                # Already gone from the registry (e.g. removed by a concurrent path)
+                success_count += 1
+                continue
+            # Purge is an explicit user action, so remove the code from
+            # the local registry even though the remote cancel failed --
+            # HYXI has no "not found" response, so a dead code would
+            # otherwise fail here forever and never be purgeable.
+            _LOGGER.warning(
+                "Could not cancel subscription %s remotely (%s); "
+                "removing it from the local registry anyway as requested",
+                mask_subscription_code(code),
+                err,
+            )
+            try:
+                await async_unregister_subscription_code(hass, code)
+                success_count += 1
+                remote_failed += 1
+            except Exception as storage_err:  # pylint: disable=broad-exception-caught
+                _LOGGER.exception(
+                    "Failed to remove subscription code %s from local registry: %s",
+                    mask_subscription_code(code),
+                    storage_err,
+                )
+                failure_count += 1
+
+    return success_count, remote_failed, failure_count
 
 
 class HyxiPurgeSubscriptionsButton(ButtonEntity):
@@ -613,25 +704,12 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Purge old inactive subscriptions."""
-        from . import (
-            async_cancel_and_unregister_subscription,
-            async_get_subscription_codes,
-            async_unregister_subscription_code,
-        )
+        from . import async_get_subscription_codes
 
         _LOGGER.info("Manually triggered HYXI purge of old subscriptions")
 
-        # Collect active subscription codes across all loaded coordinators
-        active_codes = set()
-        for coord in self.hass.data.get(DOMAIN, {}).values():
-            if getattr(coord, "subscribe_code", None):
-                active_codes.add(coord.subscribe_code)
-            if getattr(coord, "alarm_subscribe_code", None):
-                active_codes.add(coord.alarm_subscribe_code)
-
-        # Retrieve all saved subscription codes
+        active_codes = _active_subscription_codes(self.hass)
         all_known = await async_get_subscription_codes(self.hass)
-
         # Identify codes to purge (must NOT be in use)
         to_purge = [code for code in all_known if code not in active_codes]
 
@@ -641,57 +719,9 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
 
         _LOGGER.info("Found %d old subscription codes to purge", len(to_purge))
 
-        # Attempt to cancel each inactive code concurrently
-        success_count = 0
-        failure_count = 0
-
-        tasks = [
-            async_cancel_and_unregister_subscription(
-                self.hass, self.coordinator.client, code
-            )
-            for code in to_purge
-        ]
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        failed_codes = []
-        for code, result in zip(to_purge, results, strict=True):
-            if isinstance(result, asyncio.CancelledError):
-                raise result
-            if isinstance(result, Exception):
-                failed_codes.append((code, result))
-            else:
-                success_count += 1
-
-        remote_failed = 0
-        if failed_codes:
-            all_known_after = await async_get_subscription_codes(self.hass)
-            for code, err in failed_codes:
-                if code not in all_known_after:
-                    # Already gone from the registry (e.g. removed by a concurrent path)
-                    success_count += 1
-                    continue
-                # Purge is an explicit user action, so remove the code from
-                # the local registry even though the remote cancel failed --
-                # HYXI has no "not found" response, so a dead code would
-                # otherwise fail here forever and never be purgeable.
-                _LOGGER.warning(
-                    "Could not cancel subscription %s remotely (%s); "
-                    "removing it from the local registry anyway as requested",
-                    mask_subscription_code(code),
-                    err,
-                )
-                try:
-                    await async_unregister_subscription_code(self.hass, code)
-                    success_count += 1
-                    remote_failed += 1
-                except Exception as storage_err:  # pylint: disable=broad-exception-caught
-                    _LOGGER.error(
-                        "Failed to remove subscription code %s from local registry: %s",
-                        mask_subscription_code(code),
-                        storage_err,
-                    )
-                    failure_count += 1
+        success_count, remote_failed, failure_count = await _purge_subscription_codes(
+            self.hass, self.coordinator, to_purge
+        )
 
         _LOGGER.info(
             "Purged old subscriptions complete: %d purged/removed "

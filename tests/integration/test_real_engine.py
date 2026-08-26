@@ -5,7 +5,7 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HassJob, HassJobType, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import HyxiApiClient
@@ -75,7 +75,7 @@ async def test_engine_lifecycle_and_helpers(hass: HomeAssistant):
     assert engine.p1_avg == 0.0
 
     # Start the engine
-    await engine.async_start()
+    engine.start()
     assert engine.enabled is True
     # Default status is running unless disabled by switch
     assert engine.status == "running"
@@ -202,7 +202,7 @@ async def test_engine_lifecycle_and_helpers(hass: HomeAssistant):
     assert engine.battery_energy_available_wh() == 800.0
 
     # Stop the engine
-    await engine.async_stop()
+    engine.stop()
     await hass.async_block_till_done()
     assert engine.enabled is False
 
@@ -243,7 +243,7 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
 
     config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
     engine = EnergyManagerEngine(hass, coordinator, config)
-    await engine.async_start()
+    engine.start()
 
     # Define common entities for tests and register them in the entity registry
     registry = er.async_get(hass)
@@ -467,7 +467,7 @@ async def test_engine_decisions_and_actions(hass: HomeAssistant):
     assert engine.decision == "solar_charge_reduced"
 
     # Clean up
-    await engine.async_stop()
+    engine.stop()
     await hass.async_block_till_done()
 
 
@@ -509,7 +509,7 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
 
     config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
     engine = EnergyManagerEngine(hass, coordinator, config)
-    await engine.async_start()
+    engine.start()
 
     # 1. Test fast-path callback via P1 change event (high load)
     hass.states.async_set("sensor.p1_meter", "3500.0")
@@ -552,7 +552,7 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
         await engine._loop_tick(None)
         assert engine.decision == "error"
 
-    await engine.async_stop()
+    engine.stop()
     await hass.async_block_till_done()
 
 
@@ -679,7 +679,7 @@ async def test_engine_status_property(hass: HomeAssistant):
     assert engine.status == "stopped"
 
     # Start engine
-    await engine.async_start()
+    engine.start()
 
     # 2. Disabled (via em_enabled switch off)
     with (
@@ -716,7 +716,7 @@ async def test_engine_status_property(hass: HomeAssistant):
             mock_dry_run.return_value = False
             assert engine.status == "running"
 
-    await engine.async_stop()
+    engine.stop()
 
 
 @pytest.mark.asyncio
@@ -866,7 +866,7 @@ async def test_engine_on_soc_change_fast_path(hass: HomeAssistant):
         await hass.async_block_till_done()
         mock_decision.assert_not_called()
 
-        await engine.async_start()
+        engine.start()
 
         # Missing new_state -> no-op
         event.data = {"new_state": None}
@@ -904,7 +904,34 @@ async def test_engine_on_soc_change_fast_path(hass: HomeAssistant):
         await hass.async_block_till_done()
         mock_decision.assert_not_called()
 
-        await engine.async_stop()
+        engine.stop()
+
+
+def test_engine_registered_callbacks_run_on_the_event_loop(hass: HomeAssistant):
+    """Every handler start() registers with async_track_time_interval /
+    async_track_state_change_event must be classified by Home Assistant as
+    safe to run on the event loop, not dispatched to a worker thread.
+
+    A plain `def` handler without @callback is treated as
+    HassJobType.Executor and run via loop.run_in_executor -- unsafe for
+    _update_night_estimate, which reaches hass.states.async_set() and
+    entity_platform.async_get_platforms() through _set_param(), both of
+    which require the event loop thread. Hand-mocked tests that call these
+    handlers directly (e.g. test_engine_update_night_estimate below) can't
+    catch this, since they bypass HA's job-dispatch entirely.
+    """
+    engine, _coordinator, _entry = _make_engine(hass)
+
+    for method in (
+        engine._loop_tick,
+        engine._on_p1_change,
+        engine._on_soc_change,
+        engine._update_night_estimate,
+    ):
+        job_type = HassJob(method).job_type
+        assert job_type != HassJobType.Executor, (
+            f"{method.__name__} would run in a worker thread, not the event loop"
+        )
 
 
 @pytest.mark.asyncio
@@ -947,17 +974,17 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
         "homeassistant.util.dt.now",
         return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
     ):
-        await engine._update_night_estimate(None)
+        engine._update_night_estimate(None)
     assert hass.states.get(em_avg_entry.entity_id).state == "400"
 
-    await engine.async_start()
+    engine.start()
 
     # Outside the night window (21:00-06:00) -> no-op
     with patch(
         "homeassistant.util.dt.now",
         return_value=dt_util.parse_datetime("2026-06-02T12:00:00"),
     ):
-        await engine._update_night_estimate(None)
+        engine._update_night_estimate(None)
     assert hass.states.get(em_avg_entry.entity_id).state == "400"
 
     # Inside the night window but P1 <= 0 (not importing) -> no-op
@@ -966,7 +993,7 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
         "homeassistant.util.dt.now",
         return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
     ):
-        await engine._update_night_estimate(None)
+        engine._update_night_estimate(None)
     assert hass.states.get(em_avg_entry.entity_id).state == "400"
 
     # Inside the night window with a positive P1 reading -> EMA updates and
@@ -976,7 +1003,7 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
         "homeassistant.util.dt.now",
         return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
     ):
-        await engine._update_night_estimate(None)
+        engine._update_night_estimate(None)
     # raw new_avg = 400 * 0.9 + 700 * 0.1 = 430, quantized to the nearest
     # AVG_NIGHT_CONSUMPTION_STEP (50) -> 450
     assert float(hass.states.get(em_avg_entry.entity_id).state) == 450.0
@@ -992,7 +1019,7 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
         "homeassistant.util.dt.now",
         return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
     ):
-        await engine._update_night_estimate(None)
+        engine._update_night_estimate(None)
     # raw = 2000 * 0.9 + 20000 * 0.1 = 3800, well above the 2000 ceiling
     assert float(hass.states.get(em_avg_entry.entity_id).state) == 2000.0
 
@@ -1004,11 +1031,11 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
         "homeassistant.util.dt.now",
         return_value=dt_util.parse_datetime("2026-06-02T23:00:00"),
     ):
-        await engine._update_night_estimate(None)
+        engine._update_night_estimate(None)
     # raw = 50 * 0.9 + 1 * 0.1 = 45.1, below the 100 floor
     assert float(hass.states.get(em_avg_entry.entity_id).state) == 100.0
 
-    await engine.async_stop()
+    engine.stop()
 
 
 def _make_engine(hass: HomeAssistant, *, options=None, metrics=None, model="H10K-HT"):
@@ -1051,29 +1078,29 @@ def _make_engine(hass: HomeAssistant, *, options=None, metrics=None, model="H10K
 
 @pytest.mark.asyncio
 async def test_engine_lifecycle_edge_cases(hass: HomeAssistant):
-    """Test async_start/async_stop idempotency and the SOC-listener branch."""
+    """Test start/stop idempotency and the SOC-listener branch."""
     engine, _coordinator, _entry = _make_engine(hass)
     registry = er.async_get(hass)
 
-    # Register the batSoc sensor entity so async_start's SOC-listener branch
+    # Register the batSoc sensor entity so start's SOC-listener branch
     # (only taken when the entity actually exists) gets exercised.
     soc_entry = registry.async_get_or_create(
         "sensor", DOMAIN, "hyxi_SN123_batsoc", suggested_object_id="hyxi_sn123_batsoc"
     )
     hass.states.async_set(soc_entry.entity_id, "50.0")
 
-    await engine.async_start()
+    engine.start()
     assert engine.enabled is True
 
-    # Calling async_start again while already enabled is a no-op
-    await engine.async_start()
+    # Calling start again while already enabled is a no-op
+    engine.start()
     assert engine.enabled is True
 
-    await engine.async_stop()
+    engine.stop()
     assert engine.enabled is False
 
-    # Calling async_stop again while already stopped is a no-op
-    await engine.async_stop()
+    # Calling stop again while already stopped is a no-op
+    engine.stop()
     assert engine.enabled is False
 
 
@@ -1845,7 +1872,7 @@ async def test_engine_loop_tick_edge_cases(hass: HomeAssistant):
     # Disabled engine -> immediate no-op
     await engine._loop_tick(None)
 
-    await engine.async_start()
+    engine.start()
 
     # em_enabled switch off while mid-charge: self_consume fails too, but
     # the exception is swallowed rather than propagating. _set_mode itself
@@ -1880,7 +1907,7 @@ async def test_engine_loop_tick_edge_cases(hass: HomeAssistant):
         await engine._loop_tick(None)  # must not raise
     assert engine.decision == "error"
 
-    await engine.async_stop()
+    engine.stop()
 
 
 @pytest.mark.asyncio
@@ -1915,7 +1942,7 @@ async def test_engine_on_p1_change_edge_cases(hass: HomeAssistant):
         mock_decision.assert_not_called()
 
     # Engine enabled + home_load over threshold -> triggers the fast-path
-    await engine.async_start()
+    engine.start()
     with patch.object(engine, "_make_decision", new=AsyncMock()) as mock_decision:
         engine._last_fast_path_trigger = 0
         event.data = {"new_state": MagicMock(state="300.0")}
@@ -1923,4 +1950,4 @@ async def test_engine_on_p1_change_edge_cases(hass: HomeAssistant):
         await hass.async_block_till_done()
         mock_decision.assert_called_once()
 
-    await engine.async_stop()
+    engine.stop()

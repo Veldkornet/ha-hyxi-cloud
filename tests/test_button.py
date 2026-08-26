@@ -102,7 +102,7 @@ def mock_entry_fixture():
     return entry
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_setup_entry_no_coordinator_data(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -117,7 +117,7 @@ async def test_async_setup_entry_no_coordinator_data(
     async_add_entities.assert_not_called()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_setup_entry_adds_push_buttons(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -136,7 +136,7 @@ async def test_async_setup_entry_adds_push_buttons(
     assert any(isinstance(e, button_mod.HyxiPurgeSubscriptionsButton) for e in entities)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_setup_entry_micro_inverter(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -174,7 +174,7 @@ async def test_async_setup_entry_micro_inverter(
     )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_setup_entry_skips_clear_alarms_button_for_modbus(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -200,7 +200,7 @@ async def test_async_setup_entry_skips_clear_alarms_button_for_modbus(
         )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_setup_entry_three_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -239,7 +239,7 @@ async def test_async_setup_entry_three_phase(
     assert sorted(modes) == ["charge", "discharge", "idle", "self_consume"]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_setup_entry_single_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -280,7 +280,7 @@ async def test_async_setup_entry_single_phase(
     assert sorted(options) == ["charge", "close", "discharge", "hold", "stop"]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_async_setup_entry_unknown_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -316,7 +316,7 @@ async def test_async_setup_entry_unknown_phase(
     assert isinstance(entities[0], button_mod.HyxiClearAlarmsButton)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_micro_restart_button_press(mock_coordinator_fixture):
     """Test pressing the microinverter restart button."""
     btn = button_mod.HyxiMicroRestartButton(mock_coordinator_fixture, "SN123", {})
@@ -327,7 +327,7 @@ async def test_micro_restart_button_press(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_micro_restart_button_error(mock_coordinator_fixture):
     """Test error handling when pressing microinverter restart button."""
     mock_coordinator_fixture.client.restart_device.side_effect = (
@@ -339,7 +339,7 @@ async def test_micro_restart_button_error(mock_coordinator_fixture):
         await btn.async_press()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_power_command_button_press(mock_coordinator_fixture):
     """Test pressing each of the three power command buttons."""
     for action in ("power_on", "power_off", "restart"):
@@ -352,7 +352,7 @@ async def test_power_command_button_press(mock_coordinator_fixture):
         )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_power_command_button_error(mock_coordinator_fixture):
     """Test error handling when a power command write fails."""
     mock_coordinator_fixture.client.restart.side_effect = (
@@ -366,7 +366,7 @@ async def test_power_command_button_error(mock_coordinator_fixture):
         await btn.async_press()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
     """Test pressing idle and self_consume mode buttons."""
     btn_idle = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")
@@ -382,7 +382,7 @@ async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
     )
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.button._get_power_value", return_value=5000)
 async def test_mode_button_press_charge_discharge(
     mock_get_power, mock_coordinator_fixture
@@ -411,7 +411,7 @@ async def test_mode_button_press_charge_discharge(
     mock_get_power.assert_any_call(hass, "SN123", "discharge")
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_mode_button_error(mock_coordinator_fixture):
     """Test error handling in mode button press."""
     mock_coordinator_fixture.client.set_mode_idle.side_effect = (
@@ -423,7 +423,7 @@ async def test_mode_button_error(mock_coordinator_fixture):
         await btn.async_press()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_peak_shaving_button_press(mock_coordinator_fixture):
     """Test pressing peak shaving buttons."""
     for option in ["close", "charge", "discharge", "stop", "hold"]:
@@ -438,7 +438,7 @@ async def test_peak_shaving_button_press(mock_coordinator_fixture):
     assert mock_coordinator_fixture.client.set_peak_shaving.call_count == 5
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_peak_shaving_button_error(mock_coordinator_fixture):
     """Test error handling in peak shaving button press."""
     error = button_mod.HyxiApiClient.ControlError("Fail")
@@ -450,7 +450,7 @@ async def test_peak_shaving_button_error(mock_coordinator_fixture):
     with patch.object(button_mod, "_LOGGER") as mock_logger:
         with pytest.raises(button_mod.HomeAssistantError, match="peak shaving 'hold'"):
             await btn.async_press()
-        mock_logger.error.assert_called_once_with(
+        mock_logger.exception.assert_called_once_with(
             "Failed to send peak shaving '%s' to %s: %s",
             "hold",
             button_mod.mask_sn("SN123"),
@@ -520,7 +520,7 @@ def test_get_power_value_invalid_state():
         assert button_mod._get_power_value(hass, "SN123", "charge") == 100
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_clear_alarms_button_press(mock_coordinator_fixture):
     """Test pressing the clear alarms button with active alarms."""
     # Mock some alarms in data
@@ -554,7 +554,7 @@ async def test_clear_alarms_button_press(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_called_once()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_clear_alarms_button_press_no_alarms(mock_coordinator_fixture):
     """Test pressing clear alarms button with no active alarms."""
     mock_coordinator_fixture.data = {
@@ -576,7 +576,7 @@ async def test_clear_alarms_button_press_no_alarms(mock_coordinator_fixture):
     mock_coordinator_fixture.async_request_refresh.assert_not_called()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_clear_alarms_button_error(mock_coordinator_fixture):
     """Test error handling in clear alarms button press."""
     mock_coordinator_fixture.data = {
@@ -595,7 +595,7 @@ async def test_clear_alarms_button_error(mock_coordinator_fixture):
         await btn.async_press()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_clear_alarms_button_skips_non_integer_alarm_id(mock_coordinator_fixture):
     """Test an alarm with a non-integer id is logged and skipped, not fatal."""
     mock_coordinator_fixture.data = {
@@ -603,6 +603,24 @@ async def test_clear_alarms_button_skips_non_integer_alarm_id(mock_coordinator_f
             "alarms": [
                 {"id": 44733168, "alarmState": 2, "alarmName": "Grid failure"},
                 {"id": "not-an-int", "alarmState": 1, "alarmName": "Bad id"},
+            ]
+        }
+    }
+    btn = button_mod.HyxiClearAlarmsButton(mock_coordinator_fixture, "SN123", {})
+
+    await btn.async_press()
+
+    mock_coordinator_fixture.client.alter_alarm.assert_called_once_with([44733168])
+
+
+@pytest.mark.asyncio
+async def test_clear_alarms_button_skips_alarm_with_no_id(mock_coordinator_fixture):
+    """Test an active alarm with no id/alarmId/alarmid field is skipped, not fatal."""
+    mock_coordinator_fixture.data = {
+        "SN123": {
+            "alarms": [
+                {"id": 44733168, "alarmState": 2, "alarmName": "Grid failure"},
+                {"alarmState": 1, "alarmName": "No id at all"},
             ]
         }
     }

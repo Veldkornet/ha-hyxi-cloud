@@ -14,4 +14,3 @@ custom_components.__path__ = [p for p in custom_components.__path__ if Path(p).i
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
     """Enable custom integrations for testing."""
-    yield

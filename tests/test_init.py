@@ -142,14 +142,13 @@ def mock_entry():
 @pytest.mark.asyncio
 async def test_webhook_handle_auth_fails_non_ascii():
     """Verify webhook handles non-ASCII access key in auth without crashing (DoS protection)."""
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
 
     request = MagicMock()
     request.headers = {"accessKey": "malicious_ñ_key"}
 
-    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    res = await _async_handle_webhook("webhook_id", request, coordinator)
     assert res.status == 401
 
 
@@ -1196,21 +1195,32 @@ async def test_async_setup_push_subscription_client_failure_or_error():
 @pytest.mark.asyncio
 async def test_webhook_handle_auth_fails():
     """Verify webhook handles unauthorized requests securely."""
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
 
     request = MagicMock()
     request.headers = {"accessKey": "wrong_ak"}
 
-    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    res = await _async_handle_webhook("webhook_id", request, coordinator)
+    assert res.status == 401
+
+
+@pytest.mark.asyncio
+async def test_webhook_handle_auth_fails_missing_access_key_header():
+    """Verify webhook rejects a request with no accessKey header at all."""
+    coordinator = MagicMock()
+    coordinator.client.access_key = "correct_ak"
+
+    request = MagicMock()
+    request.headers = {}
+
+    res = await _async_handle_webhook("webhook_id", request, coordinator)
     assert res.status == 401
 
 
 @pytest.mark.asyncio
 async def test_webhook_handle_invalid_json():
     """Verify webhook handles invalid JSON payloads gracefully."""
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
 
@@ -1218,7 +1228,7 @@ async def test_webhook_handle_invalid_json():
     request.headers = {"accessKey": "correct_ak"}
     request.text = AsyncMock(return_value="{bad json}")
 
-    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    res = await _async_handle_webhook("webhook_id", request, coordinator)
     assert res.status == 400
 
 
@@ -1229,7 +1239,6 @@ async def test_webhook_handle_url_encoded_payload_fallback():
     import json
     from urllib.parse import urlencode
 
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
     coordinator.data = {"SN123": {}}
@@ -1244,14 +1253,13 @@ async def test_webhook_handle_url_encoded_payload_fallback():
     request.headers = {"accessKey": "correct_ak"}
     request.text = AsyncMock(return_value=body)
 
-    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    res = await _async_handle_webhook("webhook_id", request, coordinator)
     assert res.status == 200
 
 
 @pytest.mark.asyncio
 async def test_webhook_handle_process_exceptions():
     """Verify webhook handles process payload exceptions gracefully."""
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
     coordinator.data = {}
@@ -1261,14 +1269,13 @@ async def test_webhook_handle_process_exceptions():
     request.text = AsyncMock(return_value='{"data": "raw"}')
     coordinator.client.process_push_data = MagicMock(side_effect=Exception("sdk_error"))
 
-    res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+    res = await _async_handle_webhook("webhook_id", request, coordinator)
     assert res.status == 500
 
 
 @pytest.mark.asyncio
 async def test_webhook_handle_untracked_device():
     """Verify webhook handles push data for untracked devices."""
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
     coordinator.data = {"SN123": {}}
@@ -1283,7 +1290,7 @@ async def test_webhook_handle_untracked_device():
     )
 
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_debug:
-        res = await _async_handle_webhook(hass, "webhook_id", request, coordinator)
+        res = await _async_handle_webhook("webhook_id", request, coordinator)
         assert res.status == 200
         assert (
             mock_debug.call_args[0][0]
@@ -1365,7 +1372,7 @@ async def test_alarm_subscription_failures_and_webhooks():
     request = MagicMock()
     request.headers = {"accessKey": "wrong_ak"}
     res_auth = await _async_handle_alarm_webhook(
-        hass, "alarm_webhook_id", request, coordinator
+        "alarm_webhook_id", request, coordinator
     )
     assert res_auth.status == 401
 
@@ -1373,7 +1380,7 @@ async def test_alarm_subscription_failures_and_webhooks():
     request.headers = {"accessKey": "correct_ak"}
     request.text = AsyncMock(return_value="{bad json}")
     res_json = await _async_handle_alarm_webhook(
-        hass, "alarm_webhook_id", request, coordinator
+        "alarm_webhook_id", request, coordinator
     )
     assert res_json.status == 400
 
@@ -1383,7 +1390,7 @@ async def test_alarm_subscription_failures_and_webhooks():
         side_effect=Exception("sdk_err")
     )
     res_err = await _async_handle_alarm_webhook(
-        hass, "alarm_webhook_id", request, coordinator
+        "alarm_webhook_id", request, coordinator
     )
     assert res_err.status == 500
 
@@ -1394,7 +1401,7 @@ async def test_alarm_subscription_failures_and_webhooks():
     coordinator.data = {"SN123": {}}
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
         res_ok = await _async_handle_alarm_webhook(
-            hass, "alarm_webhook_id", request, coordinator
+            "alarm_webhook_id", request, coordinator
         )
         assert res_ok.status == 200
         assert (
@@ -1505,7 +1512,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     request.headers = {"accessKey": "correct_ak"}
     request.text = AsyncMock(return_value="{}")
     coordinator.client.process_push_data = MagicMock(return_value={})
-    res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
+    res = await _async_handle_webhook("web_id", request, coordinator)
     assert res.status == 200
 
     # 6. Push data webhook with coordinator.data is None (line 554)
@@ -1516,7 +1523,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     from custom_components.hyxi_cloud.const import mask_sn
 
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_debug:
-        res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
+        res = await _async_handle_webhook("web_id", request, coordinator)
         assert res.status == 200
         assert coordinator.data == {}
         # SN123 is untracked now
@@ -1527,16 +1534,14 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     # 7. Push data webhook updates successfully (line 577-580)
     coordinator.data = {"SN123": {"metrics": {}}}
     coordinator.async_update_listeners = MagicMock()
-    res = await _async_handle_webhook(mock_hass, "web_id", request, coordinator)
+    res = await _async_handle_webhook("web_id", request, coordinator)
     assert res.status == 200
     assert coordinator.data["SN123"]["metrics"] == {"batSoc": 85}
     coordinator.async_update_listeners.assert_called_once()
 
     # 8. Alarm push webhook empty results (line 755)
     coordinator.client.process_alarm_push_data = MagicMock(return_value={})
-    res = await _async_handle_alarm_webhook(
-        mock_hass, "alarm_web_id", request, coordinator
-    )
+    res = await _async_handle_alarm_webhook("alarm_web_id", request, coordinator)
     assert res.status == 200
 
     # 9. Alarm push webhook with coordinator.data is None (line 758)
@@ -1545,9 +1550,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
         return_value={"SN123": [{"alarmCode": "99"}]}
     )
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
-        res = await _async_handle_alarm_webhook(
-            mock_hass, "alarm_web_id", request, coordinator
-        )
+        res = await _async_handle_alarm_webhook("alarm_web_id", request, coordinator)
         assert res.status == 200
         assert coordinator.data == {}
         mock_warn.assert_any_call(
@@ -1566,9 +1569,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
             ]
         }
     )
-    res = await _async_handle_alarm_webhook(
-        mock_hass, "alarm_web_id", request, coordinator
-    )
+    res = await _async_handle_alarm_webhook("alarm_web_id", request, coordinator)
     assert res.status == 200
     assert len(coordinator.data["SN123"]["alarms"]) == 2
     # Ensure alarm with code "99" was updated
@@ -1652,13 +1653,13 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
 
     # Mock engine instance
     mock_engine = MagicMock()
-    mock_engine.async_start = AsyncMock()
-    mock_engine.async_stop = AsyncMock()
+    mock_engine.start = MagicMock()
+    mock_engine.stop = MagicMock()
 
     # Mock protection controller
     mock_controller = MagicMock()
     mock_controller.async_start = AsyncMock()
-    mock_controller.async_stop = AsyncMock()
+    mock_controller.stop = MagicMock()
 
     with patch(
         "custom_components.hyxi_cloud.engine.EnergyManagerEngine",
@@ -1696,7 +1697,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                                         )
                                         assert res_setup is True
                                         assert coordinator.engine is mock_engine
-                                        mock_engine.async_start.assert_called_once()
+                                        mock_engine.start.assert_called_once()
                                         mock_controller.async_start.assert_called_once()
 
                                         # Set up data in mock_hass.data for unload
@@ -1709,8 +1710,8 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                                             mock_hass, mock_entry
                                         )
                                         assert res_unload is True
-                                        mock_engine.async_stop.assert_called_once()
-                                        mock_controller.async_stop.assert_called_once()
+                                        mock_engine.stop.assert_called_once()
+                                        mock_controller.stop.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -1723,7 +1724,6 @@ async def test_alarm_webhook_url_encoded_payload_fallback():
 
     from custom_components.hyxi_cloud.__init__ import _async_handle_alarm_webhook
 
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
     coordinator.data = {"SN123": {}}
@@ -1736,7 +1736,7 @@ async def test_alarm_webhook_url_encoded_payload_fallback():
     request.headers = {"accessKey": "correct_ak"}
     request.text = AsyncMock(return_value=body)
 
-    res = await _async_handle_alarm_webhook(hass, "alarm_web_id", request, coordinator)
+    res = await _async_handle_alarm_webhook("alarm_web_id", request, coordinator)
     assert res.status == 200
 
 
@@ -1748,7 +1748,6 @@ async def test_alarm_webhook_logs_masked_alarm_details_at_debug(caplog):
 
     from custom_components.hyxi_cloud.__init__ import _async_handle_alarm_webhook
 
-    hass = MagicMock()
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
     coordinator.data = {"SN123": {"alarms": []}}
@@ -1761,7 +1760,7 @@ async def test_alarm_webhook_logs_masked_alarm_details_at_debug(caplog):
     request.text = AsyncMock(return_value='{"alarmList": []}')
 
     caplog.set_level(logging.DEBUG)
-    res = await _async_handle_alarm_webhook(hass, "alarm_web_id", request, coordinator)
+    res = await _async_handle_alarm_webhook("alarm_web_id", request, coordinator)
 
     assert res.status == 200
     assert any(

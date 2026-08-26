@@ -40,7 +40,7 @@ import struct
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 try:
     from modbus_connection import (
@@ -416,29 +416,54 @@ def run_diff(args: argparse.Namespace) -> int:
         total += len(changed)
         print(f"\n=== {space} registers: {len(changed)} changed ===")
         for address in changed:
-            old = b_regs[str(address)]
-            new = a_regs[str(address)]
-            print(
-                f"\n{address}  0x{old:04X} -> 0x{new:04X}"
-                f"   (i16 {_i16(old)} -> {_i16(new)}, "
-                f"delta {_i16(new) - _i16(old):+d})"
+            _print_changed_register(
+                space,
+                address,
+                _SnapshotSide(before, b_regs, b_label),
+                _SnapshotSide(after, a_regs, a_label),
             )
-            b_dec = decodings(_words_at(before, space, address), 0)
-            a_dec = decodings(_words_at(after, space, address), 0)
-            for key, was in b_dec.items():
-                if key == "hex" or key not in a_dec:
-                    # Absent from a_dec means the neighbouring register was
-                    # never captured, not that the value became null.
-                    continue
-                if was == a_dec[key]:
-                    continue
-                print(f"    {key:<8} {b_label}={was:<14} {a_label}={a_dec[key]}")
 
     if not total:
         print("no registers changed between the two snapshots")
     else:
         print(f"\n{total} registers differ in total")
     return 0
+
+
+class _SnapshotSide(NamedTuple):
+    """One side (before or after) of a two-snapshot diff."""
+
+    snapshot: dict
+    regs: dict
+    label: str
+
+
+def _print_changed_register(
+    space: str,
+    address: int,
+    before: _SnapshotSide,
+    after: _SnapshotSide,
+) -> None:
+    """Print the raw value change and any differing decodings for one
+    changed register.
+    """
+    old = before.regs[str(address)]
+    new = after.regs[str(address)]
+    print(
+        f"\n{address}  0x{old:04X} -> 0x{new:04X}"
+        f"   (i16 {_i16(old)} -> {_i16(new)}, "
+        f"delta {_i16(new) - _i16(old):+d})"
+    )
+    b_dec = decodings(_words_at(before.snapshot, space, address), 0)
+    a_dec = decodings(_words_at(after.snapshot, space, address), 0)
+    for key, was in b_dec.items():
+        if key == "hex" or key not in a_dec:
+            # Absent from a_dec means the neighbouring register was
+            # never captured, not that the value became null.
+            continue
+        if was == a_dec[key]:
+            continue
+        print(f"    {key:<8} {before.label}={was:<14} {after.label}={a_dec[key]}")
 
 
 def run_show(args: argparse.Namespace) -> int:
