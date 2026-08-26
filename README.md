@@ -24,12 +24,12 @@
 ## ✨ Features
 
 - **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
-- **📟 Local Modbus (RS485) — In Development:** An optional local transport that talks straight to the inverter over RS485 instead of the cloud, for faster polling and control the cloud API can't offer. See [Local Modbus (RS485)](#-local-modbus-rs485--in-development) below.
+- **📟 Local Modbus (RS485):** An optional local transport that talks straight to the inverter over RS485 instead of the cloud, for faster polling and control the cloud API can't offer. See [Local Modbus (RS485)](#-local-modbus-rs485--in-development) below.
 - **🔄 Real-Time Push Subscriptions:** Optional support for receiving instantaneous updates for telemetry data and active alarms directly from HYXI Cloud via Home Assistant's webhook endpoints, bypassing polling delays.
 - **🔧 Device Control:** Send supported HYXI Cloud control commands from Home Assistant, including inverter mode buttons, peak shaving buttons, frequency control, and microinverter power controls.
 - **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
 - **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
-- **🛡️ Reliable Quality Assurance:** Built with **99%+ automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
+- **🛡️ Reliable Quality Assurance:** Built with **100% automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
 - **🧼 Clean UI:** Precision-tuned data with support for **20+ languages** (English, German, French, Dutch, Afrikaans, Portuguese, Spanish, Italian, and more).
 
 ## 📥 Installation
@@ -63,17 +63,22 @@ Beta releases get the same testing as any other release, but haven't accumulated
 
 ### 📡 Detailed Entity Support
 
-| Device Type | Status | Key Entities Provided |
-| :--- | :--- | :--- |
-| **Hybrid & All-in-One** | ✅ Tested | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, **Capacity (kWh)**, **Max Chg/Disch Power**, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency, **Phase(1/2/3) Volts/Amps/Power**, **Bus Voltage** <br> **System:** Internal Temp, Running State, Fault Codes |
-| **Data Collector** | ✅ Tested | **Diagnostics:** Signal Intensity (RSSI/%), Heartbeat, Heartbeat Interval, Last Seen, **WiFi Version**, **Comm Mode**, **App Version** |
-| **String Inverter** | ⚠️ Untested | **PV:** Power, String Volts/Amps <br> **AC:** Output Power, Daily/Total Yield, Bus Voltage, Temperature |
-| **Micro Inverter** | ⚠️ Untested | **Module:** DC Input Power, AC Voltage, Frequency, Daily Energy, Internal Temp |
-| **Smart Meter** | ⚠️ Untested | **Grid:** Active/Reactive Power, Voltage, Export Energy, Import Energy |
+| Device Type | Cloud Status | Modbus Status | Key Entities Provided |
+| :--- | :--- | :--- | :--- |
+| **Hybrid Inverter** | ✅ Tested | ⚠️ Reads only — writes not yet confirmed working on real hardware, see [Local Modbus](#-local-modbus-rs485--in-development) below | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, **Capacity (kWh)**, **Max Chg/Disch Power**, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency, **Phase(1/2/3) Volts/Amps/Power**, **Bus Voltage** <br> **System:** Internal Temp, Running State, Fault Codes |
+| **All-in-One** | ✅ Tested | ❌ Not Supported¹ | Same as Hybrid Inverter above |
+| **Micro ESS (HALO)** | ✅ Tested | ⚠️ Untested (for now)² | **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH <br> **Grid:** Import/Export Power, Frequency <br> **System:** Internal Temp, Running State, Fault Codes *(AC-coupled — no PV/DC input)* |
+| **Data Collector** | ✅ Tested | ❌ Not Supported¹ | **Diagnostics:** Signal Intensity/Quality, Last Seen, **WiFi Version**, **Comm Mode**, **App Version** |
+| **String Inverter** | ⚠️ Untested | ❌ Not Supported¹ | **PV:** Power, String Volts/Amps <br> **AC:** Output Power, Daily/Total Yield, Bus Voltage, Temperature |
+| **Micro Inverter** | ✅ Tested | ❌ Not Supported¹ | **PV:** Per-string Voltage/Current/Power (up to 4 strings) <br> **Module:** AC Voltage, Frequency, Daily Energy, Internal Temp <br> **Aggregate:** a "Microinverters Summary" device sums AC Power and Daily Yield across every micro-inverter on the account |
+| **Smart Meter** | ⚠️ Untested | ❌ Not Supported¹ | **Grid:** Active/Reactive Power, Voltage, Export Energy, Import Energy |
+
+> ¹ No Modbus register map exists for this family yet — if you have the vendor's RS485/Modbus documentation for one of these devices, please [open an issue](https://github.com/Veldkornet/ha-hyxi-cloud/issues) and we'll look at adding support.
+> ² A register map exists (from HYXI's own document) but has not yet been checked against real HALO hardware — see [Local Modbus](#-local-modbus-rs485--in-development) below.
 
 > [!IMPORTANT]
 > ### 🤝 Call for Testers
-> Do you own a **String Inverter, Micro Inverter, Standalone Battery or Multiple Batteries**? Your data can help us move these to **✅ Tested**!
+> Do you own a **String Inverter, Smart Meter, Standalone Battery or Multiple Batteries**? Your data can help us move these to **✅ Tested**!
 > Specifically multiple batteries behind an inverter would be a great addition to confirm working!
 >
 > 1. Enable **Debug Logging** in Home Assistant for this integration.
