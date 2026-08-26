@@ -447,7 +447,7 @@ Click the **Configure** button on the HYXI integration card to access:
 ## 🛡️ Quality Assurance
 
 This integration prioritizes data integrity and system stability above all else:
-- **99% Test Coverage**: Every line of core logic is validated against dozens of simulated hardware scenarios.
+- **100% Test Coverage**: Every line of core logic is validated against dozens of simulated hardware scenarios.
 - **Glitch Filtering**: Built-in protection against impossible energy "spikes" and "dips" often caused by cloud reporting delays.
 - **Continuous Integration**: Every change is automatically scanned for security vulnerabilities (CodeQL) and code quality (Ruff).
 
