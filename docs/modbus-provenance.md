@@ -306,17 +306,17 @@ Two things the hybrid protocol states that the HALO's does not:
 
 Unlike the hybrid series above, HYXI's own *Micro Storage RS485 MODBUS*
 document gives serial parameters (115200bps, no parity, 8 data bits, 1 stop
-bit) but no pinout at all -- no pin numbers, no terminal labels, no
+bit) but no pinout at all — no pin numbers, no terminal labels, no
 connector type.
 
-The best lead so far comes from Ton123 -- the same contributor who supplied
-this project's HALO protocol document in the first place -- both directly on
+The best lead so far comes from Ton123 — the same contributor who supplied
+this project's HALO protocol document in the first place — both directly on
 [issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662#issue-5218550482)
 and on a [matching Home Assistant community
 thread](https://community.home-assistant.io/t/hyxipower-integration/926093/28):
 PIN7 = RS485 A, PIN8 = RS485 B, per HYXI confirming it to them directly.
-That's a materially better source than an unrelated third party -- it's the
-same channel this project already trusts for the register map -- but it's
+That's a materially better source than an unrelated third party — it's the
+same channel this project already trusts for the register map — but it's
 still a relayed verbal claim, not text in the document itself, and it
 hasn't been checked against real hardware. Treat it as the best available
 lead, not as resolved the way the hybrid pinout above is. Update this
