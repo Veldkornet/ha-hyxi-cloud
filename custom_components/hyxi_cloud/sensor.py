@@ -142,6 +142,26 @@ CLOUD_NEVER_PRODUCES = {
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
 BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw", "swVerMaster", "swVerSlave"}
 
+# Icons shared by multiple SensorEntityDescription entries below, factored
+# out so each icon string is defined once.
+_ICON_HOME_LIGHTNING_BOLT = "mdi:home-lightning-bolt"
+_ICON_SINE_WAVE = "mdi:sine-wave"
+_ICON_SOLAR_PANEL = "mdi:solar-panel"
+_ICON_CURRENT_DC = "mdi:current-dc"
+_ICON_SOLAR_POWER = "mdi:solar-power"
+_ICON_FLASH = "mdi:flash"
+_ICON_LIGHTNING_BOLT = "mdi:lightning-bolt"
+_ICON_BATTERY_ARROW_UP = "mdi:battery-arrow-up"
+_ICON_BATTERY_ARROW_DOWN = "mdi:battery-arrow-down"
+_ICON_CURRENT_AC = "mdi:current-ac"
+_ICON_THERMOMETER = "mdi:thermometer"
+_ICON_TRANSMISSION_TOWER_IMPORT = "mdi:transmission-tower-import"
+_ICON_COUNTER = "mdi:counter"
+_ICON_SOLAR_POWER_VARIANT = "mdi:solar-power-variant"
+_ICON_TRANSMISSION_TOWER = "mdi:transmission-tower"
+_ICON_POWER_PLUG_OFF = "mdi:power-plug-off"
+_ICON_ALERT_CIRCLE_OUTLINE = "mdi:alert-circle-outline"
+
 SENSOR_TYPES = [
     # Phase Powers
     SensorEntityDescription(
@@ -149,7 +169,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon=_ICON_HOME_LIGHTNING_BOLT,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -157,7 +177,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon=_ICON_HOME_LIGHTNING_BOLT,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -165,7 +185,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon=_ICON_HOME_LIGHTNING_BOLT,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -173,7 +193,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -181,7 +201,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -189,7 +209,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     # PV String Sensors
@@ -198,7 +218,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-panel",
+        icon=_ICON_SOLAR_PANEL,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -206,7 +226,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-panel",
+        icon=_ICON_SOLAR_PANEL,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -214,7 +234,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -222,7 +242,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -230,7 +250,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-power",
+        icon=_ICON_SOLAR_POWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -238,7 +258,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-power",
+        icon=_ICON_SOLAR_POWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -246,7 +266,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-panel",
+        icon=_ICON_SOLAR_PANEL,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -254,7 +274,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-panel",
+        icon=_ICON_SOLAR_PANEL,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -262,7 +282,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -270,7 +290,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -278,7 +298,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-power",
+        icon=_ICON_SOLAR_POWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -286,7 +306,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-power",
+        icon=_ICON_SOLAR_POWER,
         suggested_display_precision=0,
     ),
     # Battery Electricals
@@ -303,7 +323,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     # Internal Spec Sensors
@@ -329,7 +349,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:flash",
+        icon=_ICON_FLASH,
         suggested_display_precision=2,
     ),
     # Status Codes
@@ -346,7 +366,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:lightning-bolt",
+        icon=_ICON_LIGHTNING_BOLT,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -354,7 +374,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:lightning-bolt",
+        icon=_ICON_LIGHTNING_BOLT,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -399,7 +419,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-arrow-up",
+        icon=_ICON_BATTERY_ARROW_UP,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -407,7 +427,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-arrow-down",
+        icon=_ICON_BATTERY_ARROW_DOWN,
         suggested_display_precision=0,
     ),
     # Phase Powers Detailed
@@ -416,7 +436,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -424,7 +444,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-ac",
+        icon=_ICON_CURRENT_AC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -432,7 +452,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash",
+        icon=_ICON_FLASH,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -440,7 +460,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -448,7 +468,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-ac",
+        icon=_ICON_CURRENT_AC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -456,7 +476,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash",
+        icon=_ICON_FLASH,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -464,7 +484,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -472,7 +492,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-ac",
+        icon=_ICON_CURRENT_AC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -480,7 +500,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash",
+        icon=_ICON_FLASH,
         suggested_display_precision=0,
     ),
     # ESS / Battery Management (ESS specific)
@@ -497,7 +517,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:lightning-bolt",
+        icon=_ICON_LIGHTNING_BOLT,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -505,7 +525,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-ac",
+        icon=_ICON_CURRENT_AC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -528,7 +548,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -560,7 +580,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash",
+        icon=_ICON_FLASH,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -569,7 +589,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:flash",
+        icon=_ICON_FLASH,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -577,7 +597,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-power",
+        icon=_ICON_SOLAR_POWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -585,7 +605,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:home-lightning-bolt",
+        icon=_ICON_HOME_LIGHTNING_BOLT,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -593,7 +613,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:transmission-tower-import",
+        icon=_ICON_TRANSMISSION_TOWER_IMPORT,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -609,7 +629,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:battery-arrow-up",
+        icon=_ICON_BATTERY_ARROW_UP,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -617,7 +637,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:battery-arrow-down",
+        icon=_ICON_BATTERY_ARROW_DOWN,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -625,7 +645,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:counter",
+        icon=_ICON_COUNTER,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -633,7 +653,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:counter",
+        icon=_ICON_COUNTER,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -641,7 +661,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:counter",
+        icon=_ICON_COUNTER,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -649,7 +669,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:transmission-tower-import",
+        icon=_ICON_TRANSMISSION_TOWER_IMPORT,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -705,7 +725,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -766,7 +786,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-power",
+        icon=_ICON_SOLAR_POWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -774,7 +794,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -782,7 +802,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-panel",
+        icon=_ICON_SOLAR_PANEL,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -790,7 +810,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:solar-power-variant",
+        icon=_ICON_SOLAR_POWER_VARIANT,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -798,7 +818,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:transmission-tower-import",
+        icon=_ICON_TRANSMISSION_TOWER_IMPORT,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -807,7 +827,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:solar-power-variant",
+        icon=_ICON_SOLAR_POWER_VARIANT,
         suggested_display_precision=2,
     ),
     # Micro ESS / New Telemetry Sensors
@@ -835,7 +855,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=["0", "1"],
-        icon="mdi:transmission-tower",
+        icon=_ICON_TRANSMISSION_TOWER,
     ),
     SensorEntityDescription(
         key="deviceGridConn",
@@ -863,7 +883,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
         options=["0", "1"],
-        icon="mdi:transmission-tower",
+        icon=_ICON_TRANSMISSION_TOWER,
     ),
     SensorEntityDescription(
         key="runCommand",
@@ -912,20 +932,20 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:solar-power",
+        icon=_ICON_SOLAR_POWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="pvNum",
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:solar-panel",
+        icon=_ICON_SOLAR_PANEL,
     ),
     SensorEntityDescription(
         key="acSideTemper",
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -933,7 +953,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -941,7 +961,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -949,7 +969,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -957,7 +977,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="°C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -973,7 +993,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:transmission-tower",
+        icon=_ICON_TRANSMISSION_TOWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -981,7 +1001,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="var",
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:transmission-tower",
+        icon=_ICON_TRANSMISSION_TOWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -996,7 +1016,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="VA",
         device_class=SensorDeviceClass.APPARENT_POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:transmission-tower",
+        icon=_ICON_TRANSMISSION_TOWER,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -1012,7 +1032,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:power-plug-off",
+        icon=_ICON_POWER_PLUG_OFF,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -1020,7 +1040,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="V",
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sine-wave",
+        icon=_ICON_SINE_WAVE,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -1028,7 +1048,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="A",
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:current-ac",
+        icon=_ICON_CURRENT_AC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -1036,7 +1056,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="var",
         device_class=SensorDeviceClass.REACTIVE_POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:power-plug-off",
+        icon=_ICON_POWER_PLUG_OFF,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -1051,7 +1071,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="VA",
         device_class=SensorDeviceClass.APPARENT_POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:power-plug-off",
+        icon=_ICON_POWER_PLUG_OFF,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -1096,7 +1116,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:thermometer",
+        icon=_ICON_THERMOMETER,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -1105,7 +1125,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -1114,7 +1134,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     # BMS/battery detail -- one or the other family reports each of these.
@@ -1136,19 +1156,19 @@ SENSOR_TYPES = [
         key="batAlarm1",
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:alert-circle-outline",
+        icon=_ICON_ALERT_CIRCLE_OUTLINE,
     ),
     SensorEntityDescription(
         key="batAlarm2",
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:alert-circle-outline",
+        icon=_ICON_ALERT_CIRCLE_OUTLINE,
     ),
     SensorEntityDescription(
         key="batAlarm3",
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:alert-circle-outline",
+        icon=_ICON_ALERT_CIRCLE_OUTLINE,
     ),
     SensorEntityDescription(
         key="batCapacityAh",
@@ -1179,7 +1199,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-arrow-up",
+        icon=_ICON_BATTERY_ARROW_UP,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -1188,7 +1208,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -1197,7 +1217,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-arrow-up",
+        icon=_ICON_BATTERY_ARROW_UP,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -1206,7 +1226,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-arrow-down",
+        icon=_ICON_BATTERY_ARROW_DOWN,
         suggested_display_precision=1,
     ),
     SensorEntityDescription(
@@ -1215,7 +1235,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:current-dc",
+        icon=_ICON_CURRENT_DC,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -1224,7 +1244,7 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:battery-arrow-down",
+        icon=_ICON_BATTERY_ARROW_DOWN,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -1272,148 +1292,200 @@ async def async_setup_entry(hass, entry, async_add_entities):
         return
 
     entities: list[SensorEntity] = []
+    entities.extend(_build_hardware_sensors(entry, coordinator))
+    entities.extend(_integration_health_sensors(entry, coordinator))
+    entities.extend(_microinverter_aggregate_sensors(entry, coordinator))
+    entities.extend(_battery_protection_sensors(entry, coordinator))
+    entities.extend(_em_sensors(entry, coordinator))
 
-    # 1. Hardware Loop
+    if entities:
+        async_add_entities(entities)
+
+
+def _build_hardware_sensors(entry, coordinator) -> list[SensorEntity]:
+    """Section 1: hardware sensors, one pass per device in coordinator.data."""
+    entities: list[SensorEntity] = []
     for sn, dev_data in coordinator.data.items():
-        # Check all possible API keys for device type
-        raw_code = get_raw_device_code(dev_data)
-        device_type = normalize_device_type(raw_code)
-        metrics = dev_data.get("metrics") or {}
+        entities.extend(
+            _build_device_hardware_sensors(entry, coordinator, sn, dev_data)
+        )
+    return entities
 
-        if _LOGGER.isEnabledFor(logging.DEBUG):
-            logged_metrics = {
-                k: (
-                    mask_sn(str(v))
-                    if k
-                    in {
-                        "deviceSn",
-                        "parentSn",
-                        "batSn",
-                        "emsSn",
-                        "alias",
-                        "plantId",
-                        "gprsImei",
-                        "plantAddress",
-                        "plantName",
-                        "deviceName",
-                        "alarmName",
-                        "token",
-                        "access_token",
-                        "refresh_token",
-                        "password",
-                    }
-                    and v is not None
-                    else v
-                )
-                for k, v in metrics.items()
+
+def _build_device_hardware_sensors(
+    entry, coordinator, sn, dev_data
+) -> list[SensorEntity]:
+    """Hardware sensors for one device SN."""
+    # Check all possible API keys for device type
+    raw_code = get_raw_device_code(dev_data)
+    device_type = normalize_device_type(raw_code)
+    metrics = dev_data.get("metrics") or {}
+
+    _log_device_processing(sn, device_type, metrics)
+
+    keys_to_add = _keys_to_add_for_device(entry, device_type, dev_data, metrics)
+
+    entities: list[SensorEntity] = []
+    for key in keys_to_add:
+        if description := SENSOR_TYPES_BY_KEY.get(key):
+            entities.append(HyxiSensor(coordinator, sn, description))
+    return entities
+
+
+def _log_device_processing(sn: str, device_type: str, metrics: dict) -> None:
+    """Debug-log one device's metrics during sensor setup, masking sensitive keys."""
+    if not _LOGGER.isEnabledFor(logging.DEBUG):
+        return
+
+    logged_metrics = {
+        k: (
+            mask_sn(str(v))
+            if k
+            in {
+                "deviceSn",
+                "parentSn",
+                "batSn",
+                "emsSn",
+                "alias",
+                "plantId",
+                "gprsImei",
+                "plantAddress",
+                "plantName",
+                "deviceName",
+                "alarmName",
+                "token",
+                "access_token",
+                "refresh_token",
+                "password",
             }
+            and v is not None
+            else v
+        )
+        for k, v in metrics.items()
+    }
 
-            _LOGGER.debug(
-                "HYXI Processing Device %s (Normalized Type: %s). Metrics: %s",
-                mask_sn(sn),
-                device_type,
-                logged_metrics,
-            )
+    _LOGGER.debug(
+        "HYXI Processing Device %s (Normalized Type: %s). Metrics: %s",
+        mask_sn(sn),
+        device_type,
+        logged_metrics,
+    )
 
-        is_collector_or_dmu = device_type == "collector"
 
-        base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
-        local_battery_sensors = BATTERY_SENSORS
+def _keys_to_add_for_device(
+    entry, device_type: str, dev_data: dict, metrics: dict
+) -> set[str]:
+    """Compute which sensor keys apply to one device."""
+    is_collector_or_dmu = device_type == "collector"
 
-        # Pre-calculate base keys to process + specific static keys
-        keys_to_add = set(base_keys)
-        if is_modbus_entry(entry):
-            # last_seen is a cloud heartbeat timestamp; neither Modbus
-            # client ever populates it, so it would just sit frozen at
-            # whatever a prior cloud entry for this same device last wrote.
-            keys_to_add.discard("last_seen")
-        keys_to_add.add("device_type")
+    base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
+    local_battery_sensors = BATTERY_SENSORS
 
-        # Process dynamically available valid metrics keys
-        for key, v in metrics.items():
-            if v is not None and not (
-                isinstance(v, str) and v.strip().lower() in NULL_VALUES
-            ):
-                keys_to_add.add(key)
+    # Pre-calculate base keys to process + specific static keys
+    keys_to_add = set(base_keys)
+    if is_modbus_entry(entry):
+        # last_seen is a cloud heartbeat timestamp; neither Modbus
+        # client ever populates it, so it would just sit frozen at
+        # whatever a prior cloud entry for this same device last wrote.
+        keys_to_add.discard("last_seen")
+    keys_to_add.add("device_type")
 
-        # Pre-register standard sensors to ensure webhook-only metrics are
-        # successfully registered. Modbus has no webhook path -- a key
-        # this poll didn't produce will never arrive later the way a cloud
-        # metric can via push, so pre-registering it just means a sensor
-        # that's permanently "unknown" instead of never created. Skipped
-        # entirely for Modbus; the "process dynamically available valid
-        # metrics keys" loop above already adds every key a Modbus client
-        # actually reads, without needing this at all.
-        if not is_collector_or_dmu and not is_modbus_entry(entry):
-            # Common inverter sensors (always applicable)
-            keys_to_add.update(
-                {
-                    "ph1Loadp",
-                    "ph1v",
-                    "ph1i",
-                    "ph1p",
-                    "pv1v",
-                    "pv1i",
-                    "pv1p",
-                    "pv2v",
-                    "pv2i",
-                    "pv2p",
-                    "home_load",
-                    "grid_import",
-                    "grid_export",
-                    "ppv",
-                    "totalE",
-                    "totalEnt",
-                    "totalEpt",
-                    "totalEchg",
-                    "acP",
-                    "acE",
-                    "gridP",
-                    "gridF",
-                    "invSts",
-                    "gridSts",
-                }
-                - CLOUD_NEVER_PRODUCES
-            )
+    # Process dynamically available valid metrics keys
+    for key, v in metrics.items():
+        if v is not None and not (
+            isinstance(v, str) and v.strip().lower() in NULL_VALUES
+        ):
+            keys_to_add.add(key)
 
-            # Check phase type for Phase 2 & 3 sensors
-            phase_type = detect_phase_type(dev_data)
-            if phase_type == "three_phase":
-                keys_to_add.update(
-                    {
-                        "ph2Loadp",
-                        "ph2v",
-                        "ph2i",
-                        "ph2p",
-                        "ph3Loadp",
-                        "ph3v",
-                        "ph3i",
-                        "ph3p",
-                    }
-                )
+    # Pre-register standard sensors to ensure webhook-only metrics are
+    # successfully registered. Modbus has no webhook path -- a key
+    # this poll didn't produce will never arrive later the way a cloud
+    # metric can via push, so pre-registering it just means a sensor
+    # that's permanently "unknown" instead of never created. Skipped
+    # entirely for Modbus; the "process dynamically available valid
+    # metrics keys" loop above already adds every key a Modbus client
+    # actually reads, without needing this at all.
+    if not is_collector_or_dmu and not is_modbus_entry(entry):
+        keys_to_add.update(
+            _static_cloud_inverter_keys(dev_data, device_type, local_battery_sensors)
+        )
 
-            # Check if device type supports battery
-            if device_type in ("hybrid_inverter", "all_in_one"):
-                keys_to_add.update(local_battery_sensors - CLOUD_NEVER_PRODUCES)
-                keys_to_add.update(
-                    {
-                        "bat_charging",
-                        "bat_discharging",
-                        "bat_power_dc",
-                        "bat_charge_total",
-                        "bat_discharge_total",
-                    }
-                )
+    # O(1) removals instead of repeated conditionals
+    if is_collector_or_dmu:
+        keys_to_add.difference_update(local_battery_sensors)
 
-        # O(1) removals instead of repeated conditionals
-        if is_collector_or_dmu:
-            keys_to_add.difference_update(local_battery_sensors)
+    return keys_to_add
 
-        for key in keys_to_add:
-            if description := SENSOR_TYPES_BY_KEY.get(key):
-                entities.append(HyxiSensor(coordinator, sn, description))
-    # 2. Integration Health
-    entities.append(HyxiLastUpdateSensor(coordinator, entry))
+
+def _static_cloud_inverter_keys(
+    dev_data: dict, device_type: str, local_battery_sensors: set[str]
+) -> set[str]:
+    """Static keys pre-registered for cloud (non-Modbus) inverter devices."""
+    # Common inverter sensors (always applicable)
+    keys = {
+        "ph1Loadp",
+        "ph1v",
+        "ph1i",
+        "ph1p",
+        "pv1v",
+        "pv1i",
+        "pv1p",
+        "pv2v",
+        "pv2i",
+        "pv2p",
+        "home_load",
+        "grid_import",
+        "grid_export",
+        "ppv",
+        "totalE",
+        "totalEnt",
+        "totalEpt",
+        "totalEchg",
+        "acP",
+        "acE",
+        "gridP",
+        "gridF",
+        "invSts",
+        "gridSts",
+    } - CLOUD_NEVER_PRODUCES
+
+    # Check phase type for Phase 2 & 3 sensors
+    phase_type = detect_phase_type(dev_data)
+    if phase_type == "three_phase":
+        keys.update(
+            {
+                "ph2Loadp",
+                "ph2v",
+                "ph2i",
+                "ph2p",
+                "ph3Loadp",
+                "ph3v",
+                "ph3i",
+                "ph3p",
+            }
+        )
+
+    # Check if device type supports battery
+    if device_type in ("hybrid_inverter", "all_in_one"):
+        keys.update(local_battery_sensors - CLOUD_NEVER_PRODUCES)
+        keys.update(
+            {
+                "bat_charging",
+                "bat_discharging",
+                "bat_power_dc",
+                "bat_charge_total",
+                "bat_discharge_total",
+            }
+        )
+
+    return keys
+
+
+def _integration_health_sensors(entry, coordinator) -> list[SensorEntity]:
+    """Section 2: integration-health sensors -- last-update timestamp, plus
+    push status or Modbus connection type depending on transport.
+    """
+    entities: list[SensorEntity] = [HyxiLastUpdateSensor(coordinator, entry)]
     # Push is a HYXI cloud webhook subscription; a point-to-point RS485
     # link has no equivalent, so a Modbus entry never shows this sensor.
     if not is_modbus_entry(entry):
@@ -1422,146 +1494,145 @@ async def async_setup_entry(hass, entry, async_add_entities):
         # Connection type/framing is a Modbus-only distinction -- a cloud
         # entry has no physical link or wire framing of its own to report.
         entities.append(HyxiModbusConnectionTypeSensor(coordinator, entry))
+    return entities
 
-    # 2b. Microinverter Aggregate Sensors
+
+def _microinverter_aggregate_sensors(entry, coordinator) -> list[SensorEntity]:
+    """Section 2b: aggregate sensors summed across all microinverters, if any
+    are present on this entry.
+    """
     has_micro_inverter = any(
         normalize_device_type(get_raw_device_code(dev_data)) == "micro_inverter"
         for dev_data in coordinator.data.values()
     )
-    if has_micro_inverter:
-        entities.append(
-            HyxiMicroinverterSumSensor(
-                coordinator,
-                entry,
-                metric_key="acP",
-                description=SensorEntityDescription(
-                    key="micro_ac_power_total",
-                    translation_key="micro_ac_power_total",
-                    native_unit_of_measurement="W",
-                    device_class=SensorDeviceClass.POWER,
-                    state_class=SensorStateClass.MEASUREMENT,
-                    icon="mdi:solar-power",
-                    suggested_display_precision=0,
-                ),
-            )
-        )
-        entities.append(
-            HyxiMicroinverterSumSensor(
-                coordinator,
-                entry,
-                metric_key="efpv",
-                description=SensorEntityDescription(
-                    key="micro_daily_yield_total",
-                    translation_key="micro_daily_yield_total",
-                    native_unit_of_measurement="kWh",
-                    device_class=SensorDeviceClass.ENERGY,
-                    state_class=SensorStateClass.TOTAL_INCREASING,
-                    icon="mdi:solar-power-variant",
-                    suggested_display_precision=2,
-                ),
-            )
-        )
+    if not has_micro_inverter:
+        return []
 
-    # 3. Battery protection telemetry
-    if is_battery_control_enabled(entry, coordinator):
-        for sn, dev_data in coordinator.data.items():
-            device_type = normalize_device_type(get_raw_device_code(dev_data))
-            if not is_control_capable_device_type(entry, device_type):
+    return [
+        HyxiMicroinverterSumSensor(
+            coordinator,
+            entry,
+            metric_key="acP",
+            description=SensorEntityDescription(
+                key="micro_ac_power_total",
+                translation_key="micro_ac_power_total",
+                native_unit_of_measurement="W",
+                device_class=SensorDeviceClass.POWER,
+                state_class=SensorStateClass.MEASUREMENT,
+                icon=_ICON_SOLAR_POWER,
+                suggested_display_precision=0,
+            ),
+        ),
+        HyxiMicroinverterSumSensor(
+            coordinator,
+            entry,
+            metric_key="efpv",
+            description=SensorEntityDescription(
+                key="micro_daily_yield_total",
+                translation_key="micro_daily_yield_total",
+                native_unit_of_measurement="kWh",
+                device_class=SensorDeviceClass.ENERGY,
+                state_class=SensorStateClass.TOTAL_INCREASING,
+                icon=_ICON_SOLAR_POWER_VARIANT,
+                suggested_display_precision=2,
+            ),
+        ),
+    ]
+
+
+def _battery_protection_sensors(entry, coordinator) -> list[SensorEntity]:
+    """Section 3: battery-protection last-sent-mode sensors, one per
+    control-capable device, if battery control is enabled.
+    """
+    if not is_battery_control_enabled(entry):
+        return []
+
+    entities: list[SensorEntity] = []
+    for sn, dev_data in coordinator.data.items():
+        device_type = normalize_device_type(get_raw_device_code(dev_data))
+        if not is_control_capable_device_type(entry, device_type):
+            continue
+        # Local Modbus always resolves to the mode-control surface,
+        # independent of phase -- HALO has no phase 2/3 registers at
+        # all and would otherwise never pass the phase check below.
+        # Cloud entries keep the original phase-based gate. Mirrors
+        # _async_setup_battery_protection in __init__.py exactly,
+        # which starts the controller that reads this entity's
+        # restored state back on startup (protection.py,
+        # async_start) -- a HALO Modbus device that gets a
+        # controller but not this sensor loses last_sent_mode across
+        # every restart, with nothing to restore it from.
+        if not is_modbus_entry(entry):
+            phase = detect_phase_type(dev_data)
+            if phase not in ("three_phase", "single_phase"):
                 continue
-            # Local Modbus always resolves to the mode-control surface,
-            # independent of phase -- HALO has no phase 2/3 registers at
-            # all and would otherwise never pass the phase check below.
-            # Cloud entries keep the original phase-based gate. Mirrors
-            # _async_setup_battery_protection in __init__.py exactly,
-            # which starts the controller that reads this entity's
-            # restored state back on startup (protection.py,
-            # async_start) -- a HALO Modbus device that gets a
-            # controller but not this sensor loses last_sent_mode across
-            # every restart, with nothing to restore it from.
-            if not is_modbus_entry(entry):
-                phase = detect_phase_type(dev_data)
-                if phase not in ("three_phase", "single_phase"):
-                    continue
-            entities.append(HyxiLastSentModeSensor(coordinator, sn))
+        entities.append(HyxiLastSentModeSensor(coordinator, sn))
+    return entities
 
-    # 4. Energy Manager sensors (EM-only)
+
+def _em_sensors(entry, coordinator) -> list[SensorEntity]:
+    """Section 4: Energy Manager sensors, if EM is enabled for this inverter."""
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data:
-        em_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
-            name="Energy Manager",
-            manufacturer=MANUFACTURER,
-            model="Energy Manager",
-            via_device=(DOMAIN, em_sn),
-        )
-        entities.append(
-            EMSensor(
-                coordinator, em_sn, EMSensorDef("current_decision", em_device_info)
-            )
-        )
-        entities.append(
-            EMSensor(coordinator, em_sn, EMSensorDef("last_action", em_device_info))
-        )
-        entities.append(
-            EMSensor(
-                coordinator,
-                em_sn,
-                EMSensorDef("status", em_device_info, icon="mdi:state-machine"),
-            )
-        )
-        entities.append(
-            EMSensor(
-                coordinator,
-                em_sn,
-                EMSensorDef(
-                    "battery_energy_available",
-                    em_device_info,
-                    unit="Wh",
-                    device_class=SensorDeviceClass.ENERGY,
-                ),
-            )
-        )
-        entities.append(
-            EMSensor(
-                coordinator,
-                em_sn,
-                EMSensorDef(
-                    "hours_until_sunrise",
-                    em_device_info,
-                    unit="h",
-                    icon="mdi:weather-sunset-up",
-                ),
-            )
-        )
-        entities.append(
-            EMSensor(
-                coordinator,
-                em_sn,
-                EMSensorDef(
-                    "hours_until_sunset",
-                    em_device_info,
-                    unit="h",
-                    icon="mdi:weather-sunset-down",
-                ),
-            )
-        )
-        entities.append(
-            EMSensor(
-                coordinator,
-                em_sn,
-                EMSensorDef(
-                    "p1_average",
-                    em_device_info,
-                    unit="W",
-                    device_class=SensorDeviceClass.POWER,
-                    state_class=SensorStateClass.MEASUREMENT,
-                ),
-            )
-        )
+    if not (entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data):
+        return []
 
-    # FINAL REGISTRATION
-    if entities:
-        async_add_entities(entities)
+    em_device_info = DeviceInfo(
+        identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
+        name="Energy Manager",
+        manufacturer=MANUFACTURER,
+        model="Energy Manager",
+        via_device=(DOMAIN, em_sn),
+    )
+    return [
+        EMSensor(coordinator, em_sn, EMSensorDef("current_decision", em_device_info)),
+        EMSensor(coordinator, em_sn, EMSensorDef("last_action", em_device_info)),
+        EMSensor(
+            coordinator,
+            em_sn,
+            EMSensorDef("status", em_device_info, icon="mdi:state-machine"),
+        ),
+        EMSensor(
+            coordinator,
+            em_sn,
+            EMSensorDef(
+                "battery_energy_available",
+                em_device_info,
+                unit="Wh",
+                device_class=SensorDeviceClass.ENERGY,
+            ),
+        ),
+        EMSensor(
+            coordinator,
+            em_sn,
+            EMSensorDef(
+                "hours_until_sunrise",
+                em_device_info,
+                unit="h",
+                icon="mdi:weather-sunset-up",
+            ),
+        ),
+        EMSensor(
+            coordinator,
+            em_sn,
+            EMSensorDef(
+                "hours_until_sunset",
+                em_device_info,
+                unit="h",
+                icon="mdi:weather-sunset-down",
+            ),
+        ),
+        EMSensor(
+            coordinator,
+            em_sn,
+            EMSensorDef(
+                "p1_average",
+                em_device_info,
+                unit="W",
+                device_class=SensorDeviceClass.POWER,
+                state_class=SensorStateClass.MEASUREMENT,
+            ),
+        ),
+    ]
 
 
 class HyxiBaseSensor(
@@ -1582,23 +1653,26 @@ class HyxiBaseSensor(
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added."""
         await super().async_added_to_hass()
-        if self.entity_description.state_class in (
-            SensorStateClass.TOTAL_INCREASING,
-            "total_increasing",
+        if (
+            self.entity_description.state_class
+            in (
+                SensorStateClass.TOTAL_INCREASING,
+                "total_increasing",
+            )
+            and (last_state := await self.async_get_last_state()) is not None
         ):
-            if (last_state := await self.async_get_last_state()) is not None:
-                try:
-                    self._last_valid_value = float(last_state.state)
-                    self._last_valid_time = None
-                    self._update_native_value()
-                except ValueError, TypeError:
-                    _LOGGER.debug(
-                        "HYXI Restore: Could not parse restored state '%s' for %s",
-                        last_state.state,
-                        mask_sn(self._actual_sn)
-                        if hasattr(self, "_actual_sn")
-                        else self.entity_id,
-                    )
+            try:
+                self._last_valid_value = float(last_state.state)
+                self._last_valid_time = None
+                self._update_native_value()
+            except ValueError, TypeError:
+                _LOGGER.debug(
+                    "HYXI Restore: Could not parse restored state '%s' for %s",
+                    last_state.state,
+                    mask_sn(self._actual_sn)
+                    if hasattr(self, "_actual_sn")
+                    else self.entity_id,
+                )
 
     def _log_glitch_once(
         self,
@@ -1674,18 +1748,21 @@ class HyxiBaseSensor(
         try:
             num_value = round(float(value), 2)
 
-            if self.entity_description.state_class in (
-                SensorStateClass.TOTAL_INCREASING,
-                "total_increasing",
+            if (
+                self.entity_description.state_class
+                in (
+                    SensorStateClass.TOTAL_INCREASING,
+                    "total_increasing",
+                )
+                and self._last_valid_value is not None
             ):
-                if self._last_valid_value is not None:
-                    dip_result = self._check_anti_dip(num_value)
-                    if dip_result is not None:
-                        return dip_result
+                dip_result = self._check_anti_dip(num_value)
+                if dip_result is not None:
+                    return dip_result
 
-                    spike_result = self._check_anti_spike(num_value)
-                    if spike_result is not None:
-                        return spike_result
+                spike_result = self._check_anti_spike(num_value)
+                if spike_result is not None:
+                    return spike_result
             self._last_valid_value = num_value
             self._last_valid_time = dt_util.utcnow()
             return num_value

@@ -416,7 +416,11 @@ def normalize_device_type(code: str | int | float) -> str:
     if (res := DEVICE_TYPE_KEYS.get(lookup_key)) is not None:
         return res
 
-    # 2. String mapping (if API returned a name instead of code)
+    return _match_device_type_by_name(code_str)
+
+
+def _match_device_type_by_name(code_str: str) -> str:
+    """Match a device type by substring when there's no direct code lookup."""
     if "COLLECTOR" in code_str or "DMU" in code_str:
         return "collector"
     if "INVERTER" in code_str:
@@ -441,18 +445,40 @@ def detect_phase_type(dev_data: dict) -> str:
     2. Runtime metrics: structural phase keys or non-zero ph2v/ph3v = three-phase
     3. Default: "unknown" means no control entities are created (safety-first)
     """
-    # 1. Model name suffix check
-    model = (dev_data.get("model") or "").upper().strip()
-    if model:
-        # Strip trailing power rating (e.g. "H5K-HT" -> check "-HT")
-        for suffix in ("-HTA", "-HT", "-ET"):
-            if suffix in model:
-                return "three_phase"
-        for suffix in ("-HS", "-LS", "-HS1"):
-            if suffix in model:
-                return "single_phase"
+    phase = _phase_from_model_suffix(dev_data)
+    if phase is not None:
+        return phase
 
-    # 2. Runtime metrics — structural indicators of three-phase
+    phase = _phase_from_metrics(dev_data)
+    if phase is not None:
+        return phase
+
+    return "unknown"
+
+
+def _phase_from_model_suffix(dev_data: dict) -> str | None:
+    """Detect phase from the model name's trailing suffix, if present.
+
+    None means the suffix was absent or unrecognized -- try the next
+    strategy.
+    """
+    model = (dev_data.get("model") or "").upper().strip()
+    if not model:
+        return None
+    # Strip trailing power rating (e.g. "H5K-HT" -> check "-HT")
+    for suffix in ("-HTA", "-HT", "-ET"):
+        if suffix in model:
+            return "three_phase"
+    for suffix in ("-HS", "-LS", "-HS1"):
+        if suffix in model:
+            return "single_phase"
+    return None
+
+
+def _phase_from_metrics(dev_data: dict) -> str | None:
+    """Detect phase from runtime metrics: structural key presence, then
+    voltage value. None means neither strategy found a signal.
+    """
     # Power metric keys (ph3Loadp, ph3p, ph2p, ph2Loadp) are checked by PRESENCE only —
     # the API only includes these keys for three-phase devices; the value can
     # legitimately be zero (e.g. no load at night). Voltage metrics are
@@ -471,10 +497,10 @@ def detect_phase_type(dev_data: dict) -> str:
         except ValueError, TypeError:
             continue
 
-    return "unknown"
+    return None
 
 
-def is_battery_control_enabled(entry: Any, coordinator: Any) -> bool:
+def is_battery_control_enabled(entry: Any) -> bool:
     """Return True if battery control is enabled by user options.
 
     If not explicitly set in options, defaults to False.

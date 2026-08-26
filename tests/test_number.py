@@ -464,12 +464,14 @@ async def test_hyxi_micro_power_limit_set_value_error():
     entity = number_mod.HyxiMicroPowerLimit(coordinator, "SN1", dev_data)
     entity.async_write_ha_state = MagicMock()
 
-    with pytest.raises(MockControlError):
-        with patch(
+    with (
+        patch(
             "custom_components.hyxi_cloud.number.HyxiApiClient.ControlError",
             MockControlError,
-        ):
-            await entity.async_set_native_value(75.0)
+        ),
+        pytest.raises(MockControlError),
+    ):
+        await entity.async_set_native_value(75.0)
 
     # Value should not be updated and state should not be written
     assert entity._attr_native_value == 100.0
@@ -574,12 +576,14 @@ async def test_hyxi_setting_number_set_value_error():
     entity = number_mod.HyxiSettingNumber(coordinator, "SN1", dev_data, definition)
     entity.async_write_ha_state = MagicMock()
 
-    with pytest.raises(MockControlError):
-        with patch(
+    with (
+        patch(
             "custom_components.hyxi_cloud.number.HyxiApiClient.ControlError",
             MockControlError,
-        ):
-            await entity.async_set_native_value(3500)
+        ),
+        pytest.raises(MockControlError),
+    ):
+        await entity.async_set_native_value(3500)
 
     # Value should not be updated and state should not be written
     assert entity._attr_native_value == 0

@@ -77,9 +77,7 @@ async def test_handle_alarm_webhook_unauthorized_non_ascii(mock_hass, mock_coord
     request = MagicMock()
     request.headers = {"accessKey": "malicious_ñ_key"}
 
-    res = await _async_handle_alarm_webhook(
-        mock_hass, "webhook_id", request, mock_coordinator
-    )
+    res = await _async_handle_alarm_webhook("webhook_id", request, mock_coordinator)
     assert res.status == 401
 
 
@@ -365,7 +363,7 @@ async def test_handle_alarm_webhook_merges_records(mock_hass, mock_coordinator):
     request.text = AsyncMock(return_value='{"dataList": []}')
 
     response = await _async_handle_alarm_webhook(
-        mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
+        "hyxi_cloud_entry_test_alarm", request, mock_coordinator
     )
 
     assert response.status == 200
@@ -388,7 +386,7 @@ async def test_handle_alarm_webhook_unauthorized(mock_hass, mock_coordinator):
     request.headers = {"accessKey": "wrong_key"}
 
     response = await _async_handle_alarm_webhook(
-        mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
+        "hyxi_cloud_entry_test_alarm", request, mock_coordinator
     )
     assert response.status == 401
     mock_coordinator.client.process_alarm_push_data.assert_not_called()
@@ -404,7 +402,7 @@ async def test_handle_alarm_webhook_invalid_json(mock_hass, mock_coordinator):
     request.text = AsyncMock(return_value="{bad json}")
 
     response = await _async_handle_alarm_webhook(
-        mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
+        "hyxi_cloud_entry_test_alarm", request, mock_coordinator
     )
     assert response.status == 400
 
@@ -432,7 +430,7 @@ async def test_handle_alarm_webhook_untracked_device(mock_hass, mock_coordinator
     request.text = AsyncMock(return_value='{"dataList": []}')
 
     response = await _async_handle_alarm_webhook(
-        mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
+        "hyxi_cloud_entry_test_alarm", request, mock_coordinator
     )
     assert response.status == 200
     # coordinator data for SN001 should be untouched
@@ -461,7 +459,7 @@ async def test_handle_alarm_webhook_logging_details(
 
     with patch("custom_components.hyxi_cloud.__init__.web.json_response"):
         await _async_handle_alarm_webhook(
-            mock_hass, "hyxi_cloud_entry_test_alarm", request, mock_coordinator
+            "hyxi_cloud_entry_test_alarm", request, mock_coordinator
         )
 
         # Check logs for expected text

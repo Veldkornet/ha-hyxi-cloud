@@ -132,9 +132,12 @@ class TestEMConstants:
     def test_conf_keys_are_strings(self):
         """Config option keys should be non-empty strings."""
         conf_em_enabled, conf_em_inverter_sn, conf_em_p1_entity = _get_conf_keys()
-        assert isinstance(conf_em_enabled, str) and conf_em_enabled
-        assert isinstance(conf_em_inverter_sn, str) and conf_em_inverter_sn
-        assert isinstance(conf_em_p1_entity, str) and conf_em_p1_entity
+        assert isinstance(conf_em_enabled, str)
+        assert conf_em_enabled
+        assert isinstance(conf_em_inverter_sn, str)
+        assert conf_em_inverter_sn
+        assert isinstance(conf_em_p1_entity, str)
+        assert conf_em_p1_entity
 
 
 # ═══════════════════════════════════════════════════════════════════════

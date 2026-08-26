@@ -116,14 +116,10 @@ if HAS_HYPOTHESIS:
         coordinator.data["SN123"]["metrics"]["totalE"] = new_val
         sensor._handle_coordinator_update()
 
-        # 3. Trigger the property getter
-        result = None
-        try:
-            result = sensor.native_value
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            pytest.fail(
-                f"Sensor crashed when processing the value {new_val}. Error: {e}"
-            )
+        # 3. Trigger the property getter. Left to fail naturally on a crash --
+        # Hypothesis catches it, shrinks to a minimal failing new_val, and
+        # reports both in the failure output.
+        result = sensor.native_value
 
         # 4. Check Invariants (The rules that must ALWAYS be true)
 

@@ -39,7 +39,7 @@ case "$ACTION" in
     # Safety Check: Use --force to skip
     git update-index --refresh -q > /dev/null 2>&1
     if [[ "$2" != "--force" ]] && ! git diff-index --quiet HEAD --; then
-        echo "❌ ERROR: You have uncommitted changes! Commit them or stash them first."
+        echo "❌ ERROR: You have uncommitted changes! Commit them or stash them first." >&2
         echo "💡 Use './manage.sh reset-dev --force' to nuke all local changes and mirror main."
         exit 1
     fi
@@ -66,7 +66,7 @@ case "$ACTION" in
     rm -rf -- ha_testing_config
     mkdir -p -- ha_testing_config
 
-    if [ -d "ha_testing_seed" ]; then
+    if [[ -d "ha_testing_seed" ]]; then
         echo "🌱 Seeding from Golden Image..."
         cp -Rp -- ha_testing_seed/. ha_testing_config/
     else

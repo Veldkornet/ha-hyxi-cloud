@@ -599,12 +599,12 @@ async def test_a_failing_cache_write_does_not_break_the_poll(hass, client, caplo
 async def test_setup_builds_the_right_connection_for_each_type(
     hass, overrides, expected_params
 ):
-    from custom_components.hyxi_cloud import _async_build_modbus_coordinator
+    from custom_components.hyxi_cloud import _build_modbus_coordinator
 
     entry = _modbus_entry(hass, **overrides)
 
     with patch("modbus_connection.tmodbus.ModbusConnection") as connection_class:
-        coordinator = await _async_build_modbus_coordinator(hass, entry)
+        coordinator = _build_modbus_coordinator(hass, entry)
 
     params = connection_class.call_args.args[0]
     assert type(params).__name__ == expected_params
@@ -628,13 +628,13 @@ async def test_setup_selects_the_client_class_and_spacing_for_the_family(
     """The two documents disagree on minimum frame spacing (HALO >200ms,
     hybrid >500ms), so using the wrong client class would also mean using
     the wrong timing against real hardware."""
-    from custom_components.hyxi_cloud import _async_build_modbus_coordinator
+    from custom_components.hyxi_cloud import _build_modbus_coordinator
 
     overrides = {} if family is None else {"modbus_family": family}
     entry = _modbus_entry(hass, **overrides)
 
     with patch("modbus_connection.tmodbus.ModbusConnection") as connection_class:
-        coordinator = await _async_build_modbus_coordinator(hass, entry)
+        coordinator = _build_modbus_coordinator(hass, entry)
 
     assert type(coordinator.client).__name__ == expected_client
     assert connection_class.call_args.kwargs["message_spacing"] == expected_spacing

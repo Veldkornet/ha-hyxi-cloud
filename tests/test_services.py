@@ -9,9 +9,9 @@ from custom_components.hyxi_cloud import (
     DOMAIN,
     async_get_subscription_codes,
     async_register_subscription_code,
-    async_setup_services,
     async_unload_entry,
     async_unregister_subscription_code,
+    setup_services,
 )
 
 
@@ -41,11 +41,11 @@ async def test_service_registration_and_unload(hass, mock_entry, mock_coordinato
     hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
 
     # Verify service registration
-    await async_setup_services(hass)
+    setup_services(hass)
     assert hass.services.has_service(DOMAIN, "cancel_subscription")
 
     # Re-registering doesn't crash or duplicate
-    await async_setup_services(hass)
+    setup_services(hass)
     assert hass.services.has_service(DOMAIN, "cancel_subscription")
 
     # Unload entry
@@ -75,7 +75,7 @@ async def test_service_registration_and_unload(hass, mock_entry, mock_coordinato
 async def test_service_call_success(hass, mock_coordinator):
     """Test that the cancel_subscription service calls SDK method successfully."""
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
-    await async_setup_services(hass)
+    setup_services(hass)
 
     await hass.services.async_call(
         DOMAIN,
@@ -93,7 +93,7 @@ async def test_service_call_success(hass, mock_coordinator):
 async def test_service_call_empty_code(hass, mock_coordinator):
     """Test service raises error if subscription code is empty."""
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
-    await async_setup_services(hass)
+    setup_services(hass)
 
     with pytest.raises(HomeAssistantError, match="Subscription code cannot be empty"):
         await hass.services.async_call(
@@ -111,7 +111,7 @@ async def test_service_call_no_coordinators(hass):
         del hass.data[DOMAIN]
 
     # Ensure service is registered
-    await async_setup_services(hass)
+    setup_services(hass)
 
     with pytest.raises(
         HomeAssistantError, match="No active HYXI Cloud integration entries found"
@@ -132,7 +132,7 @@ async def test_service_call_api_failure(hass, mock_coordinator):
         "msg": "Invalid subscribe code",
     }
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
-    await async_setup_services(hass)
+    setup_services(hass)
 
     with pytest.raises(
         HomeAssistantError,
@@ -153,7 +153,7 @@ async def test_service_call_api_exception(hass, mock_coordinator):
         "network timeout"
     )
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
-    await async_setup_services(hass)
+    setup_services(hass)
 
     with pytest.raises(HomeAssistantError, match="API error: network timeout"):
         await hass.services.async_call(
@@ -175,7 +175,7 @@ async def test_service_call_api_exception_with_parenthesized_code(
         "subscription request failed: (C000001) Invalid subscribe code"
     )
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
-    await async_setup_services(hass)
+    setup_services(hass)
 
     with pytest.raises(
         HomeAssistantError,

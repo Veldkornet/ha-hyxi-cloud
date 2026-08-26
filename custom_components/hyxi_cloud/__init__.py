@@ -76,8 +76,13 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Repeated across several subscription setup/teardown/logging call sites below.
+_UNKNOWN_ERROR = "Unknown error"
+_PUSH_SUBSCRIPTION_LABEL = "HYXI Push"
+_ALARM_PUSH_SUBSCRIPTION_LABEL = "HYXI Alarm Push"
 
-async def _async_build_modbus_coordinator(
+
+def _build_modbus_coordinator(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> HyxiModbusCoordinator:
     """Build a coordinator that reaches the device over local RS485.
@@ -173,7 +178,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # HyxiDataUpdateCoordinator subclass, so the base type covers both.
     coordinator: HyxiDataUpdateCoordinator
     if modbus:
-        coordinator = await _async_build_modbus_coordinator(hass, entry)
+        coordinator = _build_modbus_coordinator(hass, entry)
     else:
         access_key = entry.data.get(CONF_ACCESS_KEY)
         secret_key = entry.data.get(CONF_SECRET_KEY)
@@ -243,11 +248,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Start EM engine after platforms are loaded (entities need to exist first)
     if coordinator.engine is not None:
-        await coordinator.engine.async_start()
+        coordinator.engine.start()
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
-    await async_setup_services(hass)
+    setup_services(hass)
 
     _LOGGER.debug(
         "HYXI Cloud entry %s setup complete: %d devices, protection=%s, engine=%s",
@@ -266,9 +271,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = hass.data[DOMAIN].get(entry.entry_id)
     if coordinator is not None:
         if coordinator.engine is not None:
-            await coordinator.engine.async_stop()
+            coordinator.engine.stop()
         for controller in coordinator.protection_controllers.values():
-            await controller.async_stop()
+            controller.stop()
         if is_modbus_entry(entry):
             # Release the serial port or socket, or a reload leaves the bus
             # held and the next setup cannot open it.
@@ -569,7 +574,7 @@ def _cleanup_control_entities(
     """Remove control entities from registry if battery control is disabled."""
     from .const import is_battery_control_enabled
 
-    if is_battery_control_enabled(entry, coordinator):
+    if is_battery_control_enabled(entry):
         return
 
     _LOGGER.debug(
@@ -621,7 +626,7 @@ async def _async_setup_battery_protection(
     """Start battery protection on supported battery control devices."""
     from .const import is_battery_control_enabled
 
-    if not is_battery_control_enabled(coordinator.entry, coordinator):
+    if not is_battery_control_enabled(coordinator.entry):
         _LOGGER.debug("Battery control and protection is disabled by user settings")
         return
 
@@ -706,44 +711,56 @@ async def _async_resolve_webhook_url(
         return custom_resolved
 
     _LOGGER.debug("HYXI Push: Resolving external callback URL automatically...")
-    resolved: str | None = None
-
-    # Check Nabu Casa first
-    import homeassistant.components.cloud as cloud  # pylint: disable=consider-using-from-import
-
-    if cloud.async_active_subscription(hass):
-        _LOGGER.debug("HYXI Push: Nabu Casa subscription detected, trying cloud URL")
-        try:
-            resolved = await cloud.async_get_or_create_cloudhook(hass, webhook_id)
-        except Exception as err:  # pylint: disable=broad-except
-            # Fall back to base Exception if CloudNotAvailable is not a valid exception class (e.g. in tests)
-            exc_cls = getattr(cloud, "CloudNotAvailable", Exception)
-            if not isinstance(exc_cls, type) or not issubclass(exc_cls, BaseException):
-                exc_cls = Exception
-            if isinstance(err, exc_cls):
-                _LOGGER.debug(
-                    "HYXI Push: Nabu Casa cloud hook not connected or available, falling back to network URL"
-                )
-            else:
-                raise err
+    resolved = await _try_nabu_casa_cloudhook(hass, webhook_id)
 
     # Fall back to standard external network settings
     if not resolved:
-        try:
-            resolved = network.get_url(
-                hass, allow_external=True
-            ) + webhook.async_generate_path(webhook_id)
-            _LOGGER.debug(
-                "HYXI Push: Resolved callback URL via network helper: %s",
-                mask_url(resolved),
-            )
-        except network.NoURLAvailableError:
-            _LOGGER.debug(
-                "HYXI Push: network.get_url raised NoURLAvailableError"
-                " (no external URL configured)"
-            )
+        resolved = _resolve_via_network_helper(hass, webhook_id)
 
     return resolved
+
+
+async def _try_nabu_casa_cloudhook(hass: HomeAssistant, webhook_id: str) -> str | None:
+    """Try to resolve the callback URL via an active Nabu Casa cloud hook."""
+    # pylint: disable-next=consider-using-from-import
+    import homeassistant.components.cloud as cloud
+
+    if not cloud.async_active_subscription(hass):
+        return None
+
+    _LOGGER.debug("HYXI Push: Nabu Casa subscription detected, trying cloud URL")
+    try:
+        return await cloud.async_get_or_create_cloudhook(hass, webhook_id)
+    except Exception as err:  # pylint: disable=broad-except
+        # Fall back to base Exception if CloudNotAvailable is not a valid exception class (e.g. in tests)
+        exc_cls = getattr(cloud, "CloudNotAvailable", Exception)
+        if not isinstance(exc_cls, type) or not issubclass(exc_cls, BaseException):
+            exc_cls = Exception
+        if not isinstance(err, exc_cls):
+            raise
+        _LOGGER.debug(
+            "HYXI Push: Nabu Casa cloud hook not connected or available, falling back to network URL"
+        )
+        return None
+
+
+def _resolve_via_network_helper(hass: HomeAssistant, webhook_id: str) -> str | None:
+    """Try to resolve the callback URL via HA's network helper."""
+    try:
+        resolved = network.get_url(
+            hass, allow_external=True
+        ) + webhook.async_generate_path(webhook_id)
+        _LOGGER.debug(
+            "HYXI Push: Resolved callback URL via network helper: %s",
+            mask_url(resolved),
+        )
+        return resolved
+    except network.NoURLAvailableError:
+        _LOGGER.debug(
+            "HYXI Push: network.get_url raised NoURLAvailableError"
+            " (no external URL configured)"
+        )
+        return None
 
 
 def _compute_subscription_fingerprint(
@@ -923,7 +940,7 @@ async def _async_execute_real_time_subscription(  # pylint: disable=too-many-arg
             )
         else:
             coordinator.push_status = "error"
-            msg = res.get("msg", "Unknown error")
+            msg = res.get("msg", _UNKNOWN_ERROR)
             coordinator.push_error = msg
             _log_push_subscription_failure("HYXI Real-Time Push", msg)
     except Exception as err:  # pylint: disable=broad-exception-caught
@@ -973,14 +990,14 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
             )
         else:
             coordinator.alarm_push_status = "error"
-            msg = res.get("msg", "Unknown error")
+            msg = res.get("msg", _UNKNOWN_ERROR)
             coordinator.alarm_push_error = msg
-            _log_push_subscription_failure("HYXI Alarm Push", msg)
+            _log_push_subscription_failure(_ALARM_PUSH_SUBSCRIPTION_LABEL, msg)
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.alarm_push_status = "error"
         err_msg = str(err)
         coordinator.alarm_push_error = err_msg
-        _log_push_subscription_failure("HYXI Alarm Push", err_msg)
+        _log_push_subscription_failure(_ALARM_PUSH_SUBSCRIPTION_LABEL, err_msg)
 
 
 async def _async_setup_push_subscription(
@@ -997,7 +1014,7 @@ async def _async_setup_push_subscription(
             entry,
             coordinator,
             "push_subscribe_code",
-            "HYXI Push",
+            _PUSH_SUBSCRIPTION_LABEL,
             fingerprint_key="push_subscribe_fingerprint",
         )
         return
@@ -1019,7 +1036,7 @@ async def _async_setup_push_subscription(
             DOMAIN,
             "HYXI Cloud Push",
             webhook_id,
-            lambda h, w_id, req: _async_handle_webhook(h, w_id, req, coordinator),
+            lambda _h, w_id, req: _async_handle_webhook(w_id, req, coordinator),
         )
     except ValueError:
         # Already registered (e.g. on reload config entry error)
@@ -1082,7 +1099,7 @@ async def _async_setup_push_subscription(
         entry,
         coordinator,
         "push_subscribe_code",
-        "HYXI Push",
+        _PUSH_SUBSCRIPTION_LABEL,
         fingerprint_key="push_subscribe_fingerprint",
     )
 
@@ -1132,7 +1149,12 @@ async def _async_teardown_push_subscription(
     subscribe_code = coordinator.subscribe_code
     if subscribe_code:
         should_clear = await _async_maybe_cancel_subscription(
-            hass, coordinator.client, subscribe_code, "HYXI Push", force, cancel_remote
+            hass,
+            coordinator.client,
+            subscribe_code,
+            _PUSH_SUBSCRIPTION_LABEL,
+            force,
+            cancel_remote,
         )
         if should_clear:
             coordinator.subscribe_code = None
@@ -1147,7 +1169,6 @@ async def _async_teardown_push_subscription(
 
 
 async def _async_handle_webhook(
-    hass: HomeAssistant,
     webhook_id: str,
     request: web.Request,
     coordinator: HyxiDataUpdateCoordinator,
@@ -1155,15 +1176,7 @@ async def _async_handle_webhook(
     """Handle incoming webhook request from HYXI Cloud."""
     from homeassistant.util import dt as dt_util
 
-    # 1. Ingress Header authentication check (defense-in-depth)
-    incoming_ak = request.headers.get("accessKey")
-    is_valid_auth = False
-    if incoming_ak and coordinator.client.access_key:
-        is_valid_auth = hmac.compare_digest(
-            incoming_ak.encode("utf-8"), coordinator.client.access_key.encode("utf-8")
-        )
-
-    if not is_valid_auth:
+    if not _is_authorized_webhook_request(request, coordinator):
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
             "Unauthorized push attempt received on webhook %s",
@@ -1171,29 +1184,8 @@ async def _async_handle_webhook(
         )
         return web.Response(status=401, text="Unauthorized")
 
-    # 2. Parse JSON payload
-    text = ""
-    try:
-        text = await request.text()
-        import json
-
-        try:
-            payload = json.loads(text)
-        except ValueError:
-            # Maybe it's URL-encoded? Some platforms send payload={...}
-            from urllib.parse import parse_qs
-
-            parsed = parse_qs(text)
-            if "payload" in parsed:
-                payload = json.loads(parsed["payload"][0])
-            else:
-                raise ValueError("Not JSON and not URL-encoded payload") from None
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        _LOGGER.warning(
-            "Received invalid JSON payload on HYXI push webhook. Error: %s. Raw text: %s",
-            e,
-            repr(text[:500]),
-        )
+    payload = await _parse_webhook_payload(request, "push")
+    if payload is None:
         return web.Response(status=400, text="Invalid JSON")
 
     _LOGGER.debug(
@@ -1216,17 +1208,74 @@ async def _async_handle_webhook(
             payload, existing_metrics=existing_metrics
         )
     except Exception as err:  # pylint: disable=broad-exception-caught
-        _LOGGER.error("Error parsing push payload: %s", err)
+        _LOGGER.exception("Error parsing push payload: %s", err)
         return web.Response(status=500, text="Internal Processing Error")
 
     if not push_results:
         return web.json_response({"code": "0", "msg": "Success", "success": True})
 
     # 4. Apply updates to coordinator
-    any_updated = False
     if coordinator.data is None:
         coordinator.data = {}
+    any_updated = _apply_push_updates(coordinator, push_results)
 
+    if any_updated:
+        coordinator.last_push_received = dt_util.utcnow()
+        coordinator.async_update_listeners()
+
+    return web.json_response({"code": "0", "msg": "Success", "success": True})
+
+
+def _is_authorized_webhook_request(request: web.Request, coordinator) -> bool:
+    """Ingress Header authentication check (defense-in-depth), shared by the
+    push and alarm push webhook handlers.
+    """
+    incoming_ak = request.headers.get("accessKey")
+    if not (incoming_ak and coordinator.client.access_key):
+        return False
+    return hmac.compare_digest(
+        incoming_ak.encode("utf-8"), coordinator.client.access_key.encode("utf-8")
+    )
+
+
+async def _parse_webhook_payload(request: web.Request, context: str) -> dict | None:
+    """Parse a webhook body as JSON, or URL-encoded JSON as a fallback.
+
+    `context` (e.g. "push", "alarm push") names the webhook in the log
+    message on failure. Returns None, having already logged the failure,
+    if neither works.
+    """
+    text = ""
+    try:
+        text = await request.text()
+        import json
+
+        try:
+            return json.loads(text)
+        except ValueError:
+            # Maybe it's URL-encoded? Some platforms send payload={...}
+            from urllib.parse import parse_qs
+
+            parsed = parse_qs(text)
+            if "payload" in parsed:
+                return json.loads(parsed["payload"][0])
+            raise ValueError("Not JSON and not URL-encoded payload") from None
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        _LOGGER.warning(
+            "Received invalid JSON payload on HYXI %s webhook. Error: %s. Raw text: %s",
+            context,
+            e,
+            repr(text[:500]),
+        )
+        return None
+
+
+def _apply_push_updates(coordinator, push_results: dict) -> bool:
+    """Merge push results into coordinator.data, logging masked metrics.
+
+    Returns True if any device was updated.
+    """
+    any_updated = False
     for sn, device_update in push_results.items():
         if sn not in coordinator.data:
             _LOGGER.debug("Received push data for untracked device SN: %s", mask_sn(sn))
@@ -1246,12 +1295,7 @@ async def _async_handle_webhook(
                 mask_sn(sn),
                 logged_metrics,
             )
-
-    if any_updated:
-        coordinator.last_push_received = dt_util.utcnow()
-        coordinator.async_update_listeners()
-
-    return web.json_response({"code": "0", "msg": "Success", "success": True})
+    return any_updated
 
 
 async def _async_setup_alarm_subscription(
@@ -1273,7 +1317,7 @@ async def _async_setup_alarm_subscription(
             entry,
             coordinator,
             "alarm_subscribe_code",
-            "HYXI Alarm Push",
+            _ALARM_PUSH_SUBSCRIPTION_LABEL,
             fingerprint_key="alarm_subscribe_fingerprint",
         )
         return
@@ -1294,7 +1338,7 @@ async def _async_setup_alarm_subscription(
             DOMAIN,
             "HYXI Cloud Alarm Push",
             webhook_id,
-            lambda h, w_id, req: _async_handle_alarm_webhook(h, w_id, req, coordinator),
+            lambda _h, w_id, req: _async_handle_alarm_webhook(w_id, req, coordinator),
         )
     except ValueError:
         pass  # Already registered
@@ -1346,7 +1390,7 @@ async def _async_setup_alarm_subscription(
         entry,
         coordinator,
         "alarm_subscribe_code",
-        "HYXI Alarm Push",
+        _ALARM_PUSH_SUBSCRIPTION_LABEL,
         fingerprint_key="alarm_subscribe_fingerprint",
     )
 
@@ -1390,7 +1434,7 @@ async def _async_teardown_alarm_subscription(
             hass,
             coordinator.client,
             subscribe_code,
-            "HYXI Alarm Push",
+            _ALARM_PUSH_SUBSCRIPTION_LABEL,
             force,
             cancel_remote,
         )
@@ -1406,7 +1450,6 @@ async def _async_teardown_alarm_subscription(
 
 
 async def _async_handle_alarm_webhook(
-    hass: HomeAssistant,
     webhook_id: str,
     request: web.Request,
     coordinator: HyxiDataUpdateCoordinator,
@@ -1416,14 +1459,7 @@ async def _async_handle_alarm_webhook(
     Parses the alarm payload via SDK, merges alarm records into
     coordinator.data[sn]["alarms"] so HyxiDeviceAlarmSensor fires instantly.
     """
-    incoming_ak = request.headers.get("accessKey")
-    is_valid_auth = False
-    if incoming_ak and coordinator.client.access_key:
-        is_valid_auth = hmac.compare_digest(
-            incoming_ak.encode("utf-8"), coordinator.client.access_key.encode("utf-8")
-        )
-
-    if not is_valid_auth:
+    if not _is_authorized_webhook_request(request, coordinator):
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
             "Unauthorized alarm push attempt received on webhook %s",
@@ -1433,29 +1469,8 @@ async def _async_handle_alarm_webhook(
 
     from homeassistant.util import dt as dt_util
 
-    # Parse JSON payload safely
-    text = ""
-    try:
-        text = await request.text()
-        import json
-
-        try:
-            payload = json.loads(text)
-        except ValueError:
-            # Maybe it's URL-encoded
-            from urllib.parse import parse_qs
-
-            parsed = parse_qs(text)
-            if "payload" in parsed:
-                payload = json.loads(parsed["payload"][0])
-            else:
-                raise ValueError("Not JSON and not URL-encoded payload") from None
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        _LOGGER.warning(
-            "Received invalid JSON payload on HYXI alarm push webhook. Error: %s. Raw text: %s",
-            e,
-            repr(text[:500]),
-        )
+    payload = await _parse_webhook_payload(request, "alarm push")
+    if payload is None:
         return web.Response(status=400, text="Invalid JSON")
 
     _LOGGER.debug(
@@ -1471,7 +1486,7 @@ async def _async_handle_alarm_webhook(
     try:
         alarm_results = coordinator.client.process_alarm_push_data(payload)
     except Exception as err:  # pylint: disable=broad-exception-caught
-        _LOGGER.error("Error parsing alarm push payload: %s", err)
+        _LOGGER.exception("Error parsing alarm push payload: %s", err)
         return web.Response(status=500, text="Internal Processing Error")
 
     if not alarm_results:
@@ -1479,7 +1494,21 @@ async def _async_handle_alarm_webhook(
 
     if coordinator.data is None:
         coordinator.data = {}
+    any_updated = _apply_alarm_updates(coordinator, alarm_results)
 
+    if any_updated:
+        coordinator.async_update_listeners()
+
+    return web.json_response({"code": "0", "msg": "Success", "success": True})
+
+
+def _apply_alarm_updates(
+    coordinator: HyxiDataUpdateCoordinator, alarm_results: dict
+) -> bool:
+    """Merge alarm results into coordinator.data, logging masked alarm records.
+
+    Returns True if any device was updated.
+    """
     any_updated = False
     for sn, alarm_records in alarm_results.items():
         if sn not in coordinator.data:
@@ -1509,14 +1538,10 @@ async def _async_handle_alarm_webhook(
                 mask_sn(sn),
                 logged_alarms,
             )
-
-    if any_updated:
-        coordinator.async_update_listeners()
-
-    return web.json_response({"code": "0", "msg": "Success", "success": True})
+    return any_updated
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
+def setup_services(hass: HomeAssistant) -> None:
     """Set up custom services for HYXI Cloud."""
     if hass.services.has_service(DOMAIN, "cancel_subscription"):
         return
@@ -1547,7 +1572,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                 hass, coordinator.client, subscribe_code
             )
         except Exception as err:
-            _LOGGER.error(
+            _LOGGER.exception(
                 "Error manual cancelling HYXI subscription %s: %s",
                 mask_subscription_code(subscribe_code),
                 err,
@@ -1661,7 +1686,7 @@ async def async_cancel_and_unregister_subscription(
     _LOGGER.info("Cancelling HYXI subscription: %s", mask_subscription_code(code))
     res = await client.cancel_subscription(code)
     if isinstance(res, dict) and not res.get("success"):
-        msg = res.get("msg", "Unknown error")
+        msg = res.get("msg", _UNKNOWN_ERROR)
         sub_err_cls = getattr(client, "SubscriptionError", RuntimeError)
         if not isinstance(sub_err_cls, type) or not issubclass(
             sub_err_cls, BaseException

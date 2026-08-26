@@ -296,7 +296,7 @@ async def test_async_start_already_running():
 
 @pytest.mark.asyncio
 async def test_async_stop_cancels_evaluation_task():
-    """Verify async_stop unsubscribes and cancels the running evaluation task."""
+    """Verify stop() unsubscribes and cancels the running evaluation task."""
     controller = _build_controller(50)
     mock_unsub = MagicMock()
     controller._unsub_listener = mock_unsub
@@ -305,7 +305,7 @@ async def test_async_stop_cancels_evaluation_task():
     mock_task.done.return_value = False
     controller._eval_task = mock_task
 
-    await controller.async_stop()
+    controller.stop()
 
     mock_unsub.assert_called_once()
     assert controller._unsub_listener is None

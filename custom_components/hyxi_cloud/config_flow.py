@@ -334,7 +334,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             if not device_data.get("data"):
                 return "no_devices"
         except (TimeoutError, ClientError) as e:
-            _LOGGER.error("Connection error during validation: %s", e)
+            _LOGGER.exception("Connection error during validation: %s", e)
             return "cannot_connect"
         except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.exception("Unexpected error during HYXI credential validation")
@@ -890,88 +890,99 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Manage the options form."""
         if user_input is not None:
-            # Preserve all existing options, update with new values
-            self._options = (
-                dict(self._options)
-                if self._options
-                else dict(self._config_entry.options)
-            )
-            self._options["update_interval"] = user_input.get(
-                "update_interval", user_input.get("update_interval_modbus")
-            )
-            self._options[CONF_BACK_DISCOVERY] = user_input.get(
-                CONF_BACK_DISCOVERY, False
-            )
+            return await self._process_options_input(user_input)
 
-            was_battery_control_enabled = self._options.get(
-                "enable_battery_control", False
-            )
-            was_push_enabled = self._options.get(CONF_ENABLE_PUSH, False)
+        return self._show_options_form()
 
-            if "enable_battery_control" in user_input:
-                self._options["enable_battery_control"] = user_input[
-                    "enable_battery_control"
-                ]
+    async def _process_options_input(self, user_input: dict):
+        """Apply the submitted options form to self._options.
 
-            if CONF_ENABLE_PUSH in user_input:
-                self._options[CONF_ENABLE_PUSH] = user_input[CONF_ENABLE_PUSH]
-            if CONF_PUSH_RATE in user_input:
-                # SelectSelector always returns strings; coerce back to int for SDK
-                self._options[CONF_PUSH_RATE] = int(user_input[CONF_PUSH_RATE])
-            if CONF_PUSH_URL in user_input:
-                self._options[CONF_PUSH_URL] = user_input[CONF_PUSH_URL]
+        Reloads this step to reveal newly-relevant fields when the user just
+        turned on battery control or push, hands off to the Energy Manager
+        step when EM is enabled, or otherwise persists the finished options.
+        """
+        # Preserve all existing options, update with new values
+        self._options = (
+            dict(self._options) if self._options else dict(self._config_entry.options)
+        )
+        self._options["update_interval"] = user_input.get(
+            "update_interval", user_input.get("update_interval_modbus")
+        )
+        self._options[CONF_BACK_DISCOVERY] = user_input.get(CONF_BACK_DISCOVERY, False)
 
-            enable_em = self._options.get(CONF_EM_ENABLED, False)
-            if "enable_energy_manager" in user_input:
-                enable_em = user_input["enable_energy_manager"]
+        was_battery_control_enabled = self._options.get("enable_battery_control", False)
+        was_push_enabled = self._options.get(CONF_ENABLE_PUSH, False)
 
-            # EM requires battery control — auto-enable if user turned on EM
-            if enable_em and not self._options.get("enable_battery_control"):
-                self._options["enable_battery_control"] = True
+        if "enable_battery_control" in user_input:
+            self._options["enable_battery_control"] = user_input[
+                "enable_battery_control"
+            ]
 
-            # If user just enabled battery_control, but enable_energy_manager wasn't in user_input,
-            # reload the step to reveal it (only if controllable inverters exist).
-            if (
-                self._has_controllable_inverter()
-                and self._options.get("enable_battery_control", False)
-                and not was_battery_control_enabled
-                and "enable_energy_manager" not in user_input
-            ):
-                return await self.async_step_init()
+        if CONF_ENABLE_PUSH in user_input:
+            self._options[CONF_ENABLE_PUSH] = user_input[CONF_ENABLE_PUSH]
+        if CONF_PUSH_RATE in user_input:
+            # SelectSelector always returns strings; coerce back to int for SDK
+            self._options[CONF_PUSH_RATE] = int(user_input[CONF_PUSH_RATE])
+        if CONF_PUSH_URL in user_input:
+            self._options[CONF_PUSH_URL] = user_input[CONF_PUSH_URL]
 
-            # If user just enabled push, reload step to reveal rate/url input fields
-            if (
-                self._options.get(CONF_ENABLE_PUSH, False)
-                and not was_push_enabled
-                and CONF_PUSH_RATE not in user_input
-            ):
-                return await self.async_step_init()
+        enable_em = self._options.get(CONF_EM_ENABLED, False)
+        if "enable_energy_manager" in user_input:
+            enable_em = user_input["enable_energy_manager"]
 
-            if enable_em:
-                self._options[CONF_EM_ENABLED] = True
-                return await self.async_step_energy_manager()
+        # EM requires battery control — auto-enable if user turned on EM
+        if enable_em and not self._options.get("enable_battery_control"):
+            self._options["enable_battery_control"] = True
 
-            # EM disabled — remove EM keys if they were previously set
-            self._options.pop(CONF_EM_ENABLED, None)
-            for key in (
-                CONF_EM_INVERTER_SN,
-                CONF_EM_P1_ENTITY,
-                CONF_EM_FORECAST_ENTITY,
-                CONF_EM_FORECAST_POWER_ENTITY,
-                CONF_EM_BATTERY_OVERRIDE,
-                CONF_EM_BATTERY_CAPACITY,
-                CONF_EM_LOOP_INTERVAL,
-                CONF_EM_DRY_RUN,
-            ):
-                self._options.pop(key, None)
+        # If user just enabled battery_control, but enable_energy_manager wasn't in user_input,
+        # reload the step to reveal it (only if controllable inverters exist).
+        if (
+            self._has_controllable_inverter()
+            and self._options.get("enable_battery_control", False)
+            and not was_battery_control_enabled
+            and "enable_energy_manager" not in user_input
+        ):
+            return await self.async_step_init()
 
-            # Push disabled — remove push keys if they were previously set
-            if not self._options.get(CONF_ENABLE_PUSH, False):
-                self._options.pop(CONF_PUSH_RATE, None)
-                self._options.pop(CONF_PUSH_URL, None)
+        # If user just enabled push, reload step to reveal rate/url input fields
+        if (
+            self._options.get(CONF_ENABLE_PUSH, False)
+            and not was_push_enabled
+            and CONF_PUSH_RATE not in user_input
+        ):
+            return await self.async_step_init()
 
-            return self.async_create_entry(title="", data=self._options)
+        if enable_em:
+            self._options[CONF_EM_ENABLED] = True
+            return await self.async_step_energy_manager()
 
+        self._drop_stale_em_and_push_keys()
+        return self.async_create_entry(title="", data=self._options)
+
+    def _drop_stale_em_and_push_keys(self) -> None:
+        """Remove EM keys (EM is disabled), and push keys too if push ended
+        up disabled by this submission.
+        """
+        self._options.pop(CONF_EM_ENABLED, None)
+        for key in (
+            CONF_EM_INVERTER_SN,
+            CONF_EM_P1_ENTITY,
+            CONF_EM_FORECAST_ENTITY,
+            CONF_EM_FORECAST_POWER_ENTITY,
+            CONF_EM_BATTERY_OVERRIDE,
+            CONF_EM_BATTERY_CAPACITY,
+            CONF_EM_LOOP_INTERVAL,
+            CONF_EM_DRY_RUN,
+        ):
+            self._options.pop(key, None)
+
+        # Push disabled — remove push keys if they were previously set
+        if not self._options.get(CONF_ENABLE_PUSH, False):
+            self._options.pop(CONF_PUSH_RATE, None)
+            self._options.pop(CONF_PUSH_URL, None)
+
+    def _show_options_form(self):
+        """Build and show the options form, pre-filled with current values."""
         # Pull current values or defaults
         options = self._options if self._options else self._config_entry.options
         is_modbus = is_modbus_entry(self._config_entry)

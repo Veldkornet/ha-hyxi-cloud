@@ -337,21 +337,19 @@ async def test_teardown_push_subscription_force_clears_on_cancel_failure(
 @pytest.mark.asyncio
 async def test_webhook_handler_unauthorized(mock_coordinator):
     """Test webhook handler rejects unauthorized calls."""
-    hass = MagicMock()
     request = MagicMock()
     request.headers = {"accessKey": "wrong_ak"}
 
     with patch(
         "custom_components.hyxi_cloud.__init__.web.Response"
     ) as mock_response_class:
-        await _async_handle_webhook(hass, "webhook_123", request, mock_coordinator)
+        await _async_handle_webhook("webhook_123", request, mock_coordinator)
         mock_response_class.assert_called_once_with(status=401, text="Unauthorized")
 
 
 @pytest.mark.asyncio
 async def test_webhook_handler_success(mock_coordinator):
     """Test webhook handler successfully processes valid request and updates coordinator."""
-    hass = MagicMock()
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
     request.text = AsyncMock(
@@ -368,7 +366,7 @@ async def test_webhook_handler_success(mock_coordinator):
     with patch(
         "custom_components.hyxi_cloud.__init__.web.json_response"
     ) as mock_json_res:
-        await _async_handle_webhook(hass, "webhook_123", request, mock_coordinator)
+        await _async_handle_webhook("webhook_123", request, mock_coordinator)
 
         # Verify SDK process method was called
         mock_coordinator.client.process_push_data.assert_called_once_with(
@@ -508,7 +506,6 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
     """Test that the webhook handler logs simplified request details."""
     import logging
 
-    hass = MagicMock()
     request = MagicMock()
     request.headers = {"accessKey": "test_ak"}
     request.text = AsyncMock(
@@ -526,7 +523,7 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
     caplog.set_level(logging.DEBUG)
 
     with patch("custom_components.hyxi_cloud.__init__.web.json_response"):
-        await _async_handle_webhook(hass, "webhook_123", request, mock_coordinator)
+        await _async_handle_webhook("webhook_123", request, mock_coordinator)
 
         # Check logs for expected text
         log_records = [rec.message for rec in caplog.records]

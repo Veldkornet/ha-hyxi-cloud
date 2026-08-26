@@ -76,7 +76,7 @@ class HyxiBatteryProtectionController:
         )
         await self.async_evaluate()
 
-    async def async_stop(self) -> None:
+    def stop(self) -> None:
         """Stop listening for coordinator updates."""
         if self._unsub_listener is not None:
             self._unsub_listener()
@@ -195,66 +195,96 @@ class HyxiBatteryProtectionController:
         )
 
         if soc <= soc_min:
-            if not self._low_soc_hold:
-                _LOGGER.debug(
-                    "Protection %s: entering low-SOC hold (soc=%.1f <= soc_min=%.1f)",
-                    mask_sn(self._sn),
-                    soc,
-                    soc_min,
-                )
-            self._low_soc_hold = True
-            if self._last_sent_mode != "charge":
-                await self._ensure_mode("idle" if mode_control else "hold")
+            await self._enter_low_soc_hold(soc, soc_min, mode_control)
             return
 
-        if self._low_soc_hold:
-            if soc < soc_min_resume:
-                if self._last_sent_mode != "charge":
-                    await self._ensure_mode("idle" if mode_control else "hold")
-                return
-            _LOGGER.debug(
-                "Protection %s: exiting low-SOC hold (soc=%.1f >= resume=%.1f)",
-                mask_sn(self._sn),
-                soc,
-                soc_min_resume,
-            )
-            self._low_soc_hold = False
+        if self._low_soc_hold and await self._maybe_stay_in_low_soc_hold(
+            soc, soc_min_resume, mode_control
+        ):
+            return
 
         if soc >= soc_max:
-            if not self._high_soc_hold:
-                _LOGGER.debug(
-                    "Protection %s: entering high-SOC hold (soc=%.1f >= soc_max=%.1f)",
-                    mask_sn(self._sn),
-                    soc,
-                    soc_max,
-                )
-            self._high_soc_hold = True
-            if mode_control:
-                if self._last_sent_mode not in ("discharge", "idle", "self_consume"):
-                    await self._ensure_mode("idle")
-            elif self._last_sent_mode not in ("discharge", "hold"):
-                await self._ensure_mode("hold")
+            await self._enter_high_soc_hold(soc, soc_max, mode_control)
             return
 
         if self._high_soc_hold:
-            if soc > soc_max_resume:
-                if mode_control:
-                    if self._last_sent_mode not in (
-                        "discharge",
-                        "idle",
-                        "self_consume",
-                    ):
-                        await self._ensure_mode("idle")
-                elif self._last_sent_mode not in ("discharge", "hold"):
-                    await self._ensure_mode("hold")
-                return
+            await self._maybe_stay_in_high_soc_hold(soc, soc_max_resume, mode_control)
+
+    async def _enter_low_soc_hold(
+        self, soc: float, soc_min: float, mode_control: bool
+    ) -> None:
+        """SOC at/below minimum: enter (or refresh) the low-SOC hold."""
+        if not self._low_soc_hold:
             _LOGGER.debug(
-                "Protection %s: exiting high-SOC hold (soc=%.1f <= resume=%.1f)",
+                "Protection %s: entering low-SOC hold (soc=%.1f <= soc_min=%.1f)",
                 mask_sn(self._sn),
                 soc,
-                soc_max_resume,
+                soc_min,
             )
-            self._high_soc_hold = False
+        self._low_soc_hold = True
+        if self._last_sent_mode != "charge":
+            await self._ensure_mode("idle" if mode_control else "hold")
+
+    async def _maybe_stay_in_low_soc_hold(
+        self, soc: float, soc_min_resume: float, mode_control: bool
+    ) -> bool:
+        """Already in low-SOC hold: stay in it (True) if SOC hasn't
+        recovered past the resume threshold yet, else clear the hold flag
+        and signal the caller to keep evaluating (False).
+        """
+        if soc < soc_min_resume:
+            if self._last_sent_mode != "charge":
+                await self._ensure_mode("idle" if mode_control else "hold")
+            return True
+        _LOGGER.debug(
+            "Protection %s: exiting low-SOC hold (soc=%.1f >= resume=%.1f)",
+            mask_sn(self._sn),
+            soc,
+            soc_min_resume,
+        )
+        self._low_soc_hold = False
+        return False
+
+    async def _enter_high_soc_hold(
+        self, soc: float, soc_max: float, mode_control: bool
+    ) -> None:
+        """SOC at/above maximum: enter (or refresh) the high-SOC hold."""
+        if not self._high_soc_hold:
+            _LOGGER.debug(
+                "Protection %s: entering high-SOC hold (soc=%.1f >= soc_max=%.1f)",
+                mask_sn(self._sn),
+                soc,
+                soc_max,
+            )
+        self._high_soc_hold = True
+        await self._ensure_not_charging_over_max(mode_control)
+
+    async def _maybe_stay_in_high_soc_hold(
+        self, soc: float, soc_max_resume: float, mode_control: bool
+    ) -> None:
+        """Already in high-SOC hold: stay in it if SOC hasn't dropped past
+        the resume threshold yet, else clear the hold flag.
+        """
+        if soc > soc_max_resume:
+            await self._ensure_not_charging_over_max(mode_control)
+            return
+        _LOGGER.debug(
+            "Protection %s: exiting high-SOC hold (soc=%.1f <= resume=%.1f)",
+            mask_sn(self._sn),
+            soc,
+            soc_max_resume,
+        )
+        self._high_soc_hold = False
+
+    async def _ensure_not_charging_over_max(self, mode_control: bool) -> None:
+        """Send idle/hold unless the last sent mode already stopped
+        charging. Shared by high-SOC hold entry and hold-refresh.
+        """
+        if mode_control:
+            if self._last_sent_mode not in ("discharge", "idle", "self_consume"):
+                await self._ensure_mode("idle")
+        elif self._last_sent_mode not in ("discharge", "hold"):
+            await self._ensure_mode("hold")
 
     async def _ensure_mode(self, mode: str) -> None:
         """Send a mode command if cooldown allows it and mode changed."""

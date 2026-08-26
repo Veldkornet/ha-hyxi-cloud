@@ -1,6 +1,7 @@
 """Tests for the sensor platform."""
 
 import importlib
+import logging
 import sys
 import unittest
 from datetime import UTC, datetime
@@ -486,7 +487,7 @@ def test_anti_dip_filter():
     assert sensor._process_numeric_value("0.05") == 0.05
 
 
-def test_anti_spike_filter():
+def test_anti_spike_filter(monkeypatch):
     """Test that the anti-spike filter works correctly for TOTAL_INCREASING sensors."""
 
     sensor = sensor_mod.HyxiBaseSensor(MagicMock())
@@ -500,7 +501,11 @@ def test_anti_spike_filter():
 
     # Time elapsed makes spike acceptable or not. Let's mock a short time.
     sensor._last_valid_time = datetime(2026, 3, 11, 11, 55, 0, tzinfo=UTC)
-    sensor_mod.dt_util.utcnow.return_value = datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC)
+    monkeypatch.setattr(
+        sensor_mod.dt_util.utcnow,
+        "return_value",
+        datetime(2026, 3, 11, 12, 0, 0, tzinfo=UTC),
+    )
 
     # Small increase
     assert sensor._process_numeric_value("15.0") == 15.0
@@ -695,3 +700,18 @@ async def test_async_setup_entry_modbus_adds_connection_type_sensor():
     ]
     assert len(connection_type_sensors) == 1
     assert connection_type_sensors[0].native_value == "serial"
+
+
+def test_log_device_processing_skips_when_debug_disabled(caplog):
+    """The debug-only metrics logging in _log_device_processing must be a
+    true no-op when DEBUG isn't enabled -- it should never build the
+    masked-metrics dict or emit a record. Tested directly (rather than via
+    async_setup_entry) so it doesn't depend on some other test having left
+    DEBUG enabled for this logger."""
+    caplog.set_level(logging.WARNING, logger="custom_components.hyxi_cloud.sensor")
+
+    sensor_mod._log_device_processing(
+        "SN123", "hybrid_inverter", {"batSoc": "82", "deviceSn": "SN123"}
+    )
+
+    assert caplog.records == []

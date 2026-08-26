@@ -225,28 +225,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             return devices
 
         except (ClientError, TimeoutError, UpdateFailed) as err:
-            try:
-                raw = await self.device_store.async_load()
-                cached_devices = _extract_cached_devices(raw)
-                if cached_devices and not _is_cache_expired(raw):
-                    self.hyxi_metadata["last_error"] = str(err)
-                    self.hyxi_metadata["api_status"] = "Offline"
-                    self.hyxi_metadata["cache_active"] = True
-                    _LOGGER.warning(
-                        "HYXI Cloud API fetch failed. Falling back to %d cached devices from storage.",
-                        len(cached_devices),
-                    )
-                    self._merge_metrics(cached_devices)
-                    await self._async_sync_device_metadata(cached_devices)
-                    return cached_devices
-                if cached_devices and _is_cache_expired(raw):
-                    _LOGGER.warning(
-                        "HYXI Cloud API fetch failed and cache is expired (>%d days old). "
-                        "Not loading stale cache.",
-                        CACHE_MAX_AGE.days,
-                    )
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.warning("Cache fallback recovery failed")
+            cached_devices = await self._try_stale_cache_fallback(err)
+            if cached_devices is not None:
+                return cached_devices
 
             self.hyxi_metadata["cache_active"] = False
             self._handle_update_error(err)
@@ -255,6 +236,37 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["cache_active"] = False
             self._handle_update_error(err)
             raise
+
+    async def _try_stale_cache_fallback(self, err: Exception) -> dict | None:
+        """On a fetch failure, try to fall back to cached devices from storage.
+
+        Returns the cached devices dict (already merged and synced) if a
+        usable, non-expired cache exists, otherwise None -- the caller
+        should then treat `err` as a hard failure.
+        """
+        try:
+            raw = await self.device_store.async_load()
+            cached_devices = _extract_cached_devices(raw)
+            if cached_devices and not _is_cache_expired(raw):
+                self.hyxi_metadata["last_error"] = str(err)
+                self.hyxi_metadata["api_status"] = "Offline"
+                self.hyxi_metadata["cache_active"] = True
+                _LOGGER.warning(
+                    "HYXI Cloud API fetch failed. Falling back to %d cached devices from storage.",
+                    len(cached_devices),
+                )
+                self._merge_metrics(cached_devices)
+                await self._async_sync_device_metadata(cached_devices)
+                return cached_devices
+            if cached_devices and _is_cache_expired(raw):
+                _LOGGER.warning(
+                    "HYXI Cloud API fetch failed and cache is expired (>%d days old). "
+                    "Not loading stale cache.",
+                    CACHE_MAX_AGE.days,
+                )
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.warning("Cache fallback recovery failed")
+        return None
 
     def _merge_metrics(self, devices: dict) -> None:
         """Merge pulled metrics with existing cached metrics to preserve push-only keys."""

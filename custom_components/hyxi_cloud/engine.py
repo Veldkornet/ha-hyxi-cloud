@@ -53,6 +53,9 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# The sun integration's fixed entity ID, read from in a few places below.
+_SUN_ENTITY_ID = "sun.sun"
+
 # Default rolling average window for P1 readings (overridable via p1_smoothing_period param)
 _P1_SMOOTHING_DEFAULT = 60
 
@@ -190,7 +193,7 @@ class EnergyManagerEngine:
 
     # ── Lifecycle ───────────────────────────────────────────────────────
 
-    async def async_start(self) -> None:
+    def start(self) -> None:
         """Start the engine loop and state listeners."""
         if self._enabled:
             return
@@ -242,7 +245,7 @@ class EnergyManagerEngine:
 
         self._notify_sensors()
 
-    async def async_stop(self) -> None:
+    def stop(self) -> None:
         """Stop the engine loop and all listeners."""
         if not self._enabled:
             return
@@ -425,7 +428,7 @@ class EnergyManagerEngine:
         solar = self._get_solar()
         if solar > 50:
             return False
-        sun_state = self._hass.states.get("sun.sun")
+        sun_state = self._hass.states.get(_SUN_ENTITY_ID)
         if sun_state is None:
             return solar < 50
         elevation = sun_state.attributes.get("elevation", 0)
@@ -433,7 +436,7 @@ class EnergyManagerEngine:
 
     def _hours_until_sunrise(self) -> float:
         """Calculate hours until next sunrise from sun.sun attributes."""
-        sun_state = self._hass.states.get("sun.sun")
+        sun_state = self._hass.states.get(_SUN_ENTITY_ID)
         if sun_state is None:
             return 12.0
         next_rising = sun_state.attributes.get("next_rising")
@@ -451,7 +454,7 @@ class EnergyManagerEngine:
 
     def _hours_until_sunset(self) -> float:
         """Calculate hours until next sunset from sun.sun attributes."""
-        sun_state = self._hass.states.get("sun.sun")
+        sun_state = self._hass.states.get(_SUN_ENTITY_ID)
         if sun_state is None:
             return 12.0
         next_setting = sun_state.attributes.get("next_setting")
@@ -559,7 +562,7 @@ class EnergyManagerEngine:
             return True
 
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error("EM: Failed to set mode %s: %s", mode, err)
+            _LOGGER.exception("EM: Failed to set mode %s: %s", mode, err)
             return False
 
     async def _adjust_power(self, direction: str, target_w: int) -> bool:
@@ -607,7 +610,7 @@ class EnergyManagerEngine:
             return True
 
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error("EM: Failed to adjust %s power: %s", direction, err)
+            _LOGGER.exception("EM: Failed to adjust %s power: %s", direction, err)
             return False
 
     async def _set_peak_shaving(self, option: str) -> bool:
@@ -644,7 +647,7 @@ class EnergyManagerEngine:
             self._notify_sensors()
             return True
         except HyxiApiClient.ControlError as err:
-            _LOGGER.error("EM: Failed to set peak shaving '%s': %s", option, err)
+            _LOGGER.exception("EM: Failed to set peak shaving '%s': %s", option, err)
             return False
 
     async def _release_pv_curtailment(self) -> None:
@@ -810,38 +813,43 @@ class EnergyManagerEngine:
         finally:
             self._in_decision = False
 
+    async def _handle_low_soc(self, s: DecisionState) -> None:
+        """SOC at/below minimum: emergency solar charge, grid-charge
+        fallback, or idle.
+        """
+        if s.solar_producing:
+            charge_target = min(s.solar - 50, s.max_charge)
+            charge_target = max(charge_target, 300)
+            # Absorb grid export: if P1 negative, increase charge to
+            # capture excess solar instead of wasting it to grid
+            if s.p1 < 0:
+                charge_target = min(charge_target + abs(int(s.p1)), int(s.max_charge))
+            self._set_decision("emergency_solar_charge")
+            if self._current_mode != "charge":
+                await self._set_mode("charge", int(charge_target))
+            else:
+                await self._adjust_power("charge", int(charge_target))
+            return
+
+        grid_charge_uid = f"hyxi_{self._sn}_em_grid_charge_allowed"
+        grid_entity = self._find_entity_id("switch", grid_charge_uid)
+        if self._get_ha_state_bool(grid_entity):
+            grid_charge_w = min(2000, int(s.max_charge))
+            self._set_decision("grid_charge_emergency")
+            if self._current_mode != "charge":
+                await self._set_mode("charge", grid_charge_w)
+            else:
+                await self._adjust_power("charge", grid_charge_w)
+            return
+
+        self._set_decision("low_soc_idle")
+        if self._current_mode != "idle":
+            await self._set_mode("idle")
+
     async def _check_soc_limits(self, s: DecisionState) -> bool:
         """PRIORITY 1 & 2: SOC safety limits. Returns True if handled."""
         if s.soc <= s.soc_min:
-            if s.solar_producing:
-                charge_target = min(s.solar - 50, s.max_charge)
-                charge_target = max(charge_target, 300)
-                # Absorb grid export: if P1 negative, increase charge to
-                # capture excess solar instead of wasting it to grid
-                if s.p1 < 0:
-                    charge_target = min(
-                        charge_target + abs(int(s.p1)), int(s.max_charge)
-                    )
-                self._set_decision("emergency_solar_charge")
-                if self._current_mode != "charge":
-                    await self._set_mode("charge", int(charge_target))
-                else:
-                    await self._adjust_power("charge", int(charge_target))
-                return True
-
-            grid_charge_uid = f"hyxi_{self._sn}_em_grid_charge_allowed"
-            grid_entity = self._find_entity_id("switch", grid_charge_uid)
-            if self._get_ha_state_bool(grid_entity):
-                grid_charge_w = min(2000, int(s.max_charge))
-                self._set_decision("grid_charge_emergency")
-                if self._current_mode != "charge":
-                    await self._set_mode("charge", grid_charge_w)
-                else:
-                    await self._adjust_power("charge", grid_charge_w)
-                return True
-            self._set_decision("low_soc_idle")
-            if self._current_mode != "idle":
-                await self._set_mode("idle")
+            await self._handle_low_soc(s)
             return True
 
         if s.soc > s.soc_max:
@@ -855,6 +863,31 @@ class EnergyManagerEngine:
             return True
 
         return False
+
+    async def _handle_export_exceeded(
+        self, s: DecisionState, max_export: float
+    ) -> None:
+        """Export exceeds the configured limit: charge to absorb excess if
+        the battery has room, else curtail PV via peak shaving stop.
+        """
+        if s.soc < s.soc_max:
+            # Battery has room — charge to absorb excess
+            if self._pv_curtailed:
+                await self._release_pv_curtailment()
+            excess = abs(s.p1) - max_export
+            charge_target = min(excess, s.max_charge)
+            charge_target = max(charge_target, 300)
+            self._set_decision("export_limit_charge")
+            if self._current_mode != "charge":
+                await self._set_mode("charge", int(charge_target))
+            else:
+                await self._adjust_power("charge", int(charge_target))
+            return
+
+        # Battery full — curtail PV via peak shaving stop
+        self._set_decision("export_limit_pv_curtail")
+        if not self._pv_curtailed:
+            await self._set_peak_shaving("stop")
 
     async def _check_export_limit(self, s: DecisionState) -> bool:
         """PRIORITY 2b: Export limiting (single-phase only). Returns True if handled.
@@ -882,24 +915,7 @@ class EnergyManagerEngine:
 
         # P1 negative = exporting; check if export exceeds limit
         if s.p1 < -max_export:
-            if s.soc < s.soc_max:
-                # Battery has room — charge to absorb excess
-                if self._pv_curtailed:
-                    await self._release_pv_curtailment()
-                excess = abs(s.p1) - max_export
-                charge_target = min(excess, s.max_charge)
-                charge_target = max(charge_target, 300)
-                self._set_decision("export_limit_charge")
-                if self._current_mode != "charge":
-                    await self._set_mode("charge", int(charge_target))
-                else:
-                    await self._adjust_power("charge", int(charge_target))
-                return True
-
-            # Battery full — curtail PV via peak shaving stop
-            self._set_decision("export_limit_pv_curtail")
-            if not self._pv_curtailed:
-                await self._set_peak_shaving("stop")
+            await self._handle_export_exceeded(s, max_export)
             return True
 
         # Export within limit — release curtailment if active
@@ -908,15 +924,16 @@ class EnergyManagerEngine:
             await self._release_pv_curtailment()
             return True
 
-        # Were charging due to export limit but export is now within limit
+        # Were charging due to export limit but export is now within limit.
+        # (Reaching this point already proves s.p1 >= -max_export — the
+        # `s.p1 < -max_export` branch above always returns.)
         if (
             self._current_mode == "charge"
             and self._last_decision == "export_limit_charge"
         ):
-            if s.p1 >= -max_export:
-                self._set_decision("export_limit_ok")
-                await self._set_mode("self_consume")
-                return True
+            self._set_decision("export_limit_ok")
+            await self._set_mode("self_consume")
+            return True
 
         return False
 
@@ -968,20 +985,24 @@ class EnergyManagerEngine:
             return True
 
         # Night battery preservation during daytime
-        p1_avg = self.p1_avg
-        if (
-            not s.is_night
-            and s.soc <= s.night_soc_target
-            and s.p1 > 0
-            and p1_avg > 0
-            and not self._solar_will_cover_charge(s.night_soc_target)
-        ):
+        if self._should_preserve_night_battery(s):
             self._set_decision("night_preserve_idle")
             if self._current_mode != "idle":
                 await self._set_mode("idle")
             return True
 
         return False
+
+    def _should_preserve_night_battery(self, s: DecisionState) -> bool:
+        """Whether daytime SOC should be preserved for the coming night."""
+        p1_avg = self.p1_avg
+        return (
+            not s.is_night
+            and s.soc <= s.night_soc_target
+            and s.p1 > 0
+            and p1_avg > 0
+            and not self._solar_will_cover_charge(s.night_soc_target)
+        )
 
     async def _check_solar(self, s: DecisionState) -> bool:
         """PRIORITY 5: Solar optimization. Returns True if handled."""
@@ -1046,25 +1067,33 @@ class EnergyManagerEngine:
             self._charge_entry_export_count = 0
 
         elif s.p1 < -sc.charge_entry_threshold:
-            self._charge_entry_export_count += 1
-            if (
-                self._charge_entry_export_count >= sc.readings_needed
-                and s.solar >= sc.min_solar_for_charge
-            ):
-                charge_target = min(abs(s.p1) - sc.charge_margin - 100, s.solar - 500)
-                charge_target = min(charge_target, s.max_charge)
-                charge_target = max(charge_target, 300)
-                decision = "pre_night_charge" if sc.sunset_urgent else "solar_charge"
-                self._set_decision(decision)
-                if await self._set_mode("charge", int(charge_target)):
-                    self._charge_entry_export_count = 0
-            else:
-                self._set_decision("solar_export_waiting")
-                if self._current_mode not in ("self_consume", "idle"):
-                    await self._set_mode("self_consume")
+            await self._handle_solar_export_threshold(s, sc)
         else:
             self._charge_entry_export_count = 0
             self._set_decision("solar_self_consume")
+            if self._current_mode not in ("self_consume", "idle"):
+                await self._set_mode("self_consume")
+
+    async def _handle_solar_export_threshold(
+        self, s: DecisionState, sc: SolarConfig
+    ) -> None:
+        """Export has exceeded the charge-entry threshold: charge once
+        enough consecutive readings confirm it, else wait.
+        """
+        self._charge_entry_export_count += 1
+        if (
+            self._charge_entry_export_count >= sc.readings_needed
+            and s.solar >= sc.min_solar_for_charge
+        ):
+            charge_target = min(abs(s.p1) - sc.charge_margin - 100, s.solar - 500)
+            charge_target = min(charge_target, s.max_charge)
+            charge_target = max(charge_target, 300)
+            decision = "pre_night_charge" if sc.sunset_urgent else "solar_charge"
+            self._set_decision(decision)
+            if await self._set_mode("charge", int(charge_target)):
+                self._charge_entry_export_count = 0
+        else:
+            self._set_decision("solar_export_waiting")
             if self._current_mode not in ("self_consume", "idle"):
                 await self._set_mode("self_consume")
 
@@ -1266,7 +1295,8 @@ class EnergyManagerEngine:
                 self._last_fast_path_trigger = now
                 self._hass.async_create_task(self._make_decision())
 
-    async def _update_night_estimate(self, now) -> None:
+    @callback
+    def _update_night_estimate(self, now) -> None:
         """Hourly night consumption update — EMA from P1 readings at night."""
         if not self._enabled:
             return
