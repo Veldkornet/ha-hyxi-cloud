@@ -1,22 +1,24 @@
 # Where the Modbus register facts come from
 
-Every register value in this integration traces to one of three kinds of
+Every register value in this integration traces to one of four kinds of
 source, and they are **not** equally trustworthy. This file records which is
 which, so a later change does not quietly promote a guess to a fact.
 
-The short version: **hardware observation outranks a vendor document, and a
-vendor document outranks anything inferred from the cloud API.** Where two
-sources disagree, that disagreement is evidence and must be preserved, not
-resolved by making one match the other. And within "vendor document": a
-document written for the exact hardware family in use outranks one written
-for a different family whose examples happened to decode against it.
+The short version: **hardware observation outranks a vendor document, a
+vendor document outranks a relayed claim about a private vendor
+communication, and a relayed claim outranks anything inferred from the
+cloud API.** Where two sources disagree, that disagreement is evidence and
+must be preserved, not resolved by making one match the other. And within
+"vendor document": a document written for the exact hardware family in use
+outranks one written for a different family whose examples happened to
+decode against it.
 
 ## Sources
 
 | Source | Covers | Standing |
 | :--- | :--- | :--- |
 | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1, 2025-06-13 | HYX-H(5\~12)K-HT (incl. the H10K-HT on the bench), HYX-H(15\~25)K-HT, HYX-H(6\~15)K-HTA/HTAC — registers 0–1351 and 973–3121 | **Vendor claim, current document, exact hardware family.** Supplied directly for this project. The strongest source held for any device here — not yet checked against a device, but not borrowed from a different product's document either. |
-| HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. Not yet checked against a device — no HALO has been on a bus. Gives serial parameters only; no pinout — see the row below. |
+| HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. Not yet checked against a device — no HALO has been on a bus. Gives serial parameters only; no pinout — see "Open: HALO's RS485 wiring" below. |
 | HYXIPower *HYX-H(5\~12)K-HT User Manual*, V1.2, 2024-07 | Alarm code table; lists port 14 as "Reserved Communication" with no pinout | **Vendor, published.** Superseded on the pinout question by the protocol document above — see below. |
 | [Issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662#issue-5218550482) and a [matching HA community post](https://community.home-assistant.io/t/hyxipower-integration/926093/28), both user Ton123 — the same contributor who supplied the *Micro Storage RS485 MODBUS* document two rows above | HALO / HYX-MS3000AC RS485 pinout: reported as PIN7 = A, PIN8 = B | **First-party to this project, relayed claim, unconfirmed.** Stated directly on this repo's own issue tracker by the person who obtained and supplied the HALO protocol document itself, saying "HYXI has confirmed to me" the pin assignment — not a random third party, but still a verbal claim about a private communication, not text in that document (which gives serial parameters only, no pinout), and not checked against hardware. |
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | Cloud `workMode` values 13 and 14 | **Inference, unconfirmed.** Derived by reverse-engineering the HYXI phone app's APK. Never observed on a device. See rule 1. |
