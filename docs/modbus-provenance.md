@@ -18,7 +18,7 @@ for a different family whose examples happened to decode against it.
 | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1, 2025-06-13 | HYX-H(5\~12)K-HT (incl. the H10K-HT on the bench), HYX-H(15\~25)K-HT, HYX-H(6\~15)K-HTA/HTAC — registers 0–1351 and 973–3121 | **Vendor claim, current document, exact hardware family.** Supplied directly for this project. The strongest source held for any device here — not yet checked against a device, but not borrowed from a different product's document either. |
 | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. Not yet checked against a device — no HALO has been on a bus. Gives serial parameters only; no pinout — see the row below. |
 | HYXIPower *HYX-H(5\~12)K-HT User Manual*, V1.2, 2024-07 | Alarm code table; lists port 14 as "Reserved Communication" with no pinout | **Vendor, published.** Superseded on the pinout question by the protocol document above — see below. |
-| [HA community thread](https://community.home-assistant.io/t/hyxipower-integration/926093/28), user Ton123, citing information obtained directly from HYXI | HALO / HYX-MS3000AC RS485 pinout: reported as PIN7 = A, PIN8 = B | **Third party, uncontradicted, unconfirmed.** A forum relay of a private vendor communication, not a document held here and not checked against hardware — the HALO protocol document above specifies no pinout at all. Kept here as the best lead available, not as a settled fact. |
+| [Issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662#issue-5218550482) and a [matching HA community post](https://community.home-assistant.io/t/hyxipower-integration/926093/28), both user Ton123 — the same contributor who supplied the *Micro Storage RS485 MODBUS* document two rows above | HALO / HYX-MS3000AC RS485 pinout: reported as PIN7 = A, PIN8 = B | **First-party to this project, relayed claim, unconfirmed.** Stated directly on this repo's own issue tracker by the person who obtained and supplied the HALO protocol document itself, saying "HYXI has confirmed to me" the pin assignment — not a random third party, but still a verbal claim about a private communication, not text in that document (which gives serial parameters only, no pinout), and not checked against hardware. |
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | Cloud `workMode` values 13 and 14 | **Inference, unconfirmed.** Derived by reverse-engineering the HYXI phone app's APK. Never observed on a device. See rule 1. |
 
 ## HALO register map (from registers.py)
@@ -307,13 +307,18 @@ document gives serial parameters (115200bps, no parity, 8 data bits, 1 stop
 bit) but no pinout at all -- no pin numbers, no terminal labels, no
 connector type.
 
-The best lead so far is third-party: a [Home Assistant community
-thread](https://community.home-assistant.io/t/hyxipower-integration/926093/28)
-reports PIN7 = RS485 A, PIN8 = RS485 B, sourced from a private communication
-with HYXI. That's a forum relay, not a document held here, and it hasn't
-been checked against real hardware -- treat it as the best available lead,
-not as resolved the way the hybrid pinout above is. Update this section
-(and the sources table) once it's confirmed one way or the other.
+The best lead so far comes from Ton123 -- the same contributor who supplied
+this project's HALO protocol document in the first place -- both directly on
+[issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662#issue-5218550482)
+and on a [matching Home Assistant community
+thread](https://community.home-assistant.io/t/hyxipower-integration/926093/28):
+PIN7 = RS485 A, PIN8 = RS485 B, per HYXI confirming it to them directly.
+That's a materially better source than an unrelated third party -- it's the
+same channel this project already trusts for the register map -- but it's
+still a relayed verbal claim, not text in the document itself, and it
+hasn't been checked against real hardware. Treat it as the best available
+lead, not as resolved the way the hybrid pinout above is. Update this
+section (and the sources table) once it's confirmed one way or the other.
 
 ## A worked example that does not work
 
