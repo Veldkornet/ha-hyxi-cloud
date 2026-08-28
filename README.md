@@ -2,8 +2,6 @@
 
 # HYXI Integration for Home Assistant
 
-**Monitor your [HYXIPower](https://www.hyxipower.com/) solar production, battery, and grid flow in real-time.**
-
 [![Release][release-shield]][releases]
 [![HACS][hacs-shield]][hacs]
 [![Home Assistant][ha-version-shield]][hacs]
@@ -17,6 +15,8 @@
 [![Open in Dev Containers][devcontainer-shield]][devcontainer]
 
 ---
+
+**Monitor your [HYXIPower](https://www.hyxipower.com/) solar production, battery, and grid flow in real-time.**
 
 Bring your HYXIPower inverter, battery, and meter data into Home Assistant — over the **HYXI Cloud** (your account, any supported device) or a direct **Local Modbus (RS485)** connection to one inverter (no account, no internet dependency).
 
