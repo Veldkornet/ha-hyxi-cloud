@@ -1,471 +1,147 @@
-# HYXI
-![HYXI Logo](https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/custom_components/hyxi_cloud/brand/logo.png)
+![HYXI Integration for Home Assistant](https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/assets/readme-header.png)
 
-### [HYXIPower](https://www.hyxipower.com/) Integration for Home Assistant
-**Monitor your solar production, battery state-of-charge, and grid flow in real-time.**
+# HYXI Integration for Home Assistant
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud?style=flat-square&color=blue)](https://github.com/Veldkornet/ha-hyxi-cloud/releases)
-[![License](https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=flat-square&color=lightgrey)](LICENSE)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
-[![GitHub Issues](https://img.shields.io/github/issues/Veldkornet/ha-hyxi-cloud?style=flat-square&color=blue)](https://github.com/Veldkornet/ha-hyxi-cloud/issues)
+**Monitor your [HYXIPower](https://www.hyxipower.com/) solar production, battery, and grid flow in real-time.**
 
-[![CodeQL](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml)
-[![HomeAssistant](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml/badge.svg)](https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/validate.yml)
-[![Gitleaks](https://img.shields.io/badge/protected%20by-gitleaks-blue?style=flat-square)](https://github.com/gitleaks/gitleaks-action)
-[![Security: Harden-Runner](https://img.shields.io/badge/Security-Harden--Runner-green?style=flat-square)](https://github.com/Veldkornet/ha-hyxi-cloud/actions)
-[![Dependabot](https://img.shields.io/badge/Dependabot-enabled-blue?style=flat-square&logo=dependabot)](https://github.com/Veldkornet/ha-hyxi-cloud/network/updates)
-[![OpenSSF Baseline](https://www.bestpractices.dev/projects/12051/baseline)](https://www.bestpractices.dev/projects/12051)
+[![Release][release-shield]][releases]
+[![HACS][hacs-shield]][hacs]
+[![Home Assistant][ha-version-shield]][hacs]
+[![Docs][wiki-shield]][wiki]
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/veldkornet)
+[![Tests][tests-shield]][tests]
+[![Coverage][coverage-shield]][tests]
+[![CodeQL][codeql-shield]][codeql]
+[![Downloads][downloads-shield]][releases]
+[![License][license-shield]](LICENSE)
+[![Open in Dev Containers][devcontainer-shield]][devcontainer]
 
 ---
 
+Bring your HYXIPower inverter, battery, and meter data into Home Assistant — over the **HYXI Cloud** (your account, any supported device) or a direct **Local Modbus (RS485)** connection to one inverter (no account, no internet dependency).
+
+> 📖 **Full documentation is in the [Wiki][wiki].** This page is the quick start.
+
 ## ✨ Features
 
-- **⚡ Energy Dashboard Ready:** Native support for Home Assistant's built-in Energy Dashboard. Track daily solar yield, grid dependency, and battery cycles.
-- **📟 Local Modbus (RS485):** An optional local transport that talks straight to the inverter over RS485 instead of the cloud, for faster polling and control the cloud API can't offer. See [Local Modbus (RS485)](#-local-modbus-rs485--in-development) below.
-- **🔄 Real-Time Push Subscriptions:** Optional support for receiving instantaneous updates for telemetry data and active alarms directly from HYXI Cloud via Home Assistant's webhook endpoints, bypassing polling delays.
-- **🔧 Device Control:** Send supported HYXI Cloud control commands from Home Assistant, including inverter mode buttons, peak shaving buttons, frequency control, and microinverter power controls.
-- **📊 Advanced Diagnostics:** Track cloud connectivity, API success rates, and data sync latency with dedicated diagnostic sensors.
-- **🕥 Adjustable Polling:** Fine-tune your data refresh rate between 1 and 60 minutes via the integration options.
-- **🛡️ Reliable Quality Assurance:** Built with **100% automated test coverage** and robust numeric safety nets to ensure your energy data is accurate and resilient.
-- **🧼 Clean UI:** Precision-tuned data with support for **20+ languages** (English, German, French, Dutch, Afrikaans, Portuguese, Spanish, Italian, and more).
+- **☁️ Cloud or 📟 local** — pull data through the HYXI Cloud API, or talk straight to one inverter over RS485 Modbus for faster polling and no internet dependency ([Local Modbus][wiki-modbus]).
+- **⚡ Energy Dashboard ready** — native support for Home Assistant's Energy Dashboard ([setup][wiki-energy]).
+- **🔄 Real-time push** — optional webhook subscriptions for instant telemetry and alarm updates, bypassing the poll interval ([details][wiki-push]).
+- **🔧 Device control** — opt-in inverter mode buttons, charge/discharge power, peak shaving, battery protection, and microinverter controls ([reference][wiki-control]).
+- **🔋 Energy Manager (Beta)** — an automated battery engine that manages charge/discharge from your P1 meter, solar, SOC, and forecast ([guide][wiki-em]).
+- **📊 Diagnostics** — dedicated sensors for cloud connectivity, data freshness, and sync latency.
+- **🛡️ Resilient** — 100% test coverage, and glitch-filtering that rejects impossible energy spikes and dips from cloud reporting delays.
+- **🕥 Adjustable polling** — 1 to 60 minutes.
+- **🌍 20+ languages** — English, German, French, Dutch, Afrikaans, Portuguese, Spanish, Italian, and more.
 
 ## 📥 Installation
 
-[![Open your Home Assistant instance and open the repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Veldkornet&repository=ha-hyxi-cloud&category=Integration)
+[![Open your Home Assistant instance and open the repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)][hacs]
 
-### Method 1: HACS (Recommended)
-1. Open **HACS** in Home Assistant.
-2. Go to **Integrations** > **Custom repositories** (three dots menu).
-3. Paste: `https://github.com/Veldkornet/ha-hyxi-cloud`
-4. Select **Integration** and click **Add**.
-5. Restart Home Assistant.
+1. Open **HACS** in Home Assistant and search for **HYXI**.
+2. Click **Download**, then restart Home Assistant.
 
-### Method 2: Manual
-1. Copy the `hyxi_cloud` folder to your `/config/custom_components/` directory.
-2. Restart Home Assistant.
+<details>
+<summary>Can't find it in HACS?</summary>
 
-### Trying Upcoming Features (Beta Channel)
+If **HYXI** doesn't appear in search, add it as a custom repository first:
 
-New features are sometimes available in pre-releases (`vX.Y.Z-beta.N`) before they reach stable. To get them early:
-1. In HACS, open **HYXI** > the three-dot menu > **Redownload**.
-2. Under **Need a different version?**, select a `-beta` version.
-3. Restart Home Assistant.
+1. In HACS, open the **⋮** menu → **Custom repositories**.
+2. Repository `https://github.com/Veldkornet/ha-hyxi-cloud`, category **Integration** → **Add**.
+3. Search for and download **HYXI** as above.
 
-Beta releases get the same testing as any other release, but haven't accumulated real-world usage yet — stick to stable if you'd rather wait for that.
+</details>
 
-## 🔌 Supported Devices
+Manual installation and the **beta channel** (pre-release features) are in the [Installation Guide][wiki-install].
 
-> [!TIP]
-> **Dynamic Discovery:** This integration uses a proactive discovery model. Even if your device is listed as "Untested," it will automatically populate with at least basic diagnostic entities and known mapped entities. Full sensor mapping is applied once the device type is confirmed.
-
-### 📡 Detailed Entity Support
-
-| Device Type | Cloud Status | Modbus Status | Key Entities Provided |
-| :--- | :--- | :--- | :--- |
-| **Hybrid Inverter** | ✅ Tested | ⚠️ Reads only — writes not yet confirmed working on real hardware, see [Local Modbus](#-local-modbus-rs485--in-development) below | **PV:** Power, Voltage (String 1/2), Current, Daily/Total Yield <br> **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH, **Capacity (kWh)**, **Max Chg/Disch Power**, Temp <br> **Grid:** Import/Export Power, Load Power, Voltage, Frequency, **Phase(1/2/3) Volts/Amps/Power**, **Bus Voltage** <br> **System:** Internal Temp, Running State, Fault Codes |
-| **All-in-One** | ✅ Tested | ❌ Not Supported¹ | Same as Hybrid Inverter above |
-| **Micro ESS (HALO)** | ✅ Tested | ⚠️ Untested (for now)² | **Battery:** SOC, Power (Charge/Discharge), Voltage, Current, SOH <br> **Grid:** Import/Export Power, Frequency <br> **System:** Internal Temp, Running State, Fault Codes *(AC-coupled — no PV/DC input)* |
-| **Data Collector** | ✅ Tested | ❌ Not Supported¹ | **Diagnostics:** Signal Intensity/Quality, Last Seen, **WiFi Version**, **Comm Mode**, **App Version** |
-| **String Inverter** | ⚠️ Untested | ❌ Not Supported¹ | **PV:** Power, String Volts/Amps <br> **AC:** Output Power, Daily/Total Yield, Bus Voltage, Temperature |
-| **Micro Inverter** | ✅ Tested | ❌ Not Supported¹ | **PV:** Per-string Voltage/Current/Power (up to 4 strings) <br> **Module:** AC Voltage, Frequency, Daily Energy, Internal Temp <br> **Aggregate:** a "Microinverters Summary" device sums AC Power and Daily Yield across every micro-inverter on the account |
-| **Smart Meter** | ⚠️ Untested | ❌ Not Supported¹ | **Grid:** Active/Reactive Power, Voltage, Export Energy, Import Energy |
-
-> ¹ No Modbus register map exists for this family yet — if you have the vendor's RS485/Modbus documentation for one of these devices, please [open an issue](https://github.com/Veldkornet/ha-hyxi-cloud/issues) and we'll look at adding support.
-> ² A register map exists (from HYXI's own document) but has not yet been checked against real HALO hardware — see [Local Modbus](#-local-modbus-rs485--in-development) below.
-
-> [!IMPORTANT]
-> ### 🤝 Call for Testers
-> Do you own a **String Inverter, Smart Meter, Standalone Battery or Multiple Batteries**? Your data can help us move these to **✅ Tested**!
-> Specifically multiple batteries behind an inverter would be a great addition to confirm working!
->
-> 1. Enable **Debug Logging** in Home Assistant for this integration.
-> 2. Open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices#-support-for-new-devices) and attach a snippet of the debug log output.
-> 3. We will verify the sensor mappings and update the integration!
-
-### 🔧 Device Control
-
-> [!IMPORTANT]
-> **Device Controls are Opt-In:** To prevent Home Assistant from interfering with external device management or grid curtailment schedules by default, all control entities (such as Operating Mode buttons, power sliders, and switches) are hidden initially.
->
-> **How to enable them:**
-> 1. Go to **Settings > Devices & Services** > **HYXI**.
-> 2. Click the **Configure** button on the integration card.
-> 3. Check the box for **"Enable Device Control & Protection"** and save. The integration will reload and all control entities will appear.
-
-
-This integration supports writing control commands to compatible inverters via the HYXI Cloud API.
-
-Controls are scoped per device type — each device only gets the controls it supports:
-
-#### Hybrid Inverter / All-in-One
-
-The HYXI API defines controls by **phase type** (Single Phase / Three-Phase). The integration auto-detects phase type and exposes matching controls:
-
-| Phase | Controls | controlId |
-| :--- | :--- | :--- |
-| **Three-Phase** | Operating Mode buttons (Mode: Idle / Mode: Charge / Mode: Discharge / Mode: Self-Consumption) | 1062–1065 |
-| **Three-Phase** | Target Charge / Discharge Power | — |
-| **Single Phase** | Peak Shaving buttons (Peak Shaving: Turn Off / Peak Shaving: Force Charge / Peak Shaving: Force Discharge / Peak Shaving: Stop / Peak Shaving: Hold) | 1021 |
-| **Single Phase** | Frequency Control (Enable / Disable) | 1020 |
-
-**Phase Detection** — determined in priority order:
-
-1. **Model name suffix:** `-HT` / `-HTA` / `-ET` → Three-Phase, `-HS` / `-LS` → Single Phase
-2. **Runtime metrics:** Phase power keys (`ph2Loadp` / `ph3Loadp` / `ph2p` / `ph3p`) or non-zero phase 2/3 voltage (`ph2v` / `ph3v`) → Three-Phase
-
-> [!IMPORTANT]
-> If the phase type cannot be determined from either the model name or runtime metrics, **no control entities are created**. This is a safety measure to prevent sending unsupported commands to your inverter. If you believe your device should have controls, please open a [GitHub Issue](https://github.com/Veldkornet/ha-hyxi-cloud/issues) with your device model and we will add support.
-
-#### Energy Manager Standalone (Beta)
-
-The Energy Manager Standalone is an automated battery control engine that runs a 15-second decision loop inside Home Assistant. It reads your P1 smart meter, solar production, battery SOC, and optional solar forecast to automatically manage your inverter's operating mode (charge, discharge, self-consume, idle).
-
-> [!NOTE]
-> This is the **Standalone** energy manager — it makes all decisions locally based on real-time sensor data and configurable rules. A future **Day Ahead** energy manager (optimizing against dynamic energy prices) is planned for a separate release.
-
-**Important:** The Energy Manager builds on top of the existing Battery Protection — it does **not** replace it. SOC minimum/maximum limits are read from the existing protection number entities and are always respected.
-
-##### Prerequisites
-
-- **Enable Device Control & Protection** must be turned on first (Options → Configure)
-- A **P1 smart meter** entity (power sensor) configured in Home Assistant
-
-##### Enabling
-
-1. Go to **Settings > Devices & Services** > **HYXI** > **Configure**.
-2. Enable **Device Control & Protection** and save.
-3. Re-open **Configure** — the **Enable Energy Manager Standalone (Beta)** toggle is now visible.
-4. Enable it and configure:
-   - **P1 Smart Meter** — your grid power sensor (required, e.g. `sensor.p1_meter_power`)
-   - **Solar Forecast Remaining Today** — remaining solar energy for today in kWh (optional)
-   - **Solar Forecast Current Power** — current predicted solar power in W (optional)
-   - **Inverter to Control** — which inverter the engine manages
-   - **Override Battery Capacity** — check this to manually set battery capacity (see below)
-   - **Battery Capacity (Wh)** — manual override value (only used when override is checked)
-
-The Energy Manager is **disabled by default** even after enabling it in options. You must also turn on the **Energy Manager** switch entity. Each sub-feature (Night Mode, High Load Assist) must be individually enabled via its own switch entity.
-
-##### Solar Forecast Integration
-
-The engine can use solar forecast data to make smarter decisions about battery preservation and charge timing. Two optional forecast entities can be configured:
-
-- **Solar Forecast Remaining Today (kWh):** Used for night preservation decisions — the engine checks whether remaining solar can recharge the battery to the night target before sunset. Compatible with:
-  - [Forecast.Solar](https://www.home-assistant.io/integrations/forecast_solar/) — use the `energy_production_today_remaining` sensor
-  - [Solcast](https://github.com/BJReplay/ha-solcast-solar) — use the `forecast_remaining_today` sensor
-  - Any sensor providing remaining solar energy for today in kWh
-
-- **Solar Forecast Current Power (W):** Currently reserved for future use. Compatible with:
-  - [Forecast.Solar](https://www.home-assistant.io/integrations/forecast_solar/) — use the `power_production_now` sensor
-  - [Solcast](https://github.com/BJReplay/ha-solcast-solar) — use the `forecast_this_hour` sensor
-
-If no forecast entities are configured, the engine estimates solar availability from current production and time to sunset.
-
-##### Battery Capacity
-
-The engine needs to know your battery's total capacity (in Wh) for SOC calculations, night reserve estimation, and high-load cost analysis.
-
-**How it's determined (in priority order):**
-
-1. **Manual override** — If you check *Override Battery Capacity* in the energy manager options and set a value, that value is always used.
-2. **API auto-detection** — The `batCap` metric from your inverter (reported in kWh, converted to Wh). Most hybrid inverters report this automatically.
-3. **Fallback** — 2000 Wh if neither of the above is available.
-
-> [!TIP]
-> If your inverter reports `batCap` correctly (visible as the "Battery Capacity" sensor on your inverter device), you don't need to configure anything. The override is for situations where the API value is missing, incorrect, or you have modified your battery setup.
-
-##### How It Works — Decision Priorities
-
-Every 15 seconds the engine evaluates these priorities in order. The first matching priority wins:
-
-| Priority | Condition | Action | Details |
-| :--- | :--- | :--- | :--- |
-| **1. Emergency Low SOC** | SOC < SOC Minimum | Charge from solar or grid | If solar is producing, charges from solar. If no solar and *Grid Charge Allowed* is on, charges from grid at up to 2000W. Otherwise goes idle to prevent further drain. |
-| **2. Over-Max SOC** | SOC > SOC Maximum | Forced discharge | Discharges at the higher of current grid import or 1000W, capped at max discharge power. Prevents overcharging. |
-| **2b. Export Limiting** | Grid export > max limit | Charge or curtail PV | Single-phase only. Uses peak shaving control. See details below. |
-| **3. High Load Assist** | Home load > threshold | Battery assist or grid-only | Only active when the *High Load Battery Assist* switch is ON. See details below. |
-| **4. Night Mode** | Nighttime (sun below horizon) | Self-consume or idle | Only active when the *Night Mode* switch is ON. See details below. |
-| **5. Solar Optimization** | Solar producing + SOC < max | Smart charge from solar | Waits for sustained grid export before entering charge mode. Continuously tunes charge power to minimize grid import/export. |
-| **Default** | None of the above | Self-consume | Safe fallback. If currently charging or discharging, switches to self-consume. |
-
-##### Night Mode (Priority 4)
-
-**Requires:** *Night Mode* switch entity → ON (default: OFF)
-
-Night Mode manages battery usage during nighttime and preserves battery for overnight consumption:
-
-- **At night (sun below horizon, no solar):**
-  - If SOC is above SOC Minimum → **self-consume** (battery powers the house)
-  - If SOC is at or below SOC Minimum → **idle** (stop discharging, protect the reserve)
-
-- **During daytime — night preservation:**
-  - If SOC has dropped to or below the calculated *night SOC target* and the house is importing from grid and solar forecast cannot cover the gap → **idle** (preserve remaining battery for tonight)
-
-The **night SOC target** is automatically calculated based on:
-- `Average Night Consumption` (W) — configurable, also auto-updated hourly from real P1 data between 21:00–06:00
-- `Night Buffer %` — extra safety margin (default 5%)
-- Battery capacity (from options or API)
-- Hours until sunrise
-
-Formula: `night_target = soc_min + ((avg_consumption × hours_remaining × (1 + buffer%)) / capacity) × 100`
-
-**Example:** With 400W average consumption, 14.8 kWh battery, 5% buffer, 20% SOC minimum, 12 hours until sunrise:
-Night target ≈ 20% + 34% = **54%**. The engine will preserve battery above 54% during daytime if it calculates that solar won't be enough to recharge before sunset.
-
-##### High Load Assist (Priority 3)
-
-**Requires:** *High Load Battery Assist* switch entity → ON (default: OFF)
-
-High Load Assist detects when your home consumption exceeds a configurable threshold and decides whether the battery should help:
-
-- **Home load > High Load Threshold** and assist is enabled:
-  - Calculates the SOC cost of running battery assist for 30 minutes at 50% max discharge power
-  - If the battery can afford it (remaining SOC after assist would still exceed the night SOC target) → **self-consume** (battery helps power the high load)
-  - If the battery cannot afford it (would drain below night target) → **idle** (let the grid handle it, preserve battery for night)
-
-- **Home load below threshold:** No action, falls through to next priority.
-
-**Use case:** Running an oven, EV charger, or heat pump. The engine prevents the battery from draining itself to cover a temporary spike that would leave you with insufficient reserve for the night.
-
-##### Export Limiting (Priority 2b)
-
-**Requires:** *Export Limiting* switch entity → ON (default: OFF)
-
-**Single-phase devices only** — uses peak shaving control (controlId 1021) which is not available on three-phase inverters.
-
-Export Limiting caps how much power is fed back to the grid:
-
-- **Grid export > Max Grid Export** and battery has room (SOC < SOC Maximum):
-  - Charges battery to absorb excess (minimum 300W, capped at max charge power)
-  - Continuously adjusts charge power as export fluctuates
-
-- **Grid export > Max Grid Export** and battery is full:
-  - Sends peak shaving `stop` to curtail PV production entirely
-  - 30-second cooldown between stop/hold toggles prevents oscillation
-
-- **Grid export drops below limit:**
-  - Sends peak shaving `hold` to resume PV production
-  - Returns to self-consume
-
-**Use case:** Feed-in tariff limits, grid connection limits, or reducing grid export to maximize self-consumption.
-
-##### Solar Charge Logic (Priority 5)
-
-When solar is producing and the battery isn't full, the engine optimizes charging:
-
-1. **Entry gate:** Solar must exceed `Min Solar for Charge` (default: 1000W).
-2. **Export confirmation:** Grid export must exceed `Charge Entry Threshold` (default: 500W) for several consecutive readings before entering charge mode. This prevents charge/discharge oscillation on cloudy days.
-3. **Power tuning:** Once charging, the engine continuously adjusts charge power to keep P1 close to zero (not importing, not exporting).
-4. **Bottomout exit:** If charge power drops to minimum (100W) for 3 consecutive ticks due to insufficient solar, exits back to self-consume.
-5. **Sunset urgency:** Within 4 hours of sunset, if SOC is below the night target and solar forecast won't cover it, entry thresholds are relaxed to capture remaining solar.
-
-##### Grid Charge Allowed
-
-The *Grid Charge Allowed* switch (on the inverter device, not the Energy Manager device) controls whether the engine may charge the battery from the grid during emergencies. This is only used when SOC drops below minimum and there is no solar available. Default: OFF.
-
-##### Entity Reference
-
-All Energy Manager entities appear on a virtual **Energy Manager** device linked to your inverter.
-
-**Switches (all default OFF):**
-
-| Entity | Purpose |
-| :--- | :--- |
-| Energy Manager | Master on/off for the decision loop |
-| Night Mode | Enable night self-consume and battery preservation |
-| High Load Battery Assist | Enable battery assist during high home loads |
-| Export Limiting | Cap grid export and charge battery with excess (single-phase only) |
-| Grid Charge Allowed | Allow grid charging in low-SOC emergencies (on inverter device) |
-
-**Number parameters:**
-
-| Entity | Unit | Default | Range | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| High Load Threshold | W | 6500 | 1000–20000 | Home load above this triggers high-load logic |
-| Max Charge Power | W | 5000 | 500–15000 | Maximum charge power sent to inverter |
-| Max Discharge Power | W | 5000 | 500–15000 | Maximum discharge power |
-| Min Solar for Charge | W | 1000 | 200–3000 | Solar must exceed this to consider charging |
-| Mode Switch Cooldown | s | 60 | 10–300 | Minimum seconds between mode changes |
-| Power Change Threshold | W | 100 | 10–500 | Minimum power change before resending command |
-| Power Adjust Cooldown | s | 30 | 5–120 | Minimum seconds between power adjustments |
-| Night Buffer | % | 5 | 0–20 | Extra safety margin for night SOC calculation |
-| Avg Night Consumption | W | 400 | 100–2000 | Baseline night power draw (auto-updated hourly) |
-| Charge Margin | W | 150 | 0–500 | Buffer between solar charge and grid balance point |
-| Charge Entry Threshold | W | 500 | 100–2000 | Grid export required before entering charge mode |
-| Charge Re-entry Delay | s | 300 | 30–600 | Cooldown before re-entering charge after exit |
-| Bottomout Cooldown | s | 300 | 60–900 | Extended cooldown after charge bottomout exit |
-| P1 Smoothing Period | s | 60 | 1–300 | Rolling average window for P1 meter readings |
-| Max Grid Export | W | 0 | 0–10000 | Maximum allowed grid export before charging kicks in (single-phase only) |
-
-**Options flow parameters** (set once in Configure, not entities):
-
-| Setting | Default | Purpose |
-| :--- | :--- | :--- |
-| Override Battery Capacity | OFF | Enable manual battery capacity override |
-| Battery Capacity (Wh) | 2000 | Manual capacity value (only used when override is checked) |
-| Dry-Run Mode | OFF | Engine logs decisions and fires HA events but skips all API calls |
-
-**Sensors (read-only):**
-
-| Entity | Purpose |
-| :--- | :--- |
-| EM Decision | The active decision label (e.g., `solar_charge`, `night_self_consume`) |
-| EM Last Action | Last mode command sent (e.g., `charge @ 2500W`, or `[dry-run] charge @ 2500W`) |
-| EM Status | Engine state: `running`, `stopped`, `disabled`, `cooldown`, `dry_run`, or `error` |
-| Battery Energy Available | Usable energy above SOC minimum (Wh) |
-| Hours Until Sunrise | Calculated from `sun.sun` entity |
-| Hours Until Sunset | Calculated from `sun.sun` entity |
-| P1 Average Power | Rolling average of P1 meter readings, configurable window (W) |
-
-**Binary sensors:**
-
-| Entity | Purpose |
-| :--- | :--- |
-| Night Mode Active | Whether it's currently nighttime (sun below horizon, no solar) |
-| High Load Detected | Whether home load exceeds the high load threshold |
-
-**HA Events:**
-
-The engine fires a `hyxi_em_mode_changed` event on every mode change, usable in automations:
-
-| Field | Description |
-| :--- | :--- |
-| `sn` | Inverter serial number |
-| `mode` | New mode (`charge`, `discharge`, `self_consume`, `idle`) |
-| `power` | Target power in watts (null for idle/self_consume) |
-| `previous_mode` | Mode before the change |
-| `decision` | Decision label that triggered the change |
-| `dry_run` | `true` if in dry-run mode (field absent when not dry-run) |
-
-#### Microinverter
-
-| Controls | controlId |
-| :--- | :--- |
-| Power On/Off | 3011 |
-| Power Limit (0–100%) | 3012 |
-| Restart | 3013 |
-
-#### Unsupported Device Types
-
-> [!WARNING]
-> **Micro ESS (HALO) — Operating Mode / Peak Shaving / Frequency Control (controlIds 1020, 1021, 1062–1065):** Not supported. These controls describe PV-battery interplay (e.g. "PV charges the battery first, shortfall from grid") that assumes the controlled device has its own photovoltaic input. AC-coupled Micro ESS units like the HYX-MS3000AC have no PV/DC input at all — only AC in/out and battery terminals — so these controls don't apply regardless of device type.
->
-> **Micro ESS (HALO) — Power On/Off (controlId 1011):** Implemented in code (`hyxi_cloud_api.HyxiApiClient.set_micro_ess_power`) but **currently disabled**. This is the one Energy Storage Control instruction without a PV dependency, so it's architecturally applicable to AC-coupled units. However, community testing against a live HYX-MS3000AC confirmed HYXI's API rejects the write with a permission error (`B003026`: "The current application does not have permission to call this API") — and there's no setting on the HYXI developer portal to request that access; it only issues an AccessKey/SecretKey pair. This is a platform-side restriction, not a bug in this integration. The switch entity is fully implemented and tested but gated off by `MICRO_ESS_CONTROL_SUPPORTED = False` in `const.py` — it will be re-enabled if HYXI ever grants control API access for this device type.
-
-#### Real-Time Webhook Push Subscriptions
-
-The integration supports subscribing to real-time telemetry and alarm push notifications from the HYXI Cloud. Instead of waiting for the polling interval, HYXI Cloud will push data and alarm changes directly to Home Assistant as soon as they are received.
-
-##### Configuration
-1. Go to **Settings > Devices & Services** > **HYXI** > **Configure**.
-2. Toggle **Enable Real-Time Telemetry & Alarm Push**.
-3. Configure the following optional parameters if needed:
-   - **Real-Time Push Rate (s):** Telemetry push rate in seconds (default: 10).
-   - **Real-Time Push Custom Callback URL:** By default, the integration uses the public external URL registered with Home Assistant to configure the webhook. If your Home Assistant's default public URL is not directly accessible by HYXI Cloud (e.g. if you are behind CGNAT, using custom Nginx proxies, or using an ngrok / Cloudflare tunnel), you can provide a custom callback URL here. The webhook path must be appended manually.
-4. Saving the options will register a new webhook callback endpoint on your Home Assistant instance and automatically subscribe to HYXI Cloud.
-
-##### Diagnostics & Monitoring
-The integration provides a **Subscription Status** sensor on your inverter's device page:
-- **State:** Reports `active`, `inactive`, or `error` depending on subscription health.
-- **Attributes:** Displays URLs, subscriber codes, rates, errors, and the timestamp of the last received push frame.
-- **Renewal Button:** A stateless button entity **Renew Subscription** is provided to manually trigger unregistration and re-registration of the webhook if needed.
-
-##### Troubleshooting Subscription Lockouts
-If registration fails due to a lockout (e.g. API error `B004002` indicating that a device serial number has been subscribed to repeatedly), it usually means an active or orphaned subscription remains on the HYXI Cloud server:
-1. Retrieve the active or orphaned subscription code(s) from the **known_subscription_codes** attribute of your inverter's **Subscription Status** sensor (this list is persistent and survives integration reinstalls).
-2. Go to **Developer Tools > Actions** (or **Services** in older Home Assistant versions) in the Home Assistant UI.
-3. Call the **HYXI: Cancel Subscription** (`hyxi_cloud.cancel_subscription`) service, providing the subscription code. The integration will call the API to manually tear down that subscription from the server.
-
-##### Interaction with Polling (Coexistence Loop)
-You do not need to disable or modify the standard polling interval when enabling push subscriptions:
-- **Coexistence and Syncing:** When a real-time push update is received, it immediately updates your sensors in Home Assistant. However, the standard background polling loop (default: 5 minutes) still runs periodically in the background to fetch and synchronize metrics that are only available via pull queries (such as grid power) and to act as a heartbeat fallback.
-- **Polling Fallback:** If push updates stop arriving (e.g., due to a network disruption, proxy failure, or cloud outage), standard REST API polling will continue as normal to keep your sensors updated.
-
-### 🛡️ Reliability & Diagnostics
-
-This integration includes a specialized diagnostic system to help you distinguish between local hardware issues and cloud service outages.
-
-| Sensor | Purpose | Behavior |
-| :--- | :--- | :--- |
-| **Cloud Status** | Binary connectivity sensor. | Indicates Cloud connectivity. Includes **Connection Quality** and **Data Freshness** as attributes. |
-| **Device Alarm** | Hardware fault tracking. | Binary sensor that turns `On` if the hardware reports active alarms. |
-| **Integration Last Updated** | Local Sync timestamp. | The exact time Home Assistant last successfully processed a cloud update. |
-
-## 📟 Local Modbus (RS485) — In Development
-
-As an alternative to the HYXI Cloud API, the integration can talk directly to one inverter over RS485 Modbus — no account, no internet dependency, and (once wired up) the ability to control devices the cloud API refuses. It polls far faster than the cloud allows, at the cost of needing a wired RS485 connection and losing what only makes sense with a cloud account (multi-device discovery, real-time push, remote access). Full provenance for every register — which document it came from, what's confirmed vs. inferred, known caveats — is tracked in [`docs/modbus-provenance.md`](docs/modbus-provenance.md).
-
-**Setup:** Choosing **Add Integration → HYXI** now opens with a connection-type choice — HYXI Cloud (the default) or Local Modbus. Picking Modbus asks for either a TCP gateway (host/port — an RS485-to-Ethernet adapter) or a serial port (a USB RS485 adapter's device path and baud rate), then a slave address. You don't need to know which inverter family you have: the integration probes the bus during setup and picks the right register map automatically. For a TCP gateway, it also doesn't matter which wire framing yours speaks — a transparent/passthrough gateway that tunnels raw RTU frames over TCP (e.g. Waveshare's "Protocol: None") and one that speaks native Modbus-TCP framing and translates to RTU on the wire itself (e.g. Waveshare's "Modbus TCP to RTU") are both detected automatically during the same probe.
-
-### Supported models
-
-| Family | Models | Register map source |
-| :--- | :--- | :--- |
-| **Hybrid Inverter** | HYX-H(5\~12)K-HT *(incl. H10K-HT)*, HYX-H(15\~25)K-HT, HYX-H(6\~15)K-HTA, HYX-H(6\~15)K-HTAC | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1 |
-| **Micro ESS (HALO)** | HYX-MS3000AC | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0 |
-
-Both maps cover live telemetry (grid/off-grid power, PV strings, battery/BMS detail, energy counters), charge/discharge control at the client level, and a first slice of hardware settings — feed-in power limit, VPP minimum SOC (HALO) or max charge/discharge current (Hybrid) — exposed as number entities and power on/off/restart buttons on Hybrid. Wiring and serial settings — 115200bps, no parity, 8 data bits, 1 stop bit — are documented per model in `docs/modbus-provenance.md`; the two families use different physical pins and disagree on the minimum spacing between frames, both handled automatically once your model is detected.
-
-**On HALO control specifically:** [above](#-device-control), Micro ESS Power On/Off is described as disabled because the *cloud* API rejects it (`B003026`). That restriction is cloud-specific: over local Modbus, HALO gets the same mode buttons (Idle/Charge/Discharge/Self-Consume) and charge/discharge power numbers a three-phase cloud device gets, driven by the register map's VPP dispatch block rather than the cloud's rejected permission.
-
-**On Hybrid control specifically:** these entities are implemented against the documented register map, but control *writes* have not yet succeeded against real HYX-H hardware — investigation traced it to the physical RS485 link corrupting a write's own transmitted frame, not a protocol or code-level bug. Until that's resolved, expect Hybrid number/button writes to surface as a clean error rather than actually changing the device; reads (telemetry, diagnostics, settings) are unaffected and work reliably.
-
-## 🎨 Community Examples
-
-* **[HYXi Ultra Dashboard](https://github.com/Robinbraakman/HYXi-Ultra-Dashboard)**: A custom Lovelace card for the HYXi Halo battery. Visualizes SOC, charge/discharge power, cumulative energy, efficiency, cycles, and estimated payback details.
-
-## ⚙️ Setup & Configuration
-
-Setting up **Local Modbus** instead? It needs neither a developer account nor
-an Access/Secret Key — see [Local Modbus (RS485)](#-local-modbus-rs485--in-development)
-above for its own setup steps. The rest of this section is for the **HYXI
-Cloud** path.
-
-1. Ensure you have a developer account and have created an **application** to obtain an **Access Key** and **Secret Key** from the [HYXIPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart).
-
-   > **Important:**
-   > Use the same email address that your devices are registered to in the HYXI app.
-2. Go to **Settings > Devices & Services** > **Add Integration** > **HYXI**.
-Or alternatively, add the integration with the following:
+## ⚙️ Setup
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=hyxi_cloud)
 
-## Configuration
+**Settings → Devices & Services → Add Integration → HYXI**, then pick a transport:
 
-1. Enter your **Access Key** and **Secret Key** from the HYXI Open API portal.
+- **HYXI Cloud** — needs an **Access Key** + **Secret Key** from the [HYXIPOWER Developer Platform](https://open.hyxicloud.com/#/quickStart). Log in with the **same email** your devices are registered to in the HYXI app — this is *not* your app password.
+- **Local Modbus (RS485)** — needs a wired RS485 link to one inverter ([Local Modbus][wiki-modbus]).
 
-### Optional Features (Options Flow)
-Click the **Configure** button on the HYXI integration card to access:
-* **Polling Interval:** Adjust frequency between 1–60 minutes (Default: 5).
-* **Enable Discovery via Alarms:** Proactively discover child devices reporting active alarms (Advanced).
-* **Enable Device Control & Protection:** Opt-in to enable inverter mode buttons, charge/discharge power settings, automatic battery protection thresholds, and micro-inverter power limits or switches. By default, this is disabled to prevent conflicts with external control systems (e.g. energy providers or grid constraints).
-* **Enable Real-Time Telemetry & Alarm Push:** Registers a webhook endpoint in Home Assistant and subscribes to HYXI Cloud push notifications to receive real-time updates and active alarms.
-* **Enable Energy Manager Standalone (Beta):** Automated battery management engine. Only visible after enabling Device Control & Protection. See [Energy Manager Standalone](#energy-manager-standalone-beta) above.
+Optional features live under **Configure** on the integration card: polling interval, alarm-based discovery, [device control][wiki-control], [real-time push][wiki-push], and the [Energy Manager][wiki-em]. Full walkthrough in the [Installation Guide][wiki-install].
 
-## 🛡️ Quality Assurance
+## 🔌 Supported Devices
 
-This integration prioritizes data integrity and system stability above all else:
-- **100% Test Coverage**: Every line of core logic is validated against dozens of simulated hardware scenarios.
-- **Glitch Filtering**: Built-in protection against impossible energy "spikes" and "dips" often caused by cloud reporting delays.
-- **Continuous Integration**: Every change is automatically scanned for security vulnerabilities (CodeQL) and code quality (Ruff).
+The integration adapts to whatever HYXI Cloud reports (or what the Modbus probe detects). Even an "Untested" device populates with basic diagnostics and known entities.
+
+| Device | Cloud | Local Modbus |
+| :--- | :--- | :--- |
+| Hybrid Inverter / All-in-One | ✅ Tested | ⚠️ Reads only |
+| Micro ESS (HALO) | ✅ Tested | ⚠️ Untested |
+| Data Collector | ✅ Tested | — |
+| Micro Inverter | ✅ Tested | — |
+| String Inverter / Smart Meter | ⚠️ Untested | — |
+
+Per-device entity lists and the full status matrix: [Supported Devices][wiki-devices] and [Available Sensors][wiki-sensors].
+
+> **🤝 Own a String Inverter, Smart Meter, or multiple batteries behind one inverter?** Debug logs from your setup can help move these to ✅ Tested — see [Supported Devices][wiki-devices].
+
+## 🔧 Device Control
+
+Control entities (mode buttons, power targets, switches) are **hidden by default** so the integration never fights an external controller or grid schedule. Enable **Device Control & Protection** under **Configure** to reveal them.
+
+What appears depends on the device — three-phase mode buttons, single-phase peak shaving and frequency control, microinverter power limits, battery protection thresholds, and the automated **Energy Manager (Beta)**.
+
+The full reference — controlId maps, phase detection, the Energy Manager decision logic and every tunable — is in the wiki: **[Device Control][wiki-control]** and **[Energy Manager][wiki-em]**.
+
+## 📟 Local Modbus (RS485)
+
+An alternative to the cloud: the integration talks directly to one inverter over RS485 — no account, no internet, far faster polling, and control on devices the cloud API refuses. Trade-off: one device only, a wired connection, and no multi-device discovery or remote access.
+
+Setup probes the bus and picks the register map automatically (Hybrid or HALO). Reads are reliable on both; some writes are still being validated against hardware. See **[Local Modbus (RS485)][wiki-modbus]** for wiring and setup, and [`docs/modbus-provenance.md`](docs/modbus-provenance.md) for per-register provenance.
+
+## 🎨 Community Examples
+
+- **[HYXi Ultra Dashboard](https://github.com/Robinbraakman/HYXi-Ultra-Dashboard)** — a Lovelace card for the HYXI Halo: SOC, charge/discharge power, cumulative energy, efficiency, cycles, and estimated payback.
 
 ## 🐛 Troubleshooting
 
-If you are opening a bug report, please include **Debug Logs**:
-**How to enable and download debug logs:**
-1. Go to **Settings > Devices & Services** > **HYXI**.
-2. Click the three dots (⋮) and select **Enable debug logging**.
-3. Wait 5-10 minutes, then click **Disable debug logging** to download the file.
-4. Attach the downloaded log file to your GitHub issue — **no manual editing needed**, serial numbers, plant IDs, and your home address are automatically masked in the logs.
+Opening a bug report? Attach **debug logs**: **Settings → Devices & Services → HYXI → ⋮ → Enable debug logging**, wait 5–10 minutes, then **Disable debug logging** to download the file. Serial numbers, plant IDs, and your home address are masked automatically.
+
+Common issues — credentials, stale data, Modbus detection, push-subscription lockouts, Energy Manager status — are covered in the [Troubleshooting][wiki-troubleshooting] wiki.
 
 ## Disclaimer
+
 This is a custom integration and is **not** an official product of HYXI Power.
 
 ## Support
-If you find this integration helpful and want to support its development:
+
+If this integration is useful to you and you'd like to support its development:
 
 [![Buy Me a Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=veldkornet&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/veldkornet)
 
 ---
+
+<!-- Badges -->
+[release-shield]: https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud?include_prereleases&sort=semver&style=for-the-badge&logo=github&logoColor=white&label=Release&color=41BDF5
+[releases]: https://github.com/Veldkornet/ha-hyxi-cloud/releases
+[hacs-shield]: https://img.shields.io/badge/HACS-Default-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white
+[hacs]: https://my.home-assistant.io/redirect/hacs_repository/?owner=Veldkornet&repository=ha-hyxi-cloud&category=Integration
+[ha-version-shield]: https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/hacs.json&query=$.homeassistant&style=for-the-badge&logo=homeassistant&logoColor=white&label=Home%20Assistant&color=41BDF5&prefix=%E2%89%A5%20
+[wiki-shield]: https://img.shields.io/badge/Docs-Wiki-41BDF5?style=for-the-badge&logo=readthedocs&logoColor=white
+[wiki]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki
+[tests-shield]: https://img.shields.io/github/actions/workflow/status/Veldkornet/ha-hyxi-cloud/tests.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=Tests
+[tests]: https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/tests.yml
+[coverage-shield]: https://img.shields.io/badge/Coverage-100%25-31C653?style=for-the-badge&logo=pytest&logoColor=white
+[codeql-shield]: https://img.shields.io/github/actions/workflow/status/Veldkornet/ha-hyxi-cloud/codeql.yml?branch=main&style=for-the-badge&logo=github&logoColor=white&label=CodeQL
+[codeql]: https://github.com/Veldkornet/ha-hyxi-cloud/actions/workflows/codeql.yml
+[downloads-shield]: https://img.shields.io/github/downloads/Veldkornet/ha-hyxi-cloud/total?style=for-the-badge&logo=github&logoColor=white&label=Downloads
+[license-shield]: https://img.shields.io/github/license/Veldkornet/ha-hyxi-cloud?style=for-the-badge&color=6E7681
+[devcontainer-shield]: https://img.shields.io/badge/Dev%20Container-Open-41BDF5?style=for-the-badge&logo=devcontainers&logoColor=white
+[devcontainer]: https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/Veldkornet/ha-hyxi-cloud
+
+<!-- Wiki -->
+[wiki-install]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Installation-Guide
+[wiki-devices]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Supported-Devices
+[wiki-sensors]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Available-Sensors
+[wiki-modbus]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Local-Modbus-RS485
+[wiki-em]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Local-Energy-Manager
+[wiki-control]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Device-Control
+[wiki-push]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Real-Time-Push
+[wiki-energy]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Energy-Dashboard-Setup
+[wiki-troubleshooting]: https://github.com/Veldkornet/ha-hyxi-cloud/wiki/Troubleshooting
