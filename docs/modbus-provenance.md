@@ -18,9 +18,9 @@ decode against it.
 | Source | Covers | Standing |
 | :--- | :--- | :--- |
 | HYXIPower *RS485_MODBUS RTU Hybrid Inverter Protocol*, V4.1, 2025-06-13 | HYX-H(5\~12)K-HT (incl. the H10K-HT on the bench), HYX-H(15\~25)K-HT, HYX-H(6\~15)K-HTA/HTAC — registers 0–1351 and 973–3121 | **Vendor claim, current document, exact hardware family.** Supplied directly for this project. The strongest source held for any device here — not yet checked against a device, but not borrowed from a different product's document either. |
-| HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. Not yet checked against a device — no HALO has been on a bus. Gives serial parameters only; no pinout — see "Open: HALO's RS485 wiring" below. |
+| HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. Not yet checked against a device — no HALO has been on a bus. Gives serial parameters only; no pinout — see "HALO's RS485 wiring" below. |
 | HYXIPower *HYX-H(5\~12)K-HT User Manual*, V1.2, 2024-07 | Alarm code table; lists port 14 as "Reserved Communication" with no pinout | **Vendor, published.** Superseded on the pinout question by the protocol document above — see below. |
-| [Issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662#issue-5218550482) and a [matching HA community post](https://community.home-assistant.io/t/hyxipower-integration/926093/28), both user Ton123 — the same contributor who supplied the *Micro Storage RS485 MODBUS* document two rows above | HALO / HYX-MS3000AC RS485 pinout: reported as PIN7 = A, PIN8 = B | **First-party to this project, relayed claim, unconfirmed.** Stated directly on this repo's own issue tracker by the person who obtained and supplied the HALO protocol document itself, saying "HYXI has confirmed to me" the pin assignment — not a random third party, but still a verbal claim about a private communication, not text in that document (which gives serial parameters only, no pinout), and not checked against hardware. |
+| [Issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662) and a [matching HA community post](https://community.home-assistant.io/t/hyxipower-integration/926093/28), both user Ton123 — the same contributor who supplied the *Micro Storage RS485 MODBUS* document two rows above | HALO / HYX-MS3000AC RS485 pinout: PIN7 = A, PIN8 = B (T568B white-brown / brown), RJ45 in a circular weatherproof housing, all other pins unused | **First-party to this project, relayed claim, corroborated twice, unconfirmed on hardware.** Stated on this repo's own issue tracker by the person who obtained and supplied the HALO protocol document itself. HYXI has now given the assignment twice — the original ("PIN7 = A, PIN8 = B … white-brown and brown") and a later re-confirmation Ton123 requested ("from right to left: first pin 485B, then 485A, others idle"), which agrees once counted from the other end. Still a relayed account of private messages, not text in the document (serial parameters only, no pinout), and no HALO has been on a bus. See "HALO's RS485 wiring" below. |
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | Cloud `workMode` values 13 and 14 | **Inference, unconfirmed.** Derived by reverse-engineering the HYXI phone app's APK. Never observed on a device. See rule 1. |
 
 ## HALO register map (from registers.py)
@@ -293,6 +293,8 @@ open after the HYX-H12K user manual turned out not to publish a pinout, and
 after Eniris's port-14 claim turned out not to match the vendor's own
 protocol document.
 
+![Hybrid inverter RS485 pinout: RJ45 COM port in T568B order, pin 5 (white/blue) = RS485 A, pin 6 (green) = RS485 B, other pins unused](images/hybrid-rs485-pinout.svg)
+
 Two things the hybrid protocol states that the HALO's does not:
 
 - **Function code 0x06** (write single register) is available, alongside
@@ -302,25 +304,39 @@ Two things the hybrid protocol states that the HALO's does not:
   (`message_spacing`) once a hybrid client is wired into setup, and it must
   not be copied from the HALO client's 200ms constant.
 
-## Open: HALO's RS485 wiring
+## HALO's RS485 wiring: corroborated twice, not yet hardware-checked
 
 Unlike the hybrid series above, HYXI's own *Micro Storage RS485 MODBUS*
 document gives serial parameters (115200bps, no parity, 8 data bits, 1 stop
-bit) but no pinout at all — no pin numbers, no terminal labels, no
-connector type.
+bit) but no pinout — no pin numbers, no terminal labels, no connector type.
 
-The best lead so far comes from Ton123 — the same contributor who supplied
-this project's HALO protocol document in the first place — both directly on
-[issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662#issue-5218550482)
-and on a [matching Home Assistant community
-thread](https://community.home-assistant.io/t/hyxipower-integration/926093/28):
-PIN7 = RS485 A, PIN8 = RS485 B, per HYXI confirming it to them directly.
-That's a materially better source than an unrelated third party — it's the
-same channel this project already trusts for the register map — but it's
-still a relayed verbal claim, not text in the document itself, and it
-hasn't been checked against real hardware. Treat it as the best available
-lead, not as resolved the way the hybrid pinout above is. Update this
-section (and the sources table) once it's confirmed one way or the other.
+That gap is filled by Ton123 — the same contributor who supplied this
+project's HALO protocol document — on
+[issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662) and a
+[matching Home Assistant community
+thread](https://community.home-assistant.io/t/hyxipower-integration/926093/28),
+relaying two separate answers from HYXI:
+
+- **First answer:** PIN7 = RS485 A, PIN8 = RS485 B — and, on a standard
+  Ethernet cable, the **white-brown / brown** pair (T568B pins 7 and 8).
+- **Re-confirmation, asked for later:** "from right to left, the first pin
+  is 485B, then the second pin is 485A, the other pins are idle." Counted
+  from the PIN8 end of the same 8-pin jack, that is PIN8 = B, PIN7 = A —
+  the first answer again, stated from the other side.
+
+The two agree: **A on the white-brown wire, B on the brown wire, no other
+pins connected.** The connector is a standard RJ45 inside a circular
+weatherproof housing, so the T568B colour mapping applies directly. RS485
+A/B polarity is not destructive to reverse — if the bus doesn't enumerate,
+swap the two and retry.
+
+![HALO RS485 pinout: RJ45 in T568B order, pin 7 (white/brown) = RS485 A, pin 8 (brown) = RS485 B, pins 1–6 unused](images/halo-rs485-pinout.svg)
+
+What still keeps this short of "resolved" the way the hybrid pinout is: it
+is a relayed account of private messages (now twice, consistently), not
+text in any document, and no HALO has been on a bus. Promote it once
+someone confirms it against real hardware — Ton123 expects his units and a
+Waveshare gateway around mid-September 2026.
 
 ## A worked example that does not work
 

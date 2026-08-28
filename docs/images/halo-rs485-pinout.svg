@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 446" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title>HALO RS485 pinout — RJ45, T568B</title>
+  <rect x="1" y="1" width="758" height="444" rx="14" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+
+  <text x="30" y="42" font-size="19" font-weight="700" fill="#1f2328">HALO RS485 — RJ45 connector (T568B)</text>
+  <text x="30" y="65" font-size="14" fill="#656d76">Contacts facing you, plastic clip pointing down, pin 1 on the left</text>
+
+  <!-- connector body -->
+  <rect x="40" y="96" width="680" height="150" rx="8" fill="#f6f8fa" stroke="#d0d7de" stroke-width="2"/>
+
+  <!-- highlight bracket around pins 7 & 8 -->
+  <rect x="560" y="88" width="150" height="166" rx="9" fill="#fff8f0" stroke="#1f2328" stroke-width="2.5" stroke-dasharray="6 4"/>
+
+  <!-- pin 1: white/orange -->
+  <text x="80" y="118" font-size="13" font-weight="700" fill="#656d76" text-anchor="middle">1</text>
+  <rect x="63" y="126" width="34" height="104" rx="4" fill="#ffffff" stroke="#e8873b" stroke-width="2.5"/>
+  <line x1="66" y1="158" x2="94" y2="158" stroke="#e8873b" stroke-width="3"/>
+  <line x1="66" y1="180" x2="94" y2="180" stroke="#e8873b" stroke-width="3"/>
+  <line x1="66" y1="202" x2="94" y2="202" stroke="#e8873b" stroke-width="3"/>
+
+  <!-- pin 2: orange -->
+  <text x="165" y="118" font-size="13" font-weight="700" fill="#656d76" text-anchor="middle">2</text>
+  <rect x="148" y="126" width="34" height="104" rx="4" fill="#e8873b"/>
+
+  <!-- pin 3: white/green -->
+  <text x="250" y="118" font-size="13" font-weight="700" fill="#656d76" text-anchor="middle">3</text>
+  <rect x="233" y="126" width="34" height="104" rx="4" fill="#ffffff" stroke="#2da44e" stroke-width="2.5"/>
+  <line x1="236" y1="158" x2="264" y2="158" stroke="#2da44e" stroke-width="3"/>
+  <line x1="236" y1="180" x2="264" y2="180" stroke="#2da44e" stroke-width="3"/>
+  <line x1="236" y1="202" x2="264" y2="202" stroke="#2da44e" stroke-width="3"/>
+
+  <!-- pin 4: blue -->
+  <text x="335" y="118" font-size="13" font-weight="700" fill="#656d76" text-anchor="middle">4</text>
+  <rect x="318" y="126" width="34" height="104" rx="4" fill="#2f6fed"/>
+
+  <!-- pin 5: white/blue -->
+  <text x="420" y="118" font-size="13" font-weight="700" fill="#656d76" text-anchor="middle">5</text>
+  <rect x="403" y="126" width="34" height="104" rx="4" fill="#ffffff" stroke="#2f6fed" stroke-width="2.5"/>
+  <line x1="406" y1="158" x2="434" y2="158" stroke="#2f6fed" stroke-width="3"/>
+  <line x1="406" y1="180" x2="434" y2="180" stroke="#2f6fed" stroke-width="3"/>
+  <line x1="406" y1="202" x2="434" y2="202" stroke="#2f6fed" stroke-width="3"/>
+
+  <!-- pin 6: green -->
+  <text x="505" y="118" font-size="13" font-weight="700" fill="#656d76" text-anchor="middle">6</text>
+  <rect x="488" y="126" width="34" height="104" rx="4" fill="#2da44e"/>
+
+  <!-- pin 7: white/brown -> RS485 A -->
+  <text x="590" y="118" font-size="13" font-weight="700" fill="#1f2328" text-anchor="middle">7</text>
+  <rect x="573" y="126" width="34" height="104" rx="4" fill="#ffffff" stroke="#8b5a2b" stroke-width="2.5"/>
+  <line x1="576" y1="158" x2="604" y2="158" stroke="#8b5a2b" stroke-width="3"/>
+  <line x1="576" y1="180" x2="604" y2="180" stroke="#8b5a2b" stroke-width="3"/>
+  <line x1="576" y1="202" x2="604" y2="202" stroke="#8b5a2b" stroke-width="3"/>
+
+  <!-- pin 8: brown -> RS485 B -->
+  <text x="663" y="118" font-size="13" font-weight="700" fill="#1f2328" text-anchor="middle">8</text>
+  <rect x="646" y="126" width="34" height="104" rx="4" fill="#8b5a2b"/>
+
+  <text x="635" y="276" font-size="13" font-weight="700" fill="#1f2328" text-anchor="middle">RS485</text>
+
+  <!-- legend -->
+  <g font-size="15" fill="#1f2328">
+    <rect x="40" y="300" width="30" height="21" rx="4" fill="#ffffff" stroke="#8b5a2b" stroke-width="2.5"/>
+    <line x1="43" y1="310" x2="67" y2="310" stroke="#8b5a2b" stroke-width="3"/>
+    <text x="84" y="316"><tspan font-weight="700">Pin 7</tspan> &#8211; white / brown &#8594; <tspan font-weight="700">RS485 A</tspan> (D+)</text>
+
+    <rect x="40" y="332" width="30" height="21" rx="4" fill="#8b5a2b"/>
+    <text x="84" y="348"><tspan font-weight="700">Pin 8</tspan> &#8211; brown &#8594; <tspan font-weight="700">RS485 B</tspan> (D&#8722;)</text>
+
+    <rect x="40" y="364" width="30" height="21" rx="4" fill="#eaeef2" stroke="#d0d7de" stroke-width="2"/>
+    <text x="84" y="380"><tspan font-weight="700">Pins 1&#8211;6</tspan> &#8211; not connected</text>
+  </g>
+
+  <text x="40" y="407" font-size="12" fill="#8c959f">Relayed from HYXI, corroborated twice &#8212; not yet confirmed on real hardware.</text>
+  <text x="40" y="426" font-size="12" fill="#8c959f">Reversing A/B is harmless: swap the two and retry if the bus stays silent.</text>
+</svg>
