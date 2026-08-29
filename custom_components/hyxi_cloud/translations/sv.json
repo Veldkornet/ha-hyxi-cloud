@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Soleffekt"
       },
-      "duisoc": {
-        "name": "Batteri SOC"
-      },
-      "cuvolt": {
-        "name": "Batterispänning"
-      },
-      "cucurr": {
-        "name": "Batteriström"
-      },
-      "cupower": {
-        "name": "Batterieffekt (EMS)"
-      },
-      "cusoh": {
-        "name": "Batteri SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Batteripaket-temp"
-      },
-      "duichargetoday": {
-        "name": "Daglig laddning"
-      },
-      "duiunchargetoday": {
-        "name": "Daglig urladdning"
-      },
       "home_load": {
         "name": "Huslast"
       },

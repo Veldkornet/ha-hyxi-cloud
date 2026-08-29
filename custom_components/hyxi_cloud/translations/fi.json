@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Aurinkopaneelien teho"
       },
-      "duisoc": {
-        "name": "Akun SOC"
-      },
-      "cuvolt": {
-        "name": "Akun jännite"
-      },
-      "cucurr": {
-        "name": "Akun virta"
-      },
-      "cupower": {
-        "name": "Akun teho (EMS)"
-      },
-      "cusoh": {
-        "name": "Akun SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Akkuyksikön lämpötila"
-      },
-      "duichargetoday": {
-        "name": "Päivittäinen lataus"
-      },
-      "duiunchargetoday": {
-        "name": "Päivittäinen purku"
-      },
       "home_load": {
         "name": "Kodin kuorma"
       },

@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Moc instalacji solarnej"
       },
-      "duisoc": {
-        "name": "SOC akumulatora"
-      },
-      "cuvolt": {
-        "name": "Napięcie akumulatora"
-      },
-      "cucurr": {
-        "name": "Prąd akumulatora"
-      },
-      "cupower": {
-        "name": "Moc akumulatora (EMS)"
-      },
-      "cusoh": {
-        "name": "SOH akumulatora"
-      },
-      "cuavgcelltemp": {
-        "name": "Temp. zestawu akumulatorów"
-      },
-      "duichargetoday": {
-        "name": "Dzienne ładowanie"
-      },
-      "duiunchargetoday": {
-        "name": "Dzienne rozładowanie"
-      },
       "home_load": {
         "name": "Obciążenie domu"
       },

@@ -161,30 +161,6 @@
       "ppv": {
         "name": "太阳能功率"
       },
-      "duisoc": {
-        "name": "电池 SOC"
-      },
-      "cuvolt": {
-        "name": "电池电压"
-      },
-      "cucurr": {
-        "name": "电池电流"
-      },
-      "cupower": {
-        "name": "电池功率 (EMS)"
-      },
-      "cusoh": {
-        "name": "电池 SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "电池包温度"
-      },
-      "duichargetoday": {
-        "name": "当日充电量"
-      },
-      "duiunchargetoday": {
-        "name": "当日放电量"
-      },
       "home_load": {
         "name": "家庭负载"
       },

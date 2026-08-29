@@ -161,30 +161,6 @@
       "ppv": {
         "name": "太陽光発電電力"
       },
-      "duisoc": {
-        "name": "バッテリー SOC"
-      },
-      "cuvolt": {
-        "name": "バッテリー電圧"
-      },
-      "cucurr": {
-        "name": "バッテリー電流"
-      },
-      "cupower": {
-        "name": "バッテリー電力 (EMS)"
-      },
-      "cusoh": {
-        "name": "バッテリー SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "バッテリーパック温度"
-      },
-      "duichargetoday": {
-        "name": "本日の充電量"
-      },
-      "duiunchargetoday": {
-        "name": "本日の放電量"
-      },
       "home_load": {
         "name": "家庭内負荷"
       },
