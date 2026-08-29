@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Solarleistung"
       },
-      "duisoc": {
-        "name": "Batterie SOC"
-      },
-      "cuvolt": {
-        "name": "Batteriespannung"
-      },
-      "cucurr": {
-        "name": "Batteriestrom"
-      },
-      "cupower": {
-        "name": "Batterieleistung (EMS)"
-      },
-      "cusoh": {
-        "name": "Batterie SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Batterie Temperatur"
-      },
-      "duichargetoday": {
-        "name": "Täglich Laden"
-      },
-      "duiunchargetoday": {
-        "name": "Täglich Entladen"
-      },
       "home_load": {
         "name": "Hausverbrauch"
       },

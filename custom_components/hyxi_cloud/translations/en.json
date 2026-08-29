@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Solar Power"
       },
-      "duisoc": {
-        "name": "Battery SOC"
-      },
-      "cuvolt": {
-        "name": "Battery Voltage"
-      },
-      "cucurr": {
-        "name": "Battery Current"
-      },
-      "cupower": {
-        "name": "Battery Power (EMS)"
-      },
-      "cusoh": {
-        "name": "Battery SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Battery Pack Temp"
-      },
-      "duichargetoday": {
-        "name": "Daily Charge"
-      },
-      "duiunchargetoday": {
-        "name": "Daily Discharge"
-      },
       "home_load": {
         "name": "Home Load"
       },

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ha-hyxi-cloud"
-version = "1.7.0-beta.1"
+version = "1.7.0-beta.2"
 description = "HYXI ⚡️🔋☀️ Integration for HomeAssistant"
 readme = "README.md"
 authors = [
@@ -14,7 +14,7 @@ requires-python = ">=3.14.2,<3.15"
 dependencies = [
     "aiohttp>=3.13.5",
     "voluptuous",
-    "hyxi-cloud-api>=1.4.4",
+    "hyxi-cloud-api>=1.4.6",
     # Local RS485 transport (imported lazily; a cloud-only entry never loads it).
     "modbus-connection[tmodbus]>=4.8.1",
     # Listed explicitly too: HA's requirement installer checks package+version

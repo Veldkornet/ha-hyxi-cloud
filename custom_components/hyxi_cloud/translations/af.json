@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Sonkrag"
       },
-      "duisoc": {
-        "name": "Battery-SOC"
-      },
-      "cuvolt": {
-        "name": "Battery-spanning"
-      },
-      "cucurr": {
-        "name": "Battery-stroom"
-      },
-      "cupower": {
-        "name": "Battery-krag (EMS)"
-      },
-      "cusoh": {
-        "name": "Battery-SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Battery-pak Temp"
-      },
-      "duichargetoday": {
-        "name": "Daaglikse Herlaai"
-      },
-      "duiunchargetoday": {
-        "name": "Daaglikse Ontlaai"
-      },
       "home_load": {
         "name": "Huisverbruik"
       },

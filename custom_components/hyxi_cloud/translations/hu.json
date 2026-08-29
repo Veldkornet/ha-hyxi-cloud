@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Napelem teljesítmény"
       },
-      "duisoc": {
-        "name": "Akkumulátor SOC"
-      },
-      "cuvolt": {
-        "name": "Akkumulátor feszültség"
-      },
-      "cucurr": {
-        "name": "Akkumulátor áramerősség"
-      },
-      "cupower": {
-        "name": "Akkumulátor teljesítmény (EMS)"
-      },
-      "cusoh": {
-        "name": "Akkumulátor SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Akkumulátorcsomag hőmérséklet"
-      },
-      "duichargetoday": {
-        "name": "Napi töltés"
-      },
-      "duiunchargetoday": {
-        "name": "Napi kisütés"
-      },
       "home_load": {
         "name": "Ház terhelése"
       },

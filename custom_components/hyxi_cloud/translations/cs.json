@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Solární výkon"
       },
-      "duisoc": {
-        "name": "SOC baterie"
-      },
-      "cuvolt": {
-        "name": "Napětí baterie"
-      },
-      "cucurr": {
-        "name": "Proud baterie"
-      },
-      "cupower": {
-        "name": "Výkon baterie (EMS)"
-      },
-      "cusoh": {
-        "name": "SOH baterie"
-      },
-      "cuavgcelltemp": {
-        "name": "Teplota bateriového bloku"
-      },
-      "duichargetoday": {
-        "name": "Dnešní nabití"
-      },
-      "duiunchargetoday": {
-        "name": "Dnešní vybití"
-      },
       "home_load": {
         "name": "Domácí zátěž"
       },

@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Güneş Gücü"
       },
-      "duisoc": {
-        "name": "Batarya SOC"
-      },
-      "cuvolt": {
-        "name": "Batarya Voltajı"
-      },
-      "cucurr": {
-        "name": "Batarya Akımı"
-      },
-      "cupower": {
-        "name": "Batarya Gücü (EMS)"
-      },
-      "cusoh": {
-        "name": "Batarya SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Batarya Paketi Sıcaklığı"
-      },
-      "duichargetoday": {
-        "name": "Günlük Şarj"
-      },
-      "duiunchargetoday": {
-        "name": "Günlük Deşarj"
-      },
       "home_load": {
         "name": "Ev Yükü"
       },

@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Potenza solare"
       },
-      "duisoc": {
-        "name": "SOC batteria"
-      },
-      "cuvolt": {
-        "name": "Tensione batteria"
-      },
-      "cucurr": {
-        "name": "Corrente batteria"
-      },
-      "cupower": {
-        "name": "Potenza batteria (EMS)"
-      },
-      "cusoh": {
-        "name": "SOH batteria"
-      },
-      "cuavgcelltemp": {
-        "name": "Temp. pacco batteria"
-      },
-      "duichargetoday": {
-        "name": "Carica giornaliera"
-      },
-      "duiunchargetoday": {
-        "name": "Scarica giornaliera"
-      },
       "home_load": {
         "name": "Carico domestico"
       },

@@ -161,30 +161,6 @@
       "ppv": {
         "name": "Zonne-energie"
       },
-      "duisoc": {
-        "name": "Batterij SOC"
-      },
-      "cuvolt": {
-        "name": "Batterijspanning"
-      },
-      "cucurr": {
-        "name": "Batterijstroom"
-      },
-      "cupower": {
-        "name": "Batterijvermogen (EMS)"
-      },
-      "cusoh": {
-        "name": "Batterij SOH"
-      },
-      "cuavgcelltemp": {
-        "name": "Gemiddelde Batterijtemperatuur"
-      },
-      "duichargetoday": {
-        "name": "Dagelijks Laden"
-      },
-      "duiunchargetoday": {
-        "name": "Dagelijks Ontladen"
-      },
       "home_load": {
         "name": "Huisverbruik"
       },
