@@ -213,6 +213,27 @@ def is_modbus_entry(entry: Any) -> bool:
     return entry_transport(entry) == TRANSPORT_MODBUS
 
 
+def entry_stable_key(entry: Any) -> str:
+    """Return a per-entry identifier that survives a remove-and-re-add.
+
+    `entry.entry_id` is regenerated every time the integration is deleted
+    and set up again, so anything derived from it (an entity unique_id, a
+    device identifier) points at a fresh object on re-add and strands the
+    old one's long-term statistics. `entry.unique_id` -- the account access
+    key for a cloud entry, `host:port:unit` / `device:unit` for Modbus --
+    is stable across a re-add, but it's a credential/address, so it's
+    returned as a SHA-256 digest rather than in cleartext: the result ends
+    up in entity ids, device identifiers, and migration log lines. An entry
+    with no `unique_id` falls back to the (non-sensitive, opaque) entry_id.
+    """
+    import hashlib
+
+    unique_id = getattr(entry, "unique_id", None)
+    if isinstance(unique_id, str) and unique_id:
+        return hashlib.sha256(unique_id.encode("utf-8")).hexdigest()[:16]
+    return entry.entry_id
+
+
 CONF_BACK_DISCOVERY = "back_discovery"
 
 # Real-time Webhook Push Constants
@@ -222,6 +243,48 @@ CONF_PUSH_URL = "realtime_push_url"
 DEFAULT_PUSH_RATE = 10  # 10 seconds (converted to ms at SDK call site)
 
 NULL_VALUES = {"", "null", "none", "na", "--"}
+
+# Metric keys whose sensors belong to the battery pack rather than the
+# inverter, so HyxiSensor groups them under the "Battery {batSn}" device.
+# (Their unique_id keys off the inverter serial, not batSn -- see
+# HyxiSensor.__init__.)
+BATTERY_SENSORS = {
+    "batSoc",
+    "pbat",
+    "batP",
+    "batSoh",
+    "bat_charge_total",
+    "bat_discharge_total",
+    "bat_charging",
+    "bat_discharging",
+    "batV",
+    "batI",
+    "batVch",
+    "batVcl",
+    "batTch",
+    "batTcl",
+    "batTmp",
+    "batIcm",
+    "batIdm",
+    "batCharge",
+    "batDisCharge",
+    "totalEchg",
+    "totalEdchg",
+    "bmsState",
+    "batOperatingStatus",
+    "batAlarm1",
+    "batAlarm2",
+    "batAlarm3",
+    "batCapacityAh",
+    "batNominalCapacity",
+    "llcBusVoltage",
+    "batChargeV",
+    "batChargeI",
+    "batChargeP",
+    "batDischargeV",
+    "batDischargeI",
+    "batDischargeP",
+}
 
 
 def is_null_value(value: Any) -> bool:

@@ -119,7 +119,7 @@ def mock_sensor():
         sensor = HyxiSensor(coordinator, "SN123", description)
         sensor.coordinator = coordinator
         sensor.entity_description = description
-        sensor._actual_sn = "SN123"
+        sensor._sn = "SN123"
         return sensor
 
 

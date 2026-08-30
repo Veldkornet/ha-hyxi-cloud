@@ -742,7 +742,8 @@ async def test_sensor_batteries_and_collectors():
 
 
 def test_battery_serial_mapping(base_sensor):
-    """Verify that battery sensors use batSn if available (Line 586-587 coverage)."""
+    """A battery sensor is identified by the inverter serial (stable across
+    restarts) but still grouped under the battery device via batSn."""
     coordinator = MagicMock()
     coordinator.data = {
         "INV123": {
@@ -753,10 +754,12 @@ def test_battery_serial_mapping(base_sensor):
     description = MagicMock()
     description.key = "batSoc"
 
-    # This should hit the battery SN block
     sensor = sensor_mod.HyxiSensor(coordinator, "INV123", description)
 
-    assert sensor._actual_sn == "BAT_REAL_123"
+    # Identity: inverter serial, not batSn -- see _migrate_battery_sensor_unique_ids.
+    assert sensor._attr_unique_id == "hyxi_INV123_batSoc"
+    assert sensor.entity_id == "sensor.hyxi_INV123_batsoc"
+    # Grouping: still the battery device.
     assert sensor.device_info["identifiers"] == {("hyxi_cloud", "BAT_REAL_123")}
     assert sensor.device_info["name"] == "Battery BAT_REAL_123"
 
@@ -1159,7 +1162,8 @@ async def test_new_telemetry_keys_registration_and_parsing():
     assert registered_by_key["dcSideTemper"].native_value == 50.1
     assert registered_by_key["batP"].native_value == 150.7
 
-    # Verify battery SN routing
+    # Battery sensors: identified by the inverter serial, grouped under the
+    # battery device.
     battery_keys = [
         "batVch",
         "batVcl",
@@ -1175,7 +1179,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
     ]
     for key in battery_keys:
         sensor_entity = registered_by_key[key]
-        assert sensor_entity._actual_sn == "BAT_REAL_123"
+        assert sensor_entity._attr_unique_id == f"hyxi_INV123_{key}"
         assert sensor_entity.device_info["identifiers"] == {
             ("hyxi_cloud", "BAT_REAL_123")
         }
