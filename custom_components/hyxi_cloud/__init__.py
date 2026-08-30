@@ -26,6 +26,7 @@ from hyxi_cloud_api import __version__ as API_VERSION
 
 from .const import (
     BASE_URL_DEFAULT,
+    BATTERY_SENSORS,
     CONF_ACCESS_KEY,
     CONF_EM_ENABLED,
     CONF_EM_FORECAST_ENTITY,
@@ -59,6 +60,7 @@ from .const import (
     PLATFORMS,
     VERSION,
     detect_phase_type,
+    entry_stable_key,
     get_raw_device_code,
     is_control_capable_device_type,
     is_modbus_entry,
@@ -238,6 +240,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _remove_legacy_select_entities(hass, coordinator.data)
     _migrate_vpp_dispatch_to_work_mode(hass, entry, coordinator.data)
+    _migrate_battery_sensor_unique_ids(hass, entry, coordinator.data)
+    _migrate_microinverter_sum_identifiers(hass, entry)
     _remove_work_mode_sensor_for_modbus(hass, entry, coordinator.data)
     _remove_alarm_entities_for_modbus(hass, entry, coordinator.data)
     _cleanup_control_entities(hass, entry, coordinator)
@@ -511,6 +515,202 @@ def _migrate_vpp_dispatch_to_work_mode(
             "Migrating %s from vpp_dispatch to work_mode unique_id", entity_id
         )
         registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
+
+
+def _rekey_registry_entity(
+    registry: er.EntityRegistry, domain: str, old_unique_id: str, new_unique_id: str
+) -> None:
+    """Move a registry entry from old_unique_id to new_unique_id, in place.
+
+    The entity_id is left untouched, so the recorder's long-term statistics
+    (keyed by entity_id) stay attached. A no-op when old_unique_id isn't
+    registered. If something already holds new_unique_id -- a prior partial
+    migration, or the id having flip-flopped so both survive -- the
+    migration-source entry wins (it is the older keying scheme, so almost
+    always the longer-history row) and the clashing entry is dropped; this
+    is logged at warning level since the dropped row's statistics, if any,
+    are then orphaned and a user may want to reconcile them by hand.
+    """
+    if old_unique_id == new_unique_id:
+        return
+    old_entity_id = registry.async_get_entity_id(domain, DOMAIN, old_unique_id)
+    if old_entity_id is None:
+        return
+    clash = registry.async_get_entity_id(domain, DOMAIN, new_unique_id)
+    if clash is None:
+        _LOGGER.debug(
+            "Re-keying %s unique_id %s -> %s",
+            old_entity_id,
+            old_unique_id,
+            new_unique_id,
+        )
+    else:
+        _LOGGER.warning(
+            "Re-keying %s to unique_id %s but %s already holds it; dropping %s "
+            "(any statistics it accumulated are now orphaned -- reconcile via "
+            "Developer Tools > Statistics if needed)",
+            old_entity_id,
+            new_unique_id,
+            clash,
+            clash,
+        )
+        registry.async_remove(clash)
+    registry.async_update_entity(old_entity_id, new_unique_id=new_unique_id)
+
+
+def _split_battery_unique_id(
+    unique_id: str, keys_longest_first: list[str]
+) -> tuple[str, str] | None:
+    """Split a ``hyxi_{sn}_{battery-key}`` unique_id into ``(sn, key)``.
+
+    Returns None if it isn't one. Serials and some keys both contain
+    underscores, so the key is matched as a suffix, longest first, rather
+    than splitting on ``_`` (e.g. so ``bat_charge_total`` wins and its sn
+    isn't left with a trailing ``_charge``).
+    """
+    if not unique_id.startswith("hyxi_"):
+        return None
+    body = unique_id[len("hyxi_") :]
+    for key in keys_longest_first:
+        suffix = f"_{key}"
+        if body.endswith(suffix):
+            return body[: -len(suffix)], key
+    return None
+
+
+def _inverter_sn_via_device(
+    device_registry: dr.DeviceRegistry, device_id: str | None, devices: dict
+) -> str | None:
+    """Resolve the inverter sn a battery device hangs off, via its via_device.
+
+    The fallback for when current telemetry carries no batSn to build the
+    battery->inverter map from directly: the battery device and its
+    via_device link were registered on an earlier run and persist in the
+    device registry regardless.
+    """
+    if device_id is None:
+        return None
+    device = device_registry.async_get(device_id)
+    if device is None or device.via_device_id is None:
+        return None
+    parent = device_registry.async_get(device.via_device_id)
+    if parent is None:
+        return None
+    # sorted() so a parent that somehow carries more than one matching
+    # identifier resolves the same way on every run.
+    return next(
+        (
+            ident
+            for domain, ident in sorted(parent.identifiers)
+            if domain == DOMAIN and ident in devices
+        ),
+        None,
+    )
+
+
+def _battery_serial_to_inverter(devices: dict) -> dict[str, str]:
+    """Map each usable ``batSn`` in current telemetry to its inverter sn.
+
+    Excluded: a battery that is itself a first-class device (its own
+    coordinator.data entry already keys its sensors off its own sn), and a
+    serial reported by more than one inverter -- there's no way to tell
+    which inverter an existing batSn-keyed row belonged to, so leave those
+    alone rather than move their history to an arbitrary one.
+    """
+    mapping: dict[str, str] = {}
+    ambiguous: set[str] = set()
+    for sn, dev_data in devices.items():
+        bat_sn = (dev_data.get("metrics") or {}).get("batSn")
+        if not isinstance(bat_sn, str) or not bat_sn.strip():
+            continue
+        if bat_sn == sn or bat_sn in devices:
+            continue
+        if mapping.setdefault(bat_sn, sn) != sn:
+            ambiguous.add(bat_sn)
+    return {b: i for b, i in mapping.items() if b not in ambiguous}
+
+
+def _migrate_battery_sensor_unique_ids(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Re-key battery sensors from the battery serial to the inverter serial.
+
+    Battery sensors were keyed ``hyxi_{batSn}_{key}`` before 1.7.0. batSn
+    comes from runtime telemetry that isn't reliably present when the
+    entity is built (absent from the cloud poll -- push only; a Modbus
+    string register that can read blank), so the unique_id flipped between
+    the battery and the inverter serial across restarts, and every flip
+    orphaned the old entity's long-term statistics. sensor.py now keys off
+    the inverter serial (the coordinator data key -- present every time);
+    this moves any existing batSn-keyed registry entries onto the new id so
+    their history carries over. Cheap and idempotent: a no-op once every
+    battery sensor is inverter-serial-keyed.
+
+    Migration shim added 2026-08 (1.7.0). Safe to delete once installs are
+    reasonably expected to have run a >=1.7.0 setup at least once.
+    """
+    registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+    bat_to_inverter = _battery_serial_to_inverter(devices)
+    keys_longest_first = sorted(BATTERY_SENSORS, key=len, reverse=True)
+
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if reg_entry.domain != "sensor":
+            continue
+        parsed = _split_battery_unique_id(reg_entry.unique_id, keys_longest_first)
+        if parsed is None:
+            continue
+        id_sn, key = parsed
+        if id_sn in devices:
+            continue  # already inverter-keyed (or a first-class battery device)
+        inverter_sn = bat_to_inverter.get(id_sn) or _inverter_sn_via_device(
+            device_registry, reg_entry.device_id, devices
+        )
+        if inverter_sn is None:
+            continue
+        _rekey_registry_entity(
+            registry, "sensor", reg_entry.unique_id, f"hyxi_{inverter_sn}_{key}"
+        )
+
+
+def _migrate_microinverter_sum_identifiers(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Move the microinverter aggregate entity + device off entry_id keying.
+
+    Their unique_id and device identifier embedded ``entry.entry_id`` before
+    1.7.0, which is regenerated on a remove-and-re-add and stranded the
+    aggregates' long-term statistics. sensor.py now keys them off
+    ``entry_stable_key(entry)``; this moves an existing entry_id-keyed
+    entity and device forward. A no-op once moved, or when there's no
+    stable key to move to (an entry with no unique_id, where
+    entry_stable_key() returns entry_id).
+
+    Migration shim added 2026-08 (1.7.0). Safe to delete once installs are
+    reasonably expected to have run a >=1.7.0 setup at least once.
+    """
+    stable_key = entry_stable_key(entry)
+    if stable_key == entry.entry_id:
+        return
+
+    registry = er.async_get(hass)
+    # The two aggregate keys that existed when this shim was written -- a
+    # migration only ever needs the ids that shipped before it.
+    for key in ("micro_ac_power_total", "micro_daily_yield_total"):
+        _rekey_registry_entity(
+            registry, "sensor", f"{entry.entry_id}_{key}", f"{stable_key}_{key}"
+        )
+
+    device_registry = dr.async_get(hass)
+    old_device = device_registry.async_get_device(
+        identifiers={(DOMAIN, f"{entry.entry_id}_microinverters_summary")}
+    )
+    new_identifiers = {(DOMAIN, f"{stable_key}_microinverters_summary")}
+    if old_device is None or (
+        device_registry.async_get_device(identifiers=new_identifiers) is not None
+    ):
+        return
+    device_registry.async_update_device(old_device.id, new_identifiers=new_identifiers)
 
 
 def _remove_work_mode_sensor_for_modbus(

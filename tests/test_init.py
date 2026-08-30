@@ -916,6 +916,225 @@ async def test_migrate_vpp_dispatch_to_work_mode_unique_id_collision(
         )
 
 
+def test_rekey_registry_entity_noop_when_ids_equal():
+    """No lookups at all when there is nothing to move."""
+    from custom_components.hyxi_cloud.__init__ import _rekey_registry_entity
+
+    registry = MagicMock()
+    _rekey_registry_entity(registry, "sensor", "hyxi_A_batSoc", "hyxi_A_batSoc")
+    registry.async_get_entity_id.assert_not_called()
+
+
+def test_rekey_registry_entity_noop_when_old_missing():
+    """A no-op when the old unique_id isn't registered."""
+    from custom_components.hyxi_cloud.__init__ import _rekey_registry_entity
+
+    registry = MagicMock()
+    registry.async_get_entity_id.return_value = None
+    _rekey_registry_entity(registry, "sensor", "hyxi_A_batSoc", "hyxi_B_batSoc")
+    registry.async_update_entity.assert_not_called()
+    registry.async_remove.assert_not_called()
+
+
+def test_rekey_registry_entity_drops_clashing_new_entry():
+    """When new_unique_id is already taken, the newer entry is removed so the
+    older, history-carrying one can take it."""
+    from custom_components.hyxi_cloud.__init__ import _rekey_registry_entity
+
+    registry = MagicMock()
+    ids = {"hyxi_A_batSoc": "sensor.old", "hyxi_B_batSoc": "sensor.fresh"}
+    registry.async_get_entity_id.side_effect = lambda d, c, uid: ids.get(uid)
+    _rekey_registry_entity(registry, "sensor", "hyxi_A_batSoc", "hyxi_B_batSoc")
+    registry.async_remove.assert_called_once_with("sensor.fresh")
+    registry.async_update_entity.assert_called_once_with(
+        "sensor.old", new_unique_id="hyxi_B_batSoc"
+    )
+
+
+def test_inverter_sn_via_device_resolution_paths():
+    """Every fallback path of resolving an inverter serial from a battery
+    device's via_device link."""
+    from types import SimpleNamespace
+
+    from custom_components.hyxi_cloud.__init__ import _inverter_sn_via_device
+
+    reg = MagicMock()
+    assert _inverter_sn_via_device(reg, None, {}) is None
+
+    reg.async_get.return_value = None
+    assert _inverter_sn_via_device(reg, "d1", {"INV": {}}) is None
+
+    reg.async_get.return_value = SimpleNamespace(via_device_id=None)
+    assert _inverter_sn_via_device(reg, "d1", {"INV": {}}) is None
+
+    battery = SimpleNamespace(via_device_id="p1")
+    reg.async_get.side_effect = lambda i: battery if i == "d1" else None
+    assert _inverter_sn_via_device(reg, "d1", {"INV": {}}) is None
+
+    parent_other = SimpleNamespace(identifiers={(DOMAIN, "OTHER")})
+    reg.async_get.side_effect = lambda i: battery if i == "d1" else parent_other
+    assert _inverter_sn_via_device(reg, "d1", {"INV": {}}) is None
+
+    parent_inv = SimpleNamespace(identifiers={(DOMAIN, "INV")})
+    reg.async_get.side_effect = lambda i: battery if i == "d1" else parent_inv
+    assert _inverter_sn_via_device(reg, "d1", {"INV": {}}) == "INV"
+
+
+@pytest.mark.asyncio
+async def test_migrate_battery_sensor_unique_ids_filters_registry_entries(
+    mock_hass, mock_entry
+):
+    """Only battery-key sensor entries that aren't already inverter-keyed and
+    can be mapped to an inverter are re-keyed."""
+    from types import SimpleNamespace
+
+    from custom_components.hyxi_cloud.__init__ import (
+        _migrate_battery_sensor_unique_ids,
+    )
+
+    mock_entry.entry_id = "eid"
+    entries = [
+        SimpleNamespace(  # wrong domain
+            domain="number", unique_id="hyxi_BAT_batSoc", device_id=None
+        ),
+        SimpleNamespace(  # not a battery key
+            domain="sensor", unique_id="hyxi_INV_totalE", device_id=None
+        ),
+        SimpleNamespace(  # already inverter-keyed
+            domain="sensor", unique_id="hyxi_INV_batSoc", device_id=None
+        ),
+        SimpleNamespace(  # battery-keyed but unmappable (no batSn, no device)
+            domain="sensor", unique_id="hyxi_GHOST_batSoh", device_id=None
+        ),
+        SimpleNamespace(  # battery-keyed, mappable via current batSn
+            domain="sensor", unique_id="hyxi_BAT_batP", device_id=None
+        ),
+    ]
+
+    with (
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
+        patch("custom_components.hyxi_cloud.__init__.dr.async_get"),
+        patch(
+            "custom_components.hyxi_cloud.__init__.er.async_entries_for_config_entry",
+            return_value=entries,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.__init__._rekey_registry_entity"
+        ) as mock_rekey,
+    ):
+        _migrate_battery_sensor_unique_ids(
+            mock_hass, mock_entry, {"INV": {"metrics": {"batSn": "BAT"}}}
+        )
+
+    mock_rekey.assert_called_once()
+    assert mock_rekey.call_args[0][2:] == ("hyxi_BAT_batP", "hyxi_INV_batP")
+
+
+def test_battery_serial_to_inverter_map_excludes_ambiguous_and_junk():
+    """Blank/non-string serials, self/first-class-device serials, and serials
+    reported by more than one inverter are all left out of the map."""
+    from custom_components.hyxi_cloud.__init__ import _battery_serial_to_inverter
+
+    devices = {
+        "INV_A": {"metrics": {"batSn": "SHARED"}},
+        "INV_B": {"metrics": {"batSn": "SHARED"}},  # same serial -> ambiguous
+        "INV_C": {"metrics": {"batSn": "   "}},  # blank
+        "INV_D": {"metrics": {"batSn": 0}},  # non-string (Modbus junk)
+        "INV_E": {"metrics": {"batSn": "INV_E"}},  # serial == own sn
+        "INV_F": {"metrics": {"batSn": "BAT_F"}},  # the one good mapping
+        "BAT_G": {"metrics": {}},  # first-class battery device
+        "INV_H": {"metrics": {"batSn": "BAT_G"}},  # points at a real device
+    }
+
+    assert _battery_serial_to_inverter(devices) == {"BAT_F": "INV_F"}
+
+
+@pytest.mark.asyncio
+async def test_migrate_microinverter_sum_identifiers_noop_without_stable_key(
+    mock_hass, mock_entry
+):
+    """An entry with no distinct unique_id (entry_stable_key falls back to
+    entry_id) has nothing stable to move to."""
+    from custom_components.hyxi_cloud.__init__ import (
+        _migrate_microinverter_sum_identifiers,
+    )
+
+    mock_entry.entry_id = "eid"
+    mock_entry.unique_id = "eid"
+    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+        _migrate_microinverter_sum_identifiers(mock_hass, mock_entry)
+        mock_er_get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_migrate_microinverter_sum_identifiers_moves_entity_and_device(
+    mock_hass, mock_entry
+):
+    """The aggregates' entity unique_ids and their summary device identifier
+    move onto entry_stable_key()."""
+    from types import SimpleNamespace
+
+    from custom_components.hyxi_cloud.__init__ import (
+        _migrate_microinverter_sum_identifiers,
+    )
+
+    mock_entry.entry_id = "eid"
+    mock_entry.unique_id = "ak"
+    old_device = SimpleNamespace(id="dev1")
+    dev_reg = MagicMock()
+    dev_reg.async_get_device.side_effect = lambda identifiers: (
+        old_device if (DOMAIN, "eid_microinverters_summary") in identifiers else None
+    )
+
+    with (
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
+        patch(
+            "custom_components.hyxi_cloud.__init__.dr.async_get", return_value=dev_reg
+        ),
+        patch(
+            "custom_components.hyxi_cloud.__init__._rekey_registry_entity"
+        ) as mock_rekey,
+    ):
+        _migrate_microinverter_sum_identifiers(mock_hass, mock_entry)
+
+    assert {c.args[2:] for c in mock_rekey.call_args_list} == {
+        ("eid_micro_ac_power_total", "ak_micro_ac_power_total"),
+        ("eid_micro_daily_yield_total", "ak_micro_daily_yield_total"),
+    }
+    dev_reg.async_update_device.assert_called_once_with(
+        "dev1", new_identifiers={(DOMAIN, "ak_microinverters_summary")}
+    )
+
+
+@pytest.mark.asyncio
+async def test_migrate_microinverter_sum_identifiers_skips_device_when_target_exists(
+    mock_hass, mock_entry
+):
+    """If the stable-keyed summary device already exists (a prior partial
+    migration), the old one is left for the entity link to fall away with."""
+    from types import SimpleNamespace
+
+    from custom_components.hyxi_cloud.__init__ import (
+        _migrate_microinverter_sum_identifiers,
+    )
+
+    mock_entry.entry_id = "eid"
+    mock_entry.unique_id = "ak"
+    dev_reg = MagicMock()
+    dev_reg.async_get_device.return_value = SimpleNamespace(id="whatever")
+
+    with (
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
+        patch(
+            "custom_components.hyxi_cloud.__init__.dr.async_get", return_value=dev_reg
+        ),
+        patch("custom_components.hyxi_cloud.__init__._rekey_registry_entity"),
+    ):
+        _migrate_microinverter_sum_identifiers(mock_hass, mock_entry)
+
+    dev_reg.async_update_device.assert_not_called()
+
+
 @pytest.mark.asyncio
 async def test_remove_work_mode_sensor_for_modbus(mock_hass, mock_entry):
     """A Modbus entry's pre-existing work_mode entity (from before it was
@@ -1676,8 +1895,16 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                 with patch(
                     "custom_components.hyxi_cloud.__init__._remove_legacy_select_entities"
                 ):
-                    with patch(
-                        "custom_components.hyxi_cloud.__init__._migrate_vpp_dispatch_to_work_mode"
+                    with (
+                        patch(
+                            "custom_components.hyxi_cloud.__init__._migrate_vpp_dispatch_to_work_mode"
+                        ),
+                        patch(
+                            "custom_components.hyxi_cloud.__init__._migrate_battery_sensor_unique_ids"
+                        ),
+                        patch(
+                            "custom_components.hyxi_cloud.__init__._migrate_microinverter_sum_identifiers"
+                        ),
                     ):
                         with patch(
                             "custom_components.hyxi_cloud.__init__._cleanup_control_entities"

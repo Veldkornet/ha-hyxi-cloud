@@ -10,6 +10,8 @@ the device correctly.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from modbus_connection import IllegalDataAddressError
 from modbus_connection.pytest_plugin import MockModbusConnection
 
@@ -729,12 +731,19 @@ async def test_setting_up_a_modbus_entry_creates_entities(hass):
     assert by_id[f"sensor.hyxi_{sn}_grid_export"] == "811.0"
     assert by_id[f"sensor.hyxi_{sn}_home_load"] == "276.0"
 
-    # Battery sensors hang off a sub-device keyed by the BMS serial, exactly
-    # as they do on the cloud path -- confirmation that reusing the metric
-    # vocabulary reuses the device layout too.
+    # Battery sensors are identified by the inverter serial (stable across
+    # restarts -- see _migrate_battery_sensor_unique_ids) but still hang off
+    # a sub-device keyed by the BMS serial, exactly as on the cloud path.
     # SOC is published as an integer -- batsoc is in INT_SENSOR_KEYS.
-    assert by_id["sensor.hyxi_4213571357_batsoc"] == "78"
-    assert by_id["sensor.hyxi_4213571357_batp"] == "-420.0"
+    assert by_id[f"sensor.hyxi_{sn}_batsoc"] == "78"
+    assert by_id[f"sensor.hyxi_{sn}_batp"] == "-420.0"
+
+    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+    bat_soc = entity_registry.async_get(f"sensor.hyxi_{sn}_batsoc")
+    assert bat_soc.unique_id == f"hyxi_{sn}_batSoc"
+    bat_device = device_registry.async_get(bat_soc.device_id)
+    assert (DOMAIN, "4213571357") in bat_device.identifiers
 
     # last_seen is a cloud heartbeat timestamp Modbus never populates --
     # must not be created at all rather than sit frozen or unavailable.

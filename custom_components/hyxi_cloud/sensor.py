@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    BATTERY_SENSORS,
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     CONF_MODBUS_FRAMER,
@@ -32,6 +33,7 @@ from .const import (
     MODBUS_TYPE_SERIAL,
     NULL_VALUES,
     detect_phase_type,
+    entry_stable_key,
     get_raw_device_code,
     get_software_version,
     is_battery_control_enabled,
@@ -64,44 +66,6 @@ INT_SENSOR_KEYS = {
     "devicegridconn",
     "deviceswitchstatus",
     "ratedfrequency",
-}
-
-BATTERY_SENSORS = {
-    "batSoc",
-    "pbat",
-    "batP",
-    "batSoh",
-    "bat_charge_total",
-    "bat_discharge_total",
-    "bat_charging",
-    "bat_discharging",
-    "batV",
-    "batI",
-    "batVch",
-    "batVcl",
-    "batTch",
-    "batTcl",
-    "batTmp",
-    "batIcm",
-    "batIdm",
-    "batCharge",
-    "batDisCharge",
-    "totalEchg",
-    "totalEdchg",
-    "bmsState",
-    "batOperatingStatus",
-    "batAlarm1",
-    "batAlarm2",
-    "batAlarm3",
-    "batCapacityAh",
-    "batNominalCapacity",
-    "llcBusVoltage",
-    "batChargeV",
-    "batChargeI",
-    "batChargeP",
-    "batDischargeV",
-    "batDischargeI",
-    "batDischargeP",
 }
 
 
@@ -1605,9 +1569,7 @@ class HyxiBaseSensor(
                 _LOGGER.debug(
                     "HYXI Restore: Could not parse restored state '%s' for %s",
                     last_state.state,
-                    mask_sn(self._actual_sn)
-                    if hasattr(self, "_actual_sn")
-                    else self.entity_id,
+                    mask_sn(self._sn) if hasattr(self, "_sn") else self.entity_id,
                 )
 
     def _log_glitch_once(
@@ -1772,18 +1734,16 @@ class HyxiSensor(HyxiBaseSensor):
         raw_code = get_raw_device_code(self._dev_data)
         self._device_type = normalize_device_type(raw_code)
 
-        # Determine actual SN (e.g. Battery SN for battery sensors)
-        bat_sn = self._metrics.get("batSn")
-
-        if description.key in BATTERY_SENSORS and bat_sn:
-            self._actual_sn = bat_sn
-        else:
-            self._actual_sn = sn
-
+        # Identity keys off the inverter SN -- the coordinator data key, so
+        # it's present on every build. Not metrics["batSn"] (even for
+        # battery sensors): that's push-only telemetry, missing on many
+        # builds, so keying on it gives the same sensor a different
+        # unique_id from one restart to the next. Battery-device *grouping*
+        # still follows batSn -- see the device_info property.
         key_lower = description.key.lower()
-        self._attr_unique_id = f"hyxi_{self._actual_sn}_{description.key}"
+        self._attr_unique_id = f"hyxi_{sn}_{description.key}"
         self._attr_translation_key = description.translation_key or key_lower
-        self.entity_id = f"sensor.hyxi_{self._actual_sn}_{key_lower}"
+        self.entity_id = f"sensor.hyxi_{sn}_{key_lower}"
 
         if key_lower in INT_SENSOR_KEYS:
             self._parser_func = self._parse_int_sensor
@@ -2136,9 +2096,13 @@ class HyxiMicroinverterSumSensor(
         super().__init__(coordinator)
         self.entity_description = description
         self._metric_key = metric_key
-        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        # entry_stable_key rather than entry.entry_id: these aggregates
+        # carry long-term statistics and entry_id is regenerated on a
+        # remove-and-re-add, which would strand them.
+        stable_key = entry_stable_key(entry)
+        self._attr_unique_id = f"{stable_key}_{description.key}"
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{entry.entry_id}_microinverters_summary")},
+            "identifiers": {(DOMAIN, f"{stable_key}_microinverters_summary")},
             "name": "Microinverters Summary",
             "manufacturer": MANUFACTURER,
             "model": "Aggregated Microinverter Metrics",
