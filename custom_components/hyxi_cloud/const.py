@@ -221,12 +221,16 @@ def entry_stable_key(entry: Any) -> str:
     device identifier) points at a fresh object on re-add and strands the
     old one's long-term statistics. `entry.unique_id` -- the account access
     key for a cloud entry, `host:port:unit` / `device:unit` for Modbus --
-    is stable across a re-add. An entry with no `unique_id` (none was set at
-    creation) falls back to `entry_id`.
+    is stable across a re-add, but it's a credential/address, so it's
+    returned as a SHA-256 digest rather than in cleartext: the result ends
+    up in entity ids, device identifiers, and migration log lines. An entry
+    with no `unique_id` falls back to the (non-sensitive, opaque) entry_id.
     """
+    import hashlib
+
     unique_id = getattr(entry, "unique_id", None)
     if isinstance(unique_id, str) and unique_id:
-        return unique_id
+        return hashlib.sha256(unique_id.encode("utf-8")).hexdigest()[:16]
     return entry.entry_id
 
 

@@ -579,7 +579,7 @@ def _split_battery_unique_id(
 
 
 def _inverter_sn_via_device(
-    device_registry: dr.DeviceRegistry, device_id: str | None, devices: dict
+    device_registry: dr.DeviceRegistry, device_id: str | None, devices: dict[str, dict]
 ) -> str | None:
     """Resolve the inverter sn a battery device hangs off, via its via_device.
 
@@ -608,7 +608,7 @@ def _inverter_sn_via_device(
     )
 
 
-def _battery_serial_to_inverter(devices: dict) -> dict[str, str]:
+def _battery_serial_to_inverter(devices: dict[str, dict]) -> dict[str, str]:
     """Map each usable ``batSn`` in current telemetry to its inverter sn.
 
     Excluded: a battery that is itself a first-class device (its own
@@ -631,7 +631,7 @@ def _battery_serial_to_inverter(devices: dict) -> dict[str, str]:
 
 
 def _migrate_battery_sensor_unique_ids(
-    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict[str, dict]
 ) -> None:
     """Re-key battery sensors from the battery serial to the inverter serial.
 
@@ -705,12 +705,21 @@ def _migrate_microinverter_sum_identifiers(
     old_device = device_registry.async_get_device(
         identifiers={(DOMAIN, f"{entry.entry_id}_microinverters_summary")}
     )
-    new_identifiers = {(DOMAIN, f"{stable_key}_microinverters_summary")}
-    if old_device is None or (
-        device_registry.async_get_device(identifiers=new_identifiers) is not None
-    ):
+    if old_device is None:
         return
-    device_registry.async_update_device(old_device.id, new_identifiers=new_identifiers)
+    new_identifiers = {(DOMAIN, f"{stable_key}_microinverters_summary")}
+    if device_registry.async_get_device(identifiers=new_identifiers) is None:
+        device_registry.async_update_device(
+            old_device.id, new_identifiers=new_identifiers
+        )
+    else:
+        # The stable-keyed summary device already exists (a prior partial
+        # migration). Platform setup re-homes the aggregates onto it, so
+        # detach the legacy device from this entry -- the registry then
+        # garbage-collects it instead of leaving an empty device card.
+        device_registry.async_update_device(
+            old_device.id, remove_config_entry_id=entry.entry_id
+        )
 
 
 def _remove_work_mode_sensor_for_modbus(

@@ -1053,14 +1053,14 @@ def test_battery_serial_to_inverter_map_excludes_ambiguous_and_junk():
 async def test_migrate_microinverter_sum_identifiers_noop_without_stable_key(
     mock_hass, mock_entry
 ):
-    """An entry with no distinct unique_id (entry_stable_key falls back to
-    entry_id) has nothing stable to move to."""
+    """An entry with no unique_id (entry_stable_key falls back to entry_id)
+    has nothing stable to move to."""
     from custom_components.hyxi_cloud.__init__ import (
         _migrate_microinverter_sum_identifiers,
     )
 
     mock_entry.entry_id = "eid"
-    mock_entry.unique_id = "eid"
+    mock_entry.unique_id = None
     with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
         _migrate_microinverter_sum_identifiers(mock_hass, mock_entry)
         mock_er_get.assert_not_called()
@@ -1077,9 +1077,12 @@ async def test_migrate_microinverter_sum_identifiers_moves_entity_and_device(
     from custom_components.hyxi_cloud.__init__ import (
         _migrate_microinverter_sum_identifiers,
     )
+    from custom_components.hyxi_cloud.const import entry_stable_key
 
     mock_entry.entry_id = "eid"
     mock_entry.unique_id = "ak"
+    sk = entry_stable_key(mock_entry)
+    assert sk != "ak"  # the raw key must not appear in identifiers
     old_device = SimpleNamespace(id="dev1")
     dev_reg = MagicMock()
     dev_reg.async_get_device.side_effect = lambda identifiers: (
@@ -1098,20 +1101,21 @@ async def test_migrate_microinverter_sum_identifiers_moves_entity_and_device(
         _migrate_microinverter_sum_identifiers(mock_hass, mock_entry)
 
     assert {c.args[2:] for c in mock_rekey.call_args_list} == {
-        ("eid_micro_ac_power_total", "ak_micro_ac_power_total"),
-        ("eid_micro_daily_yield_total", "ak_micro_daily_yield_total"),
+        ("eid_micro_ac_power_total", f"{sk}_micro_ac_power_total"),
+        ("eid_micro_daily_yield_total", f"{sk}_micro_daily_yield_total"),
     }
     dev_reg.async_update_device.assert_called_once_with(
-        "dev1", new_identifiers={(DOMAIN, "ak_microinverters_summary")}
+        "dev1", new_identifiers={(DOMAIN, f"{sk}_microinverters_summary")}
     )
 
 
 @pytest.mark.asyncio
-async def test_migrate_microinverter_sum_identifiers_skips_device_when_target_exists(
+async def test_migrate_microinverter_sum_identifiers_detaches_legacy_device_when_target_exists(
     mock_hass, mock_entry
 ):
     """If the stable-keyed summary device already exists (a prior partial
-    migration), the old one is left for the entity link to fall away with."""
+    migration), the legacy device is detached from the entry so the
+    registry collects it -- not re-identified onto a taken identifier."""
     from types import SimpleNamespace
 
     from custom_components.hyxi_cloud.__init__ import (
@@ -1121,7 +1125,9 @@ async def test_migrate_microinverter_sum_identifiers_skips_device_when_target_ex
     mock_entry.entry_id = "eid"
     mock_entry.unique_id = "ak"
     dev_reg = MagicMock()
-    dev_reg.async_get_device.return_value = SimpleNamespace(id="whatever")
+    dev_reg.async_get_device.side_effect = lambda identifiers: SimpleNamespace(
+        id="legacy" if any("eid" in ident for _d, ident in identifiers) else "stable"
+    )
 
     with (
         patch("custom_components.hyxi_cloud.__init__.er.async_get"),
@@ -1132,7 +1138,9 @@ async def test_migrate_microinverter_sum_identifiers_skips_device_when_target_ex
     ):
         _migrate_microinverter_sum_identifiers(mock_hass, mock_entry)
 
-    dev_reg.async_update_device.assert_not_called()
+    dev_reg.async_update_device.assert_called_once_with(
+        "legacy", remove_config_entry_id="eid"
+    )
 
 
 @pytest.mark.asyncio

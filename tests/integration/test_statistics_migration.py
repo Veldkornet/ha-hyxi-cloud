@@ -21,6 +21,7 @@ from custom_components.hyxi_cloud.const import (
     CONF_ACCESS_KEY,
     CONF_SECRET_KEY,
     DOMAIN,
+    entry_stable_key,
 )
 
 
@@ -218,11 +219,13 @@ async def test_microinverter_sum_rekeyed_off_entry_id(hass: HomeAssistant):
         },
     )
 
+    sk = entry_stable_key(entry)
+    assert sk != "ak"  # raw access key must never land in an identifier
     moved = entity_registry.async_get(legacy.entity_id)
-    assert moved.unique_id == "ak_micro_ac_power_total"
+    assert moved.unique_id == f"{sk}_micro_ac_power_total"
     assert moved.entity_id == legacy.entity_id
     assert device_registry.async_get_device(
-        identifiers={(DOMAIN, "ak_microinverters_summary")}
+        identifiers={(DOMAIN, f"{sk}_microinverters_summary")}
     ) == device_registry.async_get(old_device.id)
     assert (
         device_registry.async_get_device(
