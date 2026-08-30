@@ -149,9 +149,14 @@ async def test_battery_sensor_rekeyed_when_current_poll_has_no_batsn(
 
 
 @pytest.mark.asyncio
-async def test_first_class_battery_device_sensors_are_left_alone(hass: HomeAssistant):
-    """A battery that is its own device already keys its sensors off its own
-    serial -- the migration must not touch those."""
+async def test_first_class_battery_device_and_inverter_batsoc_do_not_collide(
+    hass: HomeAssistant,
+):
+    """When HYXI exposes the battery as its own device, both it and the
+    inverter can carry a batSoc reading. The migration leaves the
+    battery-device sensor on its own serial and the inverter's battery
+    sensor keys off the inverter serial -- two distinct entities, no
+    unique_id collision."""
     inv_sn, bat_sn = "INV_1200", "BAT_2200"
     entry = _cloud_entry(hass)
 
@@ -171,7 +176,7 @@ async def test_first_class_battery_device_sensors_are_left_alone(hass: HomeAssis
             inv_sn: {
                 "device_name": "Inverter",
                 "device_type_code": "HYBRID_INVERTER",
-                "metrics": {"batSn": bat_sn, "deviceSn": inv_sn},
+                "metrics": {"batSn": bat_sn, "batSoc": "55", "deviceSn": inv_sn},
             },
             bat_sn: {
                 "device_name": "Battery",
@@ -181,7 +186,16 @@ async def test_first_class_battery_device_sensors_are_left_alone(hass: HomeAssis
         },
     )
 
+    # First-class battery device: untouched, still on its own serial.
     assert entity_registry.async_get(own.entity_id).unique_id == f"hyxi_{bat_sn}_batSoc"
+    # Inverter's battery sensor: a separate entity on the inverter serial.
+    inv_batsoc = entity_registry.async_get_entity_id(
+        "sensor", DOMAIN, f"hyxi_{inv_sn}_batSoc"
+    )
+    assert inv_batsoc is not None
+    assert inv_batsoc != own.entity_id
+    assert hass.states.get(own.entity_id).state == "60"
+    assert hass.states.get(inv_batsoc).state == "55"
 
 
 @pytest.mark.asyncio
