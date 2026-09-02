@@ -6,7 +6,7 @@ import logging
 import sys
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -229,7 +229,10 @@ async def test_async_setup_entry_adds_em_binary_sensors(mock_coordinator, mock_e
     hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
     async_add_entities = MagicMock()
 
-    await bs_mod.async_setup_entry(hass, mock_entry, async_add_entities)
+    # The via_device_id link is exercised against a real registry in
+    # tests/integration/test_device_via_links.py.
+    with patch.object(bs_mod, "via_device_id", return_value=None):
+        await bs_mod.async_setup_entry(hass, mock_entry, async_add_entities)
 
     entities = async_add_entities.call_args[0][0]
     em_sensors = [e for e in entities if isinstance(e, bs_mod.EMBinarySensor)]
@@ -333,22 +336,30 @@ def test_device_alarm_sensor(mock_coordinator, mock_entry):
     assert sensor.is_on is False
 
 
-def test_device_alarm_sensor_sets_via_device_for_child(mock_coordinator, mock_entry):
-    """Test a device reporting a parentSn gets via_device set to the parent."""
+def test_device_alarm_sensor_child_via_device_link(mock_coordinator, mock_entry):
+    """A device reporting a parentSn links to the parent's registry id.
+
+    The identifier -> id resolution and the link itself are exercised against
+    a real registry in tests/integration/test_device_via_links.py.
+    """
     mock_coordinator.data["SN123"]["metrics"] = {"parentSn": "SN_PARENT"}
 
-    sensor = bs_mod.HyxiDeviceAlarmSensor(mock_coordinator, mock_entry, "SN123")
+    with patch.object(bs_mod, "via_device_id", return_value="parent-dev-id") as resolve:
+        sensor = bs_mod.HyxiDeviceAlarmSensor(mock_coordinator, mock_entry, "SN123")
 
-    assert sensor._attr_device_info["via_device"] == (DOMAIN, "SN_PARENT")
+    resolve.assert_called_once_with(
+        mock_coordinator.hass, mock_entry.entry_id, "SN_PARENT"
+    )
+    assert sensor._attr_device_info["via_device_id"] == "parent-dev-id"
 
 
 def test_device_alarm_sensor_no_parent_sn(mock_coordinator, mock_entry):
-    """Test a top-level device (no parentSn) has no via_device entry."""
+    """A top-level device (no parentSn) carries no via-device link."""
     mock_coordinator.data["SN123"]["metrics"] = {}
 
     sensor = bs_mod.HyxiDeviceAlarmSensor(mock_coordinator, mock_entry, "SN123")
 
-    assert "via_device" not in sensor._attr_device_info
+    assert "via_device_id" not in sensor._attr_device_info
 
 
 @pytest.mark.parametrize(
