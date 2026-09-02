@@ -44,6 +44,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+from .entity import via_device_id
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -1481,8 +1482,10 @@ def _em_sensors(entry, coordinator) -> list[SensorEntity]:
         name="Energy Manager",
         manufacturer=MANUFACTURER,
         model="Energy Manager",
-        via_device=(DOMAIN, em_sn),
     )
+    parent_id = via_device_id(coordinator.hass, entry.entry_id, em_sn)
+    if parent_id is not None:
+        em_device_info["via_device_id"] = parent_id
     return [
         EMSensor(coordinator, em_sn, EMSensorDef("current_decision", em_device_info)),
         EMSensor(coordinator, em_sn, EMSensorDef("last_action", em_device_info)),

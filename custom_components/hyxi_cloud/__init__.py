@@ -591,9 +591,12 @@ def _inverter_sn_via_device(
     if device_id is None:
         return None
     device = device_registry.async_get(device_id)
-    if device is None or device.via_device_id is None:
+    # From HA 2026.9 async_get is typed to also return a ChildDeviceEntry,
+    # which carries no via_device_id; getattr keeps the lookup total.
+    via_id = getattr(device, "via_device_id", None)
+    if via_id is None:
         return None
-    parent = device_registry.async_get(device.via_device_id)
+    parent = device_registry.async_get(via_id)
     if parent is None:
         return None
     # sorted() so a parent that somehow carries more than one matching
