@@ -696,30 +696,37 @@ def _migrate_microinverter_sum_identifiers(
     registry = er.async_get(hass)
     # The two aggregate keys that existed when this shim was written -- a
     # migration only ever needs the ids that shipped before it.
-    for key in ("micro_ac_power_total", "micro_daily_yield_total"):
+    aggregate_keys = ("micro_ac_power_total", "micro_daily_yield_total")
+    for key in aggregate_keys:
         _rekey_registry_entity(
             registry, "sensor", f"{entry.entry_id}_{key}", f"{stable_key}_{key}"
         )
 
     device_registry = dr.async_get(hass)
+    stable_identifiers = {(DOMAIN, f"{stable_key}_microinverters_summary")}
     old_device = device_registry.async_get_device(
         identifiers={(DOMAIN, f"{entry.entry_id}_microinverters_summary")}
     )
     if old_device is None:
         return
-    new_identifiers = {(DOMAIN, f"{stable_key}_microinverters_summary")}
-    if device_registry.async_get_device(identifiers=new_identifiers) is None:
+    stable_device = device_registry.async_get_device(identifiers=stable_identifiers)
+    if stable_device is None:
         device_registry.async_update_device(
-            old_device.id, new_identifiers=new_identifiers
+            old_device.id, new_identifiers=stable_identifiers
         )
     else:
         # The stable-keyed summary device already exists (a prior partial
-        # migration). Platform setup re-homes the aggregates onto it, so
-        # detach the legacy device from this entry -- the registry then
-        # garbage-collects it instead of leaving an empty device card.
-        device_registry.async_update_device(
-            old_device.id, remove_config_entry_id=entry.entry_id
-        )
+        # migration). Re-home the aggregates onto it before dropping the
+        # legacy device: removing a device also removes every entity still
+        # pointing at it, which would take the entries re-keyed above -- and
+        # the statistics this shim exists to save -- down with it.
+        for key in aggregate_keys:
+            entity_id = registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{stable_key}_{key}"
+            )
+            if entity_id is not None:
+                registry.async_update_entity(entity_id, device_id=stable_device.id)
+        device_registry.async_remove_device(old_device.id)
 
 
 def _remove_work_mode_sensor_for_modbus(

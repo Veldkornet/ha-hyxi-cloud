@@ -247,3 +247,111 @@ async def test_microinverter_sum_rekeyed_off_entry_id(hass: HomeAssistant):
         )
         is None
     )
+
+
+@pytest.mark.asyncio
+async def test_microinverter_sum_rekeyed_when_stable_device_already_exists(
+    hass: HomeAssistant,
+):
+    """A flip-flopped install can carry both the legacy entry_id-keyed
+    summary device and the stable-keyed one. The aggregates move onto the
+    stable device and keep their entity_ids -- the legacy device is removed
+    without taking the just-re-keyed entities (and their statistics) down
+    with it."""
+    entry = _cloud_entry(hass)
+    micro_sn = "MICRO_2"
+    sk = entry_stable_key(entry)
+
+    device_registry = dr.async_get(hass)
+    legacy_device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{entry.entry_id}_microinverters_summary")},
+        name="Microinverters Summary",
+    )
+    stable_device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{sk}_microinverters_summary")},
+        name="Microinverters Summary",
+    )
+
+    entity_registry = er.async_get(hass)
+    legacy_entities = {
+        key: entity_registry.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{entry.entry_id}_{key}",
+            config_entry=entry,
+            device_id=legacy_device.id,
+            suggested_object_id=f"microinverters_summary_{key}",
+        )
+        for key in ("micro_ac_power_total", "micro_daily_yield_total")
+    }
+
+    await _setup_with_devices(
+        hass,
+        entry,
+        {
+            micro_sn: {
+                "device_name": "Micro",
+                "device_type_code": "MICRO_INVERTER",
+                "metrics": {"acP": "120.0", "efpv": "3.4", "deviceSn": micro_sn},
+            }
+        },
+    )
+
+    for key, legacy in legacy_entities.items():
+        moved = entity_registry.async_get(legacy.entity_id)
+        assert moved is not None, f"{key} entity was deleted by the migration"
+        assert moved.entity_id == legacy.entity_id
+        assert moved.unique_id == f"{sk}_{key}"
+        assert moved.device_id == stable_device.id
+
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{entry.entry_id}_microinverters_summary"), entry.entry_id
+        )
+        is None
+    )
+    surviving = device_registry.async_get_device_by_identifier(
+        (DOMAIN, f"{sk}_microinverters_summary"), entry.entry_id
+    )
+    assert surviving is not None
+    assert surviving.id == stable_device.id
+
+
+@pytest.mark.asyncio
+async def test_microinverter_sum_migration_noop_without_stable_key(hass: HomeAssistant):
+    """An entry with no unique_id has no stable key to move to -- the
+    entry_id-keyed aggregate is left exactly where it is."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ACCESS_KEY: "ak", CONF_SECRET_KEY: "sk"},
+        options={},
+    )
+    entry.add_to_hass(hass)
+    assert entry_stable_key(entry) == entry.entry_id
+
+    entity_registry = er.async_get(hass)
+    legacy = entity_registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{entry.entry_id}_micro_ac_power_total",
+        config_entry=entry,
+        suggested_object_id="microinverters_summary_ac_power_total",
+    )
+
+    await _setup_with_devices(
+        hass,
+        entry,
+        {
+            "MICRO_3": {
+                "device_name": "Micro",
+                "device_type_code": "MICRO_INVERTER",
+                "metrics": {"acP": "120.0", "efpv": "3.4", "deviceSn": "MICRO_3"},
+            }
+        },
+    )
+
+    kept = entity_registry.async_get(legacy.entity_id)
+    assert kept is not None
+    assert kept.unique_id == f"{entry.entry_id}_micro_ac_power_total"
