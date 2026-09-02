@@ -179,12 +179,12 @@ MODBUS_FAMILY_SIGNATURES: tuple[tuple[str, str, int], ...] = (
 # x0.1 scale, so its raw register value can only ever be 0-1000. A value
 # outside that range at the SOC signature register isn't a HALO answering
 # with an odd reading -- it's some other device having *something* at that
-# address, which the document gives no reason to expect. There's no
-# equivalent bound for the hybrid signature (protocol_version, input 0):
-# the document doesn't define an expected range for it, and inventing one
-# would be exactly the kind of guess docs/modbus-provenance.md exists to
-# avoid presenting as fact.
+# address, which the document gives no reason to expect. The hybrid protocol
+# version is a positive version number. Zero is commonly
+# returned by gateways/devices for an unmapped register, including HALO, so it
+# must not identify a device as hybrid.
 HALO_SOC_SIGNATURE_MAX_RAW = 1000
+HYBRID_PROTOCOL_SIGNATURE_MIN_RAW = 1
 
 # Minimum inter-frame spacing per family. The HALO document requires more
 # than 200ms; the hybrid document requires more than 500ms -- a real

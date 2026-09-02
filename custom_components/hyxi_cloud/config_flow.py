@@ -53,8 +53,10 @@ from .const import (
     DETECTION_TIMEOUT,
     DOMAIN,
     HALO_SOC_SIGNATURE_MAX_RAW,
+    HYBRID_PROTOCOL_SIGNATURE_MIN_RAW,
     MICRO_ESS_CONTROL_SUPPORTED,
     MODBUS_FAMILY_HALO,
+    MODBUS_FAMILY_HYBRID,
     MODBUS_FAMILY_SIGNATURES,
     MODBUS_TCP_FRAMERS,
     MODBUS_TYPE_SERIAL,
@@ -369,8 +371,10 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         really be that field; it's some other device having *something*
         at that address, not HALO answering oddly, so it doesn't count
         as identifying evidence either (see HALO_SOC_SIGNATURE_MAX_RAW).
-        The hybrid signature has no documented range to check the same
-        way, so any non-error value there is still accepted as-is.
+        The hybrid signature is a positive protocol version. Zero is treated
+        as an unmapped/blank register rather than evidence of a hybrid
+        inverter; this matters because HALO gateways commonly return zero at
+        the hybrid-only address.
 
         Every signature is tried before giving up, rather than returning on
         the first exception, so a device that happens to reject its own
@@ -475,6 +479,24 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                         address,
                         family,
                         HALO_SOC_SIGNATURE_MAX_RAW,
+                    )
+                    continue
+                if (
+                    family == MODBUS_FAMILY_HYBRID
+                    and isinstance(value, int)
+                    and (value < HYBRID_PROTOCOL_SIGNATURE_MIN_RAW)
+                ):
+                    reachable = True
+                    _LOGGER.debug(
+                        "Modbus probe: unit %s returned an implausible "
+                        "value %s for %s register %s (family %s, expected "
+                        "a positive protocol version) -- not treated as "
+                        "identifying evidence",
+                        unit_id,
+                        value,
+                        space,
+                        address,
+                        family,
                     )
                     continue
                 _LOGGER.debug(
