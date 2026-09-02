@@ -56,14 +56,14 @@ async def test_battery_sensor_rekeyed_from_batsn_to_inverter_serial(
     entry = _cloud_entry(hass)
 
     device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
+    inverter = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={(DOMAIN, inv_sn)}, name="Inverter"
     )
     battery = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bat_sn)},
         name=f"Battery {bat_sn}",
-        via_device=(DOMAIN, inv_sn),
+        via_device_id=inverter.id,
     )
 
     entity_registry = er.async_get(hass)
@@ -111,14 +111,14 @@ async def test_battery_sensor_rekeyed_when_current_poll_has_no_batsn(
     entry = _cloud_entry(hass)
 
     device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
+    inverter = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={(DOMAIN, inv_sn)}, name="Inverter"
     )
     battery = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, bat_sn)},
         name=f"Battery {bat_sn}",
-        via_device=(DOMAIN, inv_sn),
+        via_device_id=inverter.id,
     )
     entity_registry = er.async_get(hass)
     legacy = entity_registry.async_get_or_create(
@@ -238,12 +238,12 @@ async def test_microinverter_sum_rekeyed_off_entry_id(hass: HomeAssistant):
     moved = entity_registry.async_get(legacy.entity_id)
     assert moved.unique_id == f"{sk}_micro_ac_power_total"
     assert moved.entity_id == legacy.entity_id
-    assert device_registry.async_get_device(
-        identifiers={(DOMAIN, f"{sk}_microinverters_summary")}
+    assert device_registry.async_get_device_by_identifier(
+        (DOMAIN, f"{sk}_microinverters_summary"), entry.entry_id
     ) == device_registry.async_get(old_device.id)
     assert (
-        device_registry.async_get_device(
-            identifiers={(DOMAIN, f"{entry.entry_id}_microinverters_summary")}
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{entry.entry_id}_microinverters_summary"), entry.entry_id
         )
         is None
     )
