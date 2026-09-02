@@ -344,6 +344,58 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return None
 
+    async def _read_modbus_signature(
+        self, unit, family: str, space: str, address: int, unit_id: int
+    ) -> tuple[bool, int | None]:
+        """Read one family signature, returning reachability and its value."""
+        from modbus_connection import (
+            GatewayPathUnavailableError,
+            GatewayTargetError,
+            ModbusExceptionError,
+            ModbusTimeoutError,
+        )
+
+        read = (
+            unit.read_input_registers
+            if space == "input"
+            else unit.read_holding_registers
+        )
+        try:
+            result = await read(address, 1)
+        except GatewayPathUnavailableError, GatewayTargetError:
+            _LOGGER.debug(
+                "Modbus probe: gateway for unit %s could not reach its target "
+                "for %s register %s (family %s) -- treated as no answer, not "
+                "proof a device is present",
+                unit_id,
+                space,
+                address,
+                family,
+            )
+            return False, None
+        except ModbusExceptionError as err:
+            _LOGGER.debug(
+                "Modbus probe: unit %s rejected %s register %s (%s) for family "
+                "%s -- device present, not this family",
+                unit_id,
+                space,
+                address,
+                type(err).__name__,
+                family,
+            )
+            return True, None
+        except ModbusTimeoutError:
+            _LOGGER.debug(
+                "Modbus probe: no answer from unit %s at %s register %s (family %s)",
+                unit_id,
+                space,
+                address,
+                family,
+            )
+            return False, None
+
+        return True, result[0]
+
     async def _probe_and_detect_modbus(
         self, params, unit_id: int
     ) -> tuple[str | None, str]:
@@ -391,12 +443,6 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         line to say so.
         """
         try:
-            from modbus_connection import (
-                GatewayPathUnavailableError,
-                GatewayTargetError,
-                ModbusExceptionError,
-                ModbusTimeoutError,
-            )
             from modbus_connection.tmodbus import ModbusConnection
         except ImportError:
             _LOGGER.error("modbus-connection is not installed")
@@ -409,53 +455,12 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         reachable = False
         try:
             for family, space, address in MODBUS_FAMILY_SIGNATURES:
-                read = (
-                    unit.read_input_registers
-                    if space == "input"
-                    else unit.read_holding_registers
+                signature_reachable, value = await self._read_modbus_signature(
+                    unit, family, space, address, unit_id
                 )
-                try:
-                    result = await read(address, 1)
-                # Both are ModbusExceptionError subclasses -- caught ahead of
-                # it on purpose. They're the *gateway* reporting it couldn't
-                # reach its target, not the target device rejecting this
-                # specific register, so unlike a real exception response
-                # they're not evidence anything answered.
-                except GatewayPathUnavailableError, GatewayTargetError:
-                    _LOGGER.debug(
-                        "Modbus probe: gateway for unit %s could not reach "
-                        "its target for %s register %s (family %s) -- "
-                        "treated as no answer, not proof a device is "
-                        "present",
-                        unit_id,
-                        space,
-                        address,
-                        family,
-                    )
+                reachable |= signature_reachable
+                if value is None:
                     continue
-                except ModbusExceptionError as err:
-                    reachable = True
-                    _LOGGER.debug(
-                        "Modbus probe: unit %s rejected %s register %s (%s) "
-                        "for family %s -- device present, not this family",
-                        unit_id,
-                        space,
-                        address,
-                        type(err).__name__,
-                        family,
-                    )
-                    continue
-                except ModbusTimeoutError:
-                    _LOGGER.debug(
-                        "Modbus probe: no answer from unit %s at %s register %s "
-                        "(family %s)",
-                        unit_id,
-                        space,
-                        address,
-                        family,
-                    )
-                    continue
-                value = result[0]
                 if family == MODBUS_FAMILY_HALO and not (
                     0 <= value <= HALO_SOC_SIGNATURE_MAX_RAW
                 ):
@@ -467,7 +472,6 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                     # for instance). Unlike an exception response, this
                     # can't be trusted as identifying evidence, but it's
                     # still not nothing -- treated the same as one.
-                    reachable = True
                     _LOGGER.debug(
                         "Modbus probe: unit %s returned an implausible "
                         "value %s for %s register %s (family %s, expected "
@@ -486,7 +490,6 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                     and isinstance(value, int)
                     and (value < HYBRID_PROTOCOL_SIGNATURE_MIN_RAW)
                 ):
-                    reachable = True
                     _LOGGER.debug(
                         "Modbus probe: unit %s returned an implausible "
                         "value %s for %s register %s (family %s, expected "
