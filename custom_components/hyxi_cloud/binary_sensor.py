@@ -39,6 +39,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+from .entity import via_device_id
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -90,8 +91,10 @@ async def async_setup_entry(
             name="Energy Manager",
             manufacturer=MANUFACTURER,
             model="Energy Manager",
-            via_device=(DOMAIN, em_sn),
         )
+        parent_id = via_device_id(hass, entry.entry_id, em_sn)
+        if parent_id is not None:
+            em_device_info["via_device_id"] = parent_id
         entities.append(
             EMBinarySensor(coordinator, em_sn, "night_mode_active", em_device_info)
         )
@@ -242,7 +245,9 @@ class HyxiDeviceAlarmSensor(
         }
 
         if parent_sn:
-            self._attr_device_info["via_device"] = (DOMAIN, parent_sn)
+            parent_id = via_device_id(coordinator.hass, entry.entry_id, parent_sn)
+            if parent_id is not None:
+                self._attr_device_info["via_device_id"] = parent_id
         self._update_internal_state()
 
     @callback
