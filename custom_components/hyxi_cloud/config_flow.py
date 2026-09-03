@@ -42,6 +42,7 @@ from .const import (
     CONF_TRANSPORT,
     DEFAULT_MODBUS_BAUDRATE,
     DEFAULT_MODBUS_FAMILY,
+    DEFAULT_MODBUS_FRAMER,
     DEFAULT_MODBUS_INTERVAL,
     DEFAULT_MODBUS_PORT,
     DEFAULT_MODBUS_UNIT,
@@ -58,6 +59,7 @@ from .const import (
     MODBUS_FAMILY_HALO,
     MODBUS_FAMILY_HYBRID,
     MODBUS_FAMILY_SIGNATURES,
+    MODBUS_MESSAGE_SPACING,
     MODBUS_TCP_FRAMERS,
     MODBUS_TYPE_SERIAL,
     MODBUS_TYPE_TCP,
@@ -397,10 +399,15 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         return True, result[0]
 
-    async def _probe_and_detect_modbus(
-        self, params, unit_id: int
+    async def _detect_family_on_unit(
+        self, unit, unit_id: int
     ) -> tuple[str | None, str]:
-        """Confirm a device answers, and guess which register map it speaks.
+        """Confirm a device answers on `unit`, and guess its register map.
+
+        Takes a ready unit -- from the probe's own short-lived connection
+        (_probe_and_detect_modbus) or from Home Assistant's shared one
+        (_probe_on_shared_bus) -- and does only the signature reads and the
+        checks on what comes back.
 
         Returns (error, family). error is None on success; family is
         meaningless when error is set -- every error path still returns
@@ -443,24 +450,6 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         registers under the wrong map, with nothing louder than a log
         line to say so.
         """
-        try:
-            from modbus_connection.tmodbus import ModbusConnection
-        except ImportError:
-            _LOGGER.error("modbus-connection is not installed")
-            return "modbus_unavailable", DEFAULT_MODBUS_FAMILY
-
-        # The operational path takes its unit from HA's shared `modbus`
-        # connection; this probe builds its own. It can't go through
-        # async_get_temporary_unit: it needs DETECTION_TIMEOUT's shorter read
-        # wait (see const.py), not that connection's fixed default, and it
-        # must not re-pace or refcount a connection a live entry is polling.
-        # During a reconfigure the probe does still open a second connection
-        # to a bus a running coordinator may be on -- a pre-existing overlap,
-        # unchanged by the move to async_get_unit. Closed in the finally.
-        connection = ModbusConnection(
-            params, timeout=DETECTION_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
-        )
-        unit = connection.for_unit(unit_id)
         reachable = False
         try:
             for family, space, address in MODBUS_FAMILY_SIGNATURES:
@@ -539,8 +528,117 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         except Exception:  # pylint: disable=broad-exception-caught
             _LOGGER.exception("Could not reach the Modbus device")
             return "cannot_connect", DEFAULT_MODBUS_FAMILY
+
+    async def _probe_and_detect_modbus(
+        self, params, unit_id: int
+    ) -> tuple[str | None, str]:
+        """Detect the family on a short-lived connection of the probe's own.
+
+        Used for a fresh setup, and for a reconfigure that moves to a
+        different bus. It needs DETECTION_TIMEOUT's shorter read wait and
+        DETECTION_MESSAGE_SPACING's conservative pacing (see const.py),
+        neither of which Home Assistant's shared connection exposes. A
+        reconfigure that keeps a bus a coordinator is polling never reaches
+        here while that connection is up -- _validate_modbus routes it
+        through _probe_on_shared_bus instead, so no second master lands on
+        a wire the coordinator is already driving.
+        """
+        try:
+            from modbus_connection.tmodbus import ModbusConnection
+        except ImportError:
+            _LOGGER.error("modbus-connection is not installed")
+            return "modbus_unavailable", DEFAULT_MODBUS_FAMILY
+
+        connection = ModbusConnection(
+            params, timeout=DETECTION_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
+        )
+        try:
+            return await self._detect_family_on_unit(
+                connection.for_unit(unit_id), unit_id
+            )
         finally:
             await connection.close()
+
+    async def _probe_on_shared_bus(
+        self, params, unit_id: int, reconfigure_entry
+    ) -> tuple[str | None, str] | None:
+        """Detect the family on Home Assistant's shared connection to this bus.
+
+        Returns None when this is not a reconfigure that keeps a bus a loaded
+        entry is already polling -- the caller then runs the standalone probe
+        instead. Returns (error, family) when detection ran on the shared
+        connection, so no second master was put on a wire a coordinator is
+        already driving.
+        """
+        if reconfigure_entry is None:
+            return None
+
+        from homeassistant.config_entries import ConfigEntryState
+
+        if reconfigure_entry.state is not ConfigEntryState.LOADED:
+            # No coordinator is actively polling anything -- whatever address
+            # this reconfigure targets, the standalone probe is on its own
+            # wire. A LOADED Modbus entry also means `modbus` is imported and
+            # set up, so the import below cannot block the loop.
+            return None
+
+        from homeassistant.components.modbus import async_get_temporary_unit
+        from homeassistant.exceptions import HomeAssistantError
+
+        old_data = reconfigure_entry.data
+        if modbus_params(old_data).endpoint != params.endpoint:
+            return None  # a different bus -- nothing to overlap with
+
+        same_slave = unit_id == int(old_data.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT))
+        # What the coordinator paces this slave at once the probe is done:
+        # its family's gap if it still polls this unit, none if the
+        # reconfigure moved to a slave it wasn't polling. (A successful
+        # reconfigure reloads and re-sets this regardless; it only matters
+        # for the window until then, and if the reconfigure fails.)
+        coordinator_gap = (
+            MODBUS_MESSAGE_SPACING.get(
+                old_data.get(CONF_MODBUS_FAMILY, DEFAULT_MODBUS_FAMILY),
+                DETECTION_MESSAGE_SPACING,
+            )
+            if same_slave
+            else 0.0
+        )
+        try:
+            async with async_get_temporary_unit(self.hass, params, unit_id) as unit:
+                if not unit.connected:
+                    # The shared connection is down right now -- a transient
+                    # outage, or the device changed under an unchanged
+                    # address. Nothing is polling it, so the standalone probe
+                    # -- fast fail, TCP framer sweep -- is the better tool and
+                    # safe on its own connection.
+                    return None
+                # Pace the probe conservatively while it runs: the stored gap
+                # may be the faster HALO one, and a same-address reconfigure
+                # is exactly how a swap to a slower-timed hybrid gets caught.
+                unit.set_message_spacing(DETECTION_MESSAGE_SPACING)
+                try:
+                    _LOGGER.debug(
+                        "Modbus probe: detecting on the shared connection to "
+                        "%s, unit %s (reconfigure keeps the bus)",
+                        params.endpoint,
+                        unit_id,
+                    )
+                    # Bound the reads: the shared connection's own timeout is
+                    # longer than DETECTION_TIMEOUT, so a device that goes
+                    # silent mid-reconfigure would otherwise hang the form.
+                    return await asyncio.wait_for(
+                        self._detect_family_on_unit(unit, unit_id),
+                        timeout=len(MODBUS_FAMILY_SIGNATURES) * DETECTION_TIMEOUT,
+                    )
+                except TimeoutError:
+                    return "cannot_connect", DEFAULT_MODBUS_FAMILY
+                finally:
+                    unit.set_message_spacing(coordinator_gap)
+        except HomeAssistantError:
+            # The bus is held under link settings that cannot share one
+            # connection (a baud or framer change in this reconfigure). The
+            # standalone probe opens its own at the new settings.
+            return None
 
     async def _tcp_reachable(self, host: str, port: int) -> bool:
         """A bare TCP connect, no Modbus involved -- just "is anything there".
@@ -620,16 +718,16 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         return error, family, MODBUS_TCP_FRAMERS[-1]
 
     async def _validate_modbus(
-        self, user_input, *, reconfiguring_entry_id: str | None = None
+        self, user_input, *, reconfigure_entry=None
     ) -> tuple[str | None, dict]:
         """Validate a Modbus connection and return (error, entry data).
 
-        `reconfiguring_entry_id` is the entry a reconfigure flow is editing.
-        The unique ID is connection-address-derived here (unlike the cloud
-        path's account-key one), so editing an entry back to its own
-        current address must not read as "already configured" against
-        itself -- only a collision with a genuinely different entry should
-        abort.
+        `reconfigure_entry` is the entry a reconfigure flow is editing (None
+        for a fresh setup). The unique ID is connection-address-derived here
+        (unlike the cloud path's account-key one), so editing an entry back
+        to its own current address must not read as "already configured"
+        against itself -- only a collision with a genuinely different entry
+        should abort.
         """
         unit_id = int(user_input[CONF_MODBUS_UNIT])
         _LOGGER.debug(
@@ -652,13 +750,35 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                 CONF_MODBUS_DEVICE: device,
                 CONF_MODBUS_BAUDRATE: baudrate,
             }
+            stored_framer = None
         else:
             host = user_input[CONF_MODBUS_HOST]
             port = int(user_input[CONF_MODBUS_PORT])
             unique_id = f"{host}:{port}:{unit_id}"
             title = f"HYXI Modbus ({host})"
             data = {CONF_MODBUS_HOST: host, CONF_MODBUS_PORT: port}
+            # On the TCP path only the shared-bus probe (reconfigure only)
+            # reads `params`; the standalone probe builds its own per framer.
+            # The framer is detected, never asked, so on a same-bus
+            # reconfigure carry the coordinator's proven one forward -- built
+            # into `params` here, or async_get_temporary_unit refuses to bind
+            # it as a link-settings change.
+            stored_framer = (
+                reconfigure_entry.data.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER)
+                if reconfigure_entry
+                else DEFAULT_MODBUS_FRAMER
+            )
+            params = modbus_params(
+                {
+                    **user_input,
+                    CONF_MODBUS_TYPE: MODBUS_TYPE_TCP,
+                    CONF_MODBUS_FRAMER: stored_framer,
+                }
+            )
 
+        reconfiguring_entry_id = (
+            reconfigure_entry.entry_id if reconfigure_entry else None
+        )
         await self.async_set_unique_id(unique_id, raise_on_progress=False)
         existing = self.hass.config_entries.async_entry_for_domain_unique_id(
             self.handler, unique_id
@@ -671,7 +791,12 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             # against its own entry.
             self._abort_if_unique_id_configured()
 
-        if is_serial:
+        shared = await self._probe_on_shared_bus(params, unit_id, reconfigure_entry)
+        if shared is not None:
+            error, family = shared
+            if not is_serial:
+                data[CONF_MODBUS_FRAMER] = stored_framer
+        elif is_serial:
             error, family = await self._probe_and_detect_modbus(params, unit_id)
         else:
             error, family, framer = await self._probe_and_detect_modbus_tcp(
@@ -739,10 +864,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         errors = {}
         if user_input is not None:
             error, data = await self._validate_modbus(
-                user_input,
-                reconfiguring_entry_id=(
-                    reconfigure_entry.entry_id if reconfigure_entry else None
-                ),
+                user_input, reconfigure_entry=reconfigure_entry
             )
             if not error:
                 title = data.pop("_title")

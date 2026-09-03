@@ -7,6 +7,7 @@ test wanted and prove nothing about whether registers.py addresses and scales
 the device correctly.
 """
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -732,6 +733,304 @@ def _seeded_hybrid_connection() -> MockModbusConnection:
         }
     )
     return connection
+
+
+# --- Reconfigure probe: a reconfigure that keeps the same bus must detect
+# the family on the connection the loaded coordinator is already polling,
+# not open a second master on the wire. -----------------------------------
+
+
+async def _setup_and_start_reconfigure_tcp(hass, entry):
+    """Set `entry` up for real, then open its reconfigure flow at the TCP step."""
+    from homeassistant.config_entries import SOURCE_RECONFIGURE
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    flow = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id}
+    )
+    return await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {"modbus_type": "tcp"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_that_keeps_the_bus_probes_on_the_shared_connection(hass):
+    """A reconfigure that leaves host/port unchanged detects the family on
+    the coordinator's own connection -- no second connection is opened, and
+    the family is still re-verified."""
+    from homeassistant.components.modbus.connection import DATA_MODBUS_CONNECTIONS
+    from homeassistant.data_entry_flow import FlowResultType
+
+    entry = _modbus_entry(
+        hass, modbus_family="halo", modbus_framer="socket", modbus_unit=1
+    )
+    hass.config_entries.async_update_entry(entry, unique_id="192.168.1.50:502:1")
+
+    built: list[object] = []
+    conn = _seeded_connection()
+
+    def _make(*_args, **_kwargs):
+        built.append(conn)
+        return conn
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection", side_effect=_make
+    ):
+        flow = await _setup_and_start_reconfigure_tcp(hass, entry)
+
+        endpoint = ("tcp", "192.168.1.50", 502)
+        assert hass.data[DATA_MODBUS_CONNECTIONS][endpoint].consumers == 1
+
+        with (
+            patch(
+                "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
+                "_probe_and_detect_modbus_tcp"
+            ) as standalone,
+            patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+        ):
+            flow = await hass.config_entries.flow.async_configure(
+                flow["flow_id"],
+                {
+                    "modbus_host": "192.168.1.50",
+                    "modbus_port": 502,
+                    "modbus_unit": 1,
+                },
+            )
+            await hass.async_block_till_done()
+
+    assert flow["type"] is FlowResultType.ABORT
+    assert flow["reason"] == "reconfigure_successful"
+    # The standalone probe was never used...
+    standalone.assert_not_called()
+    # ...only the coordinator's connection was ever built...
+    assert len(built) == 1
+    # ...and detection ran on it: a 1-register read at the family signature
+    # addresses, which the coordinator's block polling never issues.
+    reads = conn.for_unit(1).read_events
+    assert any(
+        e.register_type == "input" and e.address == 0 and e.count == 1 for e in reads
+    )
+    assert entry.data["modbus_family"] == "halo"
+    assert entry.data["modbus_framer"] == "socket"
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_to_a_different_bus_uses_the_standalone_probe(hass):
+    """Moving to another host has no overlap to avoid, so the standalone
+    probe (its own connection, framer sweep) still runs."""
+    entry = _modbus_entry(hass, modbus_family="halo", modbus_framer="socket")
+    hass.config_entries.async_update_entry(entry, unique_id="192.168.1.50:502:1")
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        flow = await _setup_and_start_reconfigure_tcp(hass, entry)
+
+        with (
+            patch(
+                "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
+                "_probe_and_detect_modbus_tcp",
+                return_value=(None, "halo", "socket"),
+            ) as standalone,
+            patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+        ):
+            flow = await hass.config_entries.flow.async_configure(
+                flow["flow_id"],
+                {
+                    "modbus_host": "192.168.1.60",
+                    "modbus_port": 502,
+                    "modbus_unit": 1,
+                },
+            )
+            await hass.async_block_till_done()
+
+    standalone.assert_called_once()
+    assert entry.data["modbus_host"] == "192.168.1.60"
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_falls_back_to_standalone_probe_when_the_bus_is_down(hass):
+    """A held connection that is not up right now -- a transient outage, or a
+    device swapped in under an unchanged address -- means nothing is polling
+    successfully, so the standalone probe (framer sweep, fast fail) takes over."""
+    entry = _modbus_entry(hass, modbus_family="halo", modbus_framer="socket")
+    hass.config_entries.async_update_entry(entry, unique_id="192.168.1.50:502:1")
+
+    conn = _seeded_connection()
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection", return_value=conn
+    ):
+        flow = await _setup_and_start_reconfigure_tcp(hass, entry)
+        conn.simulate_connection_lost()
+
+        with (
+            patch(
+                "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
+                "_probe_and_detect_modbus_tcp",
+                return_value=(None, "halo", "socket"),
+            ) as standalone,
+            patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+        ):
+            flow = await hass.config_entries.flow.async_configure(
+                flow["flow_id"],
+                {
+                    "modbus_host": "192.168.1.50",
+                    "modbus_port": 502,
+                    "modbus_unit": 1,
+                },
+            )
+            await hass.async_block_till_done()
+
+    standalone.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_to_another_unit_on_the_same_bus_paces_only_its_own_probe(
+    hass,
+):
+    """Pointing the entry at a different slave on the same wire probes that
+    slave on the shared connection, pacing the probe on its own unit key so
+    the coordinator's per-unit spacing is left intact, and clearing it after."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", modbus_framer="socket", modbus_unit=1
+    )
+    hass.config_entries.async_update_entry(entry, unique_id="192.168.1.50:502:1")
+
+    conn = _seeded_connection()
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection", return_value=conn
+    ):
+        flow = await _setup_and_start_reconfigure_tcp(hass, entry)
+        # The coordinator set the HALO inter-frame gap on unit 1.
+        assert conn.for_unit(1).message_spacing == 0.2
+
+        with (
+            patch(
+                "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
+                "_probe_and_detect_modbus_tcp"
+            ) as standalone,
+            patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+        ):
+            flow = await hass.config_entries.flow.async_configure(
+                flow["flow_id"],
+                {
+                    "modbus_host": "192.168.1.50",
+                    "modbus_port": 502,
+                    "modbus_unit": 2,
+                },
+            )
+            await hass.async_block_till_done()
+
+    standalone.assert_not_called()
+    assert entry.data["modbus_unit"] == 2
+    # The probe paced unit 2, then cleared it...
+    assert conn.for_unit(2).message_spacing == 0.0
+    # ...and never touched the coordinator's unit-1 gap.
+    assert conn.for_unit(1).message_spacing == 0.2
+    assert any(
+        e.register_type == "input" and e.address == 0 and e.count == 1
+        for e in conn.for_unit(2).read_events
+    )
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_changing_the_baud_rate_uses_the_standalone_probe(hass):
+    """New link settings on a bus a coordinator holds can't share its
+    connection -- async_get_temporary_unit raises, and the standalone probe
+    opens its own at the new settings."""
+    entry = _modbus_entry(
+        hass,
+        modbus_type="serial",
+        modbus_device="/dev/ttyUSB0",
+        modbus_baudrate=9600,
+        modbus_family="halo",
+        modbus_unit=1,
+    )
+    hass.config_entries.async_update_entry(entry, unique_id="/dev/ttyUSB0:1")
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        from homeassistant.config_entries import SOURCE_RECONFIGURE
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+        flow = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id}
+        )
+        flow = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {"modbus_type": "serial"}
+        )
+
+        with (
+            patch(
+                "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
+                "_probe_and_detect_modbus",
+                return_value=(None, "halo"),
+            ) as standalone,
+            patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
+        ):
+            flow = await hass.config_entries.flow.async_configure(
+                flow["flow_id"],
+                {
+                    "modbus_device": "/dev/ttyUSB0",
+                    "modbus_baudrate": "115200",
+                    "modbus_unit": 1,
+                },
+            )
+            await hass.async_block_till_done()
+
+    standalone.assert_called_once()
+    assert entry.data["modbus_baudrate"] == 115200
+
+
+@pytest.mark.asyncio
+async def test_reconfigure_shared_probe_fails_the_form_if_the_device_goes_silent(hass):
+    """The shared connection's read timeout is longer than the standalone
+    probe's, so the shared-bus probe bounds its own reads: a device that
+    stops answering mid-reconfigure fails the form rather than hanging it."""
+    from homeassistant.data_entry_flow import FlowResultType
+
+    entry = _modbus_entry(
+        hass, modbus_family="halo", modbus_framer="socket", modbus_unit=1
+    )
+    hass.config_entries.async_update_entry(entry, unique_id="192.168.1.50:502:1")
+
+    async def _hang(*_args, **_kwargs):
+        await asyncio.sleep(5)
+
+    conn = _seeded_connection()
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection", return_value=conn
+    ):
+        flow = await _setup_and_start_reconfigure_tcp(hass, entry)
+
+        with (
+            patch("custom_components.hyxi_cloud.config_flow.DETECTION_TIMEOUT", 0.01),
+            patch(
+                "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
+                "_detect_family_on_unit",
+                side_effect=_hang,
+            ),
+            patch(
+                "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
+                "_probe_and_detect_modbus_tcp"
+            ) as standalone,
+        ):
+            flow = await hass.config_entries.flow.async_configure(
+                flow["flow_id"],
+                {"modbus_host": "192.168.1.50", "modbus_port": 502, "modbus_unit": 1},
+            )
+
+    assert flow["type"] is FlowResultType.FORM
+    assert flow["errors"] == {"base": "cannot_connect"}
+    # The shared probe owned the outcome -- no standalone retry.
+    standalone.assert_not_called()
 
 
 @pytest.mark.asyncio

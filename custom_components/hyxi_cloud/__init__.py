@@ -104,8 +104,9 @@ async def _build_modbus_coordinator(
     # and closes when the last entry holding a unit on it unloads -- via a
     # callback it registers on `entry`. So nothing here constructs, holds or
     # closes a connection for the operational path, and teardown needs no code
-    # of ours; config_flow's one-shot probe is the sole exception, and builds
-    # its own deliberately (see _probe_and_detect_modbus).
+    # of ours. config_flow's one-shot probe builds its own for a fresh setup
+    # or a bus change (see _probe_and_detect_modbus), and shares this one for
+    # a reconfigure that keeps the bus (see _probe_on_shared_bus).
     #
     # Imported at call time, not module scope, so a cloud-only entry never
     # pulls in the Modbus stack (pymodbus included); via async_import_module
