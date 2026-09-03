@@ -88,11 +88,13 @@ class Target(NamedTuple):
 
 
 class RegisterRead(NamedTuple):
-    """The outcome of one read request."""
+    """The outcome of one read request. `raw` is the bytes that came back, kept
+    so the report can show exactly what an odd (non-ok) reply contained."""
 
     status: str  # "ok" | "exception" | "gateway" | "silent" | "unparsed"
     words: tuple[int, ...] = ()
     detail: str = ""
+    raw: bytes = b""
 
     @property
     def device_present(self) -> bool:
@@ -332,10 +334,10 @@ def probe(target: Target, framer: str, timeout: float, spacing: float) -> Attemp
         pdu = _extract_pdu(framer, raw, tid)
         if pdu is None:
             reads[step.address] = RegisterRead(
-                "unparsed", detail=f"{len(raw)} bytes, no valid {framer} reply"
+                "unparsed", detail=f"{len(raw)} bytes, no valid {framer} reply", raw=raw
             )
             return
-        reads[step.address] = _interpret(pdu)
+        reads[step.address] = _interpret(pdu)._replace(raw=raw)
 
     try:
         for step in SIGNATURE_PROBES:
@@ -403,7 +405,10 @@ def _format_read(address: int, read: RegisterRead) -> str:
             "silent": "no reply",
             "unparsed": "unreadable reply",
         }
-        return f"      {labels.get(read.status, read.status)} ({read.detail})"
+        text = f"      {labels.get(read.status, read.status)} ({read.detail})"
+        if read.raw:
+            text += f"\n      raw bytes: {read.raw.hex(' ')}"
+        return text
     lines = [
         f"      input {address + offset} = {word:5d}   0x{word:04X}"
         for offset, word in enumerate(read.words)
@@ -507,6 +512,8 @@ def _render_verdict(
             state = f"value {read.words[0]} (0x{read.words[0]:04X})"
         else:
             state = f"{read.status} -- {read.detail}"
+            if read.raw:
+                state += f"  [raw {read.raw.hex(' ')}]"
         lines.append(
             f"  {fam:<7} signature  input {address:<5d} [{description}]: {state}"
         )
