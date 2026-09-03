@@ -171,26 +171,33 @@ MODBUS_FAMILY_HYBRID = "hybrid"
 #   for the exact hardware this transport was built against.
 DEFAULT_MODBUS_FAMILY = MODBUS_FAMILY_HYBRID
 
-# One register from each family that's cheap and safe to read: HALO's BMS
-# SOC (input 4980, from the Micro Storage RS485 document V1.0) and the
-# hybrid's own communication protocol version (input 0, from the RS485_
-# MODBUS RTU Hybrid Inverter Protocol V4.1). A plausible value at either is
-# treated as identifying evidence; a Modbus exception response there still
-# proves the device is present and speaking Modbus, just not which family.
+# One register per family that's cheap and safe to read and lives outside
+# the other family's confirmed range: HALO's power on/off state (input 4100,
+# from the Micro Storage RS485 document V1.0) and the hybrid's own
+# communication protocol version (input 0, from the RS485_MODBUS RTU Hybrid
+# Inverter Protocol V4.1). A plausible value at either is treated as
+# identifying evidence; a Modbus exception -- or a zero-length read result,
+# which some inverters send instead -- still proves the device is present and
+# speaking Modbus, just not which family.
+#
+# Order and choice both changed after issue #611. A HALO whose BMS was
+# offline answered the old HALO signature (input 4980, BMS SOC) with nothing
+# at all, while answering the hybrid protocol-version register with a real
+# value -- so it was detected as a hybrid. switch_status is a core inverter
+# register that doesn't depend on the BMS, and checking HALO first means such
+# a unit is identified before the hybrid register is ever read.
 MODBUS_FAMILY_SIGNATURES: tuple[tuple[str, str, int], ...] = (
+    (MODBUS_FAMILY_HALO, "input", 4100),
     (MODBUS_FAMILY_HYBRID, "input", 0),
-    (MODBUS_FAMILY_HALO, "input", 4980),
 )
 
-# HALO's soc field (registers.py) is a documented unsigned 0-100% gauge at
-# x0.1 scale, so its raw register value can only ever be 0-1000. A value
-# outside that range at the SOC signature register isn't a HALO answering
-# with an odd reading -- it's some other device having *something* at that
-# address, which the document gives no reason to expect. The hybrid protocol
-# version is a positive version number. Zero is commonly
+# HALO's switch_status (registers.py) is a documented on/off flag -- 0 or 1,
+# nothing else. A value outside that at the signature register isn't a HALO
+# answering oddly, it's some other device having *something* at that address.
+# The hybrid protocol version is a positive version number; zero is commonly
 # returned by gateways/devices for an unmapped register, including HALO, so it
 # must not identify a device as hybrid.
-HALO_SOC_SIGNATURE_MAX_RAW = 1000
+HALO_SWITCH_SIGNATURE_MAX_RAW = 1
 HYBRID_PROTOCOL_SIGNATURE_MIN_RAW = 1
 
 # Minimum inter-frame spacing per family. The HALO document requires more

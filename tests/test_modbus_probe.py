@@ -21,8 +21,8 @@ from tools import hyxi_family_check as fc
 from tools import modbus_probe as mp
 
 # A "reading" is one signature register's result: ("value", n) for a plausible
-# read, or ("exception",) / ("gateway",) / ("timeout",) for the failure modes
-# config_flow._read_modbus_signature distinguishes.
+# read, or ("exception",) / ("malformed",) / ("gateway",) / ("timeout",) for
+# the failure modes config_flow._read_modbus_signature distinguishes.
 
 
 def fc_signature_read(reading):
@@ -32,28 +32,31 @@ def fc_signature_read(reading):
         return fc.RegisterRead("ok", words=(reading[1],))
     if kind == "timeout":
         return fc.RegisterRead("silent")
-    return fc.RegisterRead(kind)  # "exception" | "gateway"
+    return fc.RegisterRead(kind)  # "exception" | "malformed" | "gateway"
 
 
 def mp_signature_outcome(reading):
-    """Turn a reading into the object modbus_probe.classify_family expects."""
+    """Turn a reading into the object modbus_probe.classify_family expects.
+
+    `kind` is "exception" | "malformed" | "gateway" | "timeout" for a failure.
+    """
     kind = reading[0]
     if kind == "value":
         return mp.SignatureOutcome("value", value=reading[1])
-    return mp.SignatureOutcome(kind)  # "exception" | "gateway" | "timeout"
+    return mp.SignatureOutcome(kind)
 
 
-def fc_signature_list(reg0, reg4980):
+def fc_signature_list(reg4100, reg0):
     return [
+        ("halo", 4100, "switch state", fc_signature_read(reg4100)),
         ("hybrid", 0, "protocol version", fc_signature_read(reg0)),
-        ("halo", 4980, "state of charge", fc_signature_read(reg4980)),
     ]
 
 
-def mp_signature_list(reg0, reg4980):
+def mp_signature_list(reg4100, reg0):
     return [
+        ("halo", 4100, "switch state", mp_signature_outcome(reg4100)),
         ("hybrid", 0, "protocol version", mp_signature_outcome(reg0)),
-        ("halo", 4980, "state of charge", mp_signature_outcome(reg4980)),
     ]
 
 
@@ -67,7 +70,7 @@ def test_signature_registers_track_the_shipped_constant():
 
 @pytest.mark.parametrize("module", [fc, mp], ids=["hyxi_family_check", "modbus_probe"])
 def test_plausibility_bounds_track_the_shipped_constants(module):
-    assert module.HALO_SOC_SIGNATURE_MAX_RAW == const.HALO_SOC_SIGNATURE_MAX_RAW
+    assert module.HALO_SWITCH_SIGNATURE_MAX_RAW == const.HALO_SWITCH_SIGNATURE_MAX_RAW
     assert (
         module.HYBRID_PROTOCOL_SIGNATURE_MIN_RAW
         == const.HYBRID_PROTOCOL_SIGNATURE_MIN_RAW
@@ -135,8 +138,8 @@ def test_family_check_frame_parsing(framer, raw, tid, expected):
         (b"\x04\x04\x00\x01\x00\x02", "ok", (1, 2)),
         (b"\x84\x02", "exception", ()),
         (b"\x84\x0b", "gateway", ()),
-        (b"\x04\x00", "unparsed", ()),  # empty read -- some devices, missing register
-        (b"\x04\x03\x00\x01\x02", "unparsed", ()),  # odd byte count: not half-decoded
+        (b"\x04\x00", "malformed", ()),  # zero-length read -- device present, no data
+        (b"\x04\x03\x00\x01\x02", "malformed", ()),  # odd byte count: not half-decoded
         (b"\x03\x02\x00\x01", "unparsed", ()),  # not function 0x04
     ],
     ids=[
@@ -144,7 +147,7 @@ def test_family_check_frame_parsing(framer, raw, tid, expected):
         "two-regs",
         "exception",
         "gateway",
-        "empty",
+        "zero-length",
         "odd-count",
         "wrong-fc",
     ],
@@ -152,3 +155,10 @@ def test_family_check_frame_parsing(framer, raw, tid, expected):
 def test_family_check_interpret(pdu, status, words):
     read = fc._interpret(pdu)
     assert (read.status, read.words) == (status, words)
+
+
+def test_family_check_malformed_reply_still_counts_as_device_present():
+    # Mirrors config_flow._read_modbus_signature treating ModbusProtocolError
+    # as "device answered, not this family".
+    assert fc.RegisterRead("malformed").device_present is True
+    assert mp.SignatureOutcome("malformed").device_present is True

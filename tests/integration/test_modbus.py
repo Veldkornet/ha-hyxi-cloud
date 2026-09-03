@@ -16,9 +16,13 @@ from homeassistant.helpers import entity_registry as er
 from modbus_connection import IllegalDataAddressError
 from modbus_connection.pytest_plugin import MockModbusConnection
 
-from custom_components.hyxi_cloud.const import DOMAIN
+from custom_components.hyxi_cloud.const import DOMAIN, MODBUS_FAMILY_SIGNATURES
 from custom_components.hyxi_cloud.modbus.client import HyxiModbusClient
 from custom_components.hyxi_cloud.modbus.registers import HaloBattery, HaloGrid
+
+_SIGNATURE_ADDRESSES = {
+    address for _family, _space, address in MODBUS_FAMILY_SIGNATURES
+}
 
 
 def _words(value: int, count: int = 2) -> list[int]:
@@ -806,11 +810,14 @@ async def test_reconfigure_that_keeps_the_bus_probes_on_the_shared_connection(ha
     standalone.assert_not_called()
     # ...only the coordinator's connection was ever built...
     assert len(built) == 1
-    # ...and detection ran on it: a 1-register read at the family signature
-    # addresses, which the coordinator's block polling never issues.
+    # ...and detection ran on it: a 1-register read at a family signature
+    # address, which the coordinator's block polling never issues.
     reads = conn.for_unit(1).read_events
     assert any(
-        e.register_type == "input" and e.address == 0 and e.count == 1 for e in reads
+        e.register_type == "input"
+        and e.address in _SIGNATURE_ADDRESSES
+        and e.count == 1
+        for e in reads
     )
     assert entry.data["modbus_family"] == "halo"
     assert entry.data["modbus_framer"] == "socket"
@@ -931,7 +938,9 @@ async def test_reconfigure_to_another_unit_on_the_same_bus_uses_the_shared_conne
     assert entry.data["modbus_unit"] == 2
     # The probe read unit 2 on the shared connection...
     assert any(
-        e.register_type == "input" and e.address == 0 and e.count == 1
+        e.register_type == "input"
+        and e.address in _SIGNATURE_ADDRESSES
+        and e.count == 1
         for e in conn.for_unit(2).read_events
     )
     # ...without touching any unit's pacing -- unit 2 was never set, and the

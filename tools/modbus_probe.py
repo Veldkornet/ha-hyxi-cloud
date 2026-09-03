@@ -94,12 +94,14 @@ ABSENT_ERRORS = (IllegalDataAddressError,)
 
 # What `detect` reads, mirrored from custom_components/hyxi_cloud/const.py --
 # MODBUS_FAMILY_SIGNATURES and the two plausibility bounds. Keep them in step.
-# Hybrid is tried first, so a device that answers both is called a hybrid.
+# HALO is checked first, on switch_status rather than a BMS register -- a HALO
+# with an offline BMS answers nothing in the BMS range while still answering
+# the hybrid protocol-version register.
 DETECT_SIGNATURES = (
+    ("halo", "input", 4100, "power on/off state"),
     ("hybrid", "input", 0, "communication protocol version"),
-    ("halo", "input", 4980, "BMS state-of-charge"),
 )
-HALO_SOC_SIGNATURE_MAX_RAW = 1000
+HALO_SWITCH_SIGNATURE_MAX_RAW = 1
 HYBRID_PROTOCOL_SIGNATURE_MIN_RAW = 1
 
 # `detect` paces itself off the integration's setup probe, not the sweep
@@ -509,7 +511,7 @@ def run_show(args: argparse.Namespace) -> int:
 class SignatureOutcome(NamedTuple):
     """What one family-signature read produced."""
 
-    kind: str  # "value" | "exception" | "gateway" | "timeout"
+    kind: str  # "value" | "exception" | "malformed" | "gateway" | "timeout"
     value: int | None = None
     detail: str = ""
 
@@ -518,17 +520,18 @@ class SignatureOutcome(NamedTuple):
         """Whether this proves a device answered, for detection's purposes.
 
         A plain Modbus exception does -- something replied and rejected the
-        register. A gateway target-failure or a timeout does not. Mirrors
-        config_flow._read_modbus_signature.
+        register. So does a malformed reply (ModbusProtocolError -- typically
+        a zero-length read result). A gateway target-failure or a timeout
+        does not. Mirrors config_flow._read_modbus_signature.
         """
-        return self.kind in ("value", "exception")
+        return self.kind in ("value", "exception", "malformed")
 
 
 async def _read_signature(unit: Any, space: str, address: int) -> SignatureOutcome:
     """Read one signature register the way config_flow._read_modbus_signature does.
 
-    Catches exactly what that method catches. A link error (ModbusConnectionError,
-    a corrupt frame) is left to propagate, the same way it reaches
+    Catches exactly what that method catches. A residual link error
+    (ModbusConnectionError) is left to propagate, the same way it reaches
     _detect_family_on_unit's own handler and becomes "cannot_connect" -- run_detect
     turns it into a single clear line rather than a misleading "no_device".
     """
@@ -541,6 +544,8 @@ async def _read_signature(unit: Any, space: str, address: int) -> SignatureOutco
         return SignatureOutcome("gateway", detail=type(err).__name__)
     except ModbusExceptionError as err:
         return SignatureOutcome("exception", detail=type(err).__name__)
+    except ModbusProtocolError as err:
+        return SignatureOutcome("malformed", detail=type(err).__name__)
     except ModbusTimeoutError:
         return SignatureOutcome("timeout")
     return SignatureOutcome("value", value=words[0])
@@ -552,7 +557,7 @@ def classify_family(
     """Reproduce config_flow._detect_family_on_unit. Returns (family, reason).
 
     `outcomes` is (family, address, description, outcome) in DETECT_SIGNATURES
-    order -- hybrid first.
+    order -- HALO first.
     """
     device_present = False
     skipped: list[str] = []
@@ -561,10 +566,10 @@ def classify_family(
         value = outcome.value
         if value is None:
             continue
-        if family == "halo" and not 0 <= value <= HALO_SOC_SIGNATURE_MAX_RAW:
+        if family == "halo" and not 0 <= value <= HALO_SWITCH_SIGNATURE_MAX_RAW:
             skipped.append(
-                f"input {address}={value} is outside 0..{HALO_SOC_SIGNATURE_MAX_RAW}, "
-                "not a raw SOC reading"
+                f"input {address}={value} is outside 0..{HALO_SWITCH_SIGNATURE_MAX_RAW}, "
+                "not a switch on/off state"
             )
             continue
         if family == "hybrid" and value < HYBRID_PROTOCOL_SIGNATURE_MIN_RAW:
