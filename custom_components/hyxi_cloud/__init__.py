@@ -228,6 +228,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _remove_legacy_select_entities(hass, coordinator.data)
     _migrate_vpp_dispatch_to_work_mode(hass, entry, coordinator.data)
     _migrate_battery_sensor_unique_ids(hass, entry, coordinator.data)
+    _merge_duplicate_battery_energy_sensors(hass, entry)
     _migrate_microinverter_sum_identifiers(hass, entry)
     _remove_work_mode_sensor_for_modbus(hass, entry, coordinator.data)
     _remove_alarm_entities_for_modbus(hass, entry, coordinator.data)
@@ -659,6 +660,57 @@ def _migrate_battery_sensor_unique_ids(
         _rekey_registry_entity(
             registry, "sensor", reg_entry.unique_id, f"hyxi_{inverter_sn}_{key}"
         )
+
+
+#: Legacy battery-energy keys and the canonical key each duplicates. HYXI
+#: sends one lifetime counter under a poll name, a push name and the SDK
+#: alias; only the alias keeps an entity.
+_DUPLICATE_ENERGY_KEYS = {
+    "totalEchg": "bat_charge_total",
+    "batCharge": "bat_charge_total",
+    "totalEdchg": "bat_discharge_total",
+    "batDisCharge": "bat_discharge_total",
+}
+
+
+def _merge_duplicate_battery_energy_sensors(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Collapse the triplicate lifetime battery-energy sensors to one pair.
+
+    ``totalEchg``/``batCharge`` (and the discharge equivalents) always held
+    the exact value of ``bat_charge_total``/``bat_discharge_total``. Only the
+    canonical key gets an entity now: keep the canonical registry row (the
+    one wired into the Energy dashboard) and drop the duplicates, or promote
+    a duplicate if the canonical was never created. Idempotent, and
+    independent of the old batSn-vs-inverter keying since it matches on the
+    suffix.
+
+    Removed entities take their history with them -- a dashboard card
+    pointing at a ``..._totalechg`` / ``..._batcharge`` sensor needs
+    repointing to the ``..._bat_charge_total`` pair.
+    """
+    registry = er.async_get(hass)
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if reg_entry.domain != "sensor" or not reg_entry.unique_id.startswith("hyxi_"):
+            continue
+        for dupe_key, canonical_key in _DUPLICATE_ENERGY_KEYS.items():
+            if not reg_entry.unique_id.endswith(f"_{dupe_key}"):
+                continue
+            canonical_uid = reg_entry.unique_id[: -len(dupe_key)] + canonical_key
+            if registry.async_get_entity_id("sensor", DOMAIN, canonical_uid):
+                _LOGGER.debug(
+                    "Removing duplicate battery-energy sensor %s (%s exists)",
+                    reg_entry.entity_id,
+                    canonical_uid,
+                )
+                registry.async_remove(reg_entry.entity_id)
+            else:
+                _LOGGER.debug("Re-keying %s -> %s", reg_entry.unique_id, canonical_uid)
+                registry.async_update_entity(
+                    reg_entry.entity_id, new_unique_id=canonical_uid
+                )
+            break
 
 
 def _migrate_microinverter_sum_identifiers(

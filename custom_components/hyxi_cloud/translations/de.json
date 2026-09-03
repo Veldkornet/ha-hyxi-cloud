@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Batterie-Entladeleistung"
       },
-      "batcharge": {
-        "name": "Tägliche Ladeenergie"
-      },
-      "batdischarge": {
-        "name": "Tägliche Entladeenergie"
-      },
-      "totalechg": {
-        "name": "Gesamte Ladeenergie"
-      },
-      "totaledchg": {
-        "name": "Gesamte Entladeenergie"
-      },
       "ratedfrequency": {
         "name": "Nennfrequenz"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Gesamter Tagesertrag der Mikrowechselrichter"
+      },
+      "bat_charge_today": {
+        "name": "Batterieladung heute"
+      },
+      "bat_charge_week": {
+        "name": "Batterieladung diese Woche"
+      },
+      "bat_charge_month": {
+        "name": "Batterieladung diesen Monat"
+      },
+      "bat_charge_year": {
+        "name": "Batterieladung dieses Jahr"
+      },
+      "bat_discharge_today": {
+        "name": "Batterieentladung heute"
+      },
+      "bat_discharge_week": {
+        "name": "Batterieentladung diese Woche"
+      },
+      "bat_discharge_month": {
+        "name": "Batterieentladung diesen Monat"
+      },
+      "bat_discharge_year": {
+        "name": "Batterieentladung dieses Jahr"
+      },
+      "grid_import_today": {
+        "name": "Netzbezug heute"
+      },
+      "grid_export_today": {
+        "name": "Netzeinspeisung heute"
+      },
+      "home_load_today": {
+        "name": "Hausverbrauch heute"
       }
     },
     "number": {

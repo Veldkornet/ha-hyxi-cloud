@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Batterij ontlaadvermogen"
       },
-      "batcharge": {
-        "name": "Dagelijkse laadenergie"
-      },
-      "batdischarge": {
-        "name": "Dagelijkse ontlaadenergie"
-      },
-      "totalechg": {
-        "name": "Totale laadenergie"
-      },
-      "totaledchg": {
-        "name": "Totale ontlaadenergie"
-      },
       "ratedfrequency": {
         "name": "Nominale frequentie"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Totale dagelijkse opbrengst microomvormers"
+      },
+      "bat_charge_today": {
+        "name": "Batterijlading vandaag"
+      },
+      "bat_charge_week": {
+        "name": "Batterijlading deze week"
+      },
+      "bat_charge_month": {
+        "name": "Batterijlading deze maand"
+      },
+      "bat_charge_year": {
+        "name": "Batterijlading dit jaar"
+      },
+      "bat_discharge_today": {
+        "name": "Batterijontlading vandaag"
+      },
+      "bat_discharge_week": {
+        "name": "Batterijontlading deze week"
+      },
+      "bat_discharge_month": {
+        "name": "Batterijontlading deze maand"
+      },
+      "bat_discharge_year": {
+        "name": "Batterijontlading dit jaar"
+      },
+      "grid_import_today": {
+        "name": "Netafname vandaag"
+      },
+      "grid_export_today": {
+        "name": "Netinvoeding vandaag"
+      },
+      "home_load_today": {
+        "name": "Huisverbruik vandaag"
       }
     },
     "number": {

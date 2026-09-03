@@ -1817,6 +1817,9 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                             "custom_components.hyxi_cloud.__init__._migrate_battery_sensor_unique_ids"
                         ),
                         patch(
+                            "custom_components.hyxi_cloud.__init__._merge_duplicate_battery_energy_sensors"
+                        ),
+                        patch(
                             "custom_components.hyxi_cloud.__init__._migrate_microinverter_sum_identifiers"
                         ),
                     ):

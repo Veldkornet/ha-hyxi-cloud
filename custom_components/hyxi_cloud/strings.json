@@ -192,6 +192,30 @@
       "bat_discharge_total": {
         "name": "Total Battery Discharge"
       },
+      "bat_charge_today": {
+        "name": "Battery Charge Today"
+      },
+      "bat_charge_week": {
+        "name": "Battery Charge This Week"
+      },
+      "bat_charge_month": {
+        "name": "Battery Charge This Month"
+      },
+      "bat_charge_year": {
+        "name": "Battery Charge This Year"
+      },
+      "bat_discharge_today": {
+        "name": "Battery Discharge Today"
+      },
+      "bat_discharge_week": {
+        "name": "Battery Discharge This Week"
+      },
+      "bat_discharge_month": {
+        "name": "Battery Discharge This Month"
+      },
+      "bat_discharge_year": {
+        "name": "Battery Discharge This Year"
+      },
       "batsoh": {
         "name": "Battery State of Health"
       },
@@ -273,6 +297,15 @@
       },
       "efpv": {
         "name": "Yield Today (PV)"
+      },
+      "grid_import_today": {
+        "name": "Grid Import Today"
+      },
+      "grid_export_today": {
+        "name": "Grid Export Today"
+      },
+      "home_load_today": {
+        "name": "Home Consumption Today"
       },
       "ph1loadp": {
         "name": "Phase 1 Load"
@@ -585,18 +618,6 @@
       },
       "batdischargep": {
         "name": "Battery Discharge Power"
-      },
-      "batcharge": {
-        "name": "Daily Charging Energy"
-      },
-      "batdischarge": {
-        "name": "Daily Discharging Energy"
-      },
-      "totalechg": {
-        "name": "Total Charging Energy"
-      },
-      "totaledchg": {
-        "name": "Total Discharging Energy"
       },
       "ratedfrequency": {
         "name": "Rated Frequency"

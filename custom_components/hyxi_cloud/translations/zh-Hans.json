@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "电池放电功率"
       },
-      "batcharge": {
-        "name": "日充电量"
-      },
-      "batdischarge": {
-        "name": "日放电量"
-      },
-      "totalechg": {
-        "name": "总充电量"
-      },
-      "totaledchg": {
-        "name": "总放电量"
-      },
       "ratedfrequency": {
         "name": "额定频率"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "微型逆变器今日总发电量"
+      },
+      "bat_charge_today": {
+        "name": "今日电池充电量"
+      },
+      "bat_charge_week": {
+        "name": "本周电池充电量"
+      },
+      "bat_charge_month": {
+        "name": "本月电池充电量"
+      },
+      "bat_charge_year": {
+        "name": "今年电池充电量"
+      },
+      "bat_discharge_today": {
+        "name": "今日电池放电量"
+      },
+      "bat_discharge_week": {
+        "name": "本周电池放电量"
+      },
+      "bat_discharge_month": {
+        "name": "本月电池放电量"
+      },
+      "bat_discharge_year": {
+        "name": "今年电池放电量"
+      },
+      "grid_import_today": {
+        "name": "今日电网购电量"
+      },
+      "grid_export_today": {
+        "name": "今日电网售电量"
+      },
+      "home_load_today": {
+        "name": "今日家庭用电量"
       }
     },
     "number": {

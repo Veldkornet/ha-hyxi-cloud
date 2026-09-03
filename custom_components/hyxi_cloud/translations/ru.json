@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Мощность разряда батареи"
       },
-      "batcharge": {
-        "name": "Ежедневная энергия заряда"
-      },
-      "batdischarge": {
-        "name": "Ежедневная энергия разряда"
-      },
-      "totalechg": {
-        "name": "Общая энергия заряда"
-      },
-      "totaledchg": {
-        "name": "Общая энергия разряда"
-      },
       "ratedfrequency": {
         "name": "Номинальная частота"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Суммарная суточная выработка микроинверторов"
+      },
+      "bat_charge_today": {
+        "name": "Заряд батареи сегодня"
+      },
+      "bat_charge_week": {
+        "name": "Заряд батареи на этой неделе"
+      },
+      "bat_charge_month": {
+        "name": "Заряд батареи в этом месяце"
+      },
+      "bat_charge_year": {
+        "name": "Заряд батареи в этом году"
+      },
+      "bat_discharge_today": {
+        "name": "Разряд батареи сегодня"
+      },
+      "bat_discharge_week": {
+        "name": "Разряд батареи на этой неделе"
+      },
+      "bat_discharge_month": {
+        "name": "Разряд батареи в этом месяце"
+      },
+      "bat_discharge_year": {
+        "name": "Разряд батареи в этом году"
+      },
+      "grid_import_today": {
+        "name": "Потребление из сети сегодня"
+      },
+      "grid_export_today": {
+        "name": "Отдача в сеть сегодня"
+      },
+      "home_load_today": {
+        "name": "Домашнее потребление сегодня"
       }
     },
     "number": {

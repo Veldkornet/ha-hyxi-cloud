@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Akun purkuteho"
       },
-      "batcharge": {
-        "name": "Päivittäinen latausenergia"
-      },
-      "batdischarge": {
-        "name": "Päivittäinen purkuenergia"
-      },
-      "totalechg": {
-        "name": "Kokonaislatausenergia"
-      },
-      "totaledchg": {
-        "name": "Kokonaispurkuenergia"
-      },
       "ratedfrequency": {
         "name": "Nimellistaajuus"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Mikroinverttereiden kokonaispäivätuotto"
+      },
+      "bat_charge_today": {
+        "name": "Akun lataus tänään"
+      },
+      "bat_charge_week": {
+        "name": "Akun lataus tällä viikolla"
+      },
+      "bat_charge_month": {
+        "name": "Akun lataus tässä kuussa"
+      },
+      "bat_charge_year": {
+        "name": "Akun lataus tänä vuonna"
+      },
+      "bat_discharge_today": {
+        "name": "Akun purku tänään"
+      },
+      "bat_discharge_week": {
+        "name": "Akun purku tällä viikolla"
+      },
+      "bat_discharge_month": {
+        "name": "Akun purku tässä kuussa"
+      },
+      "bat_discharge_year": {
+        "name": "Akun purku tänä vuonna"
+      },
+      "grid_import_today": {
+        "name": "Verkosta otto tänään"
+      },
+      "grid_export_today": {
+        "name": "Verkkoon syöttö tänään"
+      },
+      "home_load_today": {
+        "name": "Kodin kulutus tänään"
       }
     },
     "number": {

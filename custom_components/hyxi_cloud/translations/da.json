@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Batteri afladningseffekt"
       },
-      "batcharge": {
-        "name": "Daglig opladningsenergi"
-      },
-      "batdischarge": {
-        "name": "Daglig afladningsenergi"
-      },
-      "totalechg": {
-        "name": "Total opladningsenergi"
-      },
-      "totaledchg": {
-        "name": "Total afladningsenergi"
-      },
       "ratedfrequency": {
         "name": "Nominel frekvens"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Samlet daglig ydelse for mikroinvertere"
+      },
+      "bat_charge_today": {
+        "name": "Batteriopladning i dag"
+      },
+      "bat_charge_week": {
+        "name": "Batteriopladning denne uge"
+      },
+      "bat_charge_month": {
+        "name": "Batteriopladning denne måned"
+      },
+      "bat_charge_year": {
+        "name": "Batteriopladning i år"
+      },
+      "bat_discharge_today": {
+        "name": "Batteriafladning i dag"
+      },
+      "bat_discharge_week": {
+        "name": "Batteriafladning denne uge"
+      },
+      "bat_discharge_month": {
+        "name": "Batteriafladning denne måned"
+      },
+      "bat_discharge_year": {
+        "name": "Batteriafladning i år"
+      },
+      "grid_import_today": {
+        "name": "Netimport i dag"
+      },
+      "grid_export_today": {
+        "name": "Neteksport i dag"
+      },
+      "home_load_today": {
+        "name": "Husforbrug i dag"
       }
     },
     "number": {

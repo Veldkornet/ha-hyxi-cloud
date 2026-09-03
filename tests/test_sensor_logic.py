@@ -1083,10 +1083,8 @@ async def test_new_telemetry_keys_registration_and_parsing():
                 "batTcl": "22.1",  # float (battery)
                 "batIcm": "50.0",  # float (battery)
                 "batIdm": "100.0",  # float (battery)
-                "batCharge": "15.5",  # float (battery)
-                "batDisCharge": "12.3",  # float (battery)
-                "totalEchg": "1500.5",  # float (battery)
-                "totalEdchg": "1200.2",  # float (battery)
+                "bat_charge_total": "1500.5",  # float (battery)
+                "bat_discharge_total": "1200.2",  # float (battery)
                 "batP": "150.7",  # float (battery)
                 "ratedFrequency": "50",  # integer (from queryDeviceInfo)
                 "batSn": "BAT_REAL_123",
@@ -1137,10 +1135,8 @@ async def test_new_telemetry_keys_registration_and_parsing():
         "batTcl",
         "batIcm",
         "batIdm",
-        "batCharge",
-        "batDisCharge",
-        "totalEchg",
-        "totalEdchg",
+        "bat_charge_total",
+        "bat_discharge_total",
         "batP",
         "ratedFrequency",
     ]
@@ -1171,10 +1167,8 @@ async def test_new_telemetry_keys_registration_and_parsing():
         "batTcl",
         "batIcm",
         "batIdm",
-        "batCharge",
-        "batDisCharge",
-        "totalEchg",
-        "totalEdchg",
+        "bat_charge_total",
+        "bat_discharge_total",
         "batP",
     ]
     for key in battery_keys:
@@ -1509,3 +1503,170 @@ async def test_async_setup_entry_em_and_battery_options(monkeypatch):
     assert "p1_average" in registered_keys
     # last_sent_mode sensor should be registered
     assert "hyxi_INV123_last_sent_mode" in registered_keys
+
+
+# --- HyxiBatteryEnergyPeriodSensor ----------------------------------------
+
+
+def _period_sensor(direction="charge", period="today", metrics=None):
+    coordinator = MagicMock()
+    coordinator.data = {"INV1": {"metrics": dict(metrics or {})}}
+    return sensor_mod.HyxiBatteryEnergyPeriodSensor(
+        coordinator, "INV1", direction, period
+    )
+
+
+def _at(sensor, moment):
+    with patch("custom_components.hyxi_cloud.sensor.dt_util.now", return_value=moment):
+        sensor._recompute()
+
+
+@pytest.mark.parametrize(
+    ("period", "expected_month", "expected_day"),
+    [("today", 9, 3), ("week", 8, 31), ("month", 9, 1), ("year", 1, 1)],
+)
+def test_period_start_boundaries(period, expected_month, expected_day):
+    from datetime import UTC
+
+    moment = datetime(2026, 9, 3, 14, 30, tzinfo=UTC)
+    start = sensor_mod._period_start(moment, period)
+    assert (start.month, start.day) == (expected_month, expected_day)
+    assert (start.hour, start.minute, start.second) == (0, 0, 0)
+
+
+def test_period_sensor_derives_delta_from_lifetime_counter():
+    from datetime import UTC
+
+    sensor = _period_sensor(metrics={"bat_charge_total": 100.0})
+    _at(sensor, datetime(2026, 9, 3, 12, 0, tzinfo=UTC))
+    assert sensor.native_value == 0.0  # anchored on the first read
+
+    sensor.coordinator.data["INV1"]["metrics"]["bat_charge_total"] = 104.5
+    _at(sensor, datetime(2026, 9, 3, 18, 0, tzinfo=UTC))
+    assert sensor.native_value == 4.5
+
+
+def test_period_sensor_rolls_over_at_the_period_boundary():
+    from datetime import UTC
+
+    sensor = _period_sensor(period="today", metrics={"bat_charge_total": 100.0})
+    _at(sensor, datetime(2026, 9, 3, 23, 0, tzinfo=UTC))
+
+    sensor.coordinator.data["INV1"]["metrics"]["bat_charge_total"] = 108.0
+    _at(sensor, datetime(2026, 9, 4, 1, 0, tzinfo=UTC))
+    # Re-anchored to the last pre-boundary reading (100), not the first one
+    # after (108), so the 8 kWh gained across the gap isn't dropped.
+    assert sensor._anchor == 100.0
+    assert sensor.native_value == 8.0
+
+
+def test_period_sensor_prefers_the_device_daily_counter():
+    from datetime import UTC
+
+    sensor = _period_sensor(
+        period="today",
+        metrics={"bat_charge_total": 900.0, "bat_charge_today": 6.2},
+    )
+    _at(sensor, datetime(2026, 9, 3, 12, 0, tzinfo=UTC))
+    assert sensor.native_value == 6.2
+    assert sensor._anchor is None  # derivation path never taken
+
+
+def test_period_sensor_week_ignores_the_device_daily_counter():
+    from datetime import UTC
+
+    sensor = _period_sensor(
+        direction="discharge",
+        period="week",
+        metrics={"bat_discharge_total": 50.0, "bat_discharge_today": 3.0},
+    )
+    _at(sensor, datetime(2026, 9, 3, 12, 0, tzinfo=UTC))
+    assert sensor.native_value == 0.0  # derived from the lifetime counter
+
+
+def test_period_sensor_survives_a_single_spurious_low_reading():
+    from datetime import UTC
+
+    sensor = _period_sensor(metrics={"bat_charge_total": 40.0})
+    _at(sensor, datetime(2026, 9, 3, 12, 0, tzinfo=UTC))
+    sensor.coordinator.data["INV1"]["metrics"]["bat_charge_total"] = 44.0
+    _at(sensor, datetime(2026, 9, 3, 12, 5, tzinfo=UTC))
+    assert sensor.native_value == 4.0
+
+    # One near-zero sample then a recovery -- must NOT re-anchor (CodeRabbit
+    # 40 -> 0.5 -> 40.5 case), or the recovery reads as 40 kWh of "new" energy.
+    sensor.coordinator.data["INV1"]["metrics"]["bat_charge_total"] = 0.5
+    _at(sensor, datetime(2026, 9, 3, 12, 10, tzinfo=UTC))
+    assert sensor.native_value == 0.0
+    assert sensor._anchor == 40.0
+    sensor.coordinator.data["INV1"]["metrics"]["bat_charge_total"] = 44.5
+    _at(sensor, datetime(2026, 9, 3, 12, 15, tzinfo=UTC))
+    assert sensor.native_value == 4.5
+
+
+def test_period_sensor_reanchors_on_a_confirmed_counter_reset():
+    from datetime import UTC
+
+    sensor = _period_sensor(metrics={"bat_charge_total": 100.0})
+    _at(sensor, datetime(2026, 9, 3, 12, 0, tzinfo=UTC))
+
+    # Near-zero for two consecutive reads -> real reset (battery swap).
+    for minute in (5, 10):
+        sensor.coordinator.data["INV1"]["metrics"]["bat_charge_total"] = 0.3
+        _at(sensor, datetime(2026, 9, 3, 12, minute, tzinfo=UTC))
+    assert sensor._anchor == 0.3
+    sensor.coordinator.data["INV1"]["metrics"]["bat_charge_total"] = 1.5
+    _at(sensor, datetime(2026, 9, 3, 12, 15, tzinfo=UTC))
+    assert sensor.native_value == 1.2
+
+
+def test_period_sensor_is_unknown_without_a_source_value():
+    from datetime import UTC
+
+    sensor = _period_sensor(metrics={})
+    _at(sensor, datetime(2026, 9, 3, 12, 0, tzinfo=UTC))
+    assert sensor.native_value is None
+
+
+def test_period_sensor_ignores_non_numeric_and_non_finite_values():
+    from datetime import UTC
+
+    for bad in ("n/a but not null", "inf", "nan", "-inf"):
+        sensor = _period_sensor(metrics={"bat_charge_total": bad})
+        _at(sensor, datetime(2026, 9, 3, 12, 0, tzinfo=UTC))
+        assert sensor.native_value is None, bad
+
+
+def test_period_sensor_enabled_by_default_only_for_today_and_month():
+    enabled = {
+        p: _period_sensor(period=p)._attr_entity_registry_enabled_default
+        for p in ("today", "week", "month", "year")
+    }
+    assert enabled == {"today": True, "week": False, "month": True, "year": False}
+
+
+def _hyxi_sensor(key, metrics):
+    coordinator = MagicMock()
+    coordinator.data = {"INV1": {"metrics": dict(metrics)}}
+    description = MagicMock()
+    description.key = key
+    description.translation_key = None
+    description.native_unit_of_measurement = "kWh"
+    description.state_class = "total_increasing"
+    return sensor_mod.HyxiSensor(coordinator, "INV1", description)
+
+
+def test_etodayin_demoted_when_grid_import_today_present():
+    """On the hybrid Modbus day block grid_import_today shadows eTodayIn,
+    so eTodayIn ships disabled there."""
+    demoted = _hyxi_sensor("eTodayIn", {"eTodayIn": "2.0", "grid_import_today": "3.0"})
+    assert demoted._attr_entity_registry_enabled_default is False
+
+
+def test_etodayin_stays_default_without_grid_import_today():
+    """HALO reports eTodayIn but never grid_import_today -- it stays on."""
+    kept = _hyxi_sensor("eTodayIn", {"eTodayIn": "2.0"})
+    assert not hasattr(kept, "_attr_entity_registry_enabled_default")
+    # grid_import_today itself is not demoted by anything.
+    grid = _hyxi_sensor("grid_import_today", {"grid_import_today": "3.0"})
+    assert not hasattr(grid, "_attr_entity_registry_enabled_default")

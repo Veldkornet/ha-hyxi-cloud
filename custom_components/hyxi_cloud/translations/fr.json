@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Puissance de décharge de la batterie"
       },
-      "batcharge": {
-        "name": "Énergie de charge quotidienne"
-      },
-      "batdischarge": {
-        "name": "Énergie de décharge quotidienne"
-      },
-      "totalechg": {
-        "name": "Énergie de charge totale"
-      },
-      "totaledchg": {
-        "name": "Énergie de décharge totale"
-      },
       "ratedfrequency": {
         "name": "Fréquence nominale"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Rendement quotidien total des micro-onduleurs"
+      },
+      "bat_charge_today": {
+        "name": "Charge de la batterie aujourd'hui"
+      },
+      "bat_charge_week": {
+        "name": "Charge de la batterie cette semaine"
+      },
+      "bat_charge_month": {
+        "name": "Charge de la batterie ce mois-ci"
+      },
+      "bat_charge_year": {
+        "name": "Charge de la batterie cette année"
+      },
+      "bat_discharge_today": {
+        "name": "Décharge de la batterie aujourd'hui"
+      },
+      "bat_discharge_week": {
+        "name": "Décharge de la batterie cette semaine"
+      },
+      "bat_discharge_month": {
+        "name": "Décharge de la batterie ce mois-ci"
+      },
+      "bat_discharge_year": {
+        "name": "Décharge de la batterie cette année"
+      },
+      "grid_import_today": {
+        "name": "Import réseau aujourd'hui"
+      },
+      "grid_export_today": {
+        "name": "Export réseau aujourd'hui"
+      },
+      "home_load_today": {
+        "name": "Consommation maison aujourd'hui"
       }
     },
     "number": {
