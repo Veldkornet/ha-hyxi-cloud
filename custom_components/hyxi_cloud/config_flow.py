@@ -450,11 +450,13 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             return "modbus_unavailable", DEFAULT_MODBUS_FAMILY
 
         # The operational path takes its unit from HA's shared `modbus`
-        # connection; this probe builds its own, on purpose. It needs the
-        # shorter DETECTION_TIMEOUT read wait (see const.py) rather than that
-        # connection's fixed default, and it must not call set_message_spacing
-        # or churn the refcount on a connection a concurrently-loaded entry
-        # (a reconfigure) may be polling. Closed in the finally below.
+        # connection; this probe builds its own. It can't go through
+        # async_get_temporary_unit: it needs DETECTION_TIMEOUT's shorter read
+        # wait (see const.py), not that connection's fixed default, and it
+        # must not re-pace or refcount a connection a live entry is polling.
+        # During a reconfigure the probe does still open a second connection
+        # to a bus a running coordinator may be on -- a pre-existing overlap,
+        # unchanged by the move to async_get_unit. Closed in the finally.
         connection = ModbusConnection(
             params, timeout=DETECTION_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
         )
