@@ -53,7 +53,7 @@ from .const import (
     DETECTION_MESSAGE_SPACING,
     DETECTION_TIMEOUT,
     DOMAIN,
-    HALO_SOC_SIGNATURE_MAX_RAW,
+    HALO_SWITCH_SIGNATURE_MAX_RAW,
     HYBRID_PROTOCOL_SIGNATURE_MIN_RAW,
     MICRO_ESS_CONTROL_SUPPORTED,
     MODBUS_FAMILY_HALO,
@@ -354,6 +354,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             GatewayPathUnavailableError,
             GatewayTargetError,
             ModbusExceptionError,
+            ModbusProtocolError,
             ModbusTimeoutError,
         )
 
@@ -379,6 +380,22 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             _LOGGER.debug(
                 "Modbus probe: unit %s rejected %s register %s (%s) for family "
                 "%s -- device present, not this family",
+                unit_id,
+                space,
+                address,
+                type(err).__name__,
+                family,
+            )
+            return True, None
+        except ModbusProtocolError as err:
+            # A reply that doesn't fit the request -- most often a zero-length
+            # read result. Some inverters answer a register outside their map
+            # this way instead of with an IllegalDataAddress exception (a HYX-H
+            # hybrid does, for the HALO signature). It still means a device
+            # replied, just not with this family's register.
+            _LOGGER.debug(
+                "Modbus probe: unit %s gave a malformed reply at %s register %s "
+                "(%s) for family %s -- device present, not this family",
                 unit_id,
                 space,
                 address,
@@ -415,7 +432,9 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         A Modbus exception response still counts as the device being
         present -- it means something replied and simply does not carry
-        that register. The exception being a *gateway* target-failure
+        that register. So does a malformed reply such as a zero-length
+        read result (a HYX-H hybrid answers the HALO signature that way).
+        The exception being a *gateway* target-failure
         (GatewayPathUnavailableError, GatewayTargetError) is the one case
         that doesn't count: that's the gateway saying it couldn't reach
         anything past itself, not a device rejecting this specific
@@ -426,14 +445,20 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         at 3121, HALO starts at 4000), so a value at either is direct
         evidence for that family, not just for "a device is here" --
         *if* the value itself is plausible. HALO's signature is a
-        documented 0-100% gauge, so a raw value outside 0-1000 can't
-        really be that field; it's some other device having *something*
-        at that address, not HALO answering oddly, so it doesn't count
-        as identifying evidence either (see HALO_SOC_SIGNATURE_MAX_RAW).
+        documented on/off flag, so a raw value outside 0-1 can't really
+        be that field; it's some other device having *something* at that
+        address, not HALO answering oddly, so it doesn't count as
+        identifying evidence either (see HALO_SWITCH_SIGNATURE_MAX_RAW).
         The hybrid signature is a positive protocol version. Zero is treated
         as an unmapped/blank register rather than evidence of a hybrid
         inverter; this matters because HALO gateways commonly return zero at
         the hybrid-only address.
+
+        HALO is checked first, and on switch_status rather than a BMS
+        register: a HALO whose BMS is offline answers nothing in the BMS
+        range while still answering the hybrid protocol-version register, so
+        keying off the BMS -- or checking the hybrid signature first --
+        mis-identifies it as a hybrid.
 
         Every signature is tried before giving up, rather than returning on
         the first exception, so a device that happens to reject its own
@@ -458,28 +483,29 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
                 reachable |= signature_reachable
                 if value is None:
                     continue
-                if family == MODBUS_FAMILY_HALO and not (
-                    0 <= value <= HALO_SOC_SIGNATURE_MAX_RAW
+                if (
+                    family == MODBUS_FAMILY_HALO
+                    and isinstance(value, int)
+                    and not (0 <= value <= HALO_SWITCH_SIGNATURE_MAX_RAW)
                 ):
-                    # A value came back, but it can't be a real SOC reading
-                    # -- soc is documented as an unsigned 0-100% gauge at
-                    # x0.1 scale, so anything outside 0-1000 raw isn't
-                    # evidence of HALO, just evidence *something* answered
-                    # (an unrelated device with something at this address,
-                    # for instance). Unlike an exception response, this
-                    # can't be trusted as identifying evidence, but it's
-                    # still not nothing -- treated the same as one.
+                    # A value came back, but it can't be a real switch_status
+                    # reading -- that field is a documented 0/1 on-off flag,
+                    # so anything outside 0-1 isn't evidence of HALO, just
+                    # evidence *something* answered (an unrelated device with
+                    # something at this address, for instance). Unlike an
+                    # exception response, this can't be trusted as identifying
+                    # evidence, but it's still not nothing -- treated the same.
                     _LOGGER.debug(
                         "Modbus probe: unit %s returned an implausible "
                         "value %s for %s register %s (family %s, expected "
-                        "0-%s as a raw SOC reading) -- not treated as "
+                        "0-%s as a switch_status reading) -- not treated as "
                         "identifying evidence",
                         unit_id,
                         value,
                         space,
                         address,
                         family,
-                        HALO_SOC_SIGNATURE_MAX_RAW,
+                        HALO_SWITCH_SIGNATURE_MAX_RAW,
                     )
                     continue
                 if (

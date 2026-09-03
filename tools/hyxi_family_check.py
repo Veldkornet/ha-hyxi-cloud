@@ -37,15 +37,16 @@ from typing import NamedTuple
 # the two plausibility bounds, and the setup probe's timing. Keep them in step
 # with that file; tests/test_modbus_probe.py pins the addresses and bounds.
 #
-# Order matters: the hybrid signature is checked first, so a device that
-# answers *both* with a plausible value is called a hybrid.
+# Order matters: HALO is checked first, on switch_status rather than a BMS
+# register, because a HALO with an offline BMS answers nothing in the BMS
+# range while still answering the hybrid protocol-version register.
 FAMILY_SIGNATURES = (
+    ("halo", 4100, "power on/off state"),
     ("hybrid", 0, "communication protocol version"),
-    ("halo", 4980, "BMS state-of-charge"),
 )
-# HALO's SOC signature is a documented 0-100 % gauge at x0.1 scale, so a raw
-# value outside 0..1000 cannot be that field.
-HALO_SOC_SIGNATURE_MAX_RAW = 1000
+# HALO's switch_status signature is a documented on/off flag: 0 or 1, nothing
+# else.
+HALO_SWITCH_SIGNATURE_MAX_RAW = 1
 # The hybrid signature is a positive protocol version. Zero reads as an
 # unmapped/blank register (HALO gateways commonly return it), not as a hybrid.
 HYBRID_PROTOCOL_SIGNATURE_MIN_RAW = 1
@@ -91,15 +92,21 @@ class RegisterRead(NamedTuple):
     """The outcome of one read request. `raw` is the bytes that came back, kept
     so the report can show exactly what an odd (non-ok) reply contained."""
 
-    status: str  # "ok" | "exception" | "gateway" | "silent" | "unparsed"
+    status: str  # "ok" | "exception" | "malformed" | "gateway" | "silent" | "unparsed"
     words: tuple[int, ...] = ()
     detail: str = ""
     raw: bytes = b""
 
     @property
     def device_present(self) -> bool:
-        """Whether this counts as 'a device answered' for family detection."""
-        return self.status in ("ok", "exception")
+        """Whether this counts as 'a device answered' for family detection.
+
+        A malformed reply (a zero-length or odd-length read result) counts:
+        something addressed to this request came back, it just isn't this
+        family's register. Mirrors config_flow._read_modbus_signature, which
+        treats ModbusProtocolError the same as an exception response.
+        """
+        return self.status in ("ok", "exception", "malformed")
 
     @property
     def signature_value(self) -> int | None:
@@ -125,16 +132,15 @@ SIGNATURE_PROBES = tuple(
     for family, address, _description in FAMILY_SIGNATURES
 )
 # Context from each map -- enough to tell whether the device genuinely
-# populates that family (real temperatures, a model string, a SOC) or just
+# populates that family (a model string, real temperatures, a SOC) or just
 # echoes a stray value at the signature address. Only read once a signature
 # has drawn some response.
 CONTEXT_PROBES = (
+    Probe("HALO model         input 4002-4009", 4002, 8),
+    Probe("HALO status        input 4101-4103", 4101, 3),
+    Probe("HALO SOC block     input 4978-4982", 4978, 5),
     Probe("hybrid DSP version input 1-2", 1, 2),
     Probe("hybrid status      input 19-23", 19, 5),
-    Probe("HALO model         input 4002-4009", 4002, 8),
-    Probe("HALO identity      input 4018-4029", 4018, 12),
-    Probe("HALO status        input 4100-4103", 4100, 4),
-    Probe("HALO SOC block     input 4978-4982", 4978, 5),
 )
 PROBE_PLAN = SIGNATURE_PROBES + CONTEXT_PROBES
 
@@ -269,10 +275,14 @@ def _interpret(pdu: bytes) -> RegisterRead:
     byte_count = pdu[1]
     body = pdu[2 : 2 + byte_count]
     # Every register is two bytes, so a real read reply has an even, non-zero
-    # byte count that matches the body length. Anything else is a malformed
-    # frame -- don't half-decode it.
+    # byte count that matches the body length. Anything else is a reply that
+    # doesn't fit the request -- a device answering an out-of-map register
+    # with a zero-length result, most often. Don't half-decode it, but it
+    # still means a device replied (see RegisterRead.device_present).
     if byte_count < 2 or byte_count % 2 or len(body) != byte_count:
-        return RegisterRead("unparsed", detail="malformed register data")
+        return RegisterRead(
+            "malformed", detail=f"function-04 reply, {byte_count} data bytes"
+        )
     words = tuple(
         int.from_bytes(body[i : i + 2], "big") for i in range(0, byte_count, 2)
     )
@@ -376,10 +386,10 @@ def classify(
         value = read.signature_value
         if value is None:
             continue
-        if family == "halo" and not 0 <= value <= HALO_SOC_SIGNATURE_MAX_RAW:
+        if family == "halo" and not 0 <= value <= HALO_SWITCH_SIGNATURE_MAX_RAW:
             skipped.append(
-                f"input {address} = {value} is outside 0..{HALO_SOC_SIGNATURE_MAX_RAW}, "
-                "so it cannot be a raw SOC reading"
+                f"input {address} = {value} is outside 0..{HALO_SWITCH_SIGNATURE_MAX_RAW}, "
+                "so it cannot be a switch on/off state"
             )
             continue
         if family == "hybrid" and value < HYBRID_PROTOCOL_SIGNATURE_MIN_RAW:
@@ -404,6 +414,7 @@ def _format_read(address: int, read: RegisterRead) -> str:
     if read.status != "ok":
         labels = {
             "exception": "Modbus exception",
+            "malformed": "answered, but with a zero/odd-length frame",
             "gateway": "gateway could not reach the device",
             "silent": "no reply",
             "unparsed": "unreadable reply",
@@ -493,10 +504,12 @@ def _render_no_device(attempts: dict[str, Attempt]) -> list[str]:
 def _mismatch_hint(expected: str, detected: str | None) -> str:
     if expected == "halo" and detected == "hybrid":
         return (
-            "  This HALO answers the hybrid protocol-version register (input 0) with a\n"
-            "  real value, so the register-map signatures alone cannot tell it apart\n"
-            "  from a hybrid inverter -- the family needs to be asked or overridden.\n"
-            "  Please paste this whole report into the issue."
+            "  This device did not give a plausible 0/1 at the HALO signature\n"
+            "  (input 4100) but did answer the hybrid protocol-version register,\n"
+            "  so it was called a hybrid. If it really is a HALO, the report above\n"
+            "  shows what input 4100 returned -- please paste it into the issue.\n"
+            "  (If input 4100 shows an old cached type in Home Assistant rather\n"
+            "  than what the script sees, remove and re-add the Modbus device.)"
         )
     return (
         "  Please paste this whole report into the issue -- the signature values\n"

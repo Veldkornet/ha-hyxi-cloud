@@ -1128,6 +1128,11 @@ class _FakeModbusTimeout(Exception):
     """Stands in for modbus_connection's timeout error."""
 
 
+class _FakeModbusProtocol(Exception):
+    """Stands in for modbus_connection's ModbusProtocolError -- a reply that
+    doesn't fit the request, e.g. a zero-length read result."""
+
+
 class _FakeGatewayPathUnavailable(_FakeModbusError):
     """Mirrors modbus_connection's real hierarchy: a ModbusExceptionError
     subclass, but the *gateway* reporting it couldn't reach anything past
@@ -1156,6 +1161,7 @@ def _fake_modbus_modules(read_side_effect=None):
 
     root = types.ModuleType("modbus_connection")
     root.ModbusExceptionError = _FakeModbusError  # type: ignore[attr-defined]
+    root.ModbusProtocolError = _FakeModbusProtocol  # type: ignore[attr-defined]
     root.ModbusTimeoutError = _FakeModbusTimeout  # type: ignore[attr-defined]
     root.GatewayPathUnavailableError = _FakeGatewayPathUnavailable  # type: ignore[attr-defined]
     root.GatewayTargetError = _FakeGatewayTarget  # type: ignore[attr-defined]
@@ -1381,20 +1387,53 @@ async def test_modbus_shows_form_before_any_input(modbus_flow):
     assert result["errors"] == {}
 
 
-# --- Family detection: does a value at either signature register pick the
-# right client, given the two documents' address ranges don't overlap -----
+# --- Family detection: a value at either signature register picks the right
+# client. HALO is checked first, on switch_status (input 4100), because a HALO
+# with an offline BMS answers nothing in the BMS range while still answering
+# the hybrid protocol-version register (input 0). --------------------------
 
 
 @pytest.mark.asyncio
-async def test_modbus_detects_hybrid_family_from_a_real_value(modbus_flow):
-    """A value at register 0 -- the hybrid's protocol version -- is treated
-    as this being a hybrid inverter, without needing to try register 4980."""
+async def test_modbus_detects_halo_from_switch_status(modbus_flow):
+    """A 0/1 at register 4100 is HALO, without needing to read register 0."""
     fake = _fake_modbus_modules()
 
     async def read(address, _count):
+        if address == 4100:
+            return [1]
+        raise AssertionError(f"should not read {address} once 4100 succeeded")
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["data"]["modbus_family"] == "halo"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "halo_signature_fault",
+    [_FakeModbusError, _FakeModbusProtocol, _FakeModbusTimeout],
+    ids=["exception", "zero-length-reply", "timeout"],
+)
+async def test_modbus_detects_hybrid_when_halo_signature_does_not_answer(
+    modbus_flow, halo_signature_fault
+):
+    """The HALO signature is tried first; a hybrid rejects it (or answers a
+    register outside its map with a zero-length frame), so detection falls
+    through to the hybrid protocol-version register."""
+    fake = _fake_modbus_modules()
+
+    async def read(address, _count):
+        if address == 4100:
+            raise halo_signature_fault()
         if address == 0:
-            return [42]
-        raise AssertionError(f"should not read {address} once 0 succeeded")
+            return [10000]
+        raise AssertionError(f"unexpected address {address}")
 
     fake.unit.read_input_registers = AsyncMock(side_effect=read)
     modbus_flow._modbus_type = "tcp"
@@ -1408,45 +1447,19 @@ async def test_modbus_detects_hybrid_family_from_a_real_value(modbus_flow):
 
 
 @pytest.mark.asyncio
-async def test_modbus_detects_halo_family_when_only_its_signature_answers(
-    modbus_flow,
+async def test_modbus_zero_at_hybrid_signature_is_not_family_identifying(
+    modbus_flow, caplog
 ):
-    """Hybrid's register 0 raises (not this family); HALO's 4980 returns a
-    value. Both signatures must be tried, not just the first."""
+    """A zero at hybrid register 0 is not evidence of a hybrid -- HALO
+    gateways return zero for this unmapped address. With the HALO signature
+    also unidentifying, the device is refused rather than guessed at."""
     fake = _fake_modbus_modules()
 
     async def read(address, _count):
-        if address == 0:
-            raise _FakeModbusError()
-        if address == 4980:
-            return [780]
-        raise AssertionError(f"unexpected address {address}")
-
-    fake.unit.read_input_registers = AsyncMock(side_effect=read)
-    modbus_flow._modbus_type = "tcp"
-
-    with _install_modbus(fake.root, fake.backend):
-        result = await modbus_flow.async_step_modbus_tcp(
-            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
-        )
-
-    assert result["data"]["modbus_family"] == "halo"
-
-
-@pytest.mark.asyncio
-async def test_modbus_ignores_zero_hybrid_signature_for_halo(modbus_flow, caplog):
-    """A zero at hybrid input register 0 is not family-identifying.
-
-    HALO gateways can return zero for this unmapped address; the detector must
-    continue to HALO's own SOC signature instead of selecting the hybrid map.
-    """
-    fake = _fake_modbus_modules()
-
-    async def read(address, _count):
+        if address == 4100:
+            raise _FakeModbusError()  # present, not a HALO
         if address == 0:
             return [0]
-        if address == 4980:
-            return [780]
         raise AssertionError(f"unexpected address {address}")
 
     fake.unit.read_input_registers = AsyncMock(side_effect=read)
@@ -1457,24 +1470,23 @@ async def test_modbus_ignores_zero_hybrid_signature_for_halo(modbus_flow, caplog
             user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
         )
 
-    assert result["data"]["modbus_family"] == "halo"
+    assert result["errors"] == {"base": "unidentified_family"}
     assert "implausible" in caplog.text
 
 
 @pytest.mark.asyncio
 async def test_modbus_rejects_implausible_value_at_halo_signature(modbus_flow, caplog):
-    """HALO's SOC signature is a documented 0-100% gauge, so its raw value
-    can only ever be 0-1000. A value far outside that isn't HALO answering
-    oddly -- it's some other device having *something* at register 4980,
-    which the document gives no reason to expect. Must not be accepted as
-    identifying evidence just because a value came back at all."""
+    """HALO's switch_status signature is a documented 0/1 flag. A value far
+    outside that isn't HALO answering oddly -- it's some other device having
+    *something* at register 4100. Not accepted as identifying evidence just
+    because a value came back."""
     fake = _fake_modbus_modules()
 
     async def read(address, _count):
+        if address == 4100:
+            return [5]  # not a 0/1 on-off flag
         if address == 0:
             raise _FakeModbusError()
-        if address == 4980:
-            return [50000]  # far outside the documented 0-1000 raw range
         raise AssertionError(f"unexpected address {address}")
 
     fake.unit.read_input_registers = AsyncMock(side_effect=read)
@@ -1539,17 +1551,38 @@ async def test_modbus_gateway_target_failure_is_not_treated_as_reachable(
     assert "treated as no answer" in caplog.text
 
 
+def _signature_reader(by_address):
+    """An async read side effect driven by a {address: (kind, [value])} map."""
+
+    async def read(address, _count):
+        kind, *rest = by_address[address]
+        if kind == "value":
+            return [rest[0]]
+        if kind == "gateway":
+            raise _FakeGatewayPathUnavailable()
+        if kind == "timeout":
+            raise _FakeModbusTimeout()
+        if kind == "malformed":
+            raise _FakeModbusProtocol()
+        raise _FakeModbusError()
+
+    return read
+
+
 # The two stand-alone diagnostic tools each carry their own copy of this
 # detection rule (one is zero-dependency and handed to users, the other cannot
 # import Home Assistant at runtime). This drives the real probe and requires
 # both copies to reach the same verdict, so a change here fails loudly there.
+# Each row is (input-4100 HALO signature, input-0 hybrid signature).
 _TOOL_DETECTION_MATRIX = [
-    (("value", 1), ("value", 780)),
-    (("value", 0), ("value", 780)),
-    (("value", 0), ("value", 0)),
-    (("exception",), ("value", 1000)),
-    (("exception",), ("value", 1001)),
-    (("value", 50000), ("value", 500)),
+    (("value", 1), ("value", 10000)),
+    (("value", 0), ("value", 10000)),
+    (("value", 5), ("value", 10000)),
+    (("malformed",), ("value", 10000)),
+    (("timeout",), ("value", 10000)),
+    (("exception",), ("value", 10000)),
+    (("exception",), ("value", 0)),
+    (("value", 1), ("timeout",)),
     (("exception",), ("exception",)),
     (("timeout",), ("timeout",)),
     (("gateway",), ("gateway",)),
@@ -1557,9 +1590,9 @@ _TOOL_DETECTION_MATRIX = [
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("reg0", "reg4980"), _TOOL_DETECTION_MATRIX)
+@pytest.mark.parametrize(("reg4100", "reg0"), _TOOL_DETECTION_MATRIX)
 async def test_diagnostic_tools_mirror_shipped_family_detection(
-    modbus_flow, reg0, reg4980
+    modbus_flow, reg4100, reg0
 ):
     """tools/hyxi_family_check.py and tools/modbus_probe.py's `detect`."""
     from tests.test_modbus_probe import fc_signature_list, mp_signature_list
@@ -1567,26 +1600,66 @@ async def test_diagnostic_tools_mirror_shipped_family_detection(
     from tools import modbus_probe as mp
 
     fake = _fake_modbus_modules()
-    by_address = {0: reg0, 4980: reg4980}
-
-    async def read(address, _count):
-        reading = by_address[address]
-        if reading[0] == "value":
-            return [reading[1]]
-        if reading[0] == "gateway":
-            raise _FakeGatewayPathUnavailable()
-        if reading[0] == "timeout":
-            raise _FakeModbusTimeout()
-        raise _FakeModbusError()
-
-    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    fake.unit.read_input_registers = AsyncMock(
+        side_effect=_signature_reader({4100: reg4100, 0: reg0})
+    )
 
     with _install_modbus(fake.root, fake.backend):
         error, family = await modbus_flow._probe_and_detect_modbus(MagicMock(), 1)
     shipped = None if error else family
 
-    assert fc.classify(fc_signature_list(reg0, reg4980))[0] == shipped
-    assert mp.classify_family(mp_signature_list(reg0, reg4980))[0] == shipped
+    assert fc.classify(fc_signature_list(reg4100, reg0))[0] == shipped
+    assert mp.classify_family(mp_signature_list(reg4100, reg0))[0] == shipped
+
+
+# Register maps transcribed from real hardware: a HALO whose BMS was offline,
+# so every BMS register is silent and only inverter-side registers answer;
+# and a HYX-H hybrid, which answers HALO-range registers with a zero-length
+# function-04 frame rather than an exception. These two shapes are what broke
+# the original hybrid-first / BMS-SOC detection.
+_REAL_HARDWARE: dict[str, dict[int, tuple]] = {
+    "halo": {
+        0: ("value", 304),
+        1: ("value", 259),
+        4002: ("value", 0x5948),
+        4100: ("value", 1),
+        4101: ("value", 6),
+        # everything else -- the whole BMS range included -- timed out
+    },
+    "hybrid": {
+        0: ("value", 10000),
+        1: ("value", 39),
+        19: ("value", 707),
+        # HALO-range registers answered with a zero-length frame
+        4002: ("malformed",),
+        4100: ("malformed",),
+        4980: ("malformed",),
+    },
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("expected_family", ["halo", "hybrid"])
+async def test_modbus_detection_matches_real_hardware_reports(
+    modbus_flow, expected_family
+):
+    register_map = _REAL_HARDWARE[expected_family]
+
+    async def read(address, _count):
+        if address in register_map:
+            return await _signature_reader(register_map)(address, _count)
+        raise _FakeModbusTimeout()
+
+    fake = _fake_modbus_modules()
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+    modbus_flow._modbus_type = "tcp"
+
+    with _install_modbus(fake.root, fake.backend):
+        result = await modbus_flow.async_step_modbus_tcp(
+            user_input={"modbus_host": "h", "modbus_port": 502, "modbus_unit": 1}
+        )
+
+    assert result["data"]["modbus_family"] == expected_family
 
 
 # --- Wire-framing detection: does a TCP gateway that only answers under the
