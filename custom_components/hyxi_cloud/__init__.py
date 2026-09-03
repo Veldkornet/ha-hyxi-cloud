@@ -13,6 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
+    ConfigEntryError,
     ConfigEntryNotReady,
     HomeAssistantError,
 )
@@ -34,29 +35,18 @@ from .const import (
     CONF_EM_INVERTER_SN,
     CONF_EM_P1_ENTITY,
     CONF_ENABLE_PUSH,
-    CONF_MODBUS_BAUDRATE,
-    CONF_MODBUS_DEVICE,
     CONF_MODBUS_FAMILY,
-    CONF_MODBUS_FRAMER,
-    CONF_MODBUS_HOST,
-    CONF_MODBUS_PORT,
-    CONF_MODBUS_TYPE,
     CONF_MODBUS_UNIT,
     CONF_PUSH_RATE,
     CONF_PUSH_URL,
     CONF_SECRET_KEY,
-    DEFAULT_MODBUS_BAUDRATE,
     DEFAULT_MODBUS_FAMILY,
-    DEFAULT_MODBUS_FRAMER,
-    DEFAULT_MODBUS_PORT,
     DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DOMAIN,
     MANUFACTURER,
     MODBUS_FAMILY_HYBRID,
     MODBUS_MESSAGE_SPACING,
-    MODBUS_TIMEOUT,
-    MODBUS_TYPE_SERIAL,
     PLATFORMS,
     VERSION,
     detect_phase_type,
@@ -68,6 +58,7 @@ from .const import (
     mask_sn,
     mask_subscription_code,
     mask_url,
+    modbus_params,
     normalize_device_type,
 )
 from .coordinator import HyxiDataUpdateCoordinator
@@ -84,7 +75,7 @@ _PUSH_SUBSCRIPTION_LABEL = "HYXI Push"
 _ALARM_PUSH_SUBSCRIPTION_LABEL = "HYXI Alarm Push"
 
 
-def _build_modbus_coordinator(
+async def _build_modbus_coordinator(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> HyxiModbusCoordinator:
     """Build a coordinator that reaches the device over local RS485.
@@ -98,63 +89,64 @@ def _build_modbus_coordinator(
     covers that case the same way entry_transport() covers pre-Modbus
     entries -- absence means the newer, stronger-evidenced default.
     """
-    from modbus_connection import ModbusSerialParams, ModbusTcpParams
-    from modbus_connection.tmodbus import ModbusConnection
+    from homeassistant.helpers.importlib import async_import_module
 
     from .modbus.client import ModbusClient
     from .modbus_coordinator import HyxiModbusCoordinator
 
     unit_id = int(entry.data.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT))
     family = entry.data.get(CONF_MODBUS_FAMILY, DEFAULT_MODBUS_FAMILY)
+    params = modbus_params(entry.data)
 
-    # Annotated explicitly -- without it, mypy narrows params to whichever
-    # branch assigns it first and rejects the other as incompatible.
-    params: ModbusSerialParams | ModbusTcpParams
-    if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
-        params = ModbusSerialParams(
-            device=entry.data[CONF_MODBUS_DEVICE],
-            baudrate=int(entry.data.get(CONF_MODBUS_BAUDRATE, DEFAULT_MODBUS_BAUDRATE)),
-            bytesize=8,
-            parity="N",
-            stopbits=1,
-        )
-    else:
-        params = ModbusTcpParams(
-            host=entry.data[CONF_MODBUS_HOST],
-            port=int(entry.data.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)),
-            # Detected during setup (config_flow._probe_and_detect_modbus_tcp)
-            # -- falls back to the pre-detection default for an entry
-            # created before that existed.
-            framer=entry.data.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER),
-        )
+    # The device is reached through Home Assistant's own `modbus` integration:
+    # async_get_unit hands back a unit on a connection HA owns, shares with
+    # any other integration on the same bus (one lock, no competing sockets),
+    # and closes when the last entry holding a unit on it unloads -- via a
+    # callback it registers on `entry`. So nothing here constructs, holds or
+    # closes a connection for the operational path, and teardown needs no code
+    # of ours; config_flow's one-shot probe is the sole exception, and builds
+    # its own deliberately (see _probe_and_detect_modbus).
+    #
+    # Imported at call time, not module scope, so a cloud-only entry never
+    # pulls in the Modbus stack (pymodbus included); via async_import_module
+    # so the first import lands in the executor instead of blocking the loop
+    # -- `modbus` is only an after-dependency, not necessarily loaded yet.
+    modbus = await async_import_module(hass, "homeassistant.components.modbus")
+    try:
+        unit = modbus.async_get_unit(hass, entry, params, unit_id)
+    except HomeAssistantError as err:
+        # Another consumer already holds this bus on link settings that
+        # cannot share one connection -- typically a different integration
+        # (a native `modbus:` hub, say) on the same host:port under another
+        # framer. Surfaced, not retried in a loop: the conflicting configs
+        # have to be reconciled.
+        raise ConfigEntryError(str(err)) from err
 
-    # Minimum inter-frame spacing differs by document: HALO asks for
-    # >200ms, the hybrid protocol for >500ms. Using the wrong one against a
-    # hybrid device would violate its documented timing.
+    # HALO wants >200ms between frames, the hybrid protocol >500ms; the wrong
+    # figure against a hybrid device breaks its documented timing. The shared
+    # connection carries no message_spacing of its own, so it is set per-unit
+    # (docs/modbus-provenance.md has the interleaving caveat).
     spacing = MODBUS_MESSAGE_SPACING[family]
+    unit.set_message_spacing(spacing)
+
     _LOGGER.debug(
-        "Building Modbus connection for entry %s: %s, unit %s, family %s, "
-        "timeout %ss, message spacing %ss",
+        "Modbus coordinator for entry %s: %s, unit %s, family %s, spacing %ss",
         entry.entry_id,
         params,
         unit_id,
         family,
-        MODBUS_TIMEOUT,
         spacing,
-    )
-    connection = ModbusConnection(
-        params, timeout=MODBUS_TIMEOUT, message_spacing=spacing
     )
 
     client: ModbusClient
     if family == MODBUS_FAMILY_HYBRID:
         from .modbus.client_hybrid import HyxiHybridModbusClient
 
-        client = HyxiHybridModbusClient(connection, unit_id)
+        client = HyxiHybridModbusClient(unit, unit_id)
     else:
         from .modbus.client import HyxiModbusClient
 
-        client = HyxiModbusClient(connection, unit_id)
+        client = HyxiModbusClient(unit, unit_id)
 
     return HyxiModbusCoordinator(hass, client, entry)
 
@@ -180,7 +172,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # HyxiDataUpdateCoordinator subclass, so the base type covers both.
     coordinator: HyxiDataUpdateCoordinator
     if modbus:
-        coordinator = _build_modbus_coordinator(hass, entry)
+        coordinator = await _build_modbus_coordinator(hass, entry)
     else:
         access_key = entry.data.get(CONF_ACCESS_KEY)
         secret_key = entry.data.get(CONF_SECRET_KEY)
@@ -203,10 +195,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # in _async_update_data requires no additional disk read.
     await coordinator.async_preload_cache()
 
-    refreshed = False
     try:
         await coordinator.async_config_entry_first_refresh()
-        refreshed = True
     except ConfigEntryAuthFailed:
         _LOGGER.error("Authentication failed during setup")
         raise
@@ -217,13 +207,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ) as err:
         _LOGGER.warning("HYXI not ready: %s", err)
         raise ConfigEntryNotReady(f"Connection error: {err}") from err
-    finally:
-        # Release the bus on any failed setup. A flag rather than an except
-        # clause because the coordinator's own first-refresh handling raises
-        # ConfigEntryNotReady, which no clause above catches -- so a serial
-        # port would stay held through every retry.
-        if modbus and not refreshed:
-            await coordinator.client.async_close()
+    # A failed Modbus setup needs no bus release of ours: HA drains
+    # entry.async_on_unload (where async_get_unit put its close) on any
+    # non-success path.
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
@@ -278,11 +264,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             coordinator.engine.stop()
         for controller in coordinator.protection_controllers.values():
             controller.stop()
-        if is_modbus_entry(entry):
-            # Release the serial port or socket, or a reload leaves the bus
-            # held and the next setup cannot open it.
-            await coordinator.client.async_close()
-        else:
+        # A Modbus entry has no server-side subscriptions to tear down,
+        # and HA releases its shared bus via entry.async_on_unload.
+        if not is_modbus_entry(entry):
             # Leave the subscriptions alive on the server (cancel_remote=False):
             # the persisted code + fingerprint let the next setup reuse them,
             # avoiding a cancel/resubscribe cycle on every restart and reload.

@@ -66,6 +66,7 @@ from .const import (
     default_region_for_country,
     get_raw_device_code,
     is_modbus_entry,
+    modbus_params,
     normalize_device_type,
     region_for_base_url,
     resolve_base_url,
@@ -448,6 +449,12 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             _LOGGER.error("modbus-connection is not installed")
             return "modbus_unavailable", DEFAULT_MODBUS_FAMILY
 
+        # The operational path takes its unit from HA's shared `modbus`
+        # connection; this probe builds its own, on purpose. It needs the
+        # shorter DETECTION_TIMEOUT read wait (see const.py) rather than that
+        # connection's fixed default, and it must not call set_message_spacing
+        # or churn the refcount on a connection a concurrently-loaded entry
+        # (a reconfigure) may be polling. Closed in the finally below.
         connection = ModbusConnection(
             params, timeout=DETECTION_TIMEOUT, message_spacing=DETECTION_MESSAGE_SPACING
         )
@@ -600,11 +607,11 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             # gateway. See PR #675 review discussion.
             return "gateway_unreachable", DEFAULT_MODBUS_FAMILY, MODBUS_TCP_FRAMERS[-1]
 
-        from modbus_connection import ModbusTcpParams
-
         error, family = None, DEFAULT_MODBUS_FAMILY
         for framer in MODBUS_TCP_FRAMERS:
-            params = ModbusTcpParams(host=host, port=port, framer=framer)
+            params = modbus_params(
+                {CONF_MODBUS_HOST: host, CONF_MODBUS_PORT: port}, framer=framer
+            )
             error, family = await self._probe_and_detect_modbus(params, unit_id)
             if error not in ("cannot_connect", "no_device"):
                 return error, family, framer
@@ -622,8 +629,6 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         itself -- only a collision with a genuinely different entry should
         abort.
         """
-        from modbus_connection import ModbusSerialParams
-
         unit_id = int(user_input[CONF_MODBUS_UNIT])
         _LOGGER.debug(
             "Config flow: validating %s Modbus connection, unit %s",
@@ -638,9 +643,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         if is_serial:
             device = user_input[CONF_MODBUS_DEVICE]
             baudrate = int(user_input[CONF_MODBUS_BAUDRATE])
-            params = ModbusSerialParams(
-                device=device, baudrate=baudrate, bytesize=8, parity="N", stopbits=1
-            )
+            params = modbus_params({**user_input, CONF_MODBUS_TYPE: MODBUS_TYPE_SERIAL})
             unique_id = f"{device}:{unit_id}"
             title = f"HYXI Modbus ({device})"
             data = {

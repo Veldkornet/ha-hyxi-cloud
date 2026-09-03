@@ -1,7 +1,7 @@
 {
   "domain": "hyxi_cloud",
   "name": "HYXI",
-  "after_dependencies": ["cloud"],
+  "after_dependencies": ["cloud", "modbus"],
   "codeowners": [
     "@Veldkornet"
   ],
@@ -17,8 +17,8 @@
     "aiohttp>=3.13.5",
     "voluptuous",
     "hyxi-cloud-api>=1.4.7",
-    "modbus-connection[tmodbus]>=4.8.1",
-    "tmodbus[async-serial]>=0.5.1"
+    "modbus-connection[tmodbus]>=4.10.0",
+    "tmodbus[async-serial]>=0.6.2"
   ],
   "version": "1.7.0-beta.3"
 }

@@ -32,6 +32,7 @@ import time
 from typing import Any, Protocol, runtime_checkable
 
 from hyxi_cloud_api import HyxiApiClient
+from modbus_connection import ModbusUnit
 from modbus_connection.model import Component
 
 from .registers import (
@@ -66,7 +67,6 @@ class ModbusClient(Protocol):
     @property
     def serial_number(self) -> str: ...
 
-    async def async_close(self) -> None: ...
     async def async_read_all(self) -> dict[str, dict]: ...
     async def set_mode_idle(self, device_sn: str) -> dict: ...
     async def set_mode_charge(self, device_sn: str, watts: int) -> dict: ...
@@ -135,11 +135,15 @@ class HyxiModbusClient:
     #: staticmethod lets the shared merge logic work on either transport.
     compute_derived_metrics = staticmethod(HyxiApiClient.compute_derived_metrics)
 
-    def __init__(self, connection: Any, unit_id: int) -> None:
-        """Bind to one unit on an already-constructed connection."""
-        self._connection = connection
+    def __init__(self, unit: ModbusUnit, unit_id: int) -> None:
+        """Bind to one unit from async_get_unit (see _build_modbus_coordinator).
+
+        The connection beneath the handle is Home Assistant's -- shared
+        across integrations on the bus and closed by HA -- so this class
+        never holds or closes it. ``unit_id`` is kept for log lines and the
+        serial-number fallback.
+        """
         self._unit_id = unit_id
-        unit = connection.for_unit(unit_id)
         self._unit = unit
 
         self.identity = HaloIdentity(unit)
@@ -171,19 +175,6 @@ class HyxiModbusClient:
         still needs a stable key, or every poll would create new entities.
         """
         return self._serial or f"modbus_{self._unit_id}"
-
-    async def async_close(self) -> None:
-        """Release the underlying connection.
-
-        Logged unconditionally rather than at each of its several call
-        sites (probe teardown, detection teardown, a failed first refresh,
-        unload) -- one line here covers all of them, and it is the only
-        direct evidence in the log that a serial port or socket was
-        actually freed, which matters when diagnosing "why won't the next
-        setup open the port".
-        """
-        _LOGGER.debug("Modbus: closing connection for unit %s", self._unit_id)
-        await self._connection.close()
 
     async def async_read_identity(self) -> None:
         """Read the static identity block once, tolerating its absence.

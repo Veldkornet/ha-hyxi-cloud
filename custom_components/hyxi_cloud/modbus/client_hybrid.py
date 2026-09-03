@@ -23,6 +23,7 @@ import time
 from typing import Any
 
 from hyxi_cloud_api import HyxiApiClient
+from modbus_connection import ModbusUnit
 from modbus_connection.model import Component
 
 from .client import _hex_identifier, _mask
@@ -69,11 +70,11 @@ class HyxiHybridModbusClient:
     ControlError = HyxiApiClient.ControlError
     compute_derived_metrics = staticmethod(HyxiApiClient.compute_derived_metrics)
 
-    def __init__(self, connection: Any, unit_id: int) -> None:
-        """Bind to one unit on an already-constructed connection."""
-        self._connection = connection
+    def __init__(self, unit: ModbusUnit, unit_id: int) -> None:
+        """Bind to one unit from async_get_unit -- see client.py's
+        HyxiModbusClient.__init__ for how the shared connection is owned.
+        """
         self._unit_id = unit_id
-        unit = connection.for_unit(unit_id)
         self._unit = unit
 
         self.identity = HybridIdentity(unit)
@@ -103,15 +104,6 @@ class HyxiHybridModbusClient:
     def serial_number(self) -> str:
         """The device serial, or a stable fallback if identity is unreadable."""
         return self._serial or f"modbus_{self._unit_id}"
-
-    async def async_close(self) -> None:
-        """Release the underlying connection.
-
-        Logged unconditionally rather than at each call site -- see
-        client.py's HyxiModbusClient.async_close for why.
-        """
-        _LOGGER.debug("Modbus: closing connection for unit %s", self._unit_id)
-        await self._connection.close()
 
     async def async_read_identity(self) -> None:
         """Read the static identity block once, tolerating its absence."""
