@@ -123,3 +123,13 @@
 "protection":
   - changed-files:
       - any-glob-to-any-file: "custom_components/hyxi_cloud/protection.py"
+
+# 🔌 Modbus (local RTU transport — HALO + HYX-H hybrid)
+"modbus":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "custom_components/hyxi_cloud/modbus/**/*"
+          - "custom_components/hyxi_cloud/modbus_coordinator.py"
+          - "tests/integration/test_modbus*.py"
+          - "tools/modbus_probe.py"
+          - "docs/modbus-provenance.md"
