@@ -890,12 +890,12 @@ async def test_reconfigure_falls_back_to_standalone_probe_when_the_bus_is_down(h
 
 
 @pytest.mark.asyncio
-async def test_reconfigure_to_another_unit_on_the_same_bus_paces_only_its_own_probe(
+async def test_reconfigure_to_another_unit_on_the_same_bus_uses_the_shared_connection(
     hass,
 ):
     """Pointing the entry at a different slave on the same wire probes that
-    slave on the shared connection, pacing the probe on its own unit key so
-    the coordinator's per-unit spacing is left intact, and clearing it after."""
+    slave on the shared connection, leaving every unit's pacing -- the
+    coordinator's, and any other consumer's -- exactly as it was."""
     entry = _modbus_entry(
         hass, modbus_family="halo", modbus_framer="socket", modbus_unit=1
     )
@@ -929,14 +929,15 @@ async def test_reconfigure_to_another_unit_on_the_same_bus_paces_only_its_own_pr
     standalone.assert_not_called()
     assert flow["reason"] == "reconfigure_successful"
     assert entry.data["modbus_unit"] == 2
-    # The probe paced unit 2, then cleared it...
-    assert conn.for_unit(2).message_spacing == 0.0
-    # ...and never touched the coordinator's unit-1 gap.
-    assert conn.for_unit(1).message_spacing == 0.2
+    # The probe read unit 2 on the shared connection...
     assert any(
         e.register_type == "input" and e.address == 0 and e.count == 1
         for e in conn.for_unit(2).read_events
     )
+    # ...without touching any unit's pacing -- unit 2 was never set, and the
+    # coordinator's unit-1 gap is intact.
+    assert conn.for_unit(2).message_spacing == 0.0
+    assert conn.for_unit(1).message_spacing == 0.2
 
 
 @pytest.mark.asyncio

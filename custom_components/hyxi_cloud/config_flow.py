@@ -587,42 +587,35 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         from homeassistant.components.modbus import async_get_temporary_unit
         from homeassistant.exceptions import HomeAssistantError
 
-        old_data = reconfigure_entry.data
-        if modbus_params(old_data).endpoint != params.endpoint:
+        if modbus_params(reconfigure_entry.data).endpoint != params.endpoint:
             return None  # a different bus -- nothing to overlap with
 
-        # Probing the slave the coordinator polls inherits its pacing; probing
-        # a different slave on the same wire gets the conservative gap on its
-        # own unit key -- cleared afterwards -- so the coordinator's (and any
-        # co-tenant's) pacing for its own slave is left untouched.
-        other_slave = unit_id != int(
-            old_data.get(CONF_MODBUS_UNIT, DEFAULT_MODBUS_UNIT)
-        )
+        # Pacing is left exactly as it is: the connection already carries the
+        # coordinator's per-slave gap (and any co-tenant's for its own
+        # slave), and set_message_spacing has no read-back to restore from
+        # afterwards. A probe that comes back too fast for the device -- a
+        # HALO gap against a swapped-in hybrid, or an unpaced slave the
+        # reconfigure just picked -- reads as no_device/cannot_connect and
+        # falls through to the standalone probe, which paces itself.
         try:
             async with async_get_temporary_unit(self.hass, params, unit_id) as unit:
                 if not unit.connected:
                     return None  # link down -- defer, see the docstring
-                if other_slave:
-                    unit.set_message_spacing(DETECTION_MESSAGE_SPACING)
-                try:
-                    _LOGGER.debug(
-                        "Modbus probe: detecting on the shared connection to "
-                        "%s, unit %s (reconfigure keeps the bus)",
-                        params.endpoint,
-                        unit_id,
-                    )
-                    # Bound the reads: the shared connection's own timeout is
-                    # longer than DETECTION_TIMEOUT, so a device that goes
-                    # silent mid-reconfigure would otherwise hang the form.
-                    error, family = await asyncio.wait_for(
-                        self._detect_family_on_unit(unit, unit_id),
-                        timeout=len(MODBUS_FAMILY_SIGNATURES) * DETECTION_TIMEOUT,
-                    )
-                except TimeoutError:
-                    error, family = "cannot_connect", DEFAULT_MODBUS_FAMILY
-                finally:
-                    if other_slave:
-                        unit.set_message_spacing(0.0)
+                _LOGGER.debug(
+                    "Modbus probe: detecting on the shared connection to "
+                    "%s, unit %s (reconfigure keeps the bus)",
+                    params.endpoint,
+                    unit_id,
+                )
+                # Bound the reads: the shared connection's own timeout is
+                # longer than DETECTION_TIMEOUT, so a device that goes silent
+                # mid-reconfigure would otherwise hang the form.
+                error, family = await asyncio.wait_for(
+                    self._detect_family_on_unit(unit, unit_id),
+                    timeout=len(MODBUS_FAMILY_SIGNATURES) * DETECTION_TIMEOUT,
+                )
+        except TimeoutError:
+            error, family = "cannot_connect", DEFAULT_MODBUS_FAMILY
         except HomeAssistantError:
             # The bus is held under link settings that cannot share one
             # connection (a baud or framer change in this reconfigure). The
