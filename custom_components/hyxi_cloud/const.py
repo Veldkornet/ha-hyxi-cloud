@@ -1,10 +1,16 @@
 """Constants for the HYXI Cloud integration."""
 
+from __future__ import annotations
+
 import json
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from homeassistant.const import Platform
+
+if TYPE_CHECKING:
+    from modbus_connection import ModbusSerialParams, ModbusTcpParams
 
 DOMAIN = "hyxi_cloud"
 CONF_ACCESS_KEY = "access_key"
@@ -94,14 +100,15 @@ CONF_MODBUS_UNIT = "modbus_unit"
 DEFAULT_MODBUS_PORT = 502
 DEFAULT_MODBUS_BAUDRATE = 115200
 DEFAULT_MODBUS_UNIT = 1
-MODBUS_TIMEOUT = 10.0
-# Sized for reliable operational polling, not for the one-time setup probe
-# (config_flow._probe_and_detect_modbus / _probe_and_detect_modbus_tcp) --
-# a real device on a local network answers in well under a second, and the
-# framer probe already has to try up to two framers x two signature
-# registers each. At MODBUS_TIMEOUT, a device that's unreachable under one
-# framer (a wrong-framer gateway looks exactly like this from here) costs
-# ~20s before the other framer is even tried; at DETECTION_TIMEOUT, ~6s.
+# Read/response timeout for the one-time setup probe only
+# (config_flow._probe_and_detect_modbus / _probe_and_detect_modbus_tcp).
+# The operational path takes its unit from Home Assistant's shared `modbus`
+# connection, which fixes its own timeout (10s) and is not tunable from
+# here. A real device on a local network answers in well under a second,
+# and the framer probe already has to try up to two framers x two signature
+# registers each: at the shared connection's 10s a wrong-framer gateway
+# (which looks exactly like an unreachable device from here) would cost
+# ~20s before the other framer is tried; at DETECTION_TIMEOUT, ~6s.
 DETECTION_TIMEOUT = 3.0
 # A bare TCP reachability check, tried before any framer -- tmodbus's own
 # TCP connect timeout defaults to 10s and modbus_connection never overrides
@@ -197,6 +204,41 @@ MODBUS_MESSAGE_SPACING: dict[str, float] = {
     MODBUS_FAMILY_HYBRID: 0.5,
 }
 DETECTION_MESSAGE_SPACING = max(MODBUS_MESSAGE_SPACING.values())
+
+
+def modbus_params(
+    config: Mapping[str, Any],
+    *,
+    framer: Literal["socket", "rtu", "ascii"] | None = None,
+) -> ModbusSerialParams | ModbusTcpParams:
+    """Build the modbus_connection link parameters from a config mapping.
+
+    `config` is an entry's ``.data`` or a config-flow ``user_input``.
+    Optional keys fall back to their defaults, so an entry written by an
+    older schema still resolves. `framer` overrides the TCP wire framing:
+    the setup probe passes each candidate in turn, the operational path
+    passes None to take whatever detection stored.
+
+    Every HYXI inverter runs its RS485 line at 8 data bits, no parity, one
+    stop bit -- both protocol documents state it, only the baud rate is
+    user-selectable -- so those three are fixed here rather than asked of
+    the caller or the form.
+    """
+    from modbus_connection import ModbusSerialParams, ModbusTcpParams
+
+    if config.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
+        return ModbusSerialParams(
+            device=config[CONF_MODBUS_DEVICE],
+            baudrate=int(config.get(CONF_MODBUS_BAUDRATE, DEFAULT_MODBUS_BAUDRATE)),
+            bytesize=8,
+            parity="N",
+            stopbits=1,
+        )
+    return ModbusTcpParams(
+        host=config[CONF_MODBUS_HOST],
+        port=int(config.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)),
+        framer=framer or config.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER),
+    )
 
 
 def entry_transport(entry: Any) -> str:

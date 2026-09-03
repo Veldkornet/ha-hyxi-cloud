@@ -16,11 +16,13 @@ dependencies = [
     "voluptuous",
     "hyxi-cloud-api>=1.4.7",
     # Local RS485 transport (imported lazily; a cloud-only entry never loads it).
-    "modbus-connection[tmodbus]>=4.8.1",
+    "modbus-connection[tmodbus]>=4.10.0",
     # Listed explicitly too: HA's requirement installer checks package+version
     # only, not extras, so a bare modbus-connection pulled in by something
-    # else can mask this and leave tmodbus itself uninstalled.
-    "tmodbus[async-serial]>=0.5.1",
+    # else can mask this and leave tmodbus itself uninstalled. Floors track
+    # what Core's `modbus` integration currently pins (4.10.0 / 0.6.2), so
+    # its own install already satisfies ours.
+    "tmodbus[async-serial]>=0.6.2",
 ]
 
 [project.optional-dependencies]
@@ -30,7 +32,7 @@ dependencies = [
 # dependency -- it's only for tools/fake_hyxi.py, which needs a Modbus
 # *server* that tmodbus does not provide.
 modbus = [
-    "modbus-connection[tmodbus]>=4.8.1",
+    "modbus-connection[tmodbus]>=4.10.0",
     # tools/fake_hyxi.py needs a Modbus *server*, which tmodbus does not provide.
     "pymodbus>=3.15.0",
 ]
@@ -41,6 +43,14 @@ test = [
     "hypothesis>=6.165.5",
     "pytest-homeassistant-custom-component>=0.13.355",
     "mypy>=2.3.0",
+    # The local Modbus transport now reaches its device through Core's
+    # `modbus` integration (async_get_unit). Importing that module pulls in
+    # homeassistant/components/modbus/modbus.py, which imports pymodbus at
+    # module level -- so the test env needs pymodbus even though our own
+    # code never imports it. At runtime Core installs it from the `modbus`
+    # manifest (==3.13.1); it is deliberately absent from our manifest.json
+    # requirements so the two pins can never disagree.
+    "pymodbus>=3.13.1",
 ]
 
 [tool.ruff]

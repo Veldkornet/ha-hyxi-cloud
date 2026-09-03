@@ -962,6 +962,7 @@ modbus = [
 test = [
     { name = "hypothesis" },
     { name = "mypy" },
+    { name = "pymodbus" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -973,15 +974,16 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.13.5" },
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.165.5" },
     { name = "hyxi-cloud-api", specifier = ">=1.4.7" },
-    { name = "modbus-connection", extras = ["tmodbus"], specifier = ">=4.8.1" },
-    { name = "modbus-connection", extras = ["tmodbus"], marker = "extra == 'modbus'", specifier = ">=4.8.1" },
+    { name = "modbus-connection", extras = ["tmodbus"], specifier = ">=4.10.0" },
+    { name = "modbus-connection", extras = ["tmodbus"], marker = "extra == 'modbus'", specifier = ">=4.10.0" },
     { name = "mypy", marker = "extra == 'test'", specifier = ">=2.3.0" },
     { name = "pymodbus", marker = "extra == 'modbus'", specifier = ">=3.15.0" },
+    { name = "pymodbus", marker = "extra == 'test'", specifier = ">=3.13.1" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.4.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=7.1.0" },
     { name = "pytest-homeassistant-custom-component", marker = "extra == 'test'", specifier = ">=0.13.355" },
-    { name = "tmodbus", extras = ["async-serial"], specifier = ">=0.5.1" },
+    { name = "tmodbus", extras = ["async-serial"], specifier = ">=0.6.2" },
     { name = "voluptuous" },
 ]
 provides-extras = ["modbus", "test"]
@@ -1419,11 +1421,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/9a/02/cef85a80ff6d3092a
 
 [[package]]
 name = "modbus-connection"
-version = "4.8.1"
+version = "4.10.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/49/a5/0226fcdbc00ba0fface4b2984cbddf1a4d187c2b66ce12a591417c1d44bd/modbus_connection-4.8.1.tar.gz", hash = "sha256:b1ededef001463d39125a2d2a3b10870892393479030e902839fc71d37f107cf", size = 253833, upload-time = "2026-08-17T13:05:14.216Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/29/701cb11593839b334c9a388e43dde4d61abdc8939d74003b4d60b546b812/modbus_connection-4.10.0.tar.gz", hash = "sha256:fb328d011c6268bd1e272a0600373794a07bc453d4e9358498789312e0c1e0f2", size = 256827, upload-time = "2026-08-25T09:47:12.384Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/98/1c2710425fa7e294b6400eac8d78ccbc26d59ccdd7172123f5bed8b7326a/modbus_connection-4.8.1-py3-none-any.whl", hash = "sha256:db22133f966afed780a085b59f8d52196e24530e4b335c3c7a5d6e0948ce5ec0", size = 77384, upload-time = "2026-08-17T13:05:13.007Z" },
+    { url = "https://files.pythonhosted.org/packages/a1/07/39374fc700ecac019d23c65696748a3a75e7390c797c09b51c114b04289d/modbus_connection-4.10.0-py3-none-any.whl", hash = "sha256:1a2256de5d427f89d422d1bbf52fdeda1a58e6e4f97acdb226e581dcad263700", size = 78284, upload-time = "2026-08-25T09:47:11.18Z" },
 ]
 
 [package.optional-dependencies]
@@ -2512,14 +2514,14 @@ wheels = [
 
 [[package]]
 name = "tmodbus"
-version = "0.5.1"
+version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/37/69/7b023b4f2629ac72fab500e8360c29240614285a8d7761be3c2105c72bd7/tmodbus-0.5.1.tar.gz", hash = "sha256:bb283952c0b00b1b55d7c0d85b808d5b517af5c3a1356af93e52caae810868f4", size = 149825, upload-time = "2026-08-12T08:54:36.782Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/94/3bcac21580627aaba908e6653d0b815ba0ae22ef211bd021d21718989c3a/tmodbus-0.6.2.tar.gz", hash = "sha256:4df75bf3976f32d7481ee43f91f4f8ba3e6905315caa3f1376be4024f987d6a4", size = 198637, upload-time = "2026-08-28T13:20:24.514Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/fc/195cbd3626c5d8c1ea619c22474a9e00ba5625476a76fd2be9435344715e/tmodbus-0.5.1-py3-none-any.whl", hash = "sha256:6ffa97235b07a254dc168b210174af122e3d2e4d393a6458e8f2d1352404feef", size = 91997, upload-time = "2026-08-12T08:54:35.428Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/3f/09d532685b15fdbc2811aec5544a44203c970793da2673cf7d494bd78d5d/tmodbus-0.6.2-py3-none-any.whl", hash = "sha256:dd4dc59247b0f3cc9ea6a7ee91e4424122ff40a6aa6bff0e4c6fbc37c5c794c0", size = 107932, upload-time = "2026-08-28T13:20:23.09Z" },
 ]
 
 [package.optional-dependencies]

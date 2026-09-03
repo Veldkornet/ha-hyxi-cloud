@@ -300,9 +300,14 @@ Two things the hybrid protocol states that the HALO's does not:
 - **Function code 0x06** (write single register) is available, alongside
   0x03/0x04/0x10. The HALO document only offers 0x03/0x04/0x10.
 - **Frame spacing is >500ms**, not the HALO's >200ms. `HybridSettings` and
-  its siblings don't encode this themselves — it belongs on the connection
-  (`message_spacing`) once a hybrid client is wired into setup, and it must
-  not be copied from the HALO client's 200ms constant.
+  its siblings don't encode this themselves. The operational path takes its
+  unit from Home Assistant's shared `modbus` connection, which is built with
+  no `message_spacing` of its own, so `_build_modbus_coordinator` sets it
+  per-unit via `unit.set_message_spacing()` (`MODBUS_MESSAGE_SPACING[family]`
+  — 0.5 for hybrid, 0.2 for HALO). It must not be copied from the HALO
+  client's 200ms constant. The setup probe uses its own connection with
+  `DETECTION_MESSAGE_SPACING` (the larger of the two, since the family is
+  not yet known).
 
 ## HALO's RS485 wiring: corroborated twice, not yet hardware-checked
 
@@ -512,4 +517,5 @@ and update this file with the result.
 | Whether a Modbus scheduling write survives a power cycle, or reverts when the master goes quiet | Hybrid + HALO | Decides whether either integration needs a heartbeat write. |
 | Whether a Modbus write is overwritten by a cloud settings sync | Hybrid + HALO | The DCS/WiFi module stays connected on both. The two control paths are independent and may fight. |
 | Whether pooled block reads may span undefined addresses | Hybrid + HALO | `Component.max_gap` defaults to 16, so fields up to 16 registers apart are read as one block. `tools/fake_hyxi.py` fills gaps with zeros to model likely real behaviour, which is an assumption, not an observation, and currently only exists for the HALO profile. |
+| Whether per-unit pacing holds the documented inter-frame gap when another integration shares the bus | Hybrid + HALO | `unit.set_message_spacing()` paces from *this* unit's last request — exact while this integration is the shared connection's only consumer. If a second integration holds a unit on the same endpoint, its frames can land inside our gap. Both documents' figures describe processing time for frames addressed to the device, so this is probably fine, but unconfirmed. |
 | The entire register map, on real hardware | Hybrid + HALO | Nothing above has been checked against a device yet. Phase 1 of bringing either transport up is a `tools/modbus_probe.py` sweep compared against the app/cloud, not trusting this file's tables blind. |

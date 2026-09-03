@@ -139,7 +139,7 @@ def client():
     unit.load_raw(
         {"input": _fill(INPUT_REGISTERS), "holding": _fill(HOLDING_REGISTERS)}
     )
-    return HyxiHybridModbusClient(connection, 1)
+    return HyxiHybridModbusClient(unit, 1)
 
 
 @pytest.mark.asyncio
@@ -504,19 +504,6 @@ async def test_identity_is_read_only_once(client):
         await client.async_read_all()
 
     second.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_close_releases_the_connection():
-    from unittest.mock import AsyncMock, MagicMock
-
-    connection = MagicMock()
-    connection.for_unit = MagicMock(return_value=MagicMock())
-    connection.close = AsyncMock()
-
-    await HyxiHybridModbusClient(connection, 1).async_close()
-
-    connection.close.assert_awaited_once()
 
 
 @pytest.mark.asyncio

@@ -7,7 +7,7 @@ test wanted and prove nothing about whether registers.py addresses and scales
 the device correctly.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.helpers import device_registry as dr
@@ -136,7 +136,7 @@ def client():
     unit.load_raw(
         {"input": _fill(INPUT_REGISTERS), "holding": _fill(HOLDING_REGISTERS)}
     )
-    return HyxiModbusClient(connection, 1)
+    return HyxiModbusClient(unit, 1)
 
 
 @pytest.mark.asyncio
@@ -473,17 +473,6 @@ async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
             await client.set_anti_starvation(True)
 
 
-@pytest.mark.asyncio
-async def test_close_releases_the_connection():
-    connection = MagicMock()
-    connection.for_unit = MagicMock(return_value=MagicMock())
-    connection.close = AsyncMock()
-
-    await HyxiModbusClient(connection, 1).async_close()
-
-    connection.close.assert_awaited_once()
-
-
 def test_register_model_declares_the_right_spaces():
     assert HaloGrid.register_space == "input"
     assert HaloBattery.register_space == "input"
@@ -605,10 +594,12 @@ async def test_setup_builds_the_right_connection_for_each_type(
 
     entry = _modbus_entry(hass, **overrides)
 
-    with patch("modbus_connection.tmodbus.ModbusConnection") as connection_class:
-        coordinator = _build_modbus_coordinator(hass, entry)
+    with patch("homeassistant.components.modbus.async_get_unit") as get_unit:
+        coordinator = await _build_modbus_coordinator(hass, entry)
 
-    params = connection_class.call_args.args[0]
+    # async_get_unit(hass, entry, params, unit_id) -- the params object is
+    # what carries the serial-vs-TCP distinction downstream.
+    params = get_unit.call_args.args[2]
     assert type(params).__name__ == expected_params
     assert coordinator.client is not None
 
@@ -635,30 +626,81 @@ async def test_setup_selects_the_client_class_and_spacing_for_the_family(
     overrides = {} if family is None else {"modbus_family": family}
     entry = _modbus_entry(hass, **overrides)
 
-    with patch("modbus_connection.tmodbus.ModbusConnection") as connection_class:
-        coordinator = _build_modbus_coordinator(hass, entry)
+    with patch("homeassistant.components.modbus.async_get_unit") as get_unit:
+        coordinator = await _build_modbus_coordinator(hass, entry)
 
+    unit = get_unit.return_value
     assert type(coordinator.client).__name__ == expected_client
-    assert connection_class.call_args.kwargs["message_spacing"] == expected_spacing
+    # The shared connection carries no spacing of its own, so the per-family
+    # inter-frame gap is set on the unit.
+    unit.set_message_spacing.assert_called_once_with(expected_spacing)
 
 
 @pytest.mark.asyncio
-async def test_unload_releases_the_bus(hass):
-    """A reload that leaves the port held cannot open it again."""
-    from custom_components.hyxi_cloud import async_unload_entry
-    from custom_components.hyxi_cloud.const import DOMAIN
+async def test_a_bus_held_on_other_link_settings_is_surfaced_not_retried(hass):
+    """A second entry on a gateway another entry already holds with
+    incompatible link settings can't share the one connection. HA's
+    async_get_unit raises HomeAssistantError; we surface it as
+    ConfigEntryError (the user must reconcile the two entries) rather than
+    let a raw traceback land in SETUP_ERROR.
+    """
+    from homeassistant.exceptions import ConfigEntryError, HomeAssistantError
+
+    from custom_components.hyxi_cloud import _build_modbus_coordinator
 
     entry = _modbus_entry(hass)
-    coordinator = MagicMock()
-    coordinator.engine = None
-    coordinator.protection_controllers = {}
-    coordinator.client.async_close = AsyncMock()
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
-        assert await async_unload_entry(hass, entry) is True
+    with (
+        patch(
+            "homeassistant.components.modbus.async_get_unit",
+            side_effect=HomeAssistantError(
+                "Modbus device ('tcp', '192.168.1.50', 502) is already in use "
+                "with different link settings"
+            ),
+        ),
+        pytest.raises(ConfigEntryError),
+    ):
+        await _build_modbus_coordinator(hass, entry)
 
-    coordinator.client.async_close.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_the_shared_connection_closes_only_when_the_last_entry_unloads(hass):
+    """Two Modbus entries on one gateway share one connection; it closes only
+    when the second unloads.
+
+    Both entries go through `_build_modbus_coordinator`, so this exercises
+    our call into `async_get_unit` against Home Assistant's real refcount
+    and `entry.async_on_unload` machinery -- which a hand-mocked connection
+    cannot stand in for.
+    """
+    from homeassistant.components.modbus.connection import DATA_MODBUS_CONNECTIONS
+
+    from custom_components.hyxi_cloud import _build_modbus_coordinator
+
+    conn = MockModbusConnection()
+    conn.close = AsyncMock()
+
+    first = _modbus_entry(hass, modbus_unit=1)
+    second = _modbus_entry(hass, modbus_unit=2)
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=conn,
+    ):
+        await _build_modbus_coordinator(hass, first)
+        await _build_modbus_coordinator(hass, second)
+
+    endpoint = ("tcp", "192.168.1.50", 502)
+    shared = hass.data[DATA_MODBUS_CONNECTIONS][endpoint]
+    assert shared.connection is conn
+    assert shared.consumers == 2
+
+    await first._async_process_on_unload(hass)
+    assert shared.consumers == 1
+    conn.close.assert_not_awaited()
+
+    await second._async_process_on_unload(hass)
+    conn.close.assert_awaited_once()
 
 
 def _seeded_connection() -> MockModbusConnection:
@@ -707,7 +749,7 @@ async def test_setting_up_a_modbus_entry_creates_entities(hass):
     entry = _modbus_entry(hass, modbus_family="halo")
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -761,7 +803,10 @@ async def test_setup_releases_the_bus_when_the_device_never_answers(hass):
 
     entry = _modbus_entry(hass)
 
-    with patch("modbus_connection.tmodbus.ModbusConnection", return_value=connection):
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
@@ -804,7 +849,7 @@ async def test_halo_control_entities_appear_when_control_is_enabled(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -834,7 +879,7 @@ async def test_halo_mode_button_press_calls_the_modbus_client(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -865,7 +910,7 @@ async def test_halo_protection_controller_starts(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -889,7 +934,7 @@ async def test_hybrid_control_entities_still_appear_unaffected(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_hybrid_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -912,7 +957,7 @@ async def test_halo_setting_numbers_appear_and_write_through(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -985,7 +1030,7 @@ async def test_hybrid_setting_numbers_appear_and_write_through(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_hybrid_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -1050,7 +1095,7 @@ async def test_hybrid_power_command_buttons_appear_and_write_through(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_hybrid_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -1081,7 +1126,7 @@ async def test_halo_has_no_power_command_buttons(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -1102,7 +1147,7 @@ async def test_halo_anti_starvation_switch_appears_and_writes_through(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -1135,7 +1180,7 @@ async def test_hybrid_anti_starvation_switch_appears_and_writes_through(hass):
     )
 
     with patch(
-        "modbus_connection.tmodbus.ModbusConnection",
+        "homeassistant.components.modbus.connection.ModbusConnection",
         return_value=_seeded_hybrid_connection(),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
