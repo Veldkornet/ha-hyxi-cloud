@@ -848,6 +848,7 @@ async def test_reconfigure_to_a_different_bus_uses_the_standalone_probe(hass):
             await hass.async_block_till_done()
 
     standalone.assert_called_once()
+    assert flow["reason"] == "reconfigure_successful"
     assert entry.data["modbus_host"] == "192.168.1.60"
 
 
@@ -885,6 +886,7 @@ async def test_reconfigure_falls_back_to_standalone_probe_when_the_bus_is_down(h
             await hass.async_block_till_done()
 
     standalone.assert_called_once()
+    assert flow["reason"] == "reconfigure_successful"
 
 
 @pytest.mark.asyncio
@@ -925,6 +927,7 @@ async def test_reconfigure_to_another_unit_on_the_same_bus_paces_only_its_own_pr
             await hass.async_block_till_done()
 
     standalone.assert_not_called()
+    assert flow["reason"] == "reconfigure_successful"
     assert entry.data["modbus_unit"] == 2
     # The probe paced unit 2, then cleared it...
     assert conn.for_unit(2).message_spacing == 0.0
@@ -986,14 +989,16 @@ async def test_reconfigure_changing_the_baud_rate_uses_the_standalone_probe(hass
             await hass.async_block_till_done()
 
     standalone.assert_called_once()
+    assert flow["reason"] == "reconfigure_successful"
     assert entry.data["modbus_baudrate"] == 115200
 
 
 @pytest.mark.asyncio
-async def test_reconfigure_shared_probe_fails_the_form_if_the_device_goes_silent(hass):
+async def test_reconfigure_shared_probe_bounds_its_reads_then_defers(hass):
     """The shared connection's read timeout is longer than the standalone
     probe's, so the shared-bus probe bounds its own reads: a device that
-    stops answering mid-reconfigure fails the form rather than hanging it."""
+    stops answering mid-reconfigure hits the bound and falls back to the
+    standalone probe rather than hanging the form."""
     from homeassistant.data_entry_flow import FlowResultType
 
     entry = _modbus_entry(
@@ -1019,18 +1024,21 @@ async def test_reconfigure_shared_probe_fails_the_form_if_the_device_goes_silent
             ),
             patch(
                 "custom_components.hyxi_cloud.config_flow.HyxiConfigFlow."
-                "_probe_and_detect_modbus_tcp"
+                "_probe_and_detect_modbus_tcp",
+                return_value=(None, "halo", "socket"),
             ) as standalone,
+            patch("custom_components.hyxi_cloud.async_setup_entry", return_value=True),
         ):
             flow = await hass.config_entries.flow.async_configure(
                 flow["flow_id"],
                 {"modbus_host": "192.168.1.50", "modbus_port": 502, "modbus_unit": 1},
             )
+            await hass.async_block_till_done()
 
-    assert flow["type"] is FlowResultType.FORM
-    assert flow["errors"] == {"base": "cannot_connect"}
-    # The shared probe owned the outcome -- no standalone retry.
-    standalone.assert_not_called()
+    # The bounded read gave up and the standalone probe took over.
+    standalone.assert_called_once()
+    assert flow["type"] is FlowResultType.ABORT
+    assert flow["reason"] == "reconfigure_successful"
 
 
 @pytest.mark.asyncio
