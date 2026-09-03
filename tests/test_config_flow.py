@@ -1539,6 +1539,56 @@ async def test_modbus_gateway_target_failure_is_not_treated_as_reachable(
     assert "treated as no answer" in caplog.text
 
 
+# The two stand-alone diagnostic tools each carry their own copy of this
+# detection rule (one is zero-dependency and handed to users, the other cannot
+# import Home Assistant at runtime). This drives the real probe and requires
+# both copies to reach the same verdict, so a change here fails loudly there.
+_TOOL_DETECTION_MATRIX = [
+    (("value", 1), ("value", 780)),
+    (("value", 0), ("value", 780)),
+    (("value", 0), ("value", 0)),
+    (("exception",), ("value", 1000)),
+    (("exception",), ("value", 1001)),
+    (("value", 50000), ("value", 500)),
+    (("exception",), ("exception",)),
+    (("timeout",), ("timeout",)),
+    (("gateway",), ("gateway",)),
+]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("reg0", "reg4980"), _TOOL_DETECTION_MATRIX)
+async def test_diagnostic_tools_mirror_shipped_family_detection(
+    modbus_flow, reg0, reg4980
+):
+    """tools/hyxi_family_check.py and tools/modbus_probe.py's `detect`."""
+    from tests.test_modbus_probe import fc_signature_list, mp_signature_list
+    from tools import hyxi_family_check as fc
+    from tools import modbus_probe as mp
+
+    fake = _fake_modbus_modules()
+    by_address = {0: reg0, 4980: reg4980}
+
+    async def read(address, _count):
+        reading = by_address[address]
+        if reading[0] == "value":
+            return [reading[1]]
+        if reading[0] == "gateway":
+            raise _FakeGatewayPathUnavailable()
+        if reading[0] == "timeout":
+            raise _FakeModbusTimeout()
+        raise _FakeModbusError()
+
+    fake.unit.read_input_registers = AsyncMock(side_effect=read)
+
+    with _install_modbus(fake.root, fake.backend):
+        error, family = await modbus_flow._probe_and_detect_modbus(MagicMock(), 1)
+    shipped = None if error else family
+
+    assert fc.classify(fc_signature_list(reg0, reg4980))[0] == shipped
+    assert mp.classify_family(mp_signature_list(reg0, reg4980))[0] == shipped
+
+
 # --- Wire-framing detection: does a TCP gateway that only answers under the
 # other framer still get identified, without asking the user to know which
 # one their gateway speaks ------------------------------------------------
