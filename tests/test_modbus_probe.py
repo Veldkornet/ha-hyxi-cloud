@@ -126,3 +126,29 @@ _RTU_EXC = bytes.fromhex("01 84 02 c2 c1")
 )
 def test_family_check_frame_parsing(framer, raw, tid, expected):
     assert fc._extract_pdu(framer, raw, tid) == expected
+
+
+@pytest.mark.parametrize(
+    ("pdu", "status", "words"),
+    [
+        (b"\x04\x02\x27\x10", "ok", (10000,)),
+        (b"\x04\x04\x00\x01\x00\x02", "ok", (1, 2)),
+        (b"\x84\x02", "exception", ()),
+        (b"\x84\x0b", "gateway", ()),
+        (b"\x04\x00", "unparsed", ()),  # empty read -- some devices, missing register
+        (b"\x04\x03\x00\x01\x02", "unparsed", ()),  # odd byte count: not half-decoded
+        (b"\x03\x02\x00\x01", "unparsed", ()),  # not function 0x04
+    ],
+    ids=[
+        "one-reg",
+        "two-regs",
+        "exception",
+        "gateway",
+        "empty",
+        "odd-count",
+        "wrong-fc",
+    ],
+)
+def test_family_check_interpret(pdu, status, words):
+    read = fc._interpret(pdu)
+    assert (read.status, read.words) == (status, words)

@@ -268,10 +268,13 @@ def _interpret(pdu: bytes) -> RegisterRead:
         return RegisterRead("unparsed", detail=f"unexpected function 0x{function:02X}")
     byte_count = pdu[1]
     body = pdu[2 : 2 + byte_count]
-    if byte_count < 2 or len(body) != byte_count:
-        return RegisterRead("unparsed", detail="truncated register data")
+    # Every register is two bytes, so a real read reply has an even, non-zero
+    # byte count that matches the body length. Anything else is a malformed
+    # frame -- don't half-decode it.
+    if byte_count < 2 or byte_count % 2 or len(body) != byte_count:
+        return RegisterRead("unparsed", detail="malformed register data")
     words = tuple(
-        int.from_bytes(body[i : i + 2], "big") for i in range(0, byte_count - 1, 2)
+        int.from_bytes(body[i : i + 2], "big") for i in range(0, byte_count, 2)
     )
     return RegisterRead("ok", words=words)
 
