@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Potencia de descarga de la batería"
       },
-      "batcharge": {
-        "name": "Energía de carga diaria"
-      },
-      "batdischarge": {
-        "name": "Energía de descarga diaria"
-      },
-      "totalechg": {
-        "name": "Energía de carga total"
-      },
-      "totaledchg": {
-        "name": "Energía de descarga total"
-      },
       "ratedfrequency": {
         "name": "Frecuencia nominal"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Rendimiento diario total de microinversores"
+      },
+      "bat_charge_today": {
+        "name": "Carga de batería hoy"
+      },
+      "bat_charge_week": {
+        "name": "Carga de batería esta semana"
+      },
+      "bat_charge_month": {
+        "name": "Carga de batería este mes"
+      },
+      "bat_charge_year": {
+        "name": "Carga de batería este año"
+      },
+      "bat_discharge_today": {
+        "name": "Descarga de batería hoy"
+      },
+      "bat_discharge_week": {
+        "name": "Descarga de batería esta semana"
+      },
+      "bat_discharge_month": {
+        "name": "Descarga de batería este mes"
+      },
+      "bat_discharge_year": {
+        "name": "Descarga de batería este año"
+      },
+      "grid_import_today": {
+        "name": "Importación de red hoy"
+      },
+      "grid_export_today": {
+        "name": "Exportación a red hoy"
+      },
+      "home_load_today": {
+        "name": "Consumo del hogar hoy"
       }
     },
     "number": {

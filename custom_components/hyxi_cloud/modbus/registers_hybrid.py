@@ -220,13 +220,40 @@ class HybridBattery(Component):
 
 
 class HybridEnergy(Component):
-    """Lifetime energy counters. Daily counters exist too (1101-1127,
-    U16 1dp) but are omitted here -- the accumulated U32 counters below
-    already cover what the cloud metric vocabulary uses, and every extra
-    field widens the poll."""
+    """Daily and lifetime energy counters.
+
+    The daily block (1101-1127, U16 1dp) resets at the device's local
+    midnight and is what the HYXI app's "D" tab shows; the accumulated
+    block (1128-1180, U32 1dp) is lifetime. Both sit inside one 1101-1149
+    read, well under max_span, so covering the daily counters costs no
+    extra round trip. Per-phase daily fields are summed in the client, the
+    same way HybridGrid's phases are.
+    """
 
     register_space = "input"
     max_span = MAX_SPAN
+
+    daily_output_a = gauge(1101, 0.1, signed=False, unit="kWh")
+    daily_output_b = gauge(1102, 0.1, signed=False, unit="kWh")
+    daily_output_c = gauge(1103, 0.1, signed=False, unit="kWh")
+    daily_input_a = gauge(1104, 0.1, signed=False, unit="kWh")
+    daily_input_b = gauge(1105, 0.1, signed=False, unit="kWh")
+    daily_input_c = gauge(1106, 0.1, signed=False, unit="kWh")
+    daily_consumption_a = gauge(1107, 0.1, signed=False, unit="kWh")
+    daily_consumption_b = gauge(1108, 0.1, signed=False, unit="kWh")
+    daily_consumption_c = gauge(1109, 0.1, signed=False, unit="kWh")
+    daily_charge = gauge(1110, 0.1, signed=False, unit="kWh")
+    daily_discharge = gauge(1111, 0.1, signed=False, unit="kWh")
+    daily_sell_a = gauge(1112, 0.1, signed=False, unit="kWh")
+    daily_sell_b = gauge(1113, 0.1, signed=False, unit="kWh")
+    daily_sell_c = gauge(1114, 0.1, signed=False, unit="kWh")
+    daily_buy_a = gauge(1115, 0.1, signed=False, unit="kWh")
+    daily_buy_b = gauge(1116, 0.1, signed=False, unit="kWh")
+    daily_buy_c = gauge(1117, 0.1, signed=False, unit="kWh")
+    # The document lists a daily generation field per string up to PV10;
+    # this hardware family has two, matching HybridPv.
+    daily_pv_1 = gauge(1118, 0.1, signed=False, unit="kWh")
+    daily_pv_2 = gauge(1119, 0.1, signed=False, unit="kWh")
 
     output_a = uint32(1128, scale=0.1, word_order=LOW_WORD_FIRST, unit="kWh")
     output_b = uint32(1130, scale=0.1, word_order=LOW_WORD_FIRST, unit="kWh")

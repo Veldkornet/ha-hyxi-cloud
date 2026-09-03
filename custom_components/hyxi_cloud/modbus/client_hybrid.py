@@ -12,8 +12,9 @@ integration's logs, and a copy would drift.
 Provenance: docs/modbus-provenance.md. This map is a materially stronger
 source than the HALO one -- the vendor's current document for the exact
 hardware family, not a document for a different product whose examples
-happened to decode against this one -- but is still unconfirmed against
-actual hardware; nothing has been wired up yet.
+happened to decode against this one. The energy block has since been
+confirmed against a live H10K-HT; the rest of the map is still document
+only.
 """
 
 from __future__ import annotations
@@ -320,6 +321,37 @@ class HyxiHybridModbusClient:
             "batDisCharge": self.energy.discharge_total,
             "bat_charge_total": self.energy.charge_total,
             "bat_discharge_total": self.energy.discharge_total,
+            # Daily counters, reset at the device's local midnight. The
+            # per-phase and per-string fields have no single-register
+            # equivalent, so they are summed here the same way ppv is.
+            "eToday": _sum_or_none(
+                self.energy.daily_output_a,
+                self.energy.daily_output_b,
+                self.energy.daily_output_c,
+            ),
+            "eTodayIn": _sum_or_none(
+                self.energy.daily_input_a,
+                self.energy.daily_input_b,
+                self.energy.daily_input_c,
+            ),
+            "efpv": _sum_or_none(self.energy.daily_pv_1, self.energy.daily_pv_2),
+            "home_load_today": _sum_or_none(
+                self.energy.daily_consumption_a,
+                self.energy.daily_consumption_b,
+                self.energy.daily_consumption_c,
+            ),
+            "grid_export_today": _sum_or_none(
+                self.energy.daily_sell_a,
+                self.energy.daily_sell_b,
+                self.energy.daily_sell_c,
+            ),
+            "grid_import_today": _sum_or_none(
+                self.energy.daily_buy_a,
+                self.energy.daily_buy_b,
+                self.energy.daily_buy_c,
+            ),
+            "bat_charge_today": self.energy.daily_charge,
+            "bat_discharge_today": self.energy.daily_discharge,
             # Current settings-register values, for number entities to show
             # on load instead of always starting at their minimum -- see
             # async_read_settings. Keyed to match HyxiSettingNumberDef.key

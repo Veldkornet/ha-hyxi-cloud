@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "バッテリー放電電力"
       },
-      "batcharge": {
-        "name": "日次充電電力量"
-      },
-      "batdischarge": {
-        "name": "日次放電電力量"
-      },
-      "totalechg": {
-        "name": "総充電電力量"
-      },
-      "totaledchg": {
-        "name": "総放電電力量"
-      },
       "ratedfrequency": {
         "name": "定格周波数"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "マイクロインバーター合計本日発電量"
+      },
+      "bat_charge_today": {
+        "name": "本日のバッテリー充電量"
+      },
+      "bat_charge_week": {
+        "name": "今週のバッテリー充電量"
+      },
+      "bat_charge_month": {
+        "name": "今月のバッテリー充電量"
+      },
+      "bat_charge_year": {
+        "name": "今年のバッテリー充電量"
+      },
+      "bat_discharge_today": {
+        "name": "本日のバッテリー放電量"
+      },
+      "bat_discharge_week": {
+        "name": "今週のバッテリー放電量"
+      },
+      "bat_discharge_month": {
+        "name": "今月のバッテリー放電量"
+      },
+      "bat_discharge_year": {
+        "name": "今年のバッテリー放電量"
+      },
+      "grid_import_today": {
+        "name": "本日の系統買電量"
+      },
+      "grid_export_today": {
+        "name": "本日の系統売電量"
+      },
+      "home_load_today": {
+        "name": "本日の宅内消費量"
       }
     },
     "number": {

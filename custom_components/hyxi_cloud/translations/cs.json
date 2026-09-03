@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Vybíjecí výkon baterie"
       },
-      "batcharge": {
-        "name": "Denní energie nabíjení"
-      },
-      "batdischarge": {
-        "name": "Denní energie vybíjení"
-      },
-      "totalechg": {
-        "name": "Celková energie nabíjení"
-      },
-      "totaledchg": {
-        "name": "Celková energie vybíjení"
-      },
       "ratedfrequency": {
         "name": "Jmenovitá frekvence"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Celkový denní výnos mikroměničů"
+      },
+      "bat_charge_today": {
+        "name": "Nabíjení baterie dnes"
+      },
+      "bat_charge_week": {
+        "name": "Nabíjení baterie tento týden"
+      },
+      "bat_charge_month": {
+        "name": "Nabíjení baterie tento měsíc"
+      },
+      "bat_charge_year": {
+        "name": "Nabíjení baterie tento rok"
+      },
+      "bat_discharge_today": {
+        "name": "Vybíjení baterie dnes"
+      },
+      "bat_discharge_week": {
+        "name": "Vybíjení baterie tento týden"
+      },
+      "bat_discharge_month": {
+        "name": "Vybíjení baterie tento měsíc"
+      },
+      "bat_discharge_year": {
+        "name": "Vybíjení baterie tento rok"
+      },
+      "grid_import_today": {
+        "name": "Odběr ze sítě dnes"
+      },
+      "grid_export_today": {
+        "name": "Dodávka do sítě dnes"
+      },
+      "home_load_today": {
+        "name": "Spotřeba domácnosti dnes"
       }
     },
     "number": {

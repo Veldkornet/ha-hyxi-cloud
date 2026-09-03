@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Akkumulátor kisütési teljesítmény"
       },
-      "batcharge": {
-        "name": "Napi töltési energia"
-      },
-      "batdischarge": {
-        "name": "Napi kisütési energia"
-      },
-      "totalechg": {
-        "name": "Teljes töltési energia"
-      },
-      "totaledchg": {
-        "name": "Teljes kisütési energia"
-      },
       "ratedfrequency": {
         "name": "Névleges frekvencia"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Mikroinverterek napi összhozama"
+      },
+      "bat_charge_today": {
+        "name": "Akkumulátor töltés ma"
+      },
+      "bat_charge_week": {
+        "name": "Akkumulátor töltés ezen a héten"
+      },
+      "bat_charge_month": {
+        "name": "Akkumulátor töltés ebben a hónapban"
+      },
+      "bat_charge_year": {
+        "name": "Akkumulátor töltés ebben az évben"
+      },
+      "bat_discharge_today": {
+        "name": "Akkumulátor kisütés ma"
+      },
+      "bat_discharge_week": {
+        "name": "Akkumulátor kisütés ezen a héten"
+      },
+      "bat_discharge_month": {
+        "name": "Akkumulátor kisütés ebben a hónapban"
+      },
+      "bat_discharge_year": {
+        "name": "Akkumulátor kisütés ebben az évben"
+      },
+      "grid_import_today": {
+        "name": "Hálózati vételezés ma"
+      },
+      "grid_export_today": {
+        "name": "Hálózati betáplálás ma"
+      },
+      "home_load_today": {
+        "name": "Otthoni fogyasztás ma"
       }
     },
     "number": {

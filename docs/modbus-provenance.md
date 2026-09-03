@@ -256,8 +256,20 @@ Same generation and legend, from the hybrid Component classes and `client_hybrid
 
 ### HybridEnergy  (space=input)
 
+The daily block (1101–1127) resets at the device's local midnight; the
+accumulated block (1128–1180) is lifetime. Both fall inside one 1101–1149
+read. Per-phase and per-string daily fields are summed in `client_hybrid`.
+
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1101–1103 | `daily_output_a/_b/_c` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `eToday` (summed) |
+| 1104–1106 | `daily_input_a/_b/_c` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `eTodayIn` (summed) |
+| 1107–1109 | `daily_consumption_a/_b/_c` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `home_load_today` (summed) |
+| 1110 | `daily_charge` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `bat_charge_today` |
+| 1111 | `daily_discharge` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `bat_discharge_today` |
+| 1112–1114 | `daily_sell_a/_b/_c` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `grid_export_today` (summed) |
+| 1115–1117 | `daily_buy_a/_b/_c` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `grid_import_today` (summed) |
+| 1118–1119 | `daily_pv_1/_2` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `efpv` (summed; doc lists up to PV10) |
 | 1128 | `output_a` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `totalE` |
 | 1130 | `output_b` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `totalEb` |
 | 1132 | `output_c` | Number (unsigned) | RO | ×0.1 | kWh | sensor: `totalEc` |
@@ -497,6 +509,12 @@ The chosen family is stored once, in `entry.data[CONF_MODBUS_FAMILY]`, and
 never re-detected on subsequent loads. There is no reconfigure flow yet for
 correcting a wrong guess short of removing and re-adding the integration.
 
+## Confirmed against hardware
+
+| What | Device | How |
+| :--- | :--- | :--- |
+| `HybridEnergy` daily block (1101–1127) and lifetime block (1128–1180): addresses, U16/U32 split, ×0.1 kWh scale, low-word-first order | Hybrid (HYX-H10K-HT) | `tools/modbus_probe.py sweep` of input 1100–1180 on a live unit, decoded and matched against the HYXI app's D/Lifetime tabs and a coordinator debug log. Daily charge (1110) read 21.9 kWh against the app's "Battery Charge 21.9"; lifetime charge (1146) read 6176.7 against the log's `totalEchg` 6176.7; daily buy/sell sums matched the app's purchase/sell figures within polling skew. The consumption registers (1107–1109 / 1140–1144) read zero on this unit — reported as 0, not hidden. |
+
 ## Still unverified
 
 Everything below is a vendor claim or an inference. Check against hardware
@@ -518,4 +536,4 @@ and update this file with the result.
 | Whether a Modbus write is overwritten by a cloud settings sync | Hybrid + HALO | The DCS/WiFi module stays connected on both. The two control paths are independent and may fight. |
 | Whether pooled block reads may span undefined addresses | Hybrid + HALO | `Component.max_gap` defaults to 16, so fields up to 16 registers apart are read as one block. `tools/fake_hyxi.py` fills gaps with zeros to model likely real behaviour, which is an assumption, not an observation, and currently only exists for the HALO profile. |
 | Whether per-unit pacing holds the documented inter-frame gap when another integration shares the bus | Hybrid + HALO | `unit.set_message_spacing()` paces from *this* unit's last request — exact while this integration is the shared connection's only consumer. If a second integration holds a unit on the same endpoint, its frames can land inside our gap. Both documents' figures describe processing time for frames addressed to the device, so this is probably fine, but unconfirmed. |
-| The entire register map, on real hardware | Hybrid + HALO | Nothing above has been checked against a device yet. Phase 1 of bringing either transport up is a `tools/modbus_probe.py` sweep compared against the app/cloud, not trusting this file's tables blind. |
+| The rest of the register map, on real hardware | Hybrid + HALO | Only the `HybridEnergy` block has been checked against a device (see "Confirmed against hardware" above). Everything else is still a `tools/modbus_probe.py` sweep away from verified — do that and compare against the app/cloud rather than trusting this file's tables blind. |

@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Moc rozładowania baterii"
       },
-      "batcharge": {
-        "name": "Dzienna energia ładowania"
-      },
-      "batdischarge": {
-        "name": "Dzienna energia rozładowania"
-      },
-      "totalechg": {
-        "name": "Całkowita energia ładowania"
-      },
-      "totaledchg": {
-        "name": "Całkowita energia rozładowania"
-      },
       "ratedfrequency": {
         "name": "Częstotliwość znamionowa"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Całkowity dzienny uzysk mikrofalowników"
+      },
+      "bat_charge_today": {
+        "name": "Ładowanie baterii dzisiaj"
+      },
+      "bat_charge_week": {
+        "name": "Ładowanie baterii w tym tygodniu"
+      },
+      "bat_charge_month": {
+        "name": "Ładowanie baterii w tym miesiącu"
+      },
+      "bat_charge_year": {
+        "name": "Ładowanie baterii w tym roku"
+      },
+      "bat_discharge_today": {
+        "name": "Rozładowanie baterii dzisiaj"
+      },
+      "bat_discharge_week": {
+        "name": "Rozładowanie baterii w tym tygodniu"
+      },
+      "bat_discharge_month": {
+        "name": "Rozładowanie baterii w tym miesiącu"
+      },
+      "bat_discharge_year": {
+        "name": "Rozładowanie baterii w tym roku"
+      },
+      "grid_import_today": {
+        "name": "Pobór z sieci dzisiaj"
+      },
+      "grid_export_today": {
+        "name": "Oddanie do sieci dzisiaj"
+      },
+      "home_load_today": {
+        "name": "Zużycie domowe dzisiaj"
       }
     },
     "number": {

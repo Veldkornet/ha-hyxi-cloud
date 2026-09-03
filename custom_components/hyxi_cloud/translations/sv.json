@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Batteri urladdningseffekt"
       },
-      "batcharge": {
-        "name": "Daglig laddningsenergi"
-      },
-      "batdischarge": {
-        "name": "Daglig urladdningsenergi"
-      },
-      "totalechg": {
-        "name": "Total laddningsenergi"
-      },
-      "totaledchg": {
-        "name": "Total urladdningsenergi"
-      },
       "ratedfrequency": {
         "name": "Nominell frekvens"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Total daglig avkastning för mikroväxelriktare"
+      },
+      "bat_charge_today": {
+        "name": "Batteriladdning idag"
+      },
+      "bat_charge_week": {
+        "name": "Batteriladdning denna vecka"
+      },
+      "bat_charge_month": {
+        "name": "Batteriladdning denna månad"
+      },
+      "bat_charge_year": {
+        "name": "Batteriladdning i år"
+      },
+      "bat_discharge_today": {
+        "name": "Batteriurladdning idag"
+      },
+      "bat_discharge_week": {
+        "name": "Batteriurladdning denna vecka"
+      },
+      "bat_discharge_month": {
+        "name": "Batteriurladdning denna månad"
+      },
+      "bat_discharge_year": {
+        "name": "Batteriurladdning i år"
+      },
+      "grid_import_today": {
+        "name": "Nätimport idag"
+      },
+      "grid_export_today": {
+        "name": "Nätexport idag"
+      },
+      "home_load_today": {
+        "name": "Hemförbrukning idag"
       }
     },
     "number": {

@@ -355,3 +355,75 @@ async def test_microinverter_sum_migration_noop_without_stable_key(hass: HomeAss
     kept = entity_registry.async_get(legacy.entity_id)
     assert kept is not None
     assert kept.unique_id == f"{entry.entry_id}_micro_ac_power_total"
+
+
+@pytest.mark.asyncio
+async def test_duplicate_energy_sensor_removed_when_canonical_exists(
+    hass: HomeAssistant,
+):
+    """totalEchg/batCharge are dropped when bat_charge_total already exists,
+    the row wired into the Energy dashboard."""
+    inv_sn = "INV_DUP_1"
+    entry = _cloud_entry(hass)
+
+    registry = er.async_get(hass)
+    canonical = registry.async_get_or_create(
+        "sensor", DOMAIN, f"hyxi_{inv_sn}_bat_charge_total", config_entry=entry
+    )
+    dupe = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"hyxi_{inv_sn}_totalEchg",
+        config_entry=entry,
+        suggested_object_id=f"hyxi_{inv_sn}_totalechg",
+    )
+
+    await _setup_with_devices(
+        hass,
+        entry,
+        {
+            inv_sn: {
+                "device_name": "Inverter",
+                "device_type_code": "HYBRID_INVERTER",
+                "metrics": {"deviceSn": inv_sn, "bat_charge_total": "1500.5"},
+            }
+        },
+    )
+
+    assert registry.async_get(dupe.entity_id) is None
+    assert registry.async_get(canonical.entity_id) is not None
+
+
+@pytest.mark.asyncio
+async def test_duplicate_energy_sensor_promoted_when_canonical_missing(
+    hass: HomeAssistant,
+):
+    """A lone batDisCharge row (e.g. bat_discharge_total was disabled and
+    never built) is re-keyed, keeping its entity_id and history."""
+    inv_sn = "INV_DUP_2"
+    entry = _cloud_entry(hass)
+
+    registry = er.async_get(hass)
+    dupe = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"hyxi_{inv_sn}_batDisCharge",
+        config_entry=entry,
+        suggested_object_id=f"hyxi_{inv_sn}_batdischarge",
+    )
+
+    await _setup_with_devices(
+        hass,
+        entry,
+        {
+            inv_sn: {
+                "device_name": "Inverter",
+                "device_type_code": "HYBRID_INVERTER",
+                "metrics": {"deviceSn": inv_sn, "bat_discharge_total": "1200.2"},
+            }
+        },
+    )
+
+    moved = registry.async_get(dupe.entity_id)
+    assert moved is not None
+    assert moved.unique_id == f"hyxi_{inv_sn}_bat_discharge_total"

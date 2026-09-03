@@ -574,18 +574,6 @@
       "batdischargep": {
         "name": "Batarya Deşarj Gücü"
       },
-      "batcharge": {
-        "name": "Günlük Şarj Enerjisi"
-      },
-      "batdischarge": {
-        "name": "Günlük Deşarj Enerjisi"
-      },
-      "totalechg": {
-        "name": "Toplam Şarj Enerjisi"
-      },
-      "totaledchg": {
-        "name": "Toplam Deşarj Enerjisi"
-      },
       "ratedfrequency": {
         "name": "Nominal Frekans"
       },
@@ -641,6 +629,39 @@
       },
       "micro_daily_yield_total": {
         "name": "Mikro İnverterler Toplam Günlük Verim"
+      },
+      "bat_charge_today": {
+        "name": "Batarya şarjı bugün"
+      },
+      "bat_charge_week": {
+        "name": "Batarya şarjı bu hafta"
+      },
+      "bat_charge_month": {
+        "name": "Batarya şarjı bu ay"
+      },
+      "bat_charge_year": {
+        "name": "Batarya şarjı bu yıl"
+      },
+      "bat_discharge_today": {
+        "name": "Batarya deşarjı bugün"
+      },
+      "bat_discharge_week": {
+        "name": "Batarya deşarjı bu hafta"
+      },
+      "bat_discharge_month": {
+        "name": "Batarya deşarjı bu ay"
+      },
+      "bat_discharge_year": {
+        "name": "Batarya deşarjı bu yıl"
+      },
+      "grid_import_today": {
+        "name": "Bugün şebekeden çekilen"
+      },
+      "grid_export_today": {
+        "name": "Bugün şebekeye verilen"
+      },
+      "home_load_today": {
+        "name": "Bugün ev tüketimi"
       }
     },
     "number": {

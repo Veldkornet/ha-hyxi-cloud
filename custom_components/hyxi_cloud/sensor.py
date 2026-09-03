@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
 from homeassistant.components.sensor import (
@@ -16,7 +17,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
@@ -118,9 +119,12 @@ _ICON_FLASH = "mdi:flash"
 _ICON_LIGHTNING_BOLT = "mdi:lightning-bolt"
 _ICON_BATTERY_ARROW_UP = "mdi:battery-arrow-up"
 _ICON_BATTERY_ARROW_DOWN = "mdi:battery-arrow-down"
+_ICON_BATTERY_PLUS_VARIANT = "mdi:battery-plus-variant"
+_ICON_BATTERY_MINUS_VARIANT = "mdi:battery-minus-variant"
 _ICON_CURRENT_AC = "mdi:current-ac"
 _ICON_THERMOMETER = "mdi:thermometer"
 _ICON_TRANSMISSION_TOWER_IMPORT = "mdi:transmission-tower-import"
+_ICON_TRANSMISSION_TOWER_EXPORT = "mdi:transmission-tower-export"
 _ICON_COUNTER = "mdi:counter"
 _ICON_SOLAR_POWER_VARIANT = "mdi:solar-power-variant"
 _ICON_TRANSMISSION_TOWER = "mdi:transmission-tower"
@@ -522,7 +526,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:transmission-tower-export",
+        icon=_ICON_TRANSMISSION_TOWER_EXPORT,
         suggested_display_precision=0,
     ),
     SensorEntityDescription(
@@ -578,7 +582,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:transmission-tower-export",
+        icon=_ICON_TRANSMISSION_TOWER_EXPORT,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -589,12 +593,17 @@ SENSOR_TYPES = [
         icon="mdi:flash-outline",
         suggested_display_precision=0,
     ),
+    # The one entity for lifetime battery charge/discharge. HYXI also sends
+    # this counter as totalEchg/totalEdchg (poll) and batCharge/batDisCharge
+    # (push) and the SDK keeps all of them equal; those names get no entity,
+    # and _merge_duplicate_battery_energy_sensors retires them from existing
+    # installs.
     SensorEntityDescription(
         key="bat_charge_total",
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-plus-variant",
+        icon=_ICON_BATTERY_PLUS_VARIANT,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -602,7 +611,7 @@ SENSOR_TYPES = [
         native_unit_of_measurement="kWh",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-minus-variant",
+        icon=_ICON_BATTERY_MINUS_VARIANT,
         suggested_display_precision=2,
     ),
     SensorEntityDescription(
@@ -729,6 +738,37 @@ SENSOR_TYPES = [
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         icon=_ICON_SOLAR_POWER_VARIANT,
+        suggested_display_precision=2,
+    ),
+    # Daily grid/load counters from the hybrid Modbus day block -- the
+    # meter-side "bought"/"sold"/consumed figures the HYXI app's D tab
+    # shows. The cloud API has no equivalent. home_load_today reads zero on
+    # a system with no load metering, which is honest rather than hidden.
+    SensorEntityDescription(
+        key="grid_import_today",
+        translation_key="grid_import_today",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon=_ICON_TRANSMISSION_TOWER_IMPORT,
+        suggested_display_precision=2,
+    ),
+    SensorEntityDescription(
+        key="grid_export_today",
+        translation_key="grid_export_today",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon=_ICON_TRANSMISSION_TOWER_EXPORT,
+        suggested_display_precision=2,
+    ),
+    SensorEntityDescription(
+        key="home_load_today",
+        translation_key="home_load_today",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        icon=_ICON_HOME_LIGHTNING_BOLT,
         suggested_display_precision=2,
     ),
     # Micro ESS / New Telemetry Sensors
@@ -1148,38 +1188,6 @@ SENSOR_TYPES = [
         icon=_ICON_BATTERY_ARROW_DOWN,
         suggested_display_precision=0,
     ),
-    SensorEntityDescription(
-        key="batCharge",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-plus",
-        suggested_display_precision=2,
-    ),
-    SensorEntityDescription(
-        key="batDisCharge",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-minus",
-        suggested_display_precision=2,
-    ),
-    SensorEntityDescription(
-        key="totalEchg",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-plus-variant",
-        suggested_display_precision=2,
-    ),
-    SensorEntityDescription(
-        key="totalEdchg",
-        native_unit_of_measurement="kWh",
-        device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:battery-minus-variant",
-        suggested_display_precision=2,
-    ),
 ]
 
 SENSOR_TYPES_BY_KEY = {desc.key: desc for desc in SENSOR_TYPES}
@@ -1196,6 +1204,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities.extend(_build_hardware_sensors(entry, coordinator))
     entities.extend(_integration_health_sensors(entry, coordinator))
     entities.extend(_microinverter_aggregate_sensors(entry, coordinator))
+    entities.extend(_battery_energy_period_sensors(coordinator))
     entities.extend(_battery_protection_sensors(entry, coordinator))
     entities.extend(_em_sensors(entry, coordinator))
 
@@ -1341,7 +1350,6 @@ def _static_cloud_inverter_keys(
         "totalE",
         "totalEnt",
         "totalEpt",
-        "totalEchg",
         "acP",
         "acE",
         "gridP",
@@ -1471,6 +1479,38 @@ def _battery_protection_sensors(entry, coordinator) -> list[SensorEntity]:
     return entities
 
 
+_BATTERY_ENERGY_PERIODS = ("today", "week", "month", "year")
+
+
+def _battery_energy_period_sensors(coordinator) -> list[SensorEntity]:
+    """Section 3b: per-period battery charge/discharge energy, derived from
+    the lifetime counter with a local-midnight reset.
+
+    HYXI exposes no daily/weekly/monthly battery energy on any transport
+    (the "batCharge"/"totalEchg" family is all lifetime cumulative), so
+    these are computed here. One set per device that reports a battery.
+    """
+    entities: list[SensorEntity] = []
+    for sn, dev_data in coordinator.data.items():
+        device_type = normalize_device_type(get_raw_device_code(dev_data))
+        if device_type == "collector":
+            continue
+        metrics = dev_data.get("metrics") or {}
+        has_battery = (
+            "bat_charge_total" in metrics
+            or "bat_discharge_total" in metrics
+            or device_type in ("hybrid_inverter", "all_in_one")
+        )
+        if not has_battery:
+            continue
+        entities.extend(
+            HyxiBatteryEnergyPeriodSensor(coordinator, sn, direction, period)
+            for direction in ("charge", "discharge")
+            for period in _BATTERY_ENERGY_PERIODS
+        )
+    return entities
+
+
 def _em_sensors(entry, coordinator) -> list[SensorEntity]:
     """Section 4: Energy Manager sensors, if EM is enabled for this inverter."""
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
@@ -1536,6 +1576,18 @@ def _em_sensors(entry, coordinator) -> list[SensorEntity]:
             ),
         ),
     ]
+
+
+def _battery_device_info(inverter_sn: str, bat_sn: str) -> dict:
+    """DeviceInfo for the battery pack hung off an inverter."""
+    return {
+        "identifiers": {(DOMAIN, bat_sn)},
+        "name": f"Battery {bat_sn}",
+        "manufacturer": MANUFACTURER,
+        "model": "Energy Storage System",
+        "serial_number": bat_sn,
+        "via_device": (DOMAIN, inverter_sn),
+    }
 
 
 class HyxiBaseSensor(
@@ -1723,6 +1775,14 @@ class HyxiSensor(HyxiBaseSensor):
         # conservative stand-in for battery-protection purposes.
         "batTmp": _SameQuantityFallback("batTch", ("hybrid_inverter", "all_in_one")),
     }
+    # {key: sentinel} -- key ships disabled by default when the sentinel
+    # metric is also present, because a better-named equivalent exists on
+    # that transport. eTodayIn ("Grid Import Energy Today") is the
+    # inverter's AC-input side; on the hybrid Modbus day block it is
+    # shadowed by grid_import_today, the meter-side figure the app shows.
+    _DEMOTE_WHEN_PRESENT: ClassVar[dict[str, str]] = {
+        "eTodayIn": "grid_import_today",
+    }
 
     def __init__(self, coordinator: Any, sn: str, description: Any) -> None:
         """Initialize the sensor."""
@@ -1736,6 +1796,10 @@ class HyxiSensor(HyxiBaseSensor):
 
         raw_code = get_raw_device_code(self._dev_data)
         self._device_type = normalize_device_type(raw_code)
+
+        sentinel = self._DEMOTE_WHEN_PRESENT.get(description.key)
+        if sentinel is not None and sentinel in self._metrics:
+            self._attr_entity_registry_enabled_default = False
 
         # Identity keys off the inverter SN -- the coordinator data key, so
         # it's present on every build. Not metrics["batSn"] (even for
@@ -1773,14 +1837,7 @@ class HyxiSensor(HyxiBaseSensor):
         bat_sn = metrics.get("batSn")
 
         if self.entity_description.key in BATTERY_SENSORS and bat_sn:
-            return {
-                "identifiers": {(DOMAIN, bat_sn)},
-                "name": f"Battery {bat_sn}",
-                "manufacturer": MANUFACTURER,
-                "model": "Energy Storage System",
-                "serial_number": bat_sn,
-                "via_device": (DOMAIN, self._sn),
-            }
+            return _battery_device_info(self._sn, bat_sn)
 
         # Determine if we need to apply any state-mapping for specific types
         sw_version = dev_data.get("_sw_version_cached") or get_software_version(
@@ -2167,6 +2224,166 @@ class HyxiMicroinverterSumSensor(
         """Handle updated data from the coordinator."""
         self._update_native_value()
         super()._handle_coordinator_update()
+
+
+def _period_start(moment: datetime, period: str) -> datetime:
+    """Local start of the calendar period ``moment`` falls in."""
+    day = moment.replace(hour=0, minute=0, second=0, microsecond=0)
+    if period == "week":
+        return day - timedelta(days=day.weekday())
+    if period == "month":
+        return day.replace(day=1)
+    if period == "year":
+        return day.replace(month=1, day=1)
+    return day  # today
+
+
+class HyxiBatteryEnergyPeriodSensor(
+    CoordinatorEntity["HyxiDataUpdateCoordinator"], SensorEntity, RestoreEntity
+):
+    """Battery charge or discharge energy for the current day / week / month
+    / year.
+
+    HYXI reports only lifetime cumulative battery energy on every transport,
+    so each period value is that lifetime counter
+    (``bat_charge_total`` / ``bat_discharge_total``) minus its reading at
+    the start of the period. The anchor is re-taken on the first update of
+    a new period; ``TOTAL_INCREASING`` lets the recorder pick up the drop
+    to zero, the same as every sibling daily counter in this file.
+
+    Hybrid Modbus additionally publishes the device's own daily counter
+    (``bat_charge_today`` / ``bat_discharge_today``); the ``today`` sensor
+    passes that straight through so it matches the HYXI app exactly.
+    Week/month/year are always derived.
+    """
+
+    _attr_has_entity_name = True
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_suggested_display_precision = 2
+
+    _ICONS: ClassVar[dict[str, str]] = {
+        "charge": _ICON_BATTERY_PLUS_VARIANT,
+        "discharge": _ICON_BATTERY_MINUS_VARIANT,
+    }
+
+    def __init__(self, coordinator, sn: str, direction: str, period: str) -> None:
+        """Initialize one period sensor for one battery direction."""
+        super().__init__(coordinator)
+        self._sn = sn
+        self._direction = direction
+        self._period = period
+        self._total_key = f"bat_{direction}_total"
+        self._device_daily_key = f"bat_{direction}_today"
+        self._anchor: float | None = None
+        self._anchor_dt: datetime | None = None
+        self._last_total: float | None = None
+        self._attr_native_value: float | None = None
+
+        self._attr_unique_id = f"hyxi_{sn}_bat_{direction}_{period}"
+        self.entity_id = f"sensor.hyxi_{sn}_bat_{direction}_{period}"
+        self._attr_translation_key = f"bat_{direction}_{period}"
+        self._attr_icon = self._ICONS[direction]
+        self._attr_entity_registry_enabled_default = period in ("today", "month")
+
+    @property
+    def _metrics(self) -> dict:
+        return (self.coordinator.data.get(self._sn) or {}).get("metrics") or {}
+
+    def _metric_float(self, key: str) -> float | None:
+        raw = self._metrics.get(key)
+        if raw is None or is_null_value(raw):
+            return None
+        try:
+            value = float(raw)
+        except ValueError, TypeError:
+            return None
+        return value if math.isfinite(value) else None
+
+    def _recompute(self) -> None:
+        """Refresh native_value from the current metrics."""
+        if self._period == "today":
+            device_today = self._metric_float(self._device_daily_key)
+            if device_today is not None:
+                self._attr_native_value = round(max(0.0, device_today), 2)
+                return
+
+        total = self._metric_float(self._total_key)
+        if total is None:
+            self._attr_native_value = None
+            return
+
+        now = dt_util.now()
+        anchor, anchor_dt, last = self._anchor, self._anchor_dt, self._last_total
+
+        if anchor is None or anchor_dt is None:
+            anchor, self._anchor_dt = total, now
+        elif _period_start(anchor_dt, self._period) < _period_start(now, self._period):
+            # Period rolled over: anchor to the last value seen *before* the
+            # boundary, not the first one after -- otherwise the energy
+            # between the last poll and the boundary is dropped from both
+            # periods.
+            anchor, self._anchor_dt = (last if last is not None else total), now
+        elif total < min(anchor, 1.0) and last is not None and last < min(anchor, 1.0):
+            # Lifetime counter genuinely reset (battery swap, firmware wipe):
+            # near-zero for two consecutive reads. A single low sample is a
+            # partial Modbus block read or a transient cloud value and must
+            # not re-anchor, or the period's total is lost on the recovery.
+            anchor, self._anchor_dt = total, now
+
+        self._anchor = anchor
+        self._last_total = total
+        self._attr_native_value = round(max(0.0, total - anchor), 2)
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the period anchor so the total survives a restart."""
+        await super().async_added_to_hass()
+
+        if (extra := await self.async_get_last_extra_data()) is not None:
+            stored = extra.as_dict()
+            try:
+                self._anchor = float(stored["anchor_total"])
+                self._anchor_dt = dt_util.parse_datetime(stored["anchor_dt"])
+                if (last := stored.get("last_total")) is not None:
+                    self._last_total = float(last)
+            except KeyError, TypeError, ValueError:
+                self._anchor = self._anchor_dt = self._last_total = None
+
+        self._recompute()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._recompute()
+        super()._handle_coordinator_update()
+
+    @property
+    def extra_restore_state_data(self) -> RestoredExtraData | None:
+        """Persist the anchor so the period value survives a restart."""
+        if self._anchor is None or self._anchor_dt is None:
+            return None
+        return RestoredExtraData(
+            {
+                "anchor_total": self._anchor,
+                "anchor_dt": self._anchor_dt.isoformat(),
+                "last_total": self._last_total,
+            }
+        )
+
+    @property
+    def device_info(self):
+        """Attach to the battery device when its serial is known."""
+        bat_sn = self._metrics.get("batSn")
+        if bat_sn:
+            return _battery_device_info(self._sn, bat_sn)
+        dev_data = self.coordinator.data.get(self._sn) or {}
+        return {
+            "identifiers": {(DOMAIN, self._sn)},
+            "name": dev_data.get("device_name") or f"Device {self._sn}",
+            "manufacturer": MANUFACTURER,
+            "model": dev_data.get("model"),
+            "serial_number": self._sn,
+        }
 
 
 class HyxiLastSentModeSensor(

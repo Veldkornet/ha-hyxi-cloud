@@ -107,6 +107,27 @@ INPUT_REGISTERS: dict[int, int] = {
     1064: 22,  # max/min cell temperature
     1065: (-420) & 0xFFFF,  # battery real-time power, 0dp
     1097: 100,
+    # Daily block, U16 1dp. Per-phase / per-string fields are summed by the
+    # client, so these are chosen to add up to round totals.
+    1101: 52,
+    1102: 34,
+    1103: 34,  # daily AC output A/B/C -> eToday 12.0 kWh
+    1104: 8,
+    1105: 6,
+    1106: 6,  # daily AC input A/B/C -> eTodayIn 2.0 kWh
+    1107: 40,
+    1108: 30,
+    1109: 30,  # daily consumption A/B/C -> home_load_today 10.0 kWh
+    1110: 91,  # daily charge -> bat_charge_today 9.1 kWh
+    1111: 73,  # daily discharge -> bat_discharge_today 7.3 kWh
+    1112: 5,
+    1113: 3,
+    1114: 2,  # daily sell A/B/C -> grid_export_today 1.0 kWh
+    1115: 12,
+    1116: 10,
+    1117: 8,  # daily buy A/B/C -> grid_import_today 3.0 kWh
+    1118: 60,
+    1119: 60,  # daily PV1/PV2 -> efpv 12.0 kWh
     **_spread(1128, 12634),  # accumulated AC output A, 1dp -> 1263.4 kWh
     **_spread(1130, 8433),  # accumulated AC output B, 1dp -> 843.3 kWh
     **_spread(1132, 8434),  # accumulated AC output C, 1dp -> 843.4 kWh
@@ -232,6 +253,27 @@ async def test_battery_detail_registers_decode_into_metrics(client):
         == metrics["totalEdchg"]
         == metrics["batDisCharge"]
     )
+
+
+@pytest.mark.asyncio
+async def test_daily_energy_block_decodes_and_sums(client):
+    """The 1101-1127 daily block: per-phase / per-string fields are summed
+    into the same cloud-shaped keys the cloud transport would carry, and
+    the battery daily counters feed the period sensors directly."""
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    assert metrics["eToday"] == 12.0  # 5.2 + 3.4 + 3.4
+    assert metrics["eTodayIn"] == 2.0  # 0.8 + 0.6 + 0.6
+    assert metrics["home_load_today"] == 10.0  # 4.0 + 3.0 + 3.0
+    assert metrics["grid_export_today"] == 1.0  # 0.5 + 0.3 + 0.2
+    assert metrics["grid_import_today"] == 3.0  # 1.2 + 1.0 + 0.8
+    assert metrics["efpv"] == 12.0  # 6.0 + 6.0
+    assert metrics["bat_charge_today"] == 9.1
+    assert metrics["bat_discharge_today"] == 7.3
+
+    # Daily and lifetime are distinct counters, not the same register.
+    assert metrics["bat_charge_today"] != metrics["bat_charge_total"]
 
 
 @pytest.mark.asyncio

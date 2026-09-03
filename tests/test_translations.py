@@ -44,6 +44,13 @@ def get_translation_keys():
             for k in em_keys:
                 keys["sensor"].add(f"em_{k}".lower())
 
+        # HyxiBatteryEnergyPeriodSensor sets
+        # self._attr_translation_key = f"bat_{direction}_{period}"
+        if re.search(r'_attr_translation_key\s*=\s*f"bat_\{', content):
+            for direction in ("charge", "discharge"):
+                for period in ("today", "week", "month", "year"):
+                    keys["sensor"].add(f"bat_{direction}_{period}")
+
     # 2. Binary Sensors from binary_sensor.py
     binary_path = (
         Path(__file__).parent / "../custom_components/hyxi_cloud/binary_sensor.py"
