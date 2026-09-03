@@ -44,9 +44,12 @@ from typing import Any, NamedTuple
 
 try:
     from modbus_connection import (
+        GatewayPathUnavailableError,
+        GatewayTargetError,
         IllegalDataAddressError,
         IllegalFunctionError,
         ModbusConnectionError,
+        ModbusError,
         ModbusExceptionError,
         ModbusProtocolError,
         ModbusSerialParams,
@@ -88,6 +91,21 @@ SPACES = ("input", "holding")
 # of my map". Everything else in the exception family is a condition of the
 # device or gateway at this moment, not a statement about the register.
 ABSENT_ERRORS = (IllegalDataAddressError,)
+
+# What `detect` reads, mirrored from custom_components/hyxi_cloud/const.py --
+# MODBUS_FAMILY_SIGNATURES and the two plausibility bounds. Keep them in step.
+# Hybrid is tried first, so a device that answers both is called a hybrid.
+DETECT_SIGNATURES = (
+    ("hybrid", "input", 0, "communication protocol version"),
+    ("halo", "input", 4980, "BMS state-of-charge"),
+)
+HALO_SOC_SIGNATURE_MAX_RAW = 1000
+HYBRID_PROTOCOL_SIGNATURE_MIN_RAW = 1
+
+# `detect` paces itself off the integration's setup probe, not the sweep
+# default -- the hybrid document requires more than 500ms between frames.
+DETECT_SPACING = 0.5
+DETECT_TIMEOUT = 3.0
 
 
 class UnsupportedSpace(Exception):
@@ -488,6 +506,161 @@ def run_show(args: argparse.Namespace) -> int:
     return 0
 
 
+class SignatureOutcome(NamedTuple):
+    """What one family-signature read produced."""
+
+    kind: str  # "value" | "exception" | "gateway" | "timeout"
+    value: int | None = None
+    detail: str = ""
+
+    @property
+    def device_present(self) -> bool:
+        """Whether this proves a device answered, for detection's purposes.
+
+        A plain Modbus exception does -- something replied and rejected the
+        register. A gateway target-failure or a timeout does not. Mirrors
+        config_flow._read_modbus_signature.
+        """
+        return self.kind in ("value", "exception")
+
+
+async def _read_signature(unit: Any, space: str, address: int) -> SignatureOutcome:
+    """Read one signature register the way config_flow._read_modbus_signature does.
+
+    Catches exactly what that method catches. A link error (ModbusConnectionError,
+    a corrupt frame) is left to propagate, the same way it reaches
+    _detect_family_on_unit's own handler and becomes "cannot_connect" -- run_detect
+    turns it into a single clear line rather than a misleading "no_device".
+    """
+    read = (
+        unit.read_input_registers if space == "input" else unit.read_holding_registers
+    )
+    try:
+        words = await read(address, 1)
+    except (GatewayPathUnavailableError, GatewayTargetError) as err:
+        return SignatureOutcome("gateway", detail=type(err).__name__)
+    except ModbusExceptionError as err:
+        return SignatureOutcome("exception", detail=type(err).__name__)
+    except ModbusTimeoutError:
+        return SignatureOutcome("timeout")
+    return SignatureOutcome("value", value=words[0])
+
+
+def classify_family(
+    outcomes: list[tuple[str, int, str, SignatureOutcome]],
+) -> tuple[str | None, str]:
+    """Reproduce config_flow._detect_family_on_unit. Returns (family, reason).
+
+    `outcomes` is (family, address, description, outcome) in DETECT_SIGNATURES
+    order -- hybrid first.
+    """
+    device_present = False
+    skipped: list[str] = []
+    for family, address, description, outcome in outcomes:
+        device_present |= outcome.device_present
+        value = outcome.value
+        if value is None:
+            continue
+        if family == "halo" and not 0 <= value <= HALO_SOC_SIGNATURE_MAX_RAW:
+            skipped.append(
+                f"input {address}={value} is outside 0..{HALO_SOC_SIGNATURE_MAX_RAW}, "
+                "not a raw SOC reading"
+            )
+            continue
+        if family == "hybrid" and value < HYBRID_PROTOCOL_SIGNATURE_MIN_RAW:
+            skipped.append(
+                f"input {address}={value} is not a positive protocol version"
+            )
+            continue
+        return family, (
+            f"input register {address} answered with {value}, a plausible {description}"
+        )
+    if device_present:
+        why = "; ".join(skipped) if skipped else "neither signature carried a value"
+        return None, f"unidentified_family ({why})"
+    return None, "no_device (nothing answered either signature register)"
+
+
+def _print_detect_report(
+    args: argparse.Namespace,
+    outcomes: list[tuple[str, int, str, SignatureOutcome]],
+    family: str | None,
+    reason: str,
+) -> None:
+    print(f"\ndetect: {args.serial or args.tcp} unit {args.unit}\n")
+    for name, address, description, outcome in outcomes:
+        if outcome.kind == "value":
+            state = f"value {outcome.value} (0x{outcome.value:04X})"
+        elif outcome.detail:
+            state = f"{outcome.kind}: {outcome.detail}"
+        else:
+            state = outcome.kind
+        present = (
+            "" if outcome.device_present else "  (does not prove a device is here)"
+        )
+        print(f"  {name:<7} input {address:<5} {description:<32} : {state}{present}")
+
+    print()
+    if family is None:
+        print(f"  => family UNIDENTIFIED -- {reason}")
+    else:
+        print(f"  => detected family: {family}")
+        print(f"     {reason}")
+    if args.expect:
+        verdict = "MATCH" if family == args.expect else "MISMATCH"
+        print(f"\n     expected {args.expect}  ->  {verdict}")
+
+
+async def run_detect(args: argparse.Namespace) -> int:
+    """Read both family signatures and report which map the device speaks."""
+    # message_spacing on the connection paces the two reads, the same way
+    # run_sweep and config_flow._detect_family_on_unit leave it to do -- no
+    # explicit sleep between them.
+    connection = build_connection(args)
+    unit = connection.for_unit(args.unit)
+    outcomes: list[tuple[str, int, str, SignatureOutcome]] = []
+    try:
+        await connection.connect()
+        for family, space, address, description in DETECT_SIGNATURES:
+            outcome = await _read_signature(unit, space, address)
+            outcomes.append((family, address, description, outcome))
+    except (ModbusError, OSError) as err:
+        # A residual link error -- config_flow._detect_family_on_unit's own
+        # broad handler turns the same thing into "cannot_connect".
+        print(
+            f"link error talking to {args.serial or args.tcp}: "
+            f"{type(err).__name__}: {err}",
+            file=sys.stderr,
+        )
+        return 1
+    finally:
+        await connection.close()
+
+    family, reason = classify_family(outcomes)
+    _print_detect_report(args, outcomes, family, reason)
+    if args.expect:
+        return 0 if family == args.expect else 1
+    return 0 if family is not None else 1
+
+
+def _add_connection_args(parser: argparse.ArgumentParser) -> None:
+    """The --serial / --tcp link options shared by `sweep` and `detect`."""
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument("--serial", metavar="DEVICE", help="e.g. /dev/ttyUSB0")
+    target.add_argument("--tcp", metavar="HOST[:PORT]", help="e.g. 192.168.1.50:502")
+    parser.add_argument("--baud", type=int, default=115200, help="serial only")
+    parser.add_argument("--parity", default="N", choices=("N", "E", "O"))
+    parser.add_argument("--stopbits", type=int, default=1, choices=(1, 2))
+    parser.add_argument(
+        "--framer",
+        default="rtu",
+        choices=("socket", "rtu", "ascii"),
+        help="rtu (default) suits RS485 and most serial-to-Ethernet gateways; "
+        "socket is native Modbus TCP and is invalid for --serial",
+    )
+    parser.add_argument("--unit", type=int, default=1, help="slave address")
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Define the CLI."""
     parser = argparse.ArgumentParser(
@@ -497,20 +670,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sweep = sub.add_parser("sweep", help="read register ranges into a snapshot")
-    target = sweep.add_mutually_exclusive_group(required=True)
-    target.add_argument("--serial", metavar="DEVICE", help="e.g. /dev/ttyUSB0")
-    target.add_argument("--tcp", metavar="HOST[:PORT]", help="e.g. 192.168.1.50:502")
-    sweep.add_argument("--baud", type=int, default=115200, help="serial only")
-    sweep.add_argument("--parity", default="N", choices=("N", "E", "O"))
-    sweep.add_argument("--stopbits", type=int, default=1, choices=(1, 2))
-    sweep.add_argument(
-        "--framer",
-        default="rtu",
-        choices=("socket", "rtu", "ascii"),
-        help="rtu (default) suits RS485 and most serial-to-Ethernet gateways; "
-        "socket is native Modbus TCP and is invalid for --serial",
-    )
-    sweep.add_argument("--unit", type=int, default=1, help="slave address")
+    _add_connection_args(sweep)
     sweep.add_argument("--space", default="both", choices=("input", "holding", "both"))
     sweep.add_argument(
         "--range",
@@ -528,6 +688,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sweep.add_argument("-o", "--out", required=True, metavar="FILE")
 
+    detect = sub.add_parser(
+        "detect",
+        help="read both family signatures and report which register map the "
+        "device speaks -- the same check the config flow runs at setup",
+    )
+    _add_connection_args(detect)
+    detect.add_argument("--spacing", type=float, default=DETECT_SPACING)
+    detect.add_argument("--timeout", type=float, default=DETECT_TIMEOUT)
+    detect.add_argument(
+        "--expect",
+        choices=("halo", "hybrid"),
+        help="the family this device should be, for a MATCH/MISMATCH line",
+    )
+
     diff = sub.add_parser("diff", help="compare two snapshots")
     diff.add_argument("before")
     diff.add_argument("after")
@@ -544,6 +718,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "sweep":
         return asyncio.run(run_sweep(args))
+    if args.command == "detect":
+        return asyncio.run(run_detect(args))
     if args.command == "diff":
         return run_diff(args)
     return run_show(args)

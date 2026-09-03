@@ -131,5 +131,7 @@
           - "custom_components/hyxi_cloud/modbus/**/*"
           - "custom_components/hyxi_cloud/modbus_coordinator.py"
           - "tests/integration/test_modbus*.py"
+          - "tests/test_modbus_probe.py"
           - "tools/modbus_probe.py"
+          - "tools/hyxi_family_check.py"
           - "docs/modbus-provenance.md"
