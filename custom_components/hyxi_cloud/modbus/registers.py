@@ -2,7 +2,9 @@
 
 Transcribed from the specification shared on issue #662 with permission to
 publish. Values are unverified against hardware -- no HALO has been on a bus
-yet -- so everything here is the vendor's claim, not an observation.
+for anything but a live control failure (see HaloSettings) -- so everything
+here is the vendor's claim, not an observation, except where individually
+noted.
 
 Two rules govern the whole map and are easy to get wrong:
 
@@ -265,6 +267,19 @@ class HaloSettings(Component):
     refuses Micro ESS control for third-party applications, and there is no
     permission check on this path.
 
+    Every writable single-register field below passes force_fc16=True: this
+    document's function-code table lists only 0x03/0x04/0x10, unlike the
+    hybrid one, which explicitly adds 0x06 (write single register) -- see
+    docs/modbus-provenance.md. Without it, modbus_connection defaults a
+    one-word field to FC 0x06, which this firmware does not implement; the
+    device's non-echo response then fails tmodbus's "response must match
+    request" check for that function, surfacing as "Expected response to
+    match request" -- this specific function-code behavior, not the wider
+    register map, is what a real device's error confirmed, when a HALO
+    owner hit it clicking the discharge control button. The two-register
+    fields (int32/uint32) below already write via FC 0x10 regardless, since
+    modbus_connection picks it for any field wider than one register.
+
     Registers 4000-4005 (clock, timezone, RS485 address and baud rate) are
     deliberately absent. Writing them can take the device off the bus, and
     nothing in this integration has a reason to.
@@ -273,27 +288,35 @@ class HaloSettings(Component):
     register_space = "holding"
     max_span = MAX_SPAN
 
-    dispatch_mode = integer(4048, signed=False, writable=True)
+    dispatch_mode = integer(4048, signed=False, writable=True, force_fc16=True)
     """0 absolute power dispatch, 1 percentage dispatch."""
     active_power_setpoint = int32(
         4049, scale=0.001, word_order=LOW_WORD_FIRST, writable=True, unit="kW"
     )
     """Active power setpoint."""
-    anti_starvation = integer(4121, signed=False, writable=True)
+    anti_starvation = integer(4121, signed=False, writable=True, force_fc16=True)
     """Battery anti-starvation protection. 0 disabled, 1 enabled."""
-    force_charge_start_soc = integer(4132, signed=False, writable=True, unit="%")
+    force_charge_start_soc = integer(
+        4132, signed=False, writable=True, unit="%", force_fc16=True
+    )
     """Anti-starvation / forced charge start SOC."""
-    off_grid_min_soc = integer(4133, signed=False, writable=True, unit="%")
+    off_grid_min_soc = integer(
+        4133, signed=False, writable=True, unit="%", force_fc16=True
+    )
     """Minimum SOC while off grid."""
-    self_use_soc = integer(4134, signed=False, writable=True, unit="%")
+    self_use_soc = integer(4134, signed=False, writable=True, unit="%", force_fc16=True)
     """Self-consumption reserve SOC."""
-    force_charge_stop_soc = integer(4140, signed=False, writable=True, unit="%")
+    force_charge_stop_soc = integer(
+        4140, signed=False, writable=True, unit="%", force_fc16=True
+    )
     """Anti-starvation / forced charge stop SOC."""
-    discharge_min_soc = integer(4141, signed=False, writable=True, unit="%")
+    discharge_min_soc = integer(
+        4141, signed=False, writable=True, unit="%", force_fc16=True
+    )
     """Discharge floor SOC."""
-    vpp_enable = integer(4146, signed=False, writable=True)
+    vpp_enable = integer(4146, signed=False, writable=True, force_fc16=True)
     """VPP dispatch mode 2. 0 disabled, 1 enabled."""
-    vpp_mode = integer(4147, signed=False, writable=True)
+    vpp_mode = integer(4147, signed=False, writable=True, force_fc16=True)
     """0 idle, 1 charge, 2 discharge, 3 self-consumption."""
     vpp_charge_power = uint32(4148, word_order=LOW_WORD_FIRST, writable=True, unit="W")
     """VPP charge power."""
@@ -301,9 +324,9 @@ class HaloSettings(Component):
         4150, word_order=LOW_WORD_FIRST, writable=True, unit="W"
     )
     """VPP discharge power."""
-    vpp_min_soc = integer(4152, signed=False, writable=True, unit="%")
+    vpp_min_soc = integer(4152, signed=False, writable=True, unit="%", force_fc16=True)
     """Minimum SOC under VPP dispatch. Not grid power -- different space."""
-    feed_in_enable = integer(4162, signed=False, writable=True)
+    feed_in_enable = integer(4162, signed=False, writable=True, force_fc16=True)
     """Export to grid. 0 off, 1 on."""
     feed_in_power_limit = int32(
         4163, scale=0.001, word_order=LOW_WORD_FIRST, writable=True, unit="kW"
