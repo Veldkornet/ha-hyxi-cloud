@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Rensa Gamla Prenumerationer"
+      },
+      "refresh_settings": {
+        "name": "Uppdatera Inställningarna"
       }
     }
   },

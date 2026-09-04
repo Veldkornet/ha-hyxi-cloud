@@ -828,7 +828,19 @@ def _cleanup_control_entities(
     coordinator: HyxiDataUpdateCoordinator,
 ) -> None:
     """Remove control entities from registry if battery control is disabled."""
+    # button.py/number.py already import back from this module's own
+    # top-level names (e.g. button.py's HyxiRenewSubscriptionButton calling
+    # `from . import _async_setup_push_subscription`), deferred to inside a
+    # function for the same reason this one is: both sides are fully loaded
+    # by the time either function actually runs, so the cycle pylint sees
+    # in the static import graph never manifests as a real ImportError.
+    # pylint: disable-next=cyclic-import
+    from .button import POWER_COMMAND_ICONS
     from .const import is_battery_control_enabled
+    from .number import (  # pylint: disable=cyclic-import
+        HALO_SETTING_NUMBER_DEFS,
+        HYBRID_SETTING_NUMBER_DEFS,
+    )
 
     if is_battery_control_enabled(entry):
         return
@@ -837,33 +849,57 @@ def _cleanup_control_entities(
         "Battery control is disabled. Cleaning up any registered control entities from registry"
     )
     registry = er.async_get(hass)
-    keys_to_remove = frozenset(
-        (
-            "mode_idle",
-            "mode_charge",
-            "mode_discharge",
-            "mode_self_consume",
-            "peak_shaving_close",
-            "peak_shaving_charge",
-            "peak_shaving_discharge",
-            "peak_shaving_stop",
-            "peak_shaving_hold",
-            "frequency_control",
-            "micro_power",
-            "charge_power",
-            "discharge_power",
-            "soc_min",
-            "soc_max",
-            "soc_min_hysteresis_pct",
-            "soc_max_hysteresis_pct",
-            "micro_power_limit",
-            "last_sent_mode",
+    # Device-scoped (hyxi_{sn}_{key}) -- every entity that only exists at
+    # all because is_battery_control_enabled(entry) was True when it was
+    # created, cloud and Modbus alike. Keep this in sync with every
+    # is_battery_control_enabled(entry) check in button.py/number.py/
+    # switch.py -- a key missing here is an entity that lingers as
+    # "unavailable" forever once created, instead of disappearing the
+    # moment the option that created it is turned back off. Sourced from
+    # the same defs/dicts those modules build their entities from wherever
+    # one already exists, rather than retyped, so a def added there is
+    # covered here automatically instead of silently drifting out of sync
+    # the way this list itself once did.
+    keys_to_remove = (
+        frozenset(
+            (
+                "mode_idle",
+                "mode_charge",
+                "mode_discharge",
+                "mode_self_consume",
+                "peak_shaving_close",
+                "peak_shaving_charge",
+                "peak_shaving_discharge",
+                "peak_shaving_stop",
+                "peak_shaving_hold",
+                "frequency_control",
+                "micro_power",
+                "micro_ess_power",
+                "charge_power",
+                "discharge_power",
+                "soc_min",
+                "soc_max",
+                "soc_min_hysteresis_pct",
+                "soc_max_hysteresis_pct",
+                "micro_power_limit",
+                "last_sent_mode",
+                # The one boolean Modbus setting with no HyxiSettingNumberDef
+                # equivalent (switch.py's HyxiAntiStarvationSwitch).
+                "anti_starvation",
+            )
         )
+        | {d.key for d in HALO_SETTING_NUMBER_DEFS}
+        | {d.key for d in HYBRID_SETTING_NUMBER_DEFS}
+        | POWER_COMMAND_ICONS.keys()
     )
 
     unique_ids_to_remove = {
         f"hyxi_{sn}_{key}" for sn in coordinator.data for key in keys_to_remove
     }
+    # Entry-scoped: one button per Modbus entry rather than per device SN
+    # (see button.py's HyxiRefreshSettingsButton), so it isn't shaped like
+    # the device-scoped ids above and needs its own entry here.
+    unique_ids_to_remove.add(f"{entry.entry_id}_refresh_settings")
 
     for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
         if reg_entry.unique_id in unique_ids_to_remove:

@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Очистить старые подписки"
+      },
+      "refresh_settings": {
+        "name": "Обновить настройки"
       }
     }
   },

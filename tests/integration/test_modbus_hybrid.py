@@ -576,6 +576,12 @@ async def test_a_failed_settings_read_retries_after_the_refresh_window(client):
     )
 
 
+def test_settings_refresh_can_be_forced_past_the_window(client):
+    """Hybrid side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts."""
+    refresh.settings_refresh_can_be_forced_past_the_window(client)
+
+
 @pytest.mark.asyncio
 async def test_battery_power_write_failure_is_logged_and_wrapped(client, caplog):
     with patch.object(

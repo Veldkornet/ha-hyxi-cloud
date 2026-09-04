@@ -153,6 +153,10 @@ class HyxiHybridModbusClient:
             _LOGGER,
         )
 
+    def force_settings_refresh(self) -> None:
+        """See HyxiModbusClient.force_settings_refresh."""
+        self._settings_read_at = None
+
     async def async_read_all(self) -> dict[str, dict]:
         """Poll the device and return it in the coordinator's data shape."""
         await self.async_read_identity()

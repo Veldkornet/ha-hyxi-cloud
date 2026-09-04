@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Limpar Assinaturas Antigas"
+      },
+      "refresh_settings": {
+        "name": "Atualizar Configurações"
       }
     }
   },

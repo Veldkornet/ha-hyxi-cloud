@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Verwyder Ou Intekeninge"
+      },
+      "refresh_settings": {
+        "name": "Verfris Instellings"
       }
     }
   },

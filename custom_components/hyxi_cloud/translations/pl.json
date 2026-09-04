@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Wyczyść stare subskrypcje"
+      },
+      "refresh_settings": {
+        "name": "Odśwież ustawienia"
       }
     }
   },

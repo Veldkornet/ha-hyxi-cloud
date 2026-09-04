@@ -34,6 +34,7 @@ from .const import (
     is_modbus_entry,
     mask_sn,
     mask_subscription_code,
+    modbus_service_device_info,
     normalize_device_type,
 )
 
@@ -107,6 +108,14 @@ async def async_setup_entry(
     if entry.options.get(CONF_ENABLE_PUSH, False) is True:
         entities.append(HyxiRenewSubscriptionButton(coordinator, entry))
         entities.append(HyxiPurgeSubscriptionsButton(coordinator, entry))
+
+    # Modbus always reads the settings block on a timer regardless of this
+    # option (see client.py's async_read_settings), but only the setting
+    # number/switch entities this button refreshes are gated by it -- with
+    # control disabled there's nothing on screen for a forced re-read to
+    # change.
+    if is_modbus_entry(entry) and is_battery_control_enabled(entry):
+        entities.append(HyxiRefreshSettingsButton(coordinator, entry))
 
     if entities:
         async_add_entities(entities)
@@ -736,3 +745,40 @@ class HyxiPurgeSubscriptionsButton(ButtonEntity):
                 f"Purged {success_count} old subscriptions, but {failure_count} failed. "
                 "Check logs for details."
             )
+
+
+class HyxiRefreshSettingsButton(ButtonEntity):
+    """Button to make the settings block due for its next re-read.
+
+    async_read_settings only re-reads the block every SETTINGS_REFRESH_SECONDS
+    (see client.py) -- fine for catching a change made elsewhere eventually,
+    but a user who just changed something from the HYXI app or another
+    Modbus master and switches back to Home Assistant right away would
+    otherwise wait up to an hour to see it. Pressing this button doesn't
+    read the settings block on its own; it clears the throttle and then
+    requests a regular coordinator poll, which reads every block including
+    settings -- there is no cheaper "settings only" poll to ask for, so this
+    piggybacks on the one that already exists rather than adding one. One
+    device per Modbus entry, so this lives on the entry's own "HYXI Modbus
+    Service" device rather than a specific inverter's.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "refresh_settings"
+    _attr_icon = "mdi:refresh"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        """Initialize the refresh settings button."""
+        self.coordinator = coordinator
+        self._attr_unique_id = f"{entry.entry_id}_refresh_settings"
+        self._attr_device_info = modbus_service_device_info(entry.entry_id)
+
+    async def async_press(self) -> None:
+        """Clear the client's refresh throttle, then poll right away rather
+        than waiting for the next scheduled interval to pick it up."""
+        _LOGGER.info(
+            "Manually triggered HYXI Modbus settings refresh for entry %s",
+            self.coordinator.entry.entry_id,
+        )
+        self.coordinator.client.force_settings_refresh()
+        await self.coordinator.async_request_refresh()
