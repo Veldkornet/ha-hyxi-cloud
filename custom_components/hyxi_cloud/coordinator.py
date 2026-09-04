@@ -60,6 +60,24 @@ def _is_cache_expired(raw: dict | None) -> bool:
         return True
 
 
+def _drop_stale_settings_markers(devices: dict) -> dict:
+    """Strip a Modbus settings-freshness marker that predates this process.
+
+    "_settings_read_at" (modbus/client.py) is a time.monotonic() value,
+    meaningful only against other timestamps from the same process. A cache
+    loaded from disk at startup comes from a previous process's clock, so
+    pre-seeding coordinator.data with it verbatim would let
+    entity.py's SettingsSyncMixin treat a days-old cached settings snapshot
+    as though this process had just confirmed it, on the very first poll
+    after a restart -- including reverting a device change made while HA
+    was down. Cloud devices never carry this key, so this is a no-op there.
+    """
+    for dev_data in devices.values():
+        if metrics := dev_data.get("metrics"):
+            metrics.pop("_settings_read_at", None)
+    return devices
+
+
 class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from HYXI API."""
 
@@ -133,7 +151,11 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                     "Pre-seeding coordinator from cache (%d devices) before first API call",
                     len(devices),
                 )
-                self.data = devices  # pylint: disable=attribute-defined-outside-init
+                # self.data crosses a process boundary here -- see
+                # _drop_stale_settings_markers.
+                self.data = _drop_stale_settings_markers(  # pylint: disable=attribute-defined-outside-init
+                    devices
+                )
                 self.hyxi_metadata["api_status"] = "Starting (cached)"
                 self.hyxi_metadata["cache_active"] = True
             else:

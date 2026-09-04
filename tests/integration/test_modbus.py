@@ -17,8 +17,12 @@ from modbus_connection import IllegalDataAddressError
 from modbus_connection.pytest_plugin import MockModbusConnection
 
 from custom_components.hyxi_cloud.const import DOMAIN, MODBUS_FAMILY_SIGNATURES
-from custom_components.hyxi_cloud.modbus.client import HyxiModbusClient
+from custom_components.hyxi_cloud.modbus.client import (
+    SETTINGS_REFRESH_SECONDS,
+    HyxiModbusClient,
+)
 from custom_components.hyxi_cloud.modbus.registers import HaloBattery, HaloGrid
+from tests.integration import settings_refresh_asserts as refresh
 
 _SIGNATURE_ADDRESSES = {
     address for _family, _space, address in MODBUS_FAMILY_SIGNATURES
@@ -362,12 +366,30 @@ async def test_unreadable_settings_falls_back_gracefully(client, caplog):
 
 
 @pytest.mark.asyncio
-async def test_settings_are_read_only_once(client):
-    await client.async_read_all()
-    with patch.object(client.settings, "async_update") as second:
-        await client.async_read_all()
+async def test_settings_are_not_reread_within_the_refresh_window(client):
+    """HALO side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts, and test_modbus_hybrid.py for the hybrid
+    equivalent."""
+    await refresh.settings_are_not_reread_within_the_refresh_window(client)
 
-    second.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_settings_are_reread_once_the_refresh_window_elapses(client):
+    """HALO side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts."""
+    await refresh.settings_are_reread_once_the_refresh_window_elapses(
+        client, SETTINGS_REFRESH_SECONDS
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_failed_settings_read_retries_after_the_refresh_window(client):
+    """HALO side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts. vpp_min_soc/4048 is this family's field;
+    self_use_soc/1102 is the hybrid equivalent."""
+    await refresh.a_failed_settings_read_retries_after_the_refresh_window(
+        client, SETTINGS_REFRESH_SECONDS, 4048, "vpp_min_soc", 10
+    )
 
 
 @pytest.mark.asyncio
@@ -1515,6 +1537,106 @@ async def test_halo_anti_starvation_switch_appears_and_writes_through(hass):
             "switch", "turn_on", {"entity_id": entity_id}, blocking=True
         )
     spy.assert_awaited_once_with(True)
+
+
+@pytest.mark.asyncio
+async def test_halo_anti_starvation_switch_shows_the_devices_real_value(hass):
+    """anti_starvation_enabled is resolved from the same settings block the
+    setting numbers already seed from -- the switch should show the
+    device's real value from the first poll, not stay unknown until this
+    session writes it, and should pick up a change made outside HA once
+    the settings refresh window reopens."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+    connection = _seeded_connection()
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    entity_id = _entity_id(hass, "switch", sn, "anti_starvation")
+    self_use_id = _entity_id(hass, "number", sn, "self_use_soc")
+
+    # HOLDING_REGISTERS seeds 4121 = 1 (enabled) and 4134 = 10.
+    assert hass.states.get(entity_id).state == "on"
+    assert hass.states.get(self_use_id).state == "10"
+
+    # Simulate a change made outside HA (the app, another Modbus master),
+    # and force the refresh window open so the next poll notices it.
+    connection.for_unit(1).load_raw({"holding": {4121: 0, 4134: 55}})
+    coordinator.client._settings_read_at -= SETTINGS_REFRESH_SECONDS + 1
+
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get(entity_id).state == "off"
+    assert hass.states.get(self_use_id).state == "55"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("family", "connection_factory", "fail_register"),
+    [
+        ("halo", _seeded_connection, 4134),
+        ("hybrid", _seeded_hybrid_connection, 1102),
+    ],
+    ids=["halo", "hybrid"],
+)
+async def test_a_write_survives_a_failed_settings_reread_past_the_refresh_window(
+    hass, family, connection_factory, fail_register
+):
+    """A write's optimistic value must outlive a settings re-read that
+    started after it but failed -- Component.write() never updates the
+    client's own cached settings fields, only the device, so a failed
+    async_update() leaves self_use_soc at its last successfully-read value
+    (10, from the fixture) even though the device now holds 20. Without
+    _settings_confirmed_at staying put on a failed attempt, that stale 10
+    would be re-published with a timestamp newer than the write and
+    SettingsSyncMixin would wrongly adopt it, reverting the entity. Checked
+    on both device families -- self_use_soc is register 4134 on HALO, 1102
+    on hybrid."""
+    entry = _modbus_entry(
+        hass, modbus_family=family, options={"enable_battery_control": True}
+    )
+    connection = connection_factory()
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    self_use_id = _entity_id(hass, "number", sn, "self_use_soc")
+    assert hass.states.get(self_use_id).state == "10"
+
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": self_use_id, "value": 20}, blocking=True
+    )
+    assert hass.states.get(self_use_id).state == "20.0"
+
+    # Force the refresh window open, then make the re-read fail -- the
+    # device's real value (20) is never in question here, only whether a
+    # failed re-attempt can make this session's own view of it regress.
+    coordinator.client._settings_read_at -= SETTINGS_REFRESH_SECONDS + 1
+    coordinator.client._unit.fail_read(
+        fail_register, IllegalDataAddressError(2, "nope"), register_type="holding"
+    )
+
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get(self_use_id).state == "20.0"
 
 
 @pytest.mark.asyncio

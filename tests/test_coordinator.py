@@ -472,6 +472,47 @@ async def test_async_preload_cache_seeds_data_when_fresh():
     assert coordinator.hyxi_metadata["cache_active"] is True
 
 
+def test_drop_stale_settings_markers_removes_the_monotonic_timestamp():
+    """_settings_read_at is a time.monotonic() value from a previous
+    process -- meaningless, and unsafe to compare against, once reloaded
+    into a new one."""
+    devices = {
+        "SN1": {"metrics": {"tinv": "45.0", "_settings_read_at": 12345.0}},
+        "SN2": {"metrics": {}},
+        "SN3": {},
+    }
+
+    result = hc_coord._drop_stale_settings_markers(devices)
+
+    assert result is devices
+    assert "_settings_read_at" not in devices["SN1"]["metrics"]
+    assert devices["SN1"]["metrics"]["tinv"] == "45.0"
+    assert not devices["SN2"]["metrics"]
+    assert not devices["SN3"]
+
+
+@pytest.mark.asyncio
+async def test_async_preload_cache_strips_settings_read_at_from_a_modbus_device():
+    """A Modbus device's settings-freshness marker must not survive a
+    restart in coordinator.data -- see _drop_stale_settings_markers. Without
+    this, SettingsSyncMixin would treat a days-old cached settings snapshot
+    as though this new process had just confirmed it."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), MagicMock(), mock_entry
+    )
+
+    devices = {"SN123": {"metrics": {"self_use_soc": 10, "_settings_read_at": 999.0}}}
+    raw = {"cached_at": hc_coord.dt_util.utcnow().isoformat(), "devices": devices}
+    coordinator.device_store.async_load = AsyncMock(return_value=raw)
+
+    await coordinator.async_preload_cache()
+
+    assert "_settings_read_at" not in coordinator.data["SN123"]["metrics"]
+    assert coordinator.data["SN123"]["metrics"]["self_use_soc"] == 10
+
+
 @pytest.mark.asyncio
 async def test_async_preload_cache_skips_when_expired():
     """An expired cache does not pre-seed coordinator.data."""

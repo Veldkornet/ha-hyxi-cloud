@@ -27,7 +27,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
-from .entity import HyxiEntity
+from .entity import HyxiEntity, SettingsSyncMixin
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -273,20 +273,25 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
             ) from err
 
 
-class HyxiAntiStarvationSwitch(HyxiEntity, SwitchEntity):
+class HyxiAntiStarvationSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
     """Switch entity for battery anti-starvation protection (Modbus only).
 
-    Same "no readback, optimistic state" pattern as
-    HyxiFrequencyControlSwitch above -- neither HaloSettings nor
-    HybridSettings is ever read back from the device, so is_on stays None
-    (unknown) until this session writes it.
+    is_on starts unknown (None) and is seeded, then kept in sync, from the
+    client's settings block -- read at startup and every
+    SETTINGS_REFRESH_SECONDS after (see client.py's async_read_settings).
+    Adopting a value on each coordinator update goes through
+    SettingsSyncMixin, which this only supplies _apply_settings_metrics to
+    -- see its docstring for the two races a plain per-update sync would
+    hit.
 
     Takes the client method name to call rather than hard-coding one: HALO
     and Hybrid both present "enabled" with the same meaning here, but call
     different client methods, since the register's actual polarity is
     inverted between the two documents (see client_hybrid.py's
     set_anti_starvation_protection). Hiding that in the client, not here,
-    keeps this entity from needing to know which family it's on.
+    keeps this entity from needing to know which family it's on -- the same
+    reason anti_starvation_enabled in metrics is already resolved to plain
+    "enabled" semantics rather than the raw register value.
     """
 
     _attr_translation_key = "anti_starvation"
@@ -300,6 +305,12 @@ class HyxiAntiStarvationSwitch(HyxiEntity, SwitchEntity):
         super().__init__(coordinator, sn, dev_data)
         self._attr_unique_id = f"hyxi_{sn}_anti_starvation"
         self._client_method = client_method
+        self._sync_from_settings(dev_data)
+
+    def _apply_settings_metrics(self, metrics: dict) -> None:
+        """See SettingsSyncMixin -- adopt this switch's own value."""
+        if "anti_starvation_enabled" in metrics:
+            self._attr_is_on = metrics["anti_starvation_enabled"]
 
     async def _async_set(self, enabled: bool) -> None:
         client = self.coordinator.client
@@ -311,6 +322,7 @@ class HyxiAntiStarvationSwitch(HyxiEntity, SwitchEntity):
         )
         try:
             await method(enabled)
+            self._note_write()
             self._attr_is_on = enabled
             self.async_write_ha_state()
             await self.coordinator.async_request_refresh()

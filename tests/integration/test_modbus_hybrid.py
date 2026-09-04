@@ -18,7 +18,9 @@ import pytest
 from modbus_connection import IllegalDataAddressError
 from modbus_connection.pytest_plugin import MockModbusConnection
 
+from custom_components.hyxi_cloud.modbus.client import SETTINGS_REFRESH_SECONDS
 from custom_components.hyxi_cloud.modbus.client_hybrid import HyxiHybridModbusClient
+from tests.integration import settings_refresh_asserts as refresh
 
 
 def _words(value: int, count: int = 2) -> list[int]:
@@ -546,6 +548,32 @@ async def test_identity_is_read_only_once(client):
         await client.async_read_all()
 
     second.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_settings_are_not_reread_within_the_refresh_window(client):
+    """Hybrid side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts, and test_modbus.py for the HALO equivalent."""
+    await refresh.settings_are_not_reread_within_the_refresh_window(client)
+
+
+@pytest.mark.asyncio
+async def test_settings_are_reread_once_the_refresh_window_elapses(client):
+    """Hybrid side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts."""
+    await refresh.settings_are_reread_once_the_refresh_window_elapses(
+        client, SETTINGS_REFRESH_SECONDS
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_failed_settings_read_retries_after_the_refresh_window(client):
+    """Hybrid side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts. self_use_soc/1102 is this family's field;
+    vpp_min_soc/4048 is the HALO equivalent."""
+    await refresh.a_failed_settings_read_retries_after_the_refresh_window(
+        client, SETTINGS_REFRESH_SECONDS, 1102, "self_use_soc", 10
+    )
 
 
 @pytest.mark.asyncio
