@@ -463,11 +463,15 @@ incorrectly:
   (4148) and discharge-power (4150) registers.
 - **Hybrid**: scheduling enable (3000) + control mode (3004, must be 0 for
   this client) + **one** signed watts register (3015) — positive discharges,
-  negative charges. `set_mode_self_consume` on the hybrid client disables
-  register 3000 entirely rather than writing a zero setpoint, handing control
-  back to the inverter's own self-use logic instead of pinning it at idle
-  under external control — deliberately different from the HALO client's
-  `set_mode_self_consume`, which writes VPP mode 3.
+  negative charges.
+
+Both clients' `set_mode_self_consume` hand control fully back to the
+inverter rather than pinning it at idle: the hybrid clears its scheduling
+enable (3000), the HALO clears its VPP dispatch enable (4146). The HALO one
+originally wrote VPP mode 3 ("selfuse") with dispatch still enabled, but a
+user reported (issue #611) that this left the device stuck in "VPP mode" in
+the app with native modes suppressed — clearing 4146 is what actually
+resumes the configured work mode.
 
 Two polarity/semantic differences between the device families, both
 documented explicitly rather than assumed to match:
@@ -528,6 +532,7 @@ and update this file with the result.
 | Battery capacity unit at 5020 | HALO | Documented in **Ah**; the cloud's `batCap` is kWh. Needs nominal pack voltage to convert — currently not mapped at all rather than mapped wrongly. |
 | BMS fault word addresses | HALO | See rule 3. |
 | Whether 4146 must enable dispatch before 4147 takes effect | HALO | `_write_vpp` writes the enable every time on the assumption it does. Harmless if unnecessary. |
+| Whether clearing 4146 cleanly resumes the configured work mode (4024) | HALO | `set_mode_self_consume` writes `vpp_enable=0` to hand control back. Expected to drop dispatch and let the inverter resume self-use / TOU, but not yet confirmed that the device doesn't instead sit idle until a mode is re-selected in the app. |
 | Whether a VPP dispatch survives a power cycle, or a watchdog reverts it | HALO | Decides whether the integration needs a heartbeat write to hold a mode. |
 | **How `dispatch_mode`/`active_power_setpoint` (4048/4049, "dispatch mode 1") relate to the VPP block (4146–4152, "dispatch mode 2")** | HALO | The document names both as separate dispatch modes but never states whether they're independent, mutually exclusive, or one overrides the other. `set_mode_*` only ever writes the VPP block; 4048/4049 are deliberately left unexposed rather than guessed. A public search for the vendor's Micro Storage RS485 protocol document (2026-08-23) turned up nothing beyond what's already transcribed here — no public copy of the register-level document was found, only marketing-level descriptions of "dispatch"/"VPP" as product concepts, which don't answer this question either. Resolve by testing against hardware: write 4048/4049 while the VPP block is enabled and observe whether it fights the VPP writes. |
 | **Unit of the grid/inverter power registers** (316–318, 333, 370–372, 507, 520–522, PV powers) | Hybrid | The document gives 0 decimal places and no unit label. Treated as Watts by convention (0dp is too coarse for kW at this precision), then `gridP` alone is converted to kW to satisfy `compute_derived_metrics`'s general contract. If the true native unit is something else, every power metric on the hybrid client is wrong by a constant factor. |

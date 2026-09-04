@@ -405,7 +405,6 @@ def test_settings_refresh_can_be_forced_past_the_window(client):
         ("set_mode_idle", (), 0, None, None),
         ("set_mode_charge", (1500,), 1, "vpp_charge_power", 1500),
         ("set_mode_discharge", (900,), 2, "vpp_discharge_power", 900),
-        ("set_mode_self_consume", (), 3, None, None),
     ],
 )
 # pylint: disable-next=too-many-arguments, too-many-positional-arguments
@@ -421,6 +420,20 @@ async def test_control_writes_land_in_the_vpp_block(
     assert client.settings.vpp_mode == expected_mode
     if power_field:
         assert getattr(client.settings, power_field) == expected_power
+
+
+@pytest.mark.asyncio
+async def test_self_consume_clears_the_dispatch_enable(client):
+    """Self-consume hands control back to the inverter -- it clears 4146
+    rather than writing VPP mode 3, which would keep the device dispatched.
+    """
+    await client.set_mode_discharge("SN", 900)
+    await client.settings.async_update()
+    assert client.settings.vpp_enable == 1
+
+    await client.set_mode_self_consume("SN")
+    await client.settings.async_update()
+    assert client.settings.vpp_enable == 0
 
 
 @pytest.mark.asyncio

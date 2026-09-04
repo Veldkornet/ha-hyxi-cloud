@@ -81,11 +81,12 @@ class ModbusClient(Protocol):
 # the entity platforms make the same decisions either way.
 MICRO_ESS_DEVICE_CODE = "MICRO_STORAGE_ALL_IN_ONE"
 
-# VPP dispatch mode 2, register 4147.
+# VPP dispatch mode 2, register 4147. Mode 3 ("selfuse") is deliberately
+# not driven -- see set_mode_self_consume, which clears the dispatch enable
+# (4146) instead so the device returns to its own configured work mode.
 VPP_IDLE = 0
 VPP_CHARGE = 1
 VPP_DISCHARGE = 2
-VPP_SELF_USE = 3
 
 # How often async_read_settings re-reads the settings block instead of
 # trusting its last read. Plain seconds against time.monotonic(), not a
@@ -562,9 +563,18 @@ class HyxiModbusClient:
         return await self._write_vpp(VPP_DISCHARGE, watts)
 
     async def set_mode_self_consume(self, device_sn: str) -> dict:
-        """Return the device to self-consumption."""
+        """Hand control back to the inverter's own logic.
+
+        Clears the VPP dispatch enable (register 4146) rather than writing
+        VPP mode 3. Mode 3 self-consumes but stays under dispatch, so the
+        app keeps showing "VPP mode" and native modes (self-use, TOU) stay
+        suppressed. Clearing 4146 drops dispatch entirely and the device
+        resumes whatever work mode (4024) the user configured -- the local
+        mirror of the hybrid client disabling its scheduling register.
+        """
         _LOGGER.debug("Modbus: self-consume on %s", _mask(device_sn))
-        return await self._write_vpp(VPP_SELF_USE)
+        await self._write_setting("vpp_enable", 0, 4146)
+        return {"code": "0", "msg": "ok"}
 
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict:
         """Limit or release export.
