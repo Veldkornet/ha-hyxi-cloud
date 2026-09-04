@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Purgar Subscrições Antigas"
+      },
+      "refresh_settings": {
+        "name": "Atualizar Definições"
       }
     }
   },

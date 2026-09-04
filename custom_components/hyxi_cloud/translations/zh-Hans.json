@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "清除旧订阅"
+      },
+      "refresh_settings": {
+        "name": "刷新设置"
       }
     }
   },

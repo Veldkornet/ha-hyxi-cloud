@@ -43,6 +43,7 @@ from .const import (
     is_null_value,
     is_zero_value,
     mask_sn,
+    modbus_service_device_info,
     normalize_device_type,
 )
 from .entity import via_device_id
@@ -1993,13 +1994,16 @@ class HyxiLastUpdateSensor(
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_integration_last_updated"
-        modbus = is_modbus_entry(entry)
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Modbus Service" if modbus else "HYXI Cloud Service",
-            "manufacturer": MANUFACTURER,
-            "model": "Local Modbus Bridge" if modbus else "Cloud API Bridge",
-        }
+        self._attr_device_info = (
+            modbus_service_device_info(entry.entry_id)
+            if is_modbus_entry(entry)
+            else DeviceInfo(
+                identifiers={(DOMAIN, entry.entry_id)},
+                name="HYXI Cloud Service",
+                manufacturer=MANUFACTURER,
+                model="Cloud API Bridge",
+            )
+        )
         self._update_native_value()
 
     def _update_native_value(self):
@@ -2039,12 +2043,7 @@ class HyxiModbusConnectionTypeSensor(
         # off, independent of however the shown text is later reworded.
         self._attr_options = ["tcp_rtu", "tcp_socket", "serial"]
         self._attr_unique_id = f"{entry.entry_id}_modbus_connection_type"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Modbus Service",
-            "manufacturer": MANUFACTURER,
-            "model": "Local Modbus Bridge",
-        }
+        self._attr_device_info = modbus_service_device_info(entry.entry_id)
         if entry.data.get(CONF_MODBUS_TYPE) == MODBUS_TYPE_SERIAL:
             self._attr_native_value = "serial"
         elif entry.data.get(CONF_MODBUS_FRAMER, DEFAULT_MODBUS_FRAMER) == "socket":

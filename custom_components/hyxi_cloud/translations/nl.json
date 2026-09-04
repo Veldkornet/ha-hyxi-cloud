@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Oude Abonnementen Opschonen"
+      },
+      "refresh_settings": {
+        "name": "Instellingen Vernieuwen"
       }
     }
   },

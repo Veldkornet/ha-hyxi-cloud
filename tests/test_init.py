@@ -1753,6 +1753,65 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                 "button.hyxi_SN123_mode_idle"
             )
 
+    # 12c. Modbus-only device-scoped control entities (setting numbers, the
+    # anti-starvation switch, micro_ess_power, hybrid power commands) and
+    # the entry-scoped refresh_settings button must also be cleaned up --
+    # these were missing from keys_to_remove and would otherwise linger as
+    # "unavailable" entities forever once battery control was turned off.
+    mock_entry.options = {"enable_battery_control": False}
+    coordinator.data = {"SN123": {}}
+    mock_registry = MagicMock()
+    modbus_reg_entries = [
+        MagicMock(
+            unique_id="hyxi_SN123_vpp_min_soc",
+            entity_id="number.hyxi_SN123_vpp_min_soc",
+            domain="number",
+        ),
+        MagicMock(
+            unique_id="hyxi_SN123_anti_starvation",
+            entity_id="switch.hyxi_SN123_anti_starvation",
+            domain="switch",
+        ),
+        MagicMock(
+            unique_id="hyxi_SN123_micro_ess_power",
+            entity_id="switch.hyxi_SN123_micro_ess_power",
+            domain="switch",
+        ),
+        MagicMock(
+            unique_id="hyxi_SN123_power_on",
+            entity_id="button.hyxi_SN123_power_on",
+            domain="button",
+        ),
+        MagicMock(
+            unique_id=f"{mock_entry.entry_id}_refresh_settings",
+            entity_id="button.hyxi_modbus_service_refresh_settings",
+            domain="button",
+        ),
+        MagicMock(
+            unique_id="hyxi_SN123_unrelated_sensor",
+            entity_id="sensor.hyxi_SN123_unrelated",
+            domain="sensor",
+        ),
+    ]
+
+    with patch(
+        "homeassistant.helpers.entity_registry.async_get", return_value=mock_registry
+    ):
+        with patch(
+            "homeassistant.helpers.entity_registry.async_entries_for_config_entry",
+            return_value=modbus_reg_entries,
+        ):
+            _cleanup_control_entities(mock_hass, mock_entry, coordinator)
+
+    removed = {call.args[0] for call in mock_registry.async_remove.call_args_list}
+    assert removed == {
+        "number.hyxi_SN123_vpp_min_soc",
+        "switch.hyxi_SN123_anti_starvation",
+        "switch.hyxi_SN123_micro_ess_power",
+        "button.hyxi_SN123_power_on",
+        "button.hyxi_modbus_service_refresh_settings",
+    }
+
     # 13. Setup and Unload with Energy Manager and Protection Controllers enabled
     from custom_components.hyxi_cloud.const import (
         CONF_EM_ENABLED,

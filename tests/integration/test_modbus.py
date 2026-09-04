@@ -392,6 +392,12 @@ async def test_a_failed_settings_read_retries_after_the_refresh_window(client):
     )
 
 
+def test_settings_refresh_can_be_forced_past_the_window(client):
+    """HALO side of the shared refresh-cadence checks -- see
+    settings_refresh_asserts."""
+    refresh.settings_refresh_can_be_forced_past_the_window(client)
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("call", "args", "expected_mode", "power_field", "expected_power"),
@@ -1577,6 +1583,47 @@ async def test_halo_anti_starvation_switch_shows_the_devices_real_value(hass):
     await hass.async_block_till_done()
 
     assert hass.states.get(entity_id).state == "off"
+    assert hass.states.get(self_use_id).state == "55"
+
+
+@pytest.mark.asyncio
+async def test_refresh_settings_button_forces_an_immediate_settings_read(hass):
+    """Pressing the button must both reset the client's refresh throttle
+    and request an immediate poll -- proving the two halves actually work
+    together, not just that force_settings_refresh() exists. Unlike
+    test_halo_anti_starvation_switch_shows_the_devices_real_value above,
+    nothing here manually opens the refresh window first."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+    connection = _seeded_connection()
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    self_use_id = _entity_id(hass, "number", sn, "self_use_soc")
+    assert hass.states.get(self_use_id).state == "10"
+
+    button_id = er.async_get(hass).async_get_entity_id(
+        "button", DOMAIN, f"{entry.entry_id}_refresh_settings"
+    )
+    assert button_id is not None
+
+    # Simulate a change made outside HA -- without pressing the button,
+    # this wouldn't show up until the hourly refresh window reopens.
+    connection.for_unit(1).load_raw({"holding": {4134: 55}})
+
+    await hass.services.async_call(
+        "button", "press", {"entity_id": button_id}, blocking=True
+    )
+    await hass.async_block_till_done()
+
     assert hass.states.get(self_use_id).state == "55"
 
 

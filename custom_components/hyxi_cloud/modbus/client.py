@@ -73,6 +73,7 @@ class ModbusClient(Protocol):
     async def set_mode_discharge(self, device_sn: str, watts: int) -> dict: ...
     async def set_mode_self_consume(self, device_sn: str) -> dict: ...
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict: ...
+    def force_settings_refresh(self) -> None: ...
 
 
 # The device type the HALO reports over the cloud API. Reused verbatim so
@@ -306,6 +307,14 @@ class HyxiModbusClient:
             self._unit_id,
             _LOGGER,
         )
+
+    def force_settings_refresh(self) -> None:
+        """Make the next async_read_settings re-read the block regardless
+        of the refresh window -- backs the manual "Refresh Settings"
+        button, for a user who just changed something from the app or
+        another Modbus master and doesn't want to wait for the hourly
+        window to notice."""
+        self._settings_read_at = None
 
     async def async_read_all(self) -> dict[str, dict]:
         """Poll the device and return it in the coordinator's data shape.

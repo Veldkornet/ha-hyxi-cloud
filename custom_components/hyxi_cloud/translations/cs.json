@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Vymazat staré odběry"
+      },
+      "refresh_settings": {
+        "name": "Obnovit nastavení"
       }
     }
   },

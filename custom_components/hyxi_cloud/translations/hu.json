@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Régi előfizetések törlése"
+      },
+      "refresh_settings": {
+        "name": "Beállítások frissítése"
       }
     }
   },

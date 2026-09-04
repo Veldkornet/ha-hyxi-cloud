@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Ryd Gamle Abonnementer"
+      },
+      "refresh_settings": {
+        "name": "Opdater Indstillinger"
       }
     }
   },

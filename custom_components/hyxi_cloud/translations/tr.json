@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Eski Abonelikleri Temizle"
+      },
+      "refresh_settings": {
+        "name": "Ayarları Yenile"
       }
     }
   },

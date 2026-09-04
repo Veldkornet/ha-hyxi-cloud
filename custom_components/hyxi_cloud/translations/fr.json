@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "Purger les anciens abonnements"
+      },
+      "refresh_settings": {
+        "name": "Actualiser les paramètres"
       }
     }
   },

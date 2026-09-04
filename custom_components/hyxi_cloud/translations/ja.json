@@ -851,6 +851,9 @@
       },
       "purge_old_subscriptions": {
         "name": "古いサブスクリプションを削除"
+      },
+      "refresh_settings": {
+        "name": "設定を更新"
       }
     }
   },

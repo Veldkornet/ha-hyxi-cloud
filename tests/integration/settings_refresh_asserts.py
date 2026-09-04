@@ -67,3 +67,11 @@ async def a_failed_settings_read_retries_after_the_refresh_window(
 
     devices = await client.async_read_all()
     assert devices[sn]["metrics"][metric_key] == expected_value
+
+
+def settings_refresh_can_be_forced_past_the_window(client) -> None:
+    """force_settings_refresh backs the manual "Refresh Settings" button --
+    it must actually clear the retry throttle, not just exist."""
+    client._settings_read_at = 123.0  # pylint: disable=protected-access
+    client.force_settings_refresh()
+    assert client._settings_read_at is None  # pylint: disable=protected-access

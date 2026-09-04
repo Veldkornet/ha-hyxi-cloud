@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from homeassistant.const import Platform
+from homeassistant.helpers.device_registry import DeviceInfo
 
 if TYPE_CHECKING:
     from modbus_connection import ModbusSerialParams, ModbusTcpParams
@@ -260,6 +261,21 @@ def entry_transport(entry: Any) -> str:
 def is_modbus_entry(entry: Any) -> bool:
     """Return True when an entry talks to its device over local Modbus."""
     return entry_transport(entry) == TRANSPORT_MODBUS
+
+
+def modbus_service_device_info(entry_id: str) -> DeviceInfo:
+    """Device info for the one non-inverter device every Modbus entry gets.
+
+    Shared by the connection-status/diagnostic sensors and the manual
+    settings-refresh button that live on it rather than a specific
+    inverter's own device.
+    """
+    return DeviceInfo(
+        identifiers={(DOMAIN, entry_id)},
+        name="HYXI Modbus Service",
+        manufacturer=MANUFACTURER,
+        model="Local Modbus Bridge",
+    )
 
 
 def entry_stable_key(entry: Any) -> str:

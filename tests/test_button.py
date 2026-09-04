@@ -201,6 +201,98 @@ async def test_async_setup_entry_skips_clear_alarms_button_for_modbus(
 
 
 @pytest.mark.asyncio
+async def test_async_setup_entry_adds_refresh_settings_button_for_modbus(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """The manual settings-refresh button is Modbus-only, and only when
+    battery control is on -- with it off there are no setting number/switch
+    entities for a forced re-read to change."""
+    hass = MagicMock()
+    mock_entry_fixture.data = {"transport": "modbus"}
+    mock_entry_fixture.options = {"enable_battery_control": True}
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {
+        "SN123": {"device_type_code": "1", "model": "H10K-HT"}
+    }
+
+    async_add_entities = MagicMock()
+    await button_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    async_add_entities.assert_called_once()
+    entities = async_add_entities.call_args[0][0]
+    button = next(
+        e for e in entities if isinstance(e, button_mod.HyxiRefreshSettingsButton)
+    )
+    assert button._attr_unique_id == f"{mock_entry_fixture.entry_id}_refresh_settings"
+    assert button._attr_device_info["name"] == "HYXI Modbus Service"
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_skips_refresh_settings_button_for_cloud(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """A cloud entry never gets the Modbus-only refresh button."""
+    hass = MagicMock()
+    mock_entry_fixture.data = {"transport": "cloud"}
+    mock_entry_fixture.options = {"enable_battery_control": True}
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {
+        "SN123": {"device_type_code": "1", "model": "H10K-HT", "alarms": []}
+    }
+
+    async_add_entities = MagicMock()
+    await button_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    entities = async_add_entities.call_args[0][0]
+    assert not any(
+        isinstance(e, button_mod.HyxiRefreshSettingsButton) for e in entities
+    )
+
+
+@pytest.mark.asyncio
+async def test_async_setup_entry_skips_refresh_settings_button_without_control(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """A Modbus entry with battery control off has no setting number/switch
+    entities, so the refresh button (which only helps those) is skipped
+    too."""
+    hass = MagicMock()
+    mock_entry_fixture.data = {"transport": "modbus"}
+    mock_entry_fixture.options = {}
+    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_coordinator_fixture.data = {
+        "SN123": {"device_type_code": "1", "model": "H10K-HT"}
+    }
+
+    async_add_entities = MagicMock()
+    await button_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
+
+    if async_add_entities.called:
+        entities = async_add_entities.call_args[0][0]
+        assert not any(
+            isinstance(e, button_mod.HyxiRefreshSettingsButton) for e in entities
+        )
+
+
+@pytest.mark.asyncio
+async def test_refresh_settings_button_press_forces_refresh_and_requests_a_poll(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """Pressing the button must clear the client's throttle before asking
+    the coordinator to poll -- otherwise the immediate poll this triggers
+    would just hit the still-open refresh window and skip the read."""
+    button = button_mod.HyxiRefreshSettingsButton(
+        mock_coordinator_fixture, mock_entry_fixture
+    )
+    mock_coordinator_fixture.client.force_settings_refresh = MagicMock()
+
+    await button.async_press()
+
+    mock_coordinator_fixture.client.force_settings_refresh.assert_called_once_with()
+    mock_coordinator_fixture.async_request_refresh.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_three_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
