@@ -86,6 +86,12 @@ VPP_CHARGE = 1
 VPP_DISCHARGE = 2
 VPP_SELF_USE = 3
 
+# How often async_read_settings re-reads the settings block instead of
+# trusting its last read. Plain seconds against time.monotonic(), not a
+# timedelta against wall-clock time, so a system clock change can't cause a
+# spurious re-read (or an equally spurious month-long skip).
+SETTINGS_REFRESH_SECONDS = 3600
+
 
 def _mask(value: Any) -> str:
     """Mask a serial number for logs, matching the cloud path's format.
@@ -121,6 +127,52 @@ def _hex_identifier(value: int | None) -> str | None:
 def _to_watts(kilowatts: float | None) -> float | None:
     """Convert a kW-scaled register to the watts the metric vocabulary uses."""
     return None if kilowatts is None else round(kilowatts * 1000, 3)
+
+
+def _enabled_when(raw: int | None, *, enabled_value: int) -> bool | None:
+    """Resolve a raw 0/1 register to plain "enabled" boolean semantics, or
+    None if the register wasn't read (rather than a real False).
+
+    enabled_value is which raw value means enabled -- HALO and hybrid
+    document opposite polarities for the same anti-starvation-protection
+    concept (see set_anti_starvation/set_anti_starvation_protection), so
+    each caller states its own instead of this guessing one.
+    """
+    return None if raw is None else raw == enabled_value
+
+
+async def _read_settings_if_stale(
+    settings: Component,
+    last_attempt_at: float | None,
+    last_confirmed_at: float | None,
+    unit_id: int,
+    logger: logging.Logger,
+) -> tuple[float | None, float | None]:
+    """Shared body of HyxiModbusClient/HyxiHybridModbusClient's
+    async_read_settings -- attempt a settings read if last_attempt_at is
+    stale or unset, and return (new_last_attempt_at, new_last_confirmed_at).
+
+    See HyxiModbusClient.async_read_settings's docstring for why this is
+    time-gated rather than part of the regular poll, and for why the two
+    timestamps this returns are kept apart rather than being the one value
+    the pre-fix version of this function returned. logger is the caller's
+    own module logger, so a failure still logs under client.py or
+    client_hybrid.py as appropriate rather than always under this one.
+    """
+    now = time.monotonic()
+    if last_attempt_at is not None and now - last_attempt_at < SETTINGS_REFRESH_SECONDS:
+        return last_attempt_at, last_confirmed_at
+    try:
+        await settings.async_update()
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logger.debug(
+            "Modbus settings block unreadable on unit %s, number entities "
+            "will fall back to their restored or minimum value: %s",
+            unit_id,
+            err,
+        )
+        return now, last_confirmed_at
+    return now, now
 
 
 class HyxiModbusClient:
@@ -165,7 +217,8 @@ class HyxiModbusClient:
         }
         self._serial: str | None = None
         self._identity_read = False
-        self._settings_read = False
+        self._settings_read_at: float | None = None
+        self._settings_confirmed_at: float | None = None
 
     @property
     def serial_number(self) -> str:
@@ -211,28 +264,48 @@ class HyxiModbusClient:
         self._identity_read = True
 
     async def async_read_settings(self) -> None:
-        """Read the settings block once, so number entities can show the
+        """Read the settings block at startup, then every
+        SETTINGS_REFRESH_SECONDS, so number/switch entities can show the
         device's actual current value instead of always starting at 0.
 
-        Not in TELEMETRY_COMPONENTS: settings change rarely, an extra block
-        read on every poll forever isn't worth it, and every set_* method
-        already keeps HA's own state in sync with what it writes. Read-once
-        only fills the gap that matters -- an entity's first value after HA
-        (re)starts. Tolerates failure the same way identity does: number
-        entities fall back to their restored or minimum value instead.
+        Not in TELEMETRY_COMPONENTS: settings change rarely, so reading the
+        block on every single poll forever isn't worth the extra bus traffic,
+        and every set_* method already keeps HA's own state in sync with
+        what it writes. Re-reading hourly only exists to catch a change made
+        by something other than this session (the app, another Modbus
+        master) -- rare enough that an hour's staleness is fine, and cheap
+        enough (one extra block read an hour) not to matter against a poll
+        that already runs every few seconds. Tolerates failure the same way
+        identity does: entities fall back to their restored or minimum
+        value instead. _settings_read_at (the throttle) still advances on a
+        failed attempt, so a device that is briefly unreachable doesn't get
+        hammered with a retry on every poll until it is -- but
+        _settings_confirmed_at, what actually reaches entities, does not: a
+        failed attempt leaves the settings fields at whatever an earlier
+        successful read left them, and re-publishing that stale snapshot
+        with a "just confirmed" timestamp would let SettingsSyncMixin
+        mistake it for genuinely fresh data and revert a write that landed
+        after the last real success.
+
+        _settings_confirmed_at is embedded into _build_metrics()'s own
+        output ("_settings_read_at") rather than exposed as a client
+        property: a poll that reads settings fine but then fails every
+        telemetry block never calls _build_metrics() at all (async_read_all
+        raises first), so the marker and the values it describes only ever
+        reach coordinator.data together -- see entity.py's SettingsSyncMixin,
+        which relies on that to avoid adopting data from a poll that never
+        actually got published.
         """
-        if self._settings_read:
-            return
-        try:
-            await self.settings.async_update()
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.debug(
-                "Modbus settings block unreadable on unit %s, number entities "
-                "will fall back to their restored or minimum value: %s",
-                self._unit_id,
-                err,
-            )
-        self._settings_read = True
+        (
+            self._settings_read_at,
+            self._settings_confirmed_at,
+        ) = await _read_settings_if_stale(
+            self.settings,
+            self._settings_read_at,
+            self._settings_confirmed_at,
+            self._unit_id,
+            _LOGGER,
+        )
 
     async def async_read_all(self) -> dict[str, dict]:
         """Poll the device and return it in the coordinator's data shape.
@@ -415,6 +488,18 @@ class HyxiModbusClient:
             "off_grid_min_soc": self.settings.off_grid_min_soc,
             "self_use_soc": self.settings.self_use_soc,
             "discharge_min_soc": self.settings.discharge_min_soc,
+            # 0 disabled, 1 enabled -- direct, unlike the hybrid client's
+            # inverted anti_starvation_protection (see set_anti_starvation).
+            "anti_starvation_enabled": _enabled_when(
+                self.settings.anti_starvation, enabled_value=1
+            ),
+            # See async_read_settings: this is _settings_confirmed_at, not
+            # the throttle -- it travels with the values above so
+            # entity.py's SettingsSyncMixin can tell a metrics dict that
+            # reflects a genuinely new, successful settings read apart from
+            # one that doesn't, rather than reading it off the client
+            # directly.
+            "_settings_read_at": self._settings_confirmed_at,
         }
         return {key: value for key, value in raw.items() if value is not None}
 

@@ -27,7 +27,7 @@ from hyxi_cloud_api import HyxiApiClient
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component
 
-from .client import _hex_identifier, _mask
+from .client import _enabled_when, _hex_identifier, _mask, _read_settings_if_stale
 from .registers_hybrid import (
     TELEMETRY_COMPONENTS,
     HybridBackup,
@@ -99,7 +99,8 @@ class HyxiHybridModbusClient:
         }
         self._serial: str | None = None
         self._identity_read = False
-        self._settings_read = False
+        self._settings_read_at: float | None = None
+        self._settings_confirmed_at: float | None = None
 
     @property
     def serial_number(self) -> str:
@@ -132,24 +133,25 @@ class HyxiHybridModbusClient:
         self._identity_read = True
 
     async def async_read_settings(self) -> None:
-        """Read the settings block once, so number entities can show the
+        """Read the settings block at startup, then every
+        SETTINGS_REFRESH_SECONDS, so number/switch entities can show the
         device's actual current value instead of always starting at 0.
 
-        See HyxiModbusClient.async_read_settings for why this is read-once
-        rather than part of the regular poll.
+        See HyxiModbusClient.async_read_settings for why this is time-gated
+        rather than part of the regular poll, and for why a failed re-read
+        advances the throttle (_settings_read_at) but not the freshness
+        marker (_settings_confirmed_at).
         """
-        if self._settings_read:
-            return
-        try:
-            await self.settings.async_update()
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.debug(
-                "Modbus settings block unreadable on unit %s, number entities "
-                "will fall back to their restored or minimum value: %s",
-                self._unit_id,
-                err,
-            )
-        self._settings_read = True
+        (
+            self._settings_read_at,
+            self._settings_confirmed_at,
+        ) = await _read_settings_if_stale(
+            self.settings,
+            self._settings_read_at,
+            self._settings_confirmed_at,
+            self._unit_id,
+            _LOGGER,
+        )
 
     async def async_read_all(self) -> dict[str, dict]:
         """Poll the device and return it in the coordinator's data shape."""
@@ -366,6 +368,18 @@ class HyxiHybridModbusClient:
             "forced_charge_soc": self.settings.forced_charge_soc,
             "feed_in_soc": self.settings.feed_in_soc,
             "off_grid_soc": self.settings.off_grid_soc,
+            # 0 open, 1 close per the document -- the opposite polarity from
+            # the HALO client's anti_starvation (see
+            # set_anti_starvation_protection).
+            "anti_starvation_enabled": _enabled_when(
+                self.settings.anti_starvation_protection, enabled_value=0
+            ),
+            # See HyxiModbusClient.async_read_settings: this is
+            # _settings_confirmed_at, not the throttle -- it travels with
+            # the values above so entity.py's SettingsSyncMixin can tell a
+            # metrics dict that reflects a genuinely new, successful
+            # settings read apart from one that doesn't.
+            "_settings_read_at": self._settings_confirmed_at,
         }
         return {key: value for key, value in raw.items() if value is not None}
 

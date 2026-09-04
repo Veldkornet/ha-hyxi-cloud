@@ -32,6 +32,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+from .entity import SettingsSyncMixin
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -481,23 +482,26 @@ class HyxiPowerNumber(
 
 
 class HyxiSettingNumber(
-    CoordinatorEntity["HyxiDataUpdateCoordinator"], NumberEntity, RestoreEntity
+    SettingsSyncMixin,
+    CoordinatorEntity["HyxiDataUpdateCoordinator"],
+    NumberEntity,
+    RestoreEntity,
 ):
     """A device-hardware setting, written straight to its Modbus register
     on every change -- see HyxiSettingNumberDef's docstring for how this
     differs from the other number entities in this file.
 
-    Starts at the device's own current value, read once at client setup
-    (ModbusClient.async_read_settings) rather than on every regular poll --
-    settings change rarely, so re-reading the whole block forever isn't
-    worth the extra traffic, and every set_* method already keeps this
-    value in sync with what HA itself writes. That one-time read means
-    this entity does not notice a change made outside HA (the app, the
-    cloud) after startup -- only its own writes and its startup snapshot.
-    Falls back to the last value *this* integration wrote (HA's restored
-    state), then to the field's minimum, if the device couldn't be read at
-    startup at all. 0 is never written on its own -- only an explicit
-    change by the user calls the client.
+    Starts at the device's own current value, read at client setup and then
+    every SETTINGS_REFRESH_SECONDS after (ModbusClient.async_read_settings)
+    rather than on every regular poll -- settings change rarely, so
+    re-reading the whole block on every single poll forever isn't worth the
+    extra traffic. Adopting a value on each coordinator update goes through
+    SettingsSyncMixin, which this only supplies _apply_settings_metrics to
+    -- see its docstring for the two races a plain per-update sync would
+    hit. Falls back to the last value *this* integration wrote (HA's
+    restored state), then to the field's minimum, if the device couldn't be
+    read at startup at all. 0 is never written on its own -- only an
+    explicit change by the user calls the client.
     """
 
     _attr_has_entity_name = True
@@ -530,11 +534,16 @@ class HyxiSettingNumber(
             "serial_number": sn,
         }
 
-        live_value = (dev_data.get("metrics") or {}).get(definition.key)
-        self._has_live_value = live_value is not None
-        self._attr_native_value = (
-            live_value if self._has_live_value else definition.min_val
-        )
+        self._has_live_value = False
+        self._attr_native_value = definition.min_val
+        self._sync_from_settings(dev_data)
+
+    def _apply_settings_metrics(self, metrics: dict) -> None:
+        """See SettingsSyncMixin -- adopt this number's own value."""
+        live_value = metrics.get(self._definition.key)
+        if live_value is not None:
+            self._has_live_value = True
+            self._attr_native_value = live_value
 
     async def async_added_to_hass(self) -> None:
         """Restore the last value written, if the device's own current
@@ -561,6 +570,7 @@ class HyxiSettingNumber(
         )
         try:
             await method(value)
+            self._note_write()
             self._attr_native_value = value
             self.async_write_ha_state()
         except HyxiApiClient.ControlError as err:
