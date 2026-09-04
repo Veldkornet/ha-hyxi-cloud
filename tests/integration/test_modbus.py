@@ -456,6 +456,36 @@ async def test_anti_starvation_write_is_straightforward_polarity(client):
 
 
 @pytest.mark.asyncio
+async def test_single_register_settings_writes_use_function_code_16(client):
+    """The HALO document's function-code table lists only 0x03/0x04/0x10 --
+    unlike the hybrid one, this firmware does not implement 0x06 (write
+    single register). Before HaloSettings' single-register fields carried
+    force_fc16=True, modbus_connection defaulted a one-word field to FC
+    0x06, and the device's non-echoing response to it failed tmodbus's
+    "response must match request" check -- surfacing to a user as "Expected
+    response to match request" on every single-register control write, first
+    reported by a HALO owner clicking the discharge control button. Every
+    field written here is one register; none may go out as FC 0x06 (6).
+    """
+    events = []
+    client.settings.modbus_unit.on_write(events.append)
+
+    await client.set_mode_discharge("SN", 1000)
+    await client.set_peak_shaving("SN", "on")
+    await client.set_vpp_min_soc(15)
+    await client.set_force_charge_start_soc(12)
+    await client.set_force_charge_stop_soc(12)
+    await client.set_off_grid_min_soc(12)
+    await client.set_self_use_soc(12)
+    await client.set_discharge_min_soc(12)
+    await client.set_anti_starvation(True)
+
+    single_register_writes = [e for e in events if len(e.values) == 1]
+    assert single_register_writes  # the FC assertion below must not be vacuous
+    assert all(event.function_code == 16 for event in single_register_writes)
+
+
+@pytest.mark.asyncio
 async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
     """button.py and friends catch HyxiApiClient.ControlError by name."""
     with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):

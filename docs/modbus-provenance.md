@@ -514,6 +514,7 @@ correcting a wrong guess short of removing and re-adding the integration.
 | What | Device | How |
 | :--- | :--- | :--- |
 | `HybridEnergy` daily block (1101–1127) and lifetime block (1128–1180): addresses, U16/U32 split, ×0.1 kWh scale, low-word-first order | Hybrid (HYX-H10K-HT) | `tools/modbus_probe.py sweep` of input 1100–1180 on a live unit, decoded and matched against the HYXI app's D/Lifetime tabs and a coordinator debug log. Daily charge (1110) read 21.9 kWh against the app's "Battery Charge 21.9"; lifetime charge (1146) read 6176.7 against the log's `totalEchg` 6176.7; daily buy/sell sums matched the app's purchase/sell figures within polling skew. The consumption registers (1107–1109 / 1140–1144) read zero on this unit — reported as 0, not hidden. |
+| HALO's write function-code table really is 0x03/0x04/0x10 only, no 0x06 | HALO (HYX-MS3000AC) | A user hit `write_register(4146, 1): Expected response to match request` (`InvalidResponseError` from tmodbus) clicking the discharge control button (issue #611). `HaloSettings`' single-register fields had no `force_fc16`, so `modbus_connection` defaulted the `vpp_enable` write to FC 0x06 -- exactly the function this document never lists, unlike the hybrid one, which explicitly adds it. The device's response to it doesn't echo the request, which is what tmodbus's FC 0x06 response check requires. Fixed by adding `force_fc16=True` to every writable single-register `HaloSettings` field, forcing FC 0x10 for all of them. |
 
 ## Still unverified
 
