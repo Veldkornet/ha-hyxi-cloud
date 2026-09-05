@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Enerji Yöneticisi",
-        "description": "Enerji Yöneticisini, güneş üretimi, şebeke sayacı ve tahmin verilerine dayalı olarak batarya kullanımını optimize edecek şekilde yapılandırın.",
+        "description": "Enerji Yöneticisini, güneş üretimi, şebeke sayacı ve tahmin verilerine dayalı olarak batarya kullanımını optimize edecek şekilde yapılandırın. Bataryanız kapasitesini bildirmiyorsa (örneğin AC bağlantılı bir HALO), aşağıdan batarya kapasitesini geçersiz kılmayı etkinleştirin.",
         "data": {
           "em_p1_entity": "P1 Akıllı Sayaç (güç sensörü)",
           "em_forecast_entity": "Bugün Kalan Güneş Tahmini (isteğe bağlı)",

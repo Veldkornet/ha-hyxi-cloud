@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energie-Manager",
-        "description": "Konfigurieren Sie den Energie-Manager, um die Batterienutzung basierend auf Solarproduktion, Netzzähler und Prognosedaten zu optimieren.",
+        "description": "Konfigurieren Sie den Energie-Manager, um die Batterienutzung basierend auf Solarproduktion, Netzzähler und Prognosedaten zu optimieren. Wenn Ihre Batterie ihre Kapazität nicht meldet (z. B. eine AC-gekoppelte HALO), aktivieren Sie unten das Überschreiben der Batteriekapazität.",
         "data": {
           "em_p1_entity": "P1 Smart Meter (Leistungssensor)",
           "em_forecast_entity": "Solarprognose für den restlichen Tag (optional)",

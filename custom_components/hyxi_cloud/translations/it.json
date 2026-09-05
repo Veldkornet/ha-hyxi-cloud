@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Gestore Energia",
-        "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione.",
+        "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione. Se la batteria non comunica la sua capacità (come un HALO ad accoppiamento CA), attiva di seguito la sovrascrittura della capacità della batteria.",
         "data": {
           "em_p1_entity": "Smart Meter P1 (sensore di potenza)",
           "em_forecast_entity": "Previsione Solare Rimanente Oggi (opzionale)",

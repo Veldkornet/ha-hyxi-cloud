@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Gestionnaire d'énergie",
-        "description": "Configurez le Gestionnaire d'énergie pour optimiser l'utilisation de la batterie en fonction de la production solaire, du compteur réseau et des données de prévision.",
+        "description": "Configurez le Gestionnaire d'énergie pour optimiser l'utilisation de la batterie en fonction de la production solaire, du compteur réseau et des données de prévision. Si votre batterie ne communique pas sa capacité (comme un HALO couplé en CA), activez ci-dessous le remplacement de la capacité de la batterie.",
         "data": {
           "em_p1_entity": "Compteur intelligent P1 (capteur de puissance)",
           "em_forecast_entity": "Prévision solaire restante aujourd'hui (optionnel)",

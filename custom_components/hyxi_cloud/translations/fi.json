@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energianhallinta",
-        "description": "Määritä Energianhallinta optimoimaan akun käyttöä aurinkotuotannon, verkkomittarin ja ennustetietojen perusteella.",
+        "description": "Määritä Energianhallinta optimoimaan akun käyttöä aurinkotuotannon, verkkomittarin ja ennustetietojen perusteella. Jos akkusi ei ilmoita kapasiteettiaan (esimerkiksi AC-kytketty HALO), ota alta käyttöön akun kapasiteetin ohitus.",
         "data": {
           "em_p1_entity": "P1-älymittari (tehoanturi)",
           "em_forecast_entity": "Tämän päivän jäljellä oleva aurinkoennuste (valinnainen)",

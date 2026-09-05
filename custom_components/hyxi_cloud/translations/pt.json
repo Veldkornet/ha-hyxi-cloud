@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Gestor de Energia",
-        "description": "Configure o Gestor de Energia para otimizar o uso da bateria com base na produção solar, contador de rede e dados de previsão.",
+        "description": "Configure o Gestor de Energia para otimizar o uso da bateria com base na produção solar, contador de rede e dados de previsão. Se a sua bateria não indica a capacidade (como uma HALO acoplada em CA), ative abaixo a substituição da capacidade da bateria.",
         "data": {
           "em_p1_entity": "Medidor Inteligente P1 (sensor de potência)",
           "em_forecast_entity": "Previsão Solar Restante Hoje (opcional)",

@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Menedżer Energii",
-        "description": "Skonfiguruj Menedżera Energii, aby optymalizować wykorzystanie baterii na podstawie produkcji słonecznej, licznika sieciowego i danych prognozy.",
+        "description": "Skonfiguruj Menedżera Energii, aby optymalizować wykorzystanie baterii na podstawie produkcji słonecznej, licznika sieciowego i danych prognozy. Jeśli bateria nie zgłasza swojej pojemności (na przykład HALO sprzężone AC), włącz poniżej zastępowanie pojemności baterii.",
         "data": {
           "em_p1_entity": "Inteligentny licznik P1 (czujnik mocy)",
           "em_forecast_entity": "Pozostała dzisiejsza prognoza słoneczna (opcjonalnie)",

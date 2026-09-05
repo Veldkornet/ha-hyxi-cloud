@@ -112,7 +112,7 @@
       },
       "energy_manager": {
         "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data.",
+        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data. If your battery doesn't report its capacity (such as an AC-coupled HALO), turn on the capacity override below.",
         "data": {
           "em_p1_entity": "P1 Smart Meter (power sensor)",
           "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
