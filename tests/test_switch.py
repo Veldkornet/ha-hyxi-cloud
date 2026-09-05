@@ -482,6 +482,54 @@ async def test_anti_starvation_switch_error(mock_coordinator_fixture):
 
 
 @pytest.mark.asyncio
+async def test_dispatch_switch_toggles_call_the_client(mock_coordinator_fixture):
+    mock_coordinator_fixture.client.set_dispatch_enabled = AsyncMock()
+    switch = switch_mod.HyxiDispatchSwitch(mock_coordinator_fixture, "SN123", {})
+    switch.async_write_ha_state = MagicMock()
+
+    await switch.async_turn_off()
+    mock_coordinator_fixture.client.set_dispatch_enabled.assert_called_once_with(False)
+    assert switch._attr_is_on is False
+
+    await switch.async_turn_on()
+    mock_coordinator_fixture.client.set_dispatch_enabled.assert_called_with(True)
+    assert switch._attr_is_on is True
+
+
+@pytest.mark.asyncio
+async def test_dispatch_switch_error_is_raised_and_state_untouched(
+    mock_coordinator_fixture,
+):
+    mock_coordinator_fixture.client.set_dispatch_enabled = AsyncMock(
+        side_effect=switch_mod.HyxiApiClient.ControlError("bus gone")
+    )
+    switch = switch_mod.HyxiDispatchSwitch(mock_coordinator_fixture, "SN123", {})
+    switch.async_write_ha_state = MagicMock()
+
+    with (
+        patch("custom_components.hyxi_cloud.switch._LOGGER.exception"),
+        pytest.raises(switch_mod.HyxiApiClient.ControlError),
+    ):
+        await switch.async_turn_on()
+
+    switch.async_write_ha_state.assert_not_called()
+    assert switch._attr_is_on is None
+
+
+@pytest.mark.asyncio
+async def test_dispatch_switch_seeds_from_settings_metrics(mock_coordinator_fixture):
+    mock_coordinator_fixture.data = {
+        "SN123": {"metrics": {"dispatch_enabled": True, "_settings_read_at": 1.0}}
+    }
+    switch = switch_mod.HyxiDispatchSwitch(
+        mock_coordinator_fixture,
+        "SN123",
+        mock_coordinator_fixture.data["SN123"],
+    )
+    assert switch._attr_is_on is True
+
+
+@pytest.mark.asyncio
 async def test_micro_power_switch_turn_on(mock_coordinator_fixture):
     """Test turning on the micro power switch."""
     switch = switch_mod.HyxiMicroPowerSwitch(mock_coordinator_fixture, "SN123", {})

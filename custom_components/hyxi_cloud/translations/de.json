@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Einspeisebegrenzung"
+      },
+      "dispatch": {
+        "name": "Batterie-Dispatch-Steuerung"
       }
     },
     "button": {

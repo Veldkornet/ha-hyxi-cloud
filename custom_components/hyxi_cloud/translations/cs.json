@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Omezení exportu"
+      },
+      "dispatch": {
+        "name": "Řízení dispečinku baterie"
       }
     },
     "button": {

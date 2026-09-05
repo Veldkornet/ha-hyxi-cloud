@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "İhracat Sınırlaması"
+      },
+      "dispatch": {
+        "name": "Batarya sevk kontrolü"
       }
     },
     "button": {

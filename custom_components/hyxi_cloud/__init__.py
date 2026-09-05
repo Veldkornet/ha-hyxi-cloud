@@ -266,6 +266,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             coordinator.engine.stop()
         for controller in coordinator.protection_controllers.values():
             controller.stop()
+        if is_modbus_entry(entry):
+            await _release_modbus_dispatch_on_teardown(hass, coordinator)
         # A Modbus entry has no server-side subscriptions to tear down,
         # and HA releases its shared bus via entry.async_on_unload.
         if not is_modbus_entry(entry):
@@ -288,6 +290,31 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hass.services.async_remove(DOMAIN, "cancel_subscription")
     _LOGGER.debug("HYXI Cloud entry %s unload result: %s", entry.entry_id, unload_ok)
     return unload_ok
+
+
+async def _release_modbus_dispatch_on_teardown(
+    hass: HomeAssistant, coordinator: HyxiDataUpdateCoordinator
+) -> None:
+    """Hand the battery back to the inverter when the entry stops managing it.
+
+    Runs on unload -- disabling device control, deleting the entry, or a
+    reload -- but not on a Home Assistant shutdown, where the entry reloads
+    and resumes control and a mode flip would be pointless churn. Skipped
+    when control was never active this run (nothing to release). Writes
+    unconditionally otherwise rather than checking the dispatch_enabled
+    metric, which lags the device by up to a settings-refresh interval; the
+    write is idempotent and cheap.
+
+    Best-effort: a failed write (bus already gone) must not block the unload.
+    """
+    if hass.is_stopping:
+        return
+    if not (coordinator.protection_controllers or coordinator.engine is not None):
+        return
+    try:
+        await coordinator.client.set_dispatch_enabled(False)
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        _LOGGER.debug("Could not release dispatch on unload: %s", err)
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -883,9 +910,11 @@ def _cleanup_control_entities(
                 "soc_max_hysteresis_pct",
                 "micro_power_limit",
                 "last_sent_mode",
-                # The one boolean Modbus setting with no HyxiSettingNumberDef
-                # equivalent (switch.py's HyxiAntiStarvationSwitch).
+                # Modbus settings switches with no HyxiSettingNumberDef
+                # equivalent (switch.py's HyxiAntiStarvationSwitch /
+                # HyxiDispatchSwitch).
                 "anti_starvation",
+                "dispatch",
             )
         )
         | {d.key for d in HALO_SETTING_NUMBER_DEFS}

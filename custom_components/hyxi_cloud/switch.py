@@ -62,40 +62,41 @@ def _build_device_switches(
     """Build the switch entities for one device SN."""
     device_type = normalize_device_type(get_raw_device_code(dev_data))
 
-    # Modbus: anti-starvation protection, the one boolean HaloSettings/
-    # HybridSettings field. HALO and Hybrid call different client
-    # methods because the register's polarity is inverted between the
-    # two documents -- see client_hybrid.py's set_anti_starvation_
-    # protection docstring. Handled before the cloud-only branches
-    # below since this has no cloud equivalent and no phase dependency.
+    # Modbus: the settings-block booleans -- anti-starvation protection and
+    # the VPP/scheduling dispatch enable. No cloud equivalent and no phase
+    # dependency, so handled before the cloud-only branches below.
     if is_modbus_entry(entry) and device_type in (
         "hybrid_inverter",
         "all_in_one",
         "micro_ess",
     ):
-        return _anti_starvation_switch(entry, coordinator, sn, dev_data, device_type)
+        return _modbus_control_switches(entry, coordinator, sn, dev_data, device_type)
 
     return _cloud_phase_switches(entry, coordinator, sn, dev_data, device_type)
 
 
-def _anti_starvation_switch(
+def _modbus_control_switches(
     entry: ConfigEntry,
     coordinator,
     sn: str,
     dev_data: dict,
     device_type: str,
 ) -> list[SwitchEntity]:
-    """Modbus-only anti-starvation protection switch, if battery control is
-    enabled.
-    """
+    """Modbus-only settings-block switches, if battery control is enabled."""
     if not is_battery_control_enabled(entry):
         return []
-    client_method = (
+    # HALO and Hybrid call different anti-starvation methods because the
+    # register's polarity is inverted between the two documents -- see
+    # client_hybrid.py's set_anti_starvation_protection docstring.
+    anti_starvation_method = (
         "set_anti_starvation"
         if device_type == "micro_ess"
         else "set_anti_starvation_protection"
     )
-    return [HyxiAntiStarvationSwitch(coordinator, sn, dev_data, client_method)]
+    return [
+        HyxiAntiStarvationSwitch(coordinator, sn, dev_data, anti_starvation_method),
+        HyxiDispatchSwitch(coordinator, sn, dev_data),
+    ]
 
 
 def _cloud_phase_switches(
@@ -347,6 +348,63 @@ class HyxiAntiStarvationSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
     def available(self) -> bool:
         """Unavailable when battery control is not enabled."""
         return super().available
+
+
+class HyxiDispatchSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
+    """VPP / scheduling dispatch enable (Modbus only).
+
+    On means the integration is driving the battery through the VPP block
+    (HALO, register 4146) or the scheduling register (Hybrid, 3000); off
+    hands control back to the inverter's own configured work mode. Every
+    set_mode_* / setpoint write turns it on, so the switch mainly matters
+    as the explicit way off -- there is no other route back to native
+    operation from the integration.
+
+    is_on is seeded and kept in sync from the settings block via
+    SettingsSyncMixin, the same as HyxiAntiStarvationSwitch.
+    """
+
+    _attr_translation_key = "dispatch"
+    _attr_icon = "mdi:remote"
+    _attr_is_on: bool | None = None
+
+    def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
+        """Initialize the dispatch switch."""
+        super().__init__(coordinator, sn, dev_data)
+        self._attr_unique_id = f"hyxi_{sn}_dispatch"
+        self._sync_from_settings(dev_data)
+
+    def _apply_settings_metrics(self, metrics: dict) -> None:
+        """See SettingsSyncMixin -- adopt this switch's own value."""
+        if "dispatch_enabled" in metrics:
+            self._attr_is_on = metrics["dispatch_enabled"]
+
+    async def _async_set(self, enabled: bool) -> None:
+        _LOGGER.debug(
+            "Switch: setting dispatch to %s for %s", enabled, mask_sn(self._sn)
+        )
+        try:
+            await self.coordinator.client.set_dispatch_enabled(enabled)
+            self._note_write()
+            self._attr_is_on = enabled
+            self.async_write_ha_state()
+            await self.coordinator.async_request_refresh()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.exception(
+                "Failed to set dispatch to %s for %s: %s",
+                enabled,
+                mask_sn(self._sn),
+                err,
+            )
+            raise
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Re-arm dispatch."""
+        await self._async_set(True)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Hand control back to the inverter."""
+        await self._async_set(False)
 
 
 class HyxiMicroEssPowerSwitch(HyxiEntity, SwitchEntity):

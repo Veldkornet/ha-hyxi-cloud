@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "输出限制"
+      },
+      "dispatch": {
+        "name": "电池调度控制"
       }
     },
     "button": {

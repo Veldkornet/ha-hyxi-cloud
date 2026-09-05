@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Limitation d'Export"
+      },
+      "dispatch": {
+        "name": "Pilotage de la batterie"
       }
     },
     "button": {

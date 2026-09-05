@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Ograniczenie Eksportu"
+      },
+      "dispatch": {
+        "name": "Sterowanie dyspozycją baterii"
       }
     },
     "button": {

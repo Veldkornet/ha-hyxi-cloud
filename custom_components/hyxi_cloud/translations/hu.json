@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Export Korlátozás"
+      },
+      "dispatch": {
+        "name": "Akkumulátor-vezérlés"
       }
     },
     "button": {

@@ -787,6 +787,9 @@
       "anti_starvation": {
         "name": "Anti-Starvation Protection"
       },
+      "dispatch": {
+        "name": "Battery Dispatch Control"
+      },
       "em_grid_charge_allowed": {
         "name": "Grid Charge Allowed"
       },
