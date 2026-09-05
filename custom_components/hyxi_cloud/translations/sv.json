@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energihantering",
-        "description": "Konfigurera Energihantering för att optimera batterianvändning baserat på solproduktion, nätmätare och prognosdata.",
+        "description": "Konfigurera Energihantering för att optimera batterianvändning baserat på solproduktion, nätmätare och prognosdata. Om ditt batteri inte rapporterar sin kapacitet (till exempel en AC-kopplad HALO), aktivera åsidosättning av batterikapacitet nedan.",
         "data": {
           "em_p1_entity": "P1 Smart Mätare (effektsensor)",
           "em_forecast_entity": "Återstående Solprognos Idag (valfritt)",

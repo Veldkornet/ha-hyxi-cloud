@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energistyring",
-        "description": "Konfigurer Energistyring til at optimere batteriforbrug baseret på solproduktion, netmåler og prognosedata.",
+        "description": "Konfigurer Energistyring til at optimere batteriforbrug baseret på solproduktion, netmåler og prognosedata. Hvis dit batteri ikke rapporterer sin kapacitet (f.eks. en AC-koblet HALO), skal du aktivere tilsidesættelse af batterikapacitet nedenfor.",
         "data": {
           "em_p1_entity": "P1 Smart Måler (effektsensor)",
           "em_forecast_entity": "Resterende Solprognose i Dag (valgfri)",

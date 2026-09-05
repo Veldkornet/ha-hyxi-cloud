@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energiebestuurder",
-        "description": "Stel die Energiebestuurder op om battery-gebruik te optimaliseer gebaseer op sonkrag-opwekking, kragnetmeter, en voorspellingsdata.",
+        "description": "Stel die Energiebestuurder op om battery-gebruik te optimaliseer gebaseer op sonkrag-opwekking, kragnetmeter, en voorspellingsdata. As jou battery nie sy kapasiteit rapporteer nie (soos 'n WS-gekoppelde HALO), skakel die oorskryf van batterykapasiteit hieronder aan.",
         "data": {
           "em_p1_entity": "P1 Slim Meter (kragsensor)",
           "em_forecast_entity": "Sonkragvoorspelling Oorblywend Vandag (opsioneel)",

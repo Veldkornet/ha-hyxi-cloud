@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energiebeheer",
-        "description": "Configureer Energiebeheer om het batterijgebruik te optimaliseren op basis van zonne-energieproductie, netmeter en voorspellingsgegevens.",
+        "description": "Configureer Energiebeheer om het batterijgebruik te optimaliseren op basis van zonne-energieproductie, netmeter en voorspellingsgegevens. Als je batterij zijn capaciteit niet doorgeeft (zoals een AC-gekoppelde HALO), schakel dan hieronder het overschrijven van de batterijcapaciteit in.",
         "data": {
           "em_p1_entity": "P1 Slimme Meter (vermogenssensor)",
           "em_forecast_entity": "Zonneprognose Resterend Vandaag (optioneel)",

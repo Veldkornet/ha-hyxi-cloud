@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energiakezelő",
-        "description": "Az Energiakezelő konfigurálása az akkumulátor-használat optimalizálásához a napelemtermelés, a hálózati mérő és az előrejelzési adatok alapján.",
+        "description": "Az Energiakezelő konfigurálása az akkumulátor-használat optimalizálásához a napelemtermelés, a hálózati mérő és az előrejelzési adatok alapján. Ha az akkumulátor nem jelenti a kapacitását (például egy AC-csatolt HALO), kapcsolja be alább az akkumulátor kapacitásának felülbírálását.",
         "data": {
           "em_p1_entity": "P1 okos mérő (teljesítményszenzor)",
           "em_forecast_entity": "Mai hátralévő napenergia-előrejelzés (opcionális)",

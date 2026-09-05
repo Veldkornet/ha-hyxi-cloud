@@ -111,7 +111,7 @@
       },
       "energy_manager": {
         "title": "Energetický manažer",
-        "description": "Nakonfigurujte Energetický manažer pro optimalizaci využití baterie na základě solární výroby, síťového měřiče a dat předpovědi.",
+        "description": "Nakonfigurujte Energetický manažer pro optimalizaci využití baterie na základě solární výroby, síťového měřiče a dat předpovědi. Pokud vaše baterie nehlásí svou kapacitu (například AC propojený HALO), zapněte níže přepsání kapacity baterie.",
         "data": {
           "em_p1_entity": "Chytrý měřič P1 (senzor výkonu)",
           "em_forecast_entity": "Zbývající solární předpověď dnes (volitelné)",
