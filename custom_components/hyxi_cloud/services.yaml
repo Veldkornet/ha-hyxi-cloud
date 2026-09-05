@@ -17,7 +17,7 @@ set_battery_mode:
     Control & Protection" to be enabled for that entry. Refused while the Energy
     Manager is managing the target inverter, unless Force is set.
   target:
-    device:
+    entity:
       integration: hyxi_cloud
   fields:
     mode:
@@ -26,6 +26,7 @@ set_battery_mode:
       required: true
       selector:
         select:
+          translation_key: battery_mode
           options:
             - idle
             - charge

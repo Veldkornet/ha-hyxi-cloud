@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inaktiv",
+        "charge": "Opladning",
+        "discharge": "Afladning",
+        "self_consume": "Selvforbrug"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Annuller abonnement",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Tilstand",
-          "description": "Batteriets driftstilstand, der skal skiftes til.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Inaktiv",
-                "charge": "Opladning",
-                "discharge": "Afladning",
-                "self_consume": "Selvforbrug"
-              }
-            }
-          }
+          "description": "Batteriets driftstilstand, der skal skiftes til."
         },
         "power": {
           "name": "Effekt",

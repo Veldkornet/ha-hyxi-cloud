@@ -43,7 +43,7 @@ def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
     if state is not None and state.state not in ("unknown", "unavailable"):
         try:
             return int(float(state.state))
-        except ValueError, TypeError:
+        except ValueError, TypeError, OverflowError:
             _LOGGER.debug(
                 "Power entity %s has non-numeric state %r, using 100W default",
                 entity_id,
@@ -100,6 +100,19 @@ def _block_manual_peak_shaving_if_needed(coordinator, sn: str, option: str) -> N
         raise HomeAssistantError(
             "Peak shaving charge blocked because battery SOC is at or above SOC Maximum"
         )
+
+
+def preflight_battery_mode(coordinator, sn: str, mode: str) -> None:
+    """Raise if `mode` would be rejected for `sn`, without sending anything.
+
+    Lets a multi-target caller check every inverter before it switches the
+    first one. Only charge / discharge have a guard (SOC protection); idle
+    and self-consume always pass.
+    """
+    if mode == "charge":
+        _block_manual_charge_if_needed(coordinator, sn)
+    elif mode == "discharge":
+        _block_manual_discharge_if_needed(coordinator, sn)
 
 
 async def async_send_battery_mode(

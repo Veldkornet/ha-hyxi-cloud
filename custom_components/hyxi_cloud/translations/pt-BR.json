@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Ocioso",
+        "charge": "Carga",
+        "discharge": "Descarga",
+        "self_consume": "Autoconsumo"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Cancelar Assinatura",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Modo",
-          "description": "O modo de operação da bateria para o qual mudar.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Ocioso",
-                "charge": "Carga",
-                "discharge": "Descarga",
-                "self_consume": "Autoconsumo"
-              }
-            }
-          }
+          "description": "O modo de operação da bateria para o qual mudar."
         },
         "power": {
           "name": "Potência",

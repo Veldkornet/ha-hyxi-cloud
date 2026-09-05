@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inaktiv",
+        "charge": "Lading",
+        "discharge": "Utlading",
+        "self_consume": "Selvforbruk"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Avbryt abonnement",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Modus",
-          "description": "Batteriets driftsmodus å bytte til.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Inaktiv",
-                "charge": "Lading",
-                "discharge": "Utlading",
-                "self_consume": "Selvforbruk"
-              }
-            }
-          }
+          "description": "Batteriets driftsmodus å bytte til."
         },
         "power": {
           "name": "Effekt",

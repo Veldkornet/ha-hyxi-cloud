@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "空闲",
+        "charge": "充电",
+        "discharge": "放电",
+        "self_consume": "自用"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "取消订阅",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "模式",
-          "description": "要切换到的电池运行模式。",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "空闲",
-                "charge": "充电",
-                "discharge": "放电",
-                "self_consume": "自用"
-              }
-            }
-          }
+          "description": "要切换到的电池运行模式。"
         },
         "power": {
           "name": "功率",

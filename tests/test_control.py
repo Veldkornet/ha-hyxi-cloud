@@ -87,6 +87,11 @@ def test_get_power_value_invalid_state():
         hass.states.get.return_value = state_invalid
         assert control_mod._get_power_value(hass, "SN123", "charge") == 100
 
+        state_inf = MagicMock()
+        state_inf.state = "inf"  # float() parses it, int() overflows
+        hass.states.get.return_value = state_inf
+        assert control_mod._get_power_value(hass, "SN123", "charge") == 100
+
         hass.states.get.return_value = None
         assert control_mod._get_power_value(hass, "SN123", "charge") == 100
 
@@ -197,6 +202,32 @@ def test_note_manual_mode_no_controller():
     control_mod._note_manual_mode(coordinator, "SN123", "test_mode")  # no raise
 
 
+@pytest.mark.parametrize("mode", ["idle", "self_consume"])
+def test_preflight_battery_mode_never_blocks_idle_or_self_consume(mode):
+    coordinator = MagicMock()
+    controller = MagicMock()
+    controller.should_block_manual_charge.return_value = True
+    controller.should_block_manual_discharge.return_value = True
+    coordinator.protection_controllers = {"SN123": controller}
+
+    control_mod.preflight_battery_mode(coordinator, "SN123", mode)  # no raise
+
+
+@pytest.mark.parametrize(
+    ("mode", "match"),
+    [("charge", "SOC Maximum"), ("discharge", "SOC Minimum")],
+)
+def test_preflight_battery_mode_raises_the_soc_guard(mode, match):
+    coordinator = MagicMock()
+    controller = MagicMock()
+    controller.should_block_manual_charge.return_value = True
+    controller.should_block_manual_discharge.return_value = True
+    coordinator.protection_controllers = {"SN123": controller}
+
+    with pytest.raises(HomeAssistantError, match=match):
+        control_mod.preflight_battery_mode(coordinator, "SN123", mode)
+
+
 # ── async_send_battery_mode ────────────────────────────────────────────
 
 
@@ -252,10 +283,11 @@ async def test_send_battery_mode_blocks_charge_at_soc_max(coord):
     controller.should_block_manual_charge.return_value = True
     coord.protection_controllers = {"SN123": controller}
 
+    send = control_mod.async_send_battery_mode(
+        MagicMock(), coord, "SN123", "charge", power=1000
+    )
     with pytest.raises(HomeAssistantError, match="SOC Maximum"):
-        await control_mod.async_send_battery_mode(
-            MagicMock(), coord, "SN123", "charge", power=1000
-        )
+        await send
     coord.client.set_mode_charge.assert_not_awaited()
 
 
@@ -263,5 +295,6 @@ async def test_send_battery_mode_blocks_charge_at_soc_max(coord):
 async def test_send_battery_mode_wraps_a_control_error(coord):
     coord.client.set_mode_idle.side_effect = ControlError("bus down")
 
+    send = control_mod.async_send_battery_mode(MagicMock(), coord, "SN123", "idle")
     with pytest.raises(HomeAssistantError, match="Failed to set mode 'idle'"):
-        await control_mod.async_send_battery_mode(MagicMock(), coord, "SN123", "idle")
+        await send

@@ -286,8 +286,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
         if not hass.data[DOMAIN]:
-            if hass.services.has_service(DOMAIN, "cancel_subscription"):
-                hass.services.async_remove(DOMAIN, "cancel_subscription")
+            _remove_services(hass)
     _LOGGER.debug("HYXI Cloud entry %s unload result: %s", entry.entry_id, unload_ok)
     return unload_ok
 
@@ -1862,6 +1861,16 @@ def _apply_alarm_updates(
     return any_updated
 
 
+_HYXI_SERVICES = ("cancel_subscription", "set_battery_mode")
+
+
+def _remove_services(hass: HomeAssistant) -> None:
+    """Drop the custom services when the last HYXI entry unloads."""
+    for service in _HYXI_SERVICES:
+        if hass.services.has_service(DOMAIN, service):
+            hass.services.async_remove(DOMAIN, service)
+
+
 def setup_services(hass: HomeAssistant) -> None:
     """Set up custom services for HYXI Cloud."""
     if hass.services.has_service(DOMAIN, "cancel_subscription"):
@@ -1961,7 +1970,7 @@ async def _async_handle_set_battery_mode(call) -> None:
     from homeassistant.exceptions import ServiceValidationError
 
     from .const import is_battery_control_enabled
-    from .control import async_send_battery_mode
+    from .control import async_send_battery_mode, preflight_battery_mode
 
     hass = call.hass
     mode = call.data["mode"]
@@ -1979,8 +1988,8 @@ async def _async_handle_set_battery_mode(call) -> None:
             "inverter device (or one of its entities)."
         )
 
-    # Validate every target before touching any, so a rejected second
-    # inverter doesn't leave the first one already switched.
+    # Validate every matched inverter before touching any, so a rejected
+    # second one doesn't leave the first already switched.
     for entry, coordinator, sn in targets:
         if not is_battery_control_enabled(entry):
             raise ServiceValidationError(
@@ -1992,6 +2001,7 @@ async def _async_handle_set_battery_mode(call) -> None:
                 f"The Energy Manager is managing {mask_sn(sn)}. Turn it off, or "
                 "pass force: true to override it for this one command."
             )
+        preflight_battery_mode(coordinator, sn, mode)
 
     for _entry, coordinator, sn in targets:
         await async_send_battery_mode(hass, coordinator, sn, mode, power=power)

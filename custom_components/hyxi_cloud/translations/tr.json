@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Boşta",
+        "charge": "Şarj",
+        "discharge": "Deşarj",
+        "self_consume": "Kendi tüketimi"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Abonneliği İptal Et",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Mod",
-          "description": "Geçilecek batarya çalışma modu.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Boşta",
-                "charge": "Şarj",
-                "discharge": "Deşarj",
-                "self_consume": "Kendi tüketimi"
-              }
-            }
-          }
+          "description": "Geçilecek batarya çalışma modu."
         },
         "power": {
           "name": "Güç",

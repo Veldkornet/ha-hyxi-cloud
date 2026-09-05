@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Простой",
+        "charge": "Заряд",
+        "discharge": "Разряд",
+        "self_consume": "Самопотребление"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Отменить подписку",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Режим",
-          "description": "Рабочий режим батареи, на который нужно переключиться.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Простой",
-                "charge": "Заряд",
-                "discharge": "Разряд",
-                "self_consume": "Самопотребление"
-              }
-            }
-          }
+          "description": "Рабочий режим батареи, на который нужно переключиться."
         },
         "power": {
           "name": "Мощность",

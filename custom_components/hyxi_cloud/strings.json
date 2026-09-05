@@ -861,6 +861,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Idle",
+        "charge": "Charge",
+        "discharge": "Discharge",
+        "self_consume": "Self-consume"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Cancel Subscription",
@@ -878,17 +888,7 @@
       "fields": {
         "mode": {
           "name": "Mode",
-          "description": "The battery operating mode to switch to.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Idle",
-                "charge": "Charge",
-                "discharge": "Discharge",
-                "self_consume": "Self-consume"
-              }
-            }
-          }
+          "description": "The battery operating mode to switch to."
         },
         "power": {
           "name": "Power",

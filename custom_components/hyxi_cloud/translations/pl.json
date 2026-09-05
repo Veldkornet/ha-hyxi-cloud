@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Bezczynność",
+        "charge": "Ładowanie",
+        "discharge": "Rozładowanie",
+        "self_consume": "Autokonsumpcja"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Anuluj subskrypcję",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Tryb",
-          "description": "Tryb pracy baterii, na który należy przełączyć.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Bezczynność",
-                "charge": "Ładowanie",
-                "discharge": "Rozładowanie",
-                "self_consume": "Autokonsumpcja"
-              }
-            }
-          }
+          "description": "Tryb pracy baterii, na który należy przełączyć."
         },
         "power": {
           "name": "Moc",

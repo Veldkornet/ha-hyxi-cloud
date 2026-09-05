@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inactief",
+        "charge": "Laden",
+        "discharge": "Ontladen",
+        "self_consume": "Zelfverbruik"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Abonnement annuleren",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Modus",
-          "description": "De batterijbedrijfsmodus om naar over te schakelen.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Inactief",
-                "charge": "Laden",
-                "discharge": "Ontladen",
-                "self_consume": "Zelfverbruik"
-              }
-            }
-          }
+          "description": "De batterijbedrijfsmodus om naar over te schakelen."
         },
         "power": {
           "name": "Vermogen",

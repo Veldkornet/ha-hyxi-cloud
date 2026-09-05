@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inaktiv",
+        "charge": "Laddning",
+        "discharge": "Urladdning",
+        "self_consume": "Egenförbrukning"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Avbryt prenumeration",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Läge",
-          "description": "Batteriets driftläge att växla till.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Inaktiv",
-                "charge": "Laddning",
-                "discharge": "Urladdning",
-                "self_consume": "Egenförbrukning"
-              }
-            }
-          }
+          "description": "Batteriets driftläge att växla till."
         },
         "power": {
           "name": "Effekt",

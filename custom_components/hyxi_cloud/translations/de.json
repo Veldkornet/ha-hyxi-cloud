@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Leerlauf",
+        "charge": "Laden",
+        "discharge": "Entladen",
+        "self_consume": "Eigenverbrauch"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Abonnement kündigen",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Modus",
-          "description": "Der Batteriebetriebsmodus, in den gewechselt werden soll.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Leerlauf",
-                "charge": "Laden",
-                "discharge": "Entladen",
-                "self_consume": "Eigenverbrauch"
-              }
-            }
-          }
+          "description": "Der Batteriebetriebsmodus, in den gewechselt werden soll."
         },
         "power": {
           "name": "Leistung",

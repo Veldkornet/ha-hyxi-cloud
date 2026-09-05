@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "アイドル",
+        "charge": "充電",
+        "discharge": "放電",
+        "self_consume": "自家消費"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "サブスクリプションをキャンセル",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "モード",
-          "description": "切り替えるバッテリーの動作モード。",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "アイドル",
-                "charge": "充電",
-                "discharge": "放電",
-                "self_consume": "自家消費"
-              }
-            }
-          }
+          "description": "切り替えるバッテリーの動作モード。"
         },
         "power": {
           "name": "電力",

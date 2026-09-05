@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Ledig",
+        "charge": "Laai",
+        "discharge": "Ontlaai",
+        "self_consume": "Self-verbruik"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Kanselleer Intekening",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Modus",
-          "description": "Die batterybedryfsmodus om na oor te skakel.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Ledig",
-                "charge": "Laai",
-                "discharge": "Ontlaai",
-                "self_consume": "Self-verbruik"
-              }
-            }
-          }
+          "description": "Die batterybedryfsmodus om na oor te skakel."
         },
         "power": {
           "name": "Drywing",

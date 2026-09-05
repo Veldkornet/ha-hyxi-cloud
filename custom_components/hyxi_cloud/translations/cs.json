@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Klid",
+        "charge": "Nabíjení",
+        "discharge": "Vybíjení",
+        "self_consume": "Vlastní spotřeba"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Zrušit předplatné",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Režim",
-          "description": "Provozní režim baterie, na který se má přepnout.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Klid",
-                "charge": "Nabíjení",
-                "discharge": "Vybíjení",
-                "self_consume": "Vlastní spotřeba"
-              }
-            }
-          }
+          "description": "Provozní režim baterie, na který se má přepnout."
         },
         "power": {
           "name": "Výkon",

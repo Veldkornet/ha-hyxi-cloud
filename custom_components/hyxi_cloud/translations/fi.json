@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Joutokäynti",
+        "charge": "Lataus",
+        "discharge": "Purku",
+        "self_consume": "Omakäyttö"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Peruuta tilaus",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Tila",
-          "description": "Akun toimintatila, johon vaihdetaan.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Joutokäynti",
-                "charge": "Lataus",
-                "discharge": "Purku",
-                "self_consume": "Omakäyttö"
-              }
-            }
-          }
+          "description": "Akun toimintatila, johon vaihdetaan."
         },
         "power": {
           "name": "Teho",

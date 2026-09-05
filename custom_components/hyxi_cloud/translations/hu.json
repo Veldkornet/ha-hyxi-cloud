@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Tétlen",
+        "charge": "Töltés",
+        "discharge": "Kisütés",
+        "self_consume": "Önfogyasztás"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Előfizetés törlése",
@@ -877,17 +887,7 @@
       "fields": {
         "mode": {
           "name": "Mód",
-          "description": "Az akkumulátor üzemmódja, amelyre váltani kell.",
-          "selector": {
-            "select": {
-              "options": {
-                "idle": "Tétlen",
-                "charge": "Töltés",
-                "discharge": "Kisütés",
-                "self_consume": "Önfogyasztás"
-              }
-            }
-          }
+          "description": "Az akkumulátor üzemmódja, amelyre váltani kell."
         },
         "power": {
           "name": "Teljesítmény",

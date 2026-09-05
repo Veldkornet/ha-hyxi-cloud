@@ -39,12 +39,13 @@ def mock_coordinator(mock_entry):
 
 @pytest.mark.asyncio
 async def test_service_registration_and_unload(hass, mock_entry, mock_coordinator):
-    """Test that the cancel_subscription service is registered on setup and removed on unload."""
+    """Both custom services register on setup and are removed when the last entry unloads."""
     hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
 
     # Verify service registration
     setup_services(hass)
     assert hass.services.has_service(DOMAIN, "cancel_subscription")
+    assert hass.services.has_service(DOMAIN, "set_battery_mode")
 
     # Re-registering doesn't crash or duplicate
     setup_services(hass)
@@ -69,8 +70,9 @@ async def test_service_registration_and_unload(hass, mock_entry, mock_coordinato
     ):
         await async_unload_entry(hass, mock_entry)
 
-    # Verify service was removed because no config entries remain
+    # Verify both services were removed because no config entries remain
     assert not hass.services.has_service(DOMAIN, "cancel_subscription")
+    assert not hass.services.has_service(DOMAIN, "set_battery_mode")
 
 
 @pytest.mark.asyncio
@@ -314,6 +316,25 @@ async def test_set_battery_mode_blocked_while_energy_manager_runs(battery_mode_e
             DOMAIN,
             "set_battery_mode",
             {"device_id": "dev1", "mode": "discharge"},
+            blocking=True,
+        )
+    send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_set_battery_mode_preflights_soc_protection(battery_mode_env):
+    """A charge command to a battery at SOC-max is rejected before any
+    command goes out -- the same guard the mode buttons apply."""
+    hass, coordinator, _entry, send = battery_mode_env
+    controller = MagicMock()
+    controller.should_block_manual_charge.return_value = True
+    coordinator.protection_controllers = {"SN1": controller}
+
+    with pytest.raises(HomeAssistantError, match="SOC Maximum"):
+        await hass.services.async_call(
+            DOMAIN,
+            "set_battery_mode",
+            {"device_id": "dev1", "mode": "charge"},
             blocking=True,
         )
     send.assert_not_awaited()
