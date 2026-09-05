@@ -25,10 +25,12 @@ the front") but describes the identical layout, and its own example proves
 it the same way: 1715081225 (0x663A186A) as register 1007 arrives on the
 wire as 18 6A 66 3A.
 
-One new rule specific to this map: HYX-H exposes function code 0x06 (write
-single register) alongside 0x03/0x04/0x10, and requires more than 500ms
-between frames -- the HALO document asked for 200ms. Both are handled at the
-connection level (message_spacing), not here.
+One new rule specific to this map: HYX-H requires more than 500ms between
+frames -- the HALO document asked for 200ms -- handled at the connection
+level (message_spacing), not here. The document also lists function code
+0x06 (write single register) alongside 0x03/0x04/0x10, but a real HYX-H
+turned out to reject it like the HALO does, so HybridSettings forces 0x10
+for single-register writes too (see that class's docstring).
 """
 
 from __future__ import annotations
@@ -265,12 +267,20 @@ class HybridEnergy(Component):
 class HybridSettings(Component):
     """Writable settings, including the Modbus scheduling control block.
 
-    Holding registers, read with 0x03, written with 0x06 (single) or 0x10
-    (multiple). Registers 3000-3015 are what make local control possible at
-    all -- and on this hardware family it is dramatically simpler than the
-    HALO's VPP block: register 3000 hands the inverter over to Modbus
-    control, and 3015 is a single signed watts value (positive discharge,
-    negative charge) when the default control mode (3004=0) is in effect.
+    Holding registers, read with 0x03. The document's function-code table
+    lists 0x06 (write single) alongside 0x10 (write multiple), but at least
+    one HYX-H hybrid rejects a 0x06 write the same way the HALO does --
+    accepting it but not echoing a spec-compliant response, so tmodbus fails
+    it with "Expected response to match request" (write_register(3000, 1)
+    while the battery protection tried to hold SOC). Every single-register
+    writable field below therefore passes force_fc16=True, exactly as
+    HaloSettings does; 0x10 is in this document's allowed set too. The
+    two-register battery_power (int32) already writes via 0x10 regardless.
+
+    Registers 3000-3015 are what make local control possible: register 3000
+    hands the inverter over to Modbus control, and 3015 is a single signed
+    watts value (positive discharge, negative charge) when the default
+    control mode (3004=0) is in effect.
 
     Registers 1007 and 1009 (absolute time, time zone), 3120 (baud rate) and
     3121 (Modbus address) are deliberately absent, matching HaloSettings'
@@ -281,33 +291,43 @@ class HybridSettings(Component):
     register_space = "holding"
     max_span = MAX_SPAN
 
-    scheduling_enabled = integer(3000, signed=False, writable=True)
+    scheduling_enabled = integer(3000, signed=False, writable=True, force_fc16=True)
     """0 disabled, 1 enabled. Master switch for local control."""
-    power_command = integer(3002, signed=False, writable=True)
+    power_command = integer(3002, signed=False, writable=True, force_fc16=True)
     """1 power on, 2 power off, 3 restart."""
-    control_mode = integer(3004, signed=False, writable=True)
+    control_mode = integer(3004, signed=False, writable=True, force_fc16=True)
     """0 battery power control (default), 1 inverter AC power control."""
     battery_power = int32(3015, word_order=LOW_WORD_FIRST, writable=True, unit="W")
     """Only takes effect while control_mode is 0. Positive: battery
     discharge. Negative: battery charge. Confirmed sign convention -- the
     document states it explicitly, unlike register 1065's read-only power
     value above."""
-    max_charge_current = gauge(3112, 0.1, signed=False, writable=True, unit="A")
+    max_charge_current = gauge(
+        3112, 0.1, signed=False, writable=True, unit="A", force_fc16=True
+    )
     """0 means no limit."""
-    max_discharge_current = gauge(3113, 0.1, signed=False, writable=True, unit="A")
+    max_discharge_current = gauge(
+        3113, 0.1, signed=False, writable=True, unit="A", force_fc16=True
+    )
     """0 means no limit."""
-    feed_in_enable = integer(1099, signed=False, writable=True)
+    feed_in_enable = integer(1099, signed=False, writable=True, force_fc16=True)
     """0 disable export control, 1 enable export control."""
-    feed_in_power = integer(1100, signed=False, writable=True, unit="W")
-    anti_starvation_protection = integer(1101, signed=False, writable=True)
+    feed_in_power = integer(
+        1100, signed=False, writable=True, unit="W", force_fc16=True
+    )
+    anti_starvation_protection = integer(
+        1101, signed=False, writable=True, force_fc16=True
+    )
     """0 open, 1 close. Inverted sense from the HALO document's equivalent
     field (there, 0 disables and 1 enables) -- these are two different
     devices and the polarity is not assumed to match."""
-    self_use_soc = integer(1102, signed=False, writable=True, unit="%")
-    backup_soc = integer(1103, signed=False, writable=True, unit="%")
-    forced_charge_soc = integer(1104, signed=False, writable=True, unit="%")
-    feed_in_soc = integer(1105, signed=False, writable=True, unit="%")
-    off_grid_soc = integer(1106, signed=False, writable=True, unit="%")
+    self_use_soc = integer(1102, signed=False, writable=True, unit="%", force_fc16=True)
+    backup_soc = integer(1103, signed=False, writable=True, unit="%", force_fc16=True)
+    forced_charge_soc = integer(
+        1104, signed=False, writable=True, unit="%", force_fc16=True
+    )
+    feed_in_soc = integer(1105, signed=False, writable=True, unit="%", force_fc16=True)
+    off_grid_soc = integer(1106, signed=False, writable=True, unit="%", force_fc16=True)
 
 
 #: Components read on every poll, in the order they are read.

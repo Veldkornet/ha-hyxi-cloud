@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
+from hyxi_cloud_api import HyxiApiClient
 
 from .const import DOMAIN, detect_phase_type, is_modbus_entry, mask_sn
 
@@ -41,6 +42,7 @@ class HyxiBatteryProtectionController:
         self._low_soc_hold = False
         self._high_soc_hold = False
         self._last_mode_switch = -999999.0
+        self._control_error_logged = False
         self._unsub_listener: CALLBACK_TYPE | None = None
         self._eval_task: asyncio.Task | None = None
 
@@ -300,8 +302,28 @@ class HyxiBatteryProtectionController:
             )
             return
 
-        await self._send_control(mode)
+        try:
+            await self._send_control(mode)
+        except HyxiApiClient.ControlError as err:
+            # The write was rejected -- most often because the inverter is
+            # already under external control (a VPP / energy-provider
+            # schedule). Throttle retries to the cooldown and don't let it
+            # escape as an unhandled task exception; log once at WARNING,
+            # then quietly at DEBUG while it keeps failing.
+            self._last_mode_switch = time.monotonic()
+            _LOGGER.log(
+                logging.DEBUG if self._control_error_logged else logging.WARNING,
+                "Protection %s: could not set mode '%s' to keep SOC within "
+                "limits: %s. The inverter may be under external control; turn "
+                "off Device Control & Protection for it if it is managed elsewhere.",
+                mask_sn(self._sn),
+                mode,
+                err,
+            )
+            self._control_error_logged = True
+            return
 
+        self._control_error_logged = False
         self._last_sent_mode = mode
         self._last_mode_switch = time.monotonic()
         await self._coordinator.async_request_refresh()

@@ -505,6 +505,35 @@ async def test_anti_starvation_protection_write_is_inverted_polarity(client):
 
 
 @pytest.mark.asyncio
+async def test_single_register_settings_writes_use_function_code_16(client):
+    """The hybrid document's function-code table lists 0x06 (write single)
+    alongside 0x10, but at least one real HYX-H rejects 0x06 the same way
+    the HALO does -- accepting the write but not echoing a spec-compliant
+    response, so tmodbus fails it with "Expected response to match request"
+    (hit on write_register(3000, 1) while the battery protection tried to
+    hold SOC). HybridSettings' one-register writable fields now all pass
+    force_fc16=True; none may go out as FC 0x06 (6). The two-register
+    battery_power (int32) already uses 0x10 and is excluded by the length
+    filter below.
+    """
+    events = []
+    client.settings.modbus_unit.on_write(events.append)
+
+    await client.set_mode_idle("SN")  # writes 3000, 3004
+    await client.set_mode_self_consume("SN")  # writes 3000
+    await client.power_off("SN")  # writes 3002
+    await client.set_peak_shaving("SN", "on")  # writes 1099
+    await client.set_feed_in_power(4200)  # writes 1100
+    await client.set_max_charge_current(30.0)  # writes 3112
+    await client.set_self_use_soc(12)  # writes 1102
+    await client.set_anti_starvation_protection(True)  # writes 1101
+
+    single_register_writes = [e for e in events if len(e.values) == 1]
+    assert single_register_writes  # the FC assertion below must not be vacuous
+    assert all(event.function_code == 16 for event in single_register_writes)
+
+
+@pytest.mark.asyncio
 async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
     with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
         with pytest.raises(HyxiHybridModbusClient.ControlError):

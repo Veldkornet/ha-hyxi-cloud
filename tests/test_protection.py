@@ -504,6 +504,48 @@ async def test_ensure_mode_modbus_actions_override_single_phase_model():
 
 
 @pytest.mark.asyncio
+async def test_ensure_mode_swallows_a_rejected_control_write(caplog):
+    """A ControlError from the client (the inverter rejected the write --
+    commonly because it's under external VPP control) is logged, not raised
+    as an unhandled task exception, and does not count as a mode change.
+    The first failure logs at WARNING, repeats drop to DEBUG.
+    """
+    import logging
+
+    from custom_components.hyxi_cloud import protection as protection_mod
+
+    class _ControlError(Exception):
+        pass
+
+    controller = _build_controller(50, "H5K-HT")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    controller._send_control = AsyncMock(side_effect=_ControlError("write rejected"))
+
+    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+        caplog.set_level(
+            logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
+        )
+
+        await controller._ensure_mode("idle")  # must not raise
+
+        assert "could not set mode 'idle'" in caplog.text
+        assert controller._last_sent_mode is None  # not treated as sent
+        assert [r.levelno for r in caplog.records if "could not set" in r.message] == [
+            logging.WARNING
+        ]
+
+        caplog.clear()
+        controller._last_mode_switch = -999999.0  # bypass the retry cooldown
+        await controller._ensure_mode("idle")  # still fails, quietly now
+
+        assert [r.levelno for r in caplog.records if "could not set" in r.message] == [
+            logging.DEBUG
+        ]
+
+
+@pytest.mark.asyncio
 async def test_send_control_three_phase_exceptions():
     """Verify three-phase send_control raises ValueError for unsupported modes."""
     controller = _build_controller(50, "H5K-HT")
