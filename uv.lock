@@ -944,7 +944,7 @@ wheels = [
 
 [[package]]
 name = "ha-hyxi-cloud"
-version = "1.7.0b5"
+version = "1.7.0b6"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
