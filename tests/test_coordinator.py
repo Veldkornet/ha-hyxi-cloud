@@ -255,7 +255,7 @@ async def test_async_sync_device_metadata_no_change():
         mock_device.sw_version = "1.2.3"
         mock_device.hw_version = "V1"
         mock_device.id = "device_id"
-        mock_dev_reg.async_get_device.return_value = mock_device
+        mock_dev_reg.async_get_device_by_identifier.return_value = mock_device
 
         devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
         await coordinator._async_sync_device_metadata(devices)
@@ -288,7 +288,7 @@ async def test_async_sync_device_metadata_with_change():
         mock_device.sw_version = "1.2.2"
         mock_device.hw_version = "V1"
         mock_device.id = "device_id"
-        mock_dev_reg.async_get_device.return_value = mock_device
+        mock_dev_reg.async_get_device_by_identifier.return_value = mock_device
 
         devices = {
             "SN123": {
@@ -321,7 +321,7 @@ async def test_async_sync_device_metadata_device_not_found():
         "custom_components.hyxi_cloud.coordinator.dr.async_get",
         return_value=mock_dev_reg,
     ):
-        mock_dev_reg.async_get_device.return_value = None
+        mock_dev_reg.async_get_device_by_identifier.return_value = None
 
         devices = {"SN123": {"sw_version": "1.2.3", "hw_version": "V1"}}
         await coordinator._async_sync_device_metadata(devices)

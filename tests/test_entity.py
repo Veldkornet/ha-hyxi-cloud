@@ -42,7 +42,11 @@ if isinstance(mock_coordinator, MagicMock):
 
 # 2. LOCAL IMPORTS (After patching sys.modules)
 from custom_components.hyxi_cloud.const import DOMAIN, MANUFACTURER
-from custom_components.hyxi_cloud.entity import HyxiEntity, SettingsSyncMixin
+from custom_components.hyxi_cloud.entity import (
+    HyxiEntity,
+    SettingsSyncMixin,
+    via_device_id,
+)
 
 
 class FakeSettingsSyncEntity(SettingsSyncMixin):  # pylint: disable=abstract-method
@@ -55,6 +59,13 @@ class FakeSettingsSyncEntity(SettingsSyncMixin):  # pylint: disable=abstract-met
     def __init__(self, coordinator, sn):
         self.coordinator = coordinator
         self._sn = sn
+
+
+def test_via_device_id_is_none_without_a_hass():
+    """A device_info read before the entity is on a platform (no hass) must
+    resolve to None, not raise -- the real-registry paths are covered in
+    tests/integration/test_device_via_links.py."""
+    assert via_device_id(None, "entry_1", "PARENT_SN") is None
 
 
 def test_hyxi_entity_initialization_with_complete_data():
