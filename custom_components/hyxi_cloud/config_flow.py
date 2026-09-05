@@ -1100,9 +1100,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             self._options["enable_battery_control"] = True
 
         # If user just enabled battery_control, but enable_energy_manager wasn't in user_input,
-        # reload the step to reveal it (only if controllable inverters exist).
+        # reload the step to reveal it (only if a control-capable device exists).
         if (
-            self._has_controllable_inverter()
+            self._has_control_capable_device()
             and self._options.get("enable_battery_control", False)
             and not was_battery_control_enabled
             and "enable_energy_manager" not in user_input
@@ -1161,7 +1161,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             "update_interval", DEFAULT_MODBUS_INTERVAL if is_modbus else 5
         )
         em_enabled = options.get(CONF_EM_ENABLED, False)
-        has_em_capable = self._has_controllable_inverter()
         has_control_capable = self._has_control_capable_device()
 
         # Annotated explicitly -- without it, mypy narrows both the key and
@@ -1224,9 +1223,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                     default=battery_control_on,
                 )
             ] = selector.BooleanSelector()
-            # EM toggle only visible when battery control is enabled AND an
-            # EM-eligible inverter (hybrid_inverter/all_in_one) is present
-            if battery_control_on and has_em_capable:
+            # EM can drive anything device control can, so the EM toggle
+            # shows whenever battery control is enabled on a capable device.
+            if battery_control_on and has_control_capable:
                 schema_dict[
                     vol.Optional("enable_energy_manager", default=em_enabled)
                 ] = selector.BooleanSelector()
@@ -1265,8 +1264,11 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             self._save_energy_manager_input(user_input)
             return self.async_create_entry(title="", data=self._options)
 
-        # Build inverter SN options from coordinator data
-        sn_options = self._get_controllable_sns()
+        # Build inverter SN options from coordinator data. EM drives the
+        # battery through the same set_mode_* surface the manual mode buttons
+        # use, so every control-capable device (including a HALO over local
+        # Modbus) can run it.
+        sn_options = self._get_control_capable_sns()
         current_sn = self._config_entry.options.get(CONF_EM_INVERTER_SN, "")
         if not current_sn and len(sn_options) == 1:
             current_sn = sn_options[0]
@@ -1289,24 +1291,19 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             if normalize_device_type(get_raw_device_code(dev_data)) in allowed_types
         ]
 
-    def _get_controllable_sns(self) -> list[str]:
-        """Get serial numbers of EM-eligible inverters (hybrid_inverter/all_in_one)."""
-        return self._get_sns_by_device_type(("hybrid_inverter", "all_in_one"))
-
-    def _has_controllable_inverter(self) -> bool:
-        """Check if any EM-eligible inverter (hybrid_inverter/all_in_one) exists."""
-        return len(self._get_controllable_sns()) > 0
-
     def _get_control_capable_sns(self) -> list[str]:
-        """Get serial numbers of any device control (not just EM) supports.
+        """Serial numbers of devices that support battery control.
 
-        Includes EM-eligible inverters, plus micro_ess/HALO devices when
+        This is also the set the Energy Manager can drive -- EM writes go
+        through the same ``set_mode_*`` surface as the manual mode buttons.
+
+        Always includes hybrid_inverter/all_in_one. Adds micro_ess/HALO when
         either MICRO_ESS_CONTROL_SUPPORTED is enabled (cloud, currently
         never) or this entry is Modbus (local, where the mode buttons and
-        protection numbers this toggle unlocks work today -- see
-        is_control_capable_device_type in const.py; the Power On/Off switch,
-        controlId 1011, has no confirmed local register and stays gated by
-        MICRO_ESS_CONTROL_SUPPORTED alone regardless of transport).
+        protection numbers work today -- see is_control_capable_device_type
+        in const.py; the Power On/Off switch, controlId 1011, has no
+        confirmed local register and stays gated by MICRO_ESS_CONTROL_SUPPORTED
+        alone regardless of transport).
         """
         allowed_types: tuple[str, ...] = ("hybrid_inverter", "all_in_one")
         if MICRO_ESS_CONTROL_SUPPORTED or is_modbus_entry(self._config_entry):
@@ -1314,9 +1311,5 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         return self._get_sns_by_device_type(allowed_types)
 
     def _has_control_capable_device(self) -> bool:
-        """Check if any control-capable device exists.
-
-        See _get_control_capable_sns — micro_ess only counts when
-        MICRO_ESS_CONTROL_SUPPORTED is enabled.
-        """
+        """Check if any control-capable device exists (see _get_control_capable_sns)."""
         return len(self._get_control_capable_sns()) > 0

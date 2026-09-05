@@ -1038,7 +1038,14 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
     engine.stop()
 
 
-def _make_engine(hass: HomeAssistant, *, options=None, metrics=None, model="H10K-HT"):
+def _make_engine(
+    hass: HomeAssistant,
+    *,
+    options=None,
+    metrics=None,
+    model="H10K-HT",
+    device_type_code="1",
+):
     """Build a real EnergyManagerEngine with a minimal coordinator/entry,
     for tests that only need engine helper methods, not the full setup flow.
     """
@@ -1061,7 +1068,7 @@ def _make_engine(hass: HomeAssistant, *, options=None, metrics=None, model="H10K
         "SN123": {
             "device_name": "Test Inverter",
             "model": model,
-            "device_type_code": "1",
+            "device_type_code": device_type_code,
             "metrics": {
                 "batSoc": "50.0",
                 "ppv": "0.0",
@@ -1292,6 +1299,48 @@ async def test_engine_make_decision_guards(hass: HomeAssistant):
     hass.states.async_set(
         registry.async_get_entity_id("number", DOMAIN, "hyxi_SN123_soc_max"), "90"
     )
+
+    await engine._make_decision()
+
+    assert engine.decision == "idle_default"
+
+
+@pytest.mark.asyncio
+async def test_engine_runs_a_pv_less_halo(hass: HomeAssistant):
+    """A HALO (micro_ess) over local Modbus can run the Energy Manager.
+
+    It is AC-coupled and normally PV-less, and it surfaces no battery
+    capacity, so the solar paths stay inert and capacity falls back to the
+    2000 Wh floor. Peak shaving stays off because it is device-type gated,
+    not just phase gated -- even a (synthetic) single-phase-suffixed HALO
+    does not get it.
+    """
+    engine, coordinator, _entry = _make_engine(
+        hass,
+        options={"em_dry_run": True},
+        metrics={"batSoc": "50.0", "home_load": "300.0"},  # no ppv, no batCap
+        model="HYX-MS3000AC",
+        device_type_code="EMS",
+    )
+    registry = er.async_get(hass)
+
+    assert engine._get_solar() == 0.0
+    assert engine._get_battery_capacity() == 2000.0
+    assert engine._has_peak_shaving() is False
+    coordinator.data["SN123"]["model"] = "HYX-MS3000AC-LS"  # force single_phase
+    assert engine._has_peak_shaving() is False
+
+    engine._current_mode = "charge"
+    hass.states.async_set("sensor.p1_meter", "0")
+    hass.states.async_set("sun.sun", "above_horizon", {"elevation": 10.0})
+    for key, val in (("soc_min", "20"), ("soc_max", "90")):
+        entry = registry.async_get_or_create(
+            "number",
+            DOMAIN,
+            f"hyxi_SN123_{key}",
+            suggested_object_id=f"hyxi_sn123_{key}",
+        )
+        hass.states.async_set(entry.entity_id, val)
 
     await engine._make_decision()
 

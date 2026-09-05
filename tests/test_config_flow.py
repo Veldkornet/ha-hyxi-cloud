@@ -574,7 +574,7 @@ async def test_options_flow_reloads_step_when_battery_control_just_enabled(
         return_value={"type": "form", "step_id": "init"}
     )
 
-    with patch.object(options_flow, "_has_controllable_inverter", return_value=True):
+    with patch.object(options_flow, "_has_control_capable_device", return_value=True):
         user_input = {"update_interval": 5, "enable_battery_control": True}
         result = await options_flow.async_step_init(user_input=user_input)
 
@@ -634,7 +634,7 @@ async def test_options_flow_show_form_includes_em_toggle_when_eligible(
     mock_ha_environment,
 ):
     """Test the EM toggle field is added when battery control is already on
-    and an EM-eligible (hybrid_inverter/all_in_one) device is present."""
+    and a control-capable device is present."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
     from custom_components.hyxi_cloud.const import DOMAIN
 
@@ -743,55 +743,54 @@ async def test_options_flow_success(mock_ha_environment):
     assert call_kwargs["data"]["update_interval"] == 30
 
 
-def test_control_capable_excludes_micro_ess_by_default(mock_ha_environment):
-    """Micro ESS is excluded from control-capable SNs by default
-    (MICRO_ESS_CONTROL_SUPPORTED=False) pending HYXI control API permission."""
+def _halo_options_flow(*, modbus=False):
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
     from custom_components.hyxi_cloud.const import DOMAIN
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry_id"
+    config_entry.data = {"transport": "modbus"} if modbus else {}
 
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.hass = MagicMock()
     coordinator = MagicMock()
     coordinator.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
     options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    return options_flow
+
+
+def test_control_capable_excludes_cloud_micro_ess_by_default(mock_ha_environment):
+    """A cloud HALO is not control-capable by default
+    (MICRO_ESS_CONTROL_SUPPORTED=False) -- HYXI's cloud API rejects the writes."""
+    options_flow = _halo_options_flow()
 
     assert not options_flow._get_control_capable_sns()
     assert options_flow._has_control_capable_device() is False
-    # Not EM-eligible either — micro_ess devices can't run the Energy Manager
-    assert not options_flow._get_controllable_sns()
-    assert options_flow._has_controllable_inverter() is False
 
 
 def test_control_capable_includes_micro_ess_when_supported(mock_ha_environment):
-    """Once HYXI grants control API access and MICRO_ESS_CONTROL_SUPPORTED is
-    flipped to True, a HALO-only install becomes control-capable (but still
-    not EM-eligible)."""
-    import custom_components.hyxi_cloud.config_flow as config_flow_mod
-    from custom_components.hyxi_cloud.const import DOMAIN
-
-    config_entry = MagicMock()
-    config_entry.entry_id = "test_entry_id"
-
-    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
-    options_flow.hass = MagicMock()
-    coordinator = MagicMock()
-    coordinator.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
-    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    """A cloud HALO becomes control-capable once HYXI grants control API
+    access and MICRO_ESS_CONTROL_SUPPORTED is flipped."""
+    options_flow = _halo_options_flow()
 
     with patch(
         "custom_components.hyxi_cloud.config_flow.MICRO_ESS_CONTROL_SUPPORTED", True
     ):
         assert options_flow._get_control_capable_sns() == ["SN_HALO_1"]
         assert options_flow._has_control_capable_device() is True
-    assert not options_flow._get_controllable_sns()
-    assert options_flow._has_controllable_inverter() is False
+
+
+def test_modbus_halo_is_control_capable(mock_ha_environment):
+    """Over local Modbus the mode writes work, so a HALO is control-capable
+    -- which is also what makes it eligible for the Energy Manager picker."""
+    options_flow = _halo_options_flow(modbus=True)
+
+    assert options_flow._get_control_capable_sns() == ["SN_HALO_1"]
+    assert options_flow._has_control_capable_device() is True
 
 
 def test_control_capable_includes_hybrid_inverter(mock_ha_environment):
-    """A hybrid inverter is both control-capable and EM-eligible."""
+    """A hybrid inverter is control-capable."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
     from custom_components.hyxi_cloud.const import DOMAIN
 
@@ -806,8 +805,6 @@ def test_control_capable_includes_hybrid_inverter(mock_ha_environment):
 
     assert options_flow._get_control_capable_sns() == ["SN_INV_1"]
     assert options_flow._has_control_capable_device() is True
-    assert options_flow._get_controllable_sns() == ["SN_INV_1"]
-    assert options_flow._has_controllable_inverter() is True
 
 
 def test_get_sns_by_device_type_hass_not_set(mock_ha_environment):
@@ -821,8 +818,6 @@ def test_get_sns_by_device_type_hass_not_set(mock_ha_environment):
     assert not hasattr(options_flow, "hass")
     assert options_flow._get_control_capable_sns() == []
     assert options_flow._has_control_capable_device() is False
-    assert options_flow._get_controllable_sns() == []
-    assert options_flow._has_controllable_inverter() is False
 
 
 def test_get_sns_by_device_type_hass_none(mock_ha_environment):
