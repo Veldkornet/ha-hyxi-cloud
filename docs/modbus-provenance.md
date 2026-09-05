@@ -313,12 +313,12 @@ Two things the hybrid protocol states that the HALO's does not:
   alongside 0x03/0x04/0x10 (the HALO document only offers 0x03/0x04/0x10) --
   but at least one real HYX-H rejects an 0x06 write the same way the HALO
   does: it accepts the write but the response doesn't echo the request, so
-  tmodbus fails it with `write_register(3000, 1): Expected response to match
-  request` (hit while the battery protection tried to hold SOC on a
-  VPP-managed inverter). `HybridSettings`' single-register writable fields
-  therefore all carry `force_fc16=True` now, matching `HaloSettings` — 0x10
-  is in this document's allowed set anyway, and `battery_power` (int32) was
-  already going out as 0x10. See "Confirmed against hardware".
+  tmodbus fails it ("Expected response to match request", hit on
+  `write_register(3000, 1)` while the battery protection tried to hold SOC
+  on a VPP-managed inverter). `HybridSettings`' single-register writable
+  fields therefore all carry `force_fc16=True` now, matching `HaloSettings`
+  — 0x10 is in this document's allowed set anyway, and `battery_power`
+  (int32) was already going out as 0x10. See "Confirmed against hardware".
 - **Frame spacing is >500ms**, not the HALO's >200ms. `HybridSettings` and
   its siblings don't encode this themselves. The operational path takes its
   unit from Home Assistant's shared `modbus` connection, which is built with
