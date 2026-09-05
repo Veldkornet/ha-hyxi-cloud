@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "逆潮流制限"
+      },
+      "dispatch": {
+        "name": "バッテリー制御"
       }
     },
     "button": {

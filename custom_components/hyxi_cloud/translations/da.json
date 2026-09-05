@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Eksportbegrænsning"
+      },
+      "dispatch": {
+        "name": "Batteristyring"
       }
     },
     "button": {

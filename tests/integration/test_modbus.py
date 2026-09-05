@@ -484,6 +484,17 @@ async def test_anti_starvation_write_is_straightforward_polarity(client):
 
 
 @pytest.mark.asyncio
+async def test_set_dispatch_enabled_toggles_the_vpp_enable_register(client):
+    await client.set_dispatch_enabled(False)
+    await client.settings.async_update()
+    assert client.settings.vpp_enable == 0
+
+    await client.set_dispatch_enabled(True)
+    await client.settings.async_update()
+    assert client.settings.vpp_enable == 1
+
+
+@pytest.mark.asyncio
 async def test_single_register_settings_writes_use_function_code_16(client):
     """The HALO document's function-code table lists only 0x03/0x04/0x10 --
     unlike the hybrid one, this firmware does not implement 0x06 (write
@@ -1584,6 +1595,85 @@ async def test_halo_anti_starvation_switch_shows_the_devices_real_value(hass):
 
     assert hass.states.get(entity_id).state == "off"
     assert hass.states.get(self_use_id).state == "55"
+
+
+@pytest.mark.asyncio
+async def test_halo_dispatch_switch_reflects_and_writes_the_vpp_enable(hass):
+    """Seeded 4146 = 0, so the switch shows "off"; toggling it writes 4146
+    through the client, and a change made outside HA is picked up on the
+    next settings refresh."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+    connection = _seeded_connection()
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    entity_id = _entity_id(hass, "switch", sn, "dispatch")
+    assert entity_id is not None
+    assert hass.states.get(entity_id).state == "off"  # seed 4146 = 0
+
+    with patch.object(
+        coordinator.client,
+        "set_dispatch_enabled",
+        wraps=coordinator.client.set_dispatch_enabled,
+    ) as spy:
+        await hass.services.async_call(
+            "switch", "turn_on", {"entity_id": entity_id}, blocking=True
+        )
+    spy.assert_awaited_once_with(True)
+    await coordinator.client.settings.async_update()
+    assert coordinator.client.settings.vpp_enable == 1
+
+    # A change made outside HA is adopted once the refresh window reopens.
+    connection.for_unit(1).load_raw({"holding": {4146: 0}})
+    coordinator.client._settings_read_at -= SETTINGS_REFRESH_SECONDS + 1
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).state == "off"
+
+
+@pytest.mark.asyncio
+async def test_unloading_a_modbus_entry_releases_dispatch(hass):
+    """Turning off Device Control (a reload) or deleting the entry must hand
+    the battery back -- otherwise a HALO left mid-discharge stays there with
+    no entity to stop it. The bus is still open here: HA fires the
+    connection-close callback only after async_unload_entry returns."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    assert coordinator.protection_controllers  # control is active this run
+
+    with patch.object(
+        coordinator.client,
+        "set_dispatch_enabled",
+        wraps=coordinator.client.set_dispatch_enabled,
+    ) as spy:
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+    # Released during unload (the register write itself is covered by
+    # test_set_dispatch_enabled_toggles_the_vpp_enable_register; the bus is
+    # closed by the time control returns here).
+    spy.assert_awaited_once_with(False)
 
 
 @pytest.mark.asyncio

@@ -512,6 +512,50 @@ async def test_async_unload_entry_does_not_close_shared_session(mock_hass, mock_
     mock_coordinator.client.session.close.assert_not_called()
 
 
+def _dispatch_teardown_setup(*, is_stopping, control_active=True):
+    from custom_components.hyxi_cloud import _release_modbus_dispatch_on_teardown
+
+    hass = MagicMock()
+    hass.is_stopping = is_stopping
+    coordinator = MagicMock()
+    coordinator.engine = None
+    coordinator.protection_controllers = (
+        {"SN123": MagicMock()} if control_active else {}
+    )
+    coordinator.client.set_dispatch_enabled = AsyncMock()
+    return _release_modbus_dispatch_on_teardown, hass, coordinator
+
+
+@pytest.mark.asyncio
+async def test_dispatch_release_on_teardown_when_control_was_active():
+    fn, hass, coordinator = _dispatch_teardown_setup(is_stopping=False)
+    await fn(hass, coordinator)
+    coordinator.client.set_dispatch_enabled.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_dispatch_release_skipped_on_home_assistant_shutdown():
+    fn, hass, coordinator = _dispatch_teardown_setup(is_stopping=True)
+    await fn(hass, coordinator)
+    coordinator.client.set_dispatch_enabled.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_release_skipped_when_control_was_never_active():
+    fn, hass, coordinator = _dispatch_teardown_setup(
+        is_stopping=False, control_active=False
+    )
+    await fn(hass, coordinator)
+    coordinator.client.set_dispatch_enabled.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_release_swallows_a_failed_write():
+    fn, hass, coordinator = _dispatch_teardown_setup(is_stopping=False)
+    coordinator.client.set_dispatch_enabled.side_effect = OSError("bus gone")
+    await fn(hass, coordinator)  # must not raise
+
+
 @pytest.mark.asyncio
 async def test_async_remove_entry_cancels_subscriptions(mock_hass, mock_entry):
     """Permanent entry removal cancels both subscriptions remotely."""
@@ -1773,6 +1817,11 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
             domain="switch",
         ),
         MagicMock(
+            unique_id="hyxi_SN123_dispatch",
+            entity_id="switch.hyxi_SN123_dispatch",
+            domain="switch",
+        ),
+        MagicMock(
             unique_id="hyxi_SN123_micro_ess_power",
             entity_id="switch.hyxi_SN123_micro_ess_power",
             domain="switch",
@@ -1807,6 +1856,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     assert removed == {
         "number.hyxi_SN123_vpp_min_soc",
         "switch.hyxi_SN123_anti_starvation",
+        "switch.hyxi_SN123_dispatch",
         "switch.hyxi_SN123_micro_ess_power",
         "button.hyxi_SN123_power_on",
         "button.hyxi_modbus_service_refresh_settings",

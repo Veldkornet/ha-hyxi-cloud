@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Limitazione Esportazione"
+      },
+      "dispatch": {
+        "name": "Controllo dispacciamento batteria"
       }
     },
     "button": {

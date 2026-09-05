@@ -378,6 +378,13 @@ class HyxiHybridModbusClient:
             "anti_starvation_enabled": _enabled_when(
                 self.settings.anti_starvation_protection, enabled_value=0
             ),
+            # Whether Modbus scheduling (3000) is currently driving the
+            # inverter -- the hybrid equivalent of the HALO's VPP enable.
+            # Every setpoint write turns it on; the dispatch switch is the
+            # explicit way off.
+            "dispatch_enabled": _enabled_when(
+                self.settings.scheduling_enabled, enabled_value=1
+            ),
             # See HyxiModbusClient.async_read_settings: this is
             # _settings_confirmed_at, not the throttle -- it travels with
             # the values above so entity.py's SettingsSyncMixin can tell a
@@ -441,23 +448,25 @@ class HyxiHybridModbusClient:
     async def set_mode_self_consume(self, device_sn: str) -> dict:
         """Return the device to its own self-consumption logic.
 
-        Unlike the HALO client, this is not "hold at zero power" -- it turns
-        Modbus scheduling off entirely (register 3000), handing control back
-        to the inverter's native self-use behaviour rather than pinning it
-        at an idle setpoint under external control.
+        The hybrid scheduling block has no self-use setpoint -- its only
+        control is one signed watts register, and the operating-mode
+        register is read-only -- so the sole way to reach native self-use
+        is to disable scheduling (3000). That coincides with what the
+        dispatch switch writes, but the intent differs: this is "select
+        self-use", not "release control".
         """
         _LOGGER.debug("Modbus: self-consume on %s", _mask(device_sn))
-        try:
-            await self.settings.write("scheduling_enabled", 0)
-        except Exception as err:  # pylint: disable=broad-exception-caught
-            _LOGGER.debug(
-                "Modbus self-consume write failed on unit %s: %s",
-                self._unit_id,
-                err,
-            )
-            raise self.ControlError(f"Modbus write failed: {err}") from err
-        _LOGGER.debug("Modbus self-consume write ok on unit %s: 3000=0", self._unit_id)
+        await self.set_dispatch_enabled(False)
         return {"code": "0", "msg": "ok"}
+
+    async def set_dispatch_enabled(self, enabled: bool) -> None:
+        """Enable or disable Modbus scheduling (register 3000).
+
+        Disabling hands control back to the inverter's native work mode.
+        Enabling re-arms scheduling at whatever battery_power setpoint
+        (3015) was last written -- the setpoint writes already do this.
+        """
+        await self._write_setting("scheduling_enabled", 1 if enabled else 0, 3000)
 
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict:
         """Limit or release export via the real feed-in registers."""

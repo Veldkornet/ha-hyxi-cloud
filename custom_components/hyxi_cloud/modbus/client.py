@@ -73,6 +73,7 @@ class ModbusClient(Protocol):
     async def set_mode_discharge(self, device_sn: str, watts: int) -> dict: ...
     async def set_mode_self_consume(self, device_sn: str) -> dict: ...
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict: ...
+    async def set_dispatch_enabled(self, enabled: bool) -> None: ...
     def force_settings_refresh(self) -> None: ...
 
 
@@ -502,6 +503,13 @@ class HyxiModbusClient:
             "anti_starvation_enabled": _enabled_when(
                 self.settings.anti_starvation, enabled_value=1
             ),
+            # Whether the VPP dispatch block (4146) is currently driving the
+            # inverter. Every set_mode_* write turns this on; the dispatch
+            # switch is the explicit way to turn it off and hand control
+            # back to the inverter's own work mode.
+            "dispatch_enabled": _enabled_when(
+                self.settings.vpp_enable, enabled_value=1
+            ),
             # See async_read_settings: this is _settings_confirmed_at, not
             # the throttle -- it travels with the values above so
             # entity.py's SettingsSyncMixin can tell a metrics dict that
@@ -565,6 +573,16 @@ class HyxiModbusClient:
         """Return the device to self-consumption."""
         _LOGGER.debug("Modbus: self-consume on %s", _mask(device_sn))
         return await self._write_vpp(VPP_SELF_USE)
+
+    async def set_dispatch_enabled(self, enabled: bool) -> None:
+        """Enable or disable VPP dispatch (register 4146).
+
+        Disabling drops dispatch entirely so the inverter resumes its own
+        configured work mode (4024). Enabling re-arms it at whatever VPP
+        mode (4147) was last set -- the mode buttons already do this
+        implicitly, so this is mostly a way back from "off".
+        """
+        await self._write_setting("vpp_enable", 1 if enabled else 0, 4146)
 
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict:
         """Limit or release export.

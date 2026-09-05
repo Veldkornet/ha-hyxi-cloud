@@ -460,14 +460,26 @@ HALO's VPP block, and it would be easy to "simplify" one to match the other
 incorrectly:
 
 - **HALO**: enable (4146) + mode (4147, 0/1/2/3) + separate charge-power
-  (4148) and discharge-power (4150) registers.
+  (4148) and discharge-power (4150) registers. `set_mode_self_consume`
+  writes VPP mode 3 ("selfuse"), a valid sub-mode — VPP stays enabled.
 - **Hybrid**: scheduling enable (3000) + control mode (3004, must be 0 for
   this client) + **one** signed watts register (3015) — positive discharges,
-  negative charges. `set_mode_self_consume` on the hybrid client disables
-  register 3000 entirely rather than writing a zero setpoint, handing control
-  back to the inverter's own self-use logic instead of pinning it at idle
-  under external control — deliberately different from the HALO client's
-  `set_mode_self_consume`, which writes VPP mode 3.
+  negative charges. There is no "self-consume setpoint" and register 1265
+  (operating mode) is read-only, so the only way to reach the inverter's
+  native self-use behaviour is to disable scheduling: `set_mode_self_consume`
+  clears register 3000. This is a hardware limitation of the hybrid's
+  control block, not the same operation as the dispatch switch — the intent
+  is "pick the self-use mode", it just has nowhere else to land.
+
+The **dispatch switch** (`HyxiDispatchSwitch`) is the transport-agnostic
+"is the integration in control at all" toggle: it reads and writes 4146
+(HALO) / 3000 (Hybrid). Every idle / charge / discharge write turns dispatch
+on, so the switch is the deliberate way back off. On HALO, `set_mode_self_consume`
+(VPP mode 3) is a real sub-mode and keeps dispatch on, so the switch is the
+only route off; on Hybrid, self-consume ends up in the same off state for
+the hardware reason above. Clearing 4146 / 3000 hands the battery back to
+the inverter's own configured work mode — whether clearing 4146 cleanly
+resumes that mode on a real HALO is still unconfirmed (see "Still unverified").
 
 Two polarity/semantic differences between the device families, both
 documented explicitly rather than assumed to match:
@@ -528,6 +540,7 @@ and update this file with the result.
 | Battery capacity unit at 5020 | HALO | Documented in **Ah**; the cloud's `batCap` is kWh. Needs nominal pack voltage to convert — currently not mapped at all rather than mapped wrongly. |
 | BMS fault word addresses | HALO | See rule 3. |
 | Whether 4146 must enable dispatch before 4147 takes effect | HALO | `_write_vpp` writes the enable every time on the assumption it does. Harmless if unnecessary. |
+| Whether clearing 4146 cleanly resumes the configured work mode (4024) | HALO | The dispatch switch writes `vpp_enable=0` to release control. Expected to drop dispatch and let the inverter resume self-use / TOU, but not yet confirmed the device doesn't instead sit idle until a mode is re-selected in the app. |
 | Whether a VPP dispatch survives a power cycle, or a watchdog reverts it | HALO | Decides whether the integration needs a heartbeat write to hold a mode. |
 | **How `dispatch_mode`/`active_power_setpoint` (4048/4049, "dispatch mode 1") relate to the VPP block (4146–4152, "dispatch mode 2")** | HALO | The document names both as separate dispatch modes but never states whether they're independent, mutually exclusive, or one overrides the other. `set_mode_*` only ever writes the VPP block; 4048/4049 are deliberately left unexposed rather than guessed. A public search for the vendor's Micro Storage RS485 protocol document (2026-08-23) turned up nothing beyond what's already transcribed here — no public copy of the register-level document was found, only marketing-level descriptions of "dispatch"/"VPP" as product concepts, which don't answer this question either. Resolve by testing against hardware: write 4048/4049 while the VPP block is enabled and observe whether it fights the VPP writes. |
 | **Unit of the grid/inverter power registers** (316–318, 333, 370–372, 507, 520–522, PV powers) | Hybrid | The document gives 0 decimal places and no unit label. Treated as Watts by convention (0dp is too coarse for kW at this precision), then `gridP` alone is converted to kW to satisfy `compute_derived_metrics`'s general contract. If the true native unit is something else, every power metric on the hybrid client is wrong by a constant factor. |

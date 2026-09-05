@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Uitvoerbeperking"
+      },
+      "dispatch": {
+        "name": "Batterybeheer"
       }
     },
     "button": {

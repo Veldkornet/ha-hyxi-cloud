@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Exportbeperking"
+      },
+      "dispatch": {
+        "name": "Batterij-aansturing"
       }
     },
     "button": {

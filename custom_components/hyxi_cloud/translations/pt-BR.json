@@ -801,6 +801,9 @@
       },
       "em_export_limiting": {
         "name": "Limitação de Exportação"
+      },
+      "dispatch": {
+        "name": "Controle de despacho da bateria"
       }
     },
     "button": {
