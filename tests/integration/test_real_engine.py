@@ -1318,10 +1318,15 @@ async def test_engine_runs_a_pv_less_halo(hass: HomeAssistant):
     engine, coordinator, _entry = _make_engine(
         hass,
         options={"em_dry_run": True},
-        metrics={"batSoc": "50.0", "home_load": "300.0"},  # no ppv, no batCap
+        metrics={"batSoc": "50.0", "home_load": "300.0"},
         model="HYX-MS3000AC",
         device_type_code="EMS",
     )
+    # The HALO Modbus client emits no ppv key at all (only the hybrid client
+    # does), so drop _make_engine's zero-valued stand-in -- the engine has to
+    # fall back on the missing key, not read a literal 0. batCap is likewise
+    # absent, so _get_battery_capacity hits its 2000 Wh floor.
+    del coordinator.data["SN123"]["metrics"]["ppv"]
     registry = er.async_get(hass)
 
     assert engine._get_solar() == 0.0
