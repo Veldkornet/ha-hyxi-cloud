@@ -448,7 +448,9 @@ def _async_setup_energy_manager(
     engine = EnergyManagerEngine(hass, coordinator, em_config)
     coordinator.engine = engine
 
-    # Register EM virtual device under its inverter.
+    # Register EM virtual device under its inverter. UNDEFINED (not None)
+    # when the inverter isn't found, so a lookup miss leaves any existing
+    # link alone instead of clearing it.
     device_registry = dr.async_get(hass)
     inverter = device_registry.async_get_device_by_identifier(
         (DOMAIN, em_sn), entry.entry_id
@@ -459,7 +461,7 @@ def _async_setup_energy_manager(
         name="Energy Manager",
         manufacturer=MANUFACTURER,
         model="Energy Manager",
-        via_device_id=inverter.id if inverter else None,
+        via_device_id=inverter.id if inverter is not None else dr.UNDEFINED,
     )
 
 
