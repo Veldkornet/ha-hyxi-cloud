@@ -20,5 +20,5 @@
     "modbus-connection[tmodbus]>=4.10.0",
     "tmodbus[async-serial]>=0.6.2"
   ],
-  "version": "1.7.0-beta.5"
+  "version": "1.7.0-beta.6"
 }
