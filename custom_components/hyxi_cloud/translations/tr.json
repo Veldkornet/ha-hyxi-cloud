@@ -870,6 +870,34 @@
           "description": "32 karakterlik abonelik kodu. Aktif/yetim kalmış kodları Home Assistant'ın dahili depolama dosyalarında bulabilirsiniz (\".storage/core.config_entries\" veya \".storage/hyxi_cloud_subscriptions\" - sadece gelişmiş kullanıcılar için)."
         }
       }
+    },
+    "set_battery_mode": {
+      "name": "Batarya modunu ayarla",
+      "description": "Bir HYXI inverterine batarya çalışma modu komutu gönderir. O giriş için \"Cihaz Kontrolü ve Koruması\" etkinleştirilmiş olmalıdır ve Zorla ayarlanmadıkça, Enerji Yöneticisi hedef inverteri yönetirken reddedilir.",
+      "fields": {
+        "mode": {
+          "name": "Mod",
+          "description": "Geçilecek batarya çalışma modu.",
+          "selector": {
+            "select": {
+              "options": {
+                "idle": "Boşta",
+                "charge": "Şarj",
+                "discharge": "Deşarj",
+                "self_consume": "Kendi tüketimi"
+              }
+            }
+          }
+        },
+        "power": {
+          "name": "Güç",
+          "description": "Watt cinsinden şarj veya deşarj gücü. Boşta ve kendi tüketimi için yok sayılır. Atlanırsa inverterin Şarj/Deşarj Gücü sayısı kullanılır veya hiç ayarlanmadıysa 100 W."
+        },
+        "force": {
+          "name": "Zorla",
+          "description": "Enerji Yöneticisi bu inverteri yönetirken bile komutu gönderir. Enerji Yöneticisi bir sonraki kararında bunu yeniden geçersiz kılar."
+        }
+      }
     }
   }
 }

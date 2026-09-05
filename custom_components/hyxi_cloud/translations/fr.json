@@ -870,6 +870,34 @@
           "description": "Le code d'abonnement de 32 caractères. Vous pouvez trouver des codes actifs/orphelins dans les fichiers de stockage internes de Home Assistant (\".storage/core.config_entries\" ou \".storage/hyxi_cloud_subscriptions\" - utilisateurs avancés uniquement)."
         }
       }
+    },
+    "set_battery_mode": {
+      "name": "Définir le mode de la batterie",
+      "description": "Envoie une commande de mode de fonctionnement de la batterie à un onduleur HYXI. Nécessite que \"Contrôle et protection de l'appareil\" soit activé pour cette entrée, et est refusée tant que le Gestionnaire d'énergie pilote l'onduleur ciblé, sauf si Forcer est défini.",
+      "fields": {
+        "mode": {
+          "name": "Mode",
+          "description": "Le mode de fonctionnement de la batterie vers lequel basculer.",
+          "selector": {
+            "select": {
+              "options": {
+                "idle": "Inactif",
+                "charge": "Charge",
+                "discharge": "Décharge",
+                "self_consume": "Autoconsommation"
+              }
+            }
+          }
+        },
+        "power": {
+          "name": "Puissance",
+          "description": "Puissance de charge ou de décharge en watts. Ignorée pour inactif et autoconsommation. Si omise, le nombre Puissance de charge/décharge de l'onduleur est utilisé, ou 100 W s'il n'a jamais été défini."
+        },
+        "force": {
+          "name": "Forcer",
+          "description": "Envoie la commande même pendant que le Gestionnaire d'énergie pilote cet onduleur. Le Gestionnaire d'énergie la remplacera de nouveau lors de sa prochaine décision."
+        }
+      }
     }
   }
 }

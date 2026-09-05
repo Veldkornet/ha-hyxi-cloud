@@ -870,6 +870,34 @@
           "description": "32-znakowy kod subskrypcji. Aktywne/osierocone kody można znaleźć w wewnętrznych plikach Home Assistant (\".storage/core.config_entries\" lub \".storage/hyxi_cloud_subscriptions\" - tylko dla zaawansowanych użytkowników)."
         }
       }
+    },
+    "set_battery_mode": {
+      "name": "Ustaw tryb baterii",
+      "description": "Wysyła polecenie trybu pracy baterii do falownika HYXI. Wymaga włączonej „Kontroli i ochrony urządzenia” dla tego wpisu i jest odrzucane, gdy Menedżer Energii zarządza docelowym falownikiem, chyba że ustawiono Wymuś.",
+      "fields": {
+        "mode": {
+          "name": "Tryb",
+          "description": "Tryb pracy baterii, na który należy przełączyć.",
+          "selector": {
+            "select": {
+              "options": {
+                "idle": "Bezczynność",
+                "charge": "Ładowanie",
+                "discharge": "Rozładowanie",
+                "self_consume": "Autokonsumpcja"
+              }
+            }
+          }
+        },
+        "power": {
+          "name": "Moc",
+          "description": "Moc ładowania lub rozładowania w watach. Ignorowana dla bezczynności i autokonsumpcji. W przypadku pominięcia używana jest wartość Moc ładowania/rozładowania falownika lub 100 W, jeśli nigdy jej nie ustawiono."
+        },
+        "force": {
+          "name": "Wymuś",
+          "description": "Wysyła polecenie nawet wtedy, gdy Menedżer Energii zarządza tym falownikiem. Menedżer Energii nadpisze je ponownie przy następnej decyzji."
+        }
+      }
     }
   }
 }

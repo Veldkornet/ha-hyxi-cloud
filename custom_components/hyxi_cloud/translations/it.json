@@ -870,6 +870,34 @@
           "description": "Il codice di abbonamento a 32 caratteri. Puoi trovare i codici attivi/orfani nei file di archiviazione interni di Home Assistant (\".storage/core.config_entries\" o \".storage/hyxi_cloud_subscriptions\" - solo per utenti esperti)."
         }
       }
+    },
+    "set_battery_mode": {
+      "name": "Imposta modalità batteria",
+      "description": "Invia un comando di modalità operativa della batteria a un inverter HYXI. Richiede che \"Controllo e protezione del dispositivo\" sia abilitato per quella voce, e viene rifiutato mentre il Gestore Energia sta gestendo l'inverter di destinazione, a meno che non sia impostato Forza.",
+      "fields": {
+        "mode": {
+          "name": "Modalità",
+          "description": "La modalità operativa della batteria a cui passare.",
+          "selector": {
+            "select": {
+              "options": {
+                "idle": "Inattiva",
+                "charge": "Carica",
+                "discharge": "Scarica",
+                "self_consume": "Autoconsumo"
+              }
+            }
+          }
+        },
+        "power": {
+          "name": "Potenza",
+          "description": "Potenza di carica o scarica in watt. Ignorata per inattiva e autoconsumo. Se omessa, viene usato il numero Potenza di carica/scarica dell'inverter, o 100 W se non è mai stato impostato."
+        },
+        "force": {
+          "name": "Forza",
+          "description": "Invia il comando anche mentre il Gestore Energia sta gestendo questo inverter. Il Gestore Energia lo sovrascriverà di nuovo alla sua decisione successiva."
+        }
+      }
     }
   }
 }

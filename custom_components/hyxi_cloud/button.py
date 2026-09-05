@@ -17,7 +17,6 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from hyxi_cloud_api import HyxiApiClient
@@ -36,6 +35,11 @@ from .const import (
     mask_subscription_code,
     modbus_service_device_info,
     normalize_device_type,
+)
+from .control import (
+    _block_manual_peak_shaving_if_needed,
+    _note_manual_mode,
+    async_send_battery_mode,
 )
 
 if TYPE_CHECKING:
@@ -326,34 +330,7 @@ class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntit
 
     async def async_press(self) -> None:
         """Send the operating mode command to the inverter."""
-        client = self.coordinator.client
-        try:
-            if self._mode == "idle":
-                await client.set_mode_idle(self._sn)
-            elif self._mode == "charge":
-                _block_manual_charge_if_needed(self.coordinator, self._sn)
-                watts = _get_power_value(self.hass, self._sn, "charge")
-                _LOGGER.debug("Setting %s to CHARGE at %dW", mask_sn(self._sn), watts)
-                await client.set_mode_charge(self._sn, watts)
-            elif self._mode == "discharge":
-                _block_manual_discharge_if_needed(self.coordinator, self._sn)
-                watts = _get_power_value(self.hass, self._sn, "discharge")
-                _LOGGER.debug(
-                    "Setting %s to DISCHARGE at %dW", mask_sn(self._sn), watts
-                )
-                await client.set_mode_discharge(self._sn, watts)
-            elif self._mode == "self_consume":
-                await client.set_mode_self_consume(self._sn)
-            _note_manual_mode(self.coordinator, self._sn, self._mode)
-            _LOGGER.info("Mode '%s' command sent to %s", self._mode, mask_sn(self._sn))
-            await self.coordinator.async_request_refresh()
-        except HyxiApiClient.ControlError as err:
-            _LOGGER.exception(
-                "Failed to set mode '%s' for %s: %s", self._mode, mask_sn(self._sn), err
-            )
-            raise HomeAssistantError(
-                f"Failed to set mode '{self._mode}': {err}"
-            ) from err
+        await async_send_battery_mode(self.hass, self.coordinator, self._sn, self._mode)
 
     @property
     def available(self) -> bool:
@@ -476,87 +453,6 @@ class HyxiPowerCommandButton(
     def available(self) -> bool:
         """Unavailable when battery control is not enabled."""
         return super().available
-
-
-def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
-    """Read the wattage from the paired number entity.
-
-    Looks up the entity by unique_id via the entity registry, since HA-assigned
-    entity_ids don't follow a predictable pattern.
-    Falls back to 100W if the number entity has not been set yet.
-    """
-    unique_id = f"hyxi_{sn}_{direction}_power"
-    registry = er.async_get(hass)
-    entity_id = registry.async_get_entity_id("number", DOMAIN, unique_id)
-    if entity_id is None:
-        # unique_id contains unmasked sn, so we should mask it here for logs or just avoid logging unmasked unique_id
-        masked_unique_id = f"hyxi_{mask_sn(sn)}_{direction}_power"
-        _LOGGER.warning(
-            "Power number entity (unique_id=%s) not found in registry, using 100W default",
-            masked_unique_id,
-        )
-        return 100
-    state = hass.states.get(entity_id)
-    if state is not None and state.state not in ("unknown", "unavailable"):
-        try:
-            return int(float(state.state))
-        except ValueError, TypeError:
-            _LOGGER.debug(
-                "Power entity %s has non-numeric state %r, using 100W default",
-                entity_id,
-                state.state,
-            )
-    _LOGGER.warning(
-        "Power number entity %s not available, using 100W default", entity_id
-    )
-    return 100
-
-
-def _note_manual_mode(coordinator, sn: str, mode: str) -> None:
-    """Track the last user-sent inverter mode for battery protection telemetry."""
-    if controller := _get_protection_controller(coordinator, sn):
-        controller.note_manual_mode(mode)
-
-
-def _block_manual_discharge_if_needed(coordinator, sn: str) -> None:
-    """Reject manual discharge when SOC protection says discharge is unsafe."""
-    if (
-        controller := _get_protection_controller(coordinator, sn)
-    ) is not None and controller.should_block_manual_discharge():
-        raise HomeAssistantError(
-            "Discharge blocked because battery SOC is at or below SOC Minimum"
-        )
-
-
-def _block_manual_charge_if_needed(coordinator, sn: str) -> None:
-    """Reject manual charge when SOC protection says charging is unsafe."""
-    if (
-        controller := _get_protection_controller(coordinator, sn)
-    ) is not None and controller.should_block_manual_charge():
-        raise HomeAssistantError(
-            "Charge blocked because battery SOC is at or above SOC Maximum"
-        )
-
-
-def _block_manual_peak_shaving_if_needed(coordinator, sn: str, option: str) -> None:
-    """Reject unsafe peak-shaving actions when SOC protection is active."""
-    controller = _get_protection_controller(coordinator, sn)
-    if controller is None:
-        return
-
-    if option == "discharge" and controller.should_block_manual_discharge():
-        raise HomeAssistantError(
-            "Peak shaving discharge blocked because battery SOC is at or below SOC Minimum"
-        )
-    if option == "charge" and controller.should_block_manual_charge():
-        raise HomeAssistantError(
-            "Peak shaving charge blocked because battery SOC is at or above SOC Maximum"
-        )
-
-
-def _get_protection_controller(coordinator, sn: str):
-    """Return the battery protection controller for a device."""
-    return getattr(coordinator, "protection_controllers", {}).get(sn)
 
 
 class HyxiRenewSubscriptionButton(ButtonEntity):

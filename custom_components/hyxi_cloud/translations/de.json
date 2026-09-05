@@ -870,6 +870,34 @@
           "description": "Der 32-stellige Abonnementcode. Sie finden aktive/verwaiste Codes in den internen Speicherdateien von Home Assistant (\".storage/core.config_entries\" oder \".storage/hyxi_cloud_subscriptions\" - nur für fortgeschrittene Benutzer)."
         }
       }
+    },
+    "set_battery_mode": {
+      "name": "Batteriemodus setzen",
+      "description": "Sendet einen Befehl für den Batteriebetriebsmodus an einen HYXI-Wechselrichter. Erfordert, dass \"Gerätesteuerung & Schutz\" für diesen Eintrag aktiviert ist, und wird abgelehnt, solange der Energie-Manager den Ziel-Wechselrichter steuert, sofern nicht Erzwingen gesetzt ist.",
+      "fields": {
+        "mode": {
+          "name": "Modus",
+          "description": "Der Batteriebetriebsmodus, in den gewechselt werden soll.",
+          "selector": {
+            "select": {
+              "options": {
+                "idle": "Leerlauf",
+                "charge": "Laden",
+                "discharge": "Entladen",
+                "self_consume": "Eigenverbrauch"
+              }
+            }
+          }
+        },
+        "power": {
+          "name": "Leistung",
+          "description": "Lade- oder Entladeleistung in Watt. Wird bei Leerlauf und Eigenverbrauch ignoriert. Ohne Angabe wird der Lade-/Entladeleistung-Wert des Wechselrichters verwendet, oder 100 W, falls dieser nie gesetzt wurde."
+        },
+        "force": {
+          "name": "Erzwingen",
+          "description": "Sendet den Befehl auch, während der Energie-Manager diesen Wechselrichter steuert. Der Energie-Manager überschreibt ihn bei seiner nächsten Entscheidung erneut."
+        }
+      }
     }
   }
 }

@@ -870,6 +870,34 @@
           "description": "32个字符的订阅代码。您可以在Home Assistant的内部存储文件中找到活动的/孤立的代码（\".storage/core.config_entries\" 或 \".storage/hyxi_cloud_subscriptions\" - 仅限高级用户）。"
         }
       }
+    },
+    "set_battery_mode": {
+      "name": "设置电池模式",
+      "description": "向 HYXI 逆变器发送电池运行模式命令。需要为该条目启用“设备控制与保护”，并且在能源管理器正在管理目标逆变器时会被拒绝，除非设置了强制。",
+      "fields": {
+        "mode": {
+          "name": "模式",
+          "description": "要切换到的电池运行模式。",
+          "selector": {
+            "select": {
+              "options": {
+                "idle": "空闲",
+                "charge": "充电",
+                "discharge": "放电",
+                "self_consume": "自用"
+              }
+            }
+          }
+        },
+        "power": {
+          "name": "功率",
+          "description": "充电或放电功率（瓦）。空闲和自用时忽略。省略时使用逆变器的充电/放电功率数值，若从未设置则为 100 W。"
+        },
+        "force": {
+          "name": "强制",
+          "description": "即使能源管理器正在管理此逆变器也发送命令。能源管理器将在下一次决策时再次覆盖它。"
+        }
+      }
     }
   }
 }
