@@ -360,15 +360,14 @@ def _async_register_devices(
     """Register all devices and establish parent-child relationships."""
     device_registry = dr.async_get(hass)
 
-    # Two-pass device registration to guarantee correct via_device ordering.
-    # Without Pass 1, a child registered before its parent would fail the
-    # via_device lookup and appear as an orphaned device in Home Assistant.
+    # Two-pass registration so a parent device always exists before Pass 2
+    # links a child to it. via_device_id needs the parent's registry id, so
+    # Pass 1's return values are kept and reused rather than looked up again.
     #
-    # Pass 1: Register every device as a standalone entry (no relationships).
-    #         This ensures all SNs are present in the registry before Pass 2
-    #         attempts to link them.
+    # Pass 1: register every device standalone (no relationships).
+    devices: dict[str, dr.DeviceEntry] = {}
     for sn, dev_data in coordinator.data.items():
-        device_registry.async_get_or_create(
+        devices[sn] = device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, sn)},
             name=dev_data.get("device_name") or f"Device {sn}",
@@ -379,43 +378,46 @@ def _async_register_devices(
             serial_number=sn,
         )
 
-    # Pass 2: Establish parent→child relationships now that all devices exist.
+    # Pass 2: establish parent→child relationships now that all devices exist.
     for sn, dev_data in coordinator.data.items():
         metrics = dev_data.get("metrics", {})
 
-        # 1. Handle Battery relationship.
-        #    Guard: if bat_sn is already a first-class device in coordinator.data
-        #    it was registered in Pass 1 with full metadata — skip the sparse stub
-        #    and just link it via_device to avoid overwriting the full entry.
+        # 1. Battery hangs off its inverter.
+        #    Guard: a bat_sn that's already a first-class device was registered
+        #    in Pass 1 with full metadata -- only set the link, don't re-send
+        #    the sparse stub over it.
         bat_sn = metrics.get("batSn")
         if bat_sn:
-            if bat_sn in coordinator.data:
-                # Already registered with full metadata in Pass 1; just set the link.
+            if bat_sn in devices:
                 device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
                     identifiers={(DOMAIN, bat_sn)},
-                    via_device=(DOMAIN, sn),
+                    via_device_id=devices[sn].id,
                 )
             else:
-                # Battery is not a standalone device — create a minimal stub.
-                device_registry.async_get_or_create(
+                devices[bat_sn] = device_registry.async_get_or_create(
                     config_entry_id=entry.entry_id,
                     identifiers={(DOMAIN, bat_sn)},
                     name=f"Battery {bat_sn}",
                     manufacturer=MANUFACTURER,
                     model="Energy Storage System",
                     serial_number=bat_sn,
-                    via_device=(DOMAIN, sn),
+                    via_device_id=devices[sn].id,
                 )
 
-        # 2. Handle Parent Collector relationship.
-        parent_sn = metrics.get("parentSn")
-        if parent_sn:
-            device_registry.async_get_or_create(
-                config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, sn)},
-                via_device=(DOMAIN, parent_sn),
+        # 2. Device hangs off its parent collector.
+        if parent_sn := metrics.get("parentSn"):
+            parent = devices.get(
+                parent_sn
+            ) or device_registry.async_get_device_by_identifier(
+                (DOMAIN, parent_sn), entry.entry_id
             )
+            if parent is not None:
+                device_registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers={(DOMAIN, sn)},
+                    via_device_id=parent.id,
+                )
 
 
 def _async_setup_energy_manager(
@@ -446,15 +448,18 @@ def _async_setup_energy_manager(
     engine = EnergyManagerEngine(hass, coordinator, em_config)
     coordinator.engine = engine
 
-    # Register EM virtual device
+    # Register EM virtual device under its inverter.
     device_registry = dr.async_get(hass)
+    inverter = device_registry.async_get_device_by_identifier(
+        (DOMAIN, em_sn), entry.entry_id
+    )
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, f"{em_sn}_energy_manager")},
         name="Energy Manager",
         manufacturer=MANUFACTURER,
         model="Energy Manager",
-        via_device=(DOMAIN, em_sn),
+        via_device_id=inverter.id if inverter else None,
     )
 
 
@@ -769,13 +774,16 @@ def _migrate_microinverter_sum_identifiers(
         )
 
     device_registry = dr.async_get(hass)
-    stable_identifiers = {(DOMAIN, f"{stable_key}_microinverters_summary")}
-    old_device = device_registry.async_get_device(
-        identifiers={(DOMAIN, f"{entry.entry_id}_microinverters_summary")}
+    stable_identifier = (DOMAIN, f"{stable_key}_microinverters_summary")
+    stable_identifiers = {stable_identifier}
+    old_device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, f"{entry.entry_id}_microinverters_summary"), entry.entry_id
     )
     if old_device is None:
         return
-    stable_device = device_registry.async_get_device(identifiers=stable_identifiers)
+    stable_device = device_registry.async_get_device_by_identifier(
+        stable_identifier, entry.entry_id
+    )
     if stable_device is None:
         device_registry.async_update_device(
             old_device.id, new_identifiers=stable_identifiers

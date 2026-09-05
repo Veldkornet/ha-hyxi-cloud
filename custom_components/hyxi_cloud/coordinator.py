@@ -354,7 +354,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             sw_version = get_software_version(dev_data)
             dev_data["_sw_version_cached"] = sw_version
 
-            device = dev_reg.async_get_device(identifiers={(DOMAIN, sn)})
+            device = dev_reg.async_get_device_by_identifier(
+                (DOMAIN, sn), self.entry.entry_id
+            )
             if not device:
                 continue
 

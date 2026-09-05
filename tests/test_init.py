@@ -210,7 +210,10 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
 
         # Call 3: Battery TEST_BAT_1 (Pass 2)
         assert calls[2].kwargs["identifiers"] == {(DOMAIN, "TEST_BAT_1")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "TEST_SN_1")
+        assert (
+            calls[2].kwargs["via_device_id"]
+            == mock_registry.async_get_or_create.return_value.id
+        )
         assert calls[2].kwargs["serial_number"] == "TEST_BAT_1"
 
         # Check platforms setup forwarded
@@ -314,7 +317,10 @@ async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
         # Verify child links via_device to parent in Pass 2
         # Call 3 is the update call for CHILD_SN_1 in Pass 2
         assert calls[2].kwargs["identifiers"] == {(DOMAIN, "CHILD_SN_1")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "PARENT_SN_1")
+        assert (
+            calls[2].kwargs["via_device_id"]
+            == mock_registry.async_get_or_create.return_value.id
+        )
 
         # Check platforms setup forwarded
         mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
@@ -823,7 +829,10 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
 
         # Pass 2 — guard path: link only, no name/model/serial overwrite
         assert calls[2].kwargs["identifiers"] == {(DOMAIN, "BATTERY_SN")}
-        assert calls[2].kwargs["via_device"] == (DOMAIN, "INVERTER_SN")
+        assert (
+            calls[2].kwargs["via_device_id"]
+            == mock_registry.async_get_or_create.return_value.id
+        )
         assert "name" not in calls[2].kwargs
         assert "model" not in calls[2].kwargs
         assert "serial_number" not in calls[2].kwargs

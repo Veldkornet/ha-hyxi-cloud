@@ -15,7 +15,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -1579,16 +1579,20 @@ def _em_sensors(entry, coordinator) -> list[SensorEntity]:
     ]
 
 
-def _battery_device_info(inverter_sn: str, bat_sn: str) -> dict:
+def _battery_device_info(
+    hass: HomeAssistant, config_entry_id: str, inverter_sn: str, bat_sn: str
+) -> dict:
     """DeviceInfo for the battery pack hung off an inverter."""
-    return {
+    info: dict = {
         "identifiers": {(DOMAIN, bat_sn)},
         "name": f"Battery {bat_sn}",
         "manufacturer": MANUFACTURER,
         "model": "Energy Storage System",
         "serial_number": bat_sn,
-        "via_device": (DOMAIN, inverter_sn),
     }
+    if parent_id := via_device_id(hass, config_entry_id, inverter_sn):
+        info["via_device_id"] = parent_id
+    return info
 
 
 class HyxiBaseSensor(
@@ -1838,7 +1842,9 @@ class HyxiSensor(HyxiBaseSensor):
         bat_sn = metrics.get("batSn")
 
         if self.entity_description.key in BATTERY_SENSORS and bat_sn:
-            return _battery_device_info(self._sn, bat_sn)
+            return _battery_device_info(
+                self.hass, self.coordinator.entry.entry_id, self._sn, bat_sn
+            )
 
         # Determine if we need to apply any state-mapping for specific types
         sw_version = dev_data.get("_sw_version_cached") or get_software_version(
@@ -1858,8 +1864,12 @@ class HyxiSensor(HyxiBaseSensor):
 
         # Handle Parent Collector relationship
         parent_sn = metrics.get("parentSn")
-        if parent_sn:
-            info["via_device"] = (DOMAIN, parent_sn)
+        if parent_sn and (
+            parent_id := via_device_id(
+                self.hass, self.coordinator.entry.entry_id, parent_sn
+            )
+        ):
+            info["via_device_id"] = parent_id
 
         return info
 
@@ -2374,7 +2384,9 @@ class HyxiBatteryEnergyPeriodSensor(
         """Attach to the battery device when its serial is known."""
         bat_sn = self._metrics.get("batSn")
         if bat_sn:
-            return _battery_device_info(self._sn, bat_sn)
+            return _battery_device_info(
+                self.hass, self.coordinator.entry.entry_id, self._sn, bat_sn
+            )
         dev_data = self.coordinator.data.get(self._sn) or {}
         return {
             "identifiers": {(DOMAIN, self._sn)},

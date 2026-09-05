@@ -755,6 +755,7 @@ def test_battery_serial_mapping(base_sensor):
     description.key = "batSoc"
 
     sensor = sensor_mod.HyxiSensor(coordinator, "INV123", description)
+    sensor.hass = MagicMock()
 
     # Identity: inverter serial, not batSn -- see _migrate_battery_sensor_unique_ids.
     assert sensor._attr_unique_id == "hyxi_INV123_batSoc"
@@ -1103,6 +1104,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
     registered_keys = []
     registered_by_key = {}
     for entity in registered_entities:
+        entity.hass = MagicMock()  # device_info reads it (via_device_id lookup)
         if hasattr(entity, "entity_description"):
             key = entity.entity_description.key
             registered_keys.append(key)
@@ -1378,13 +1380,21 @@ def test_hyxi_sensor_advanced_mappings(base_sensor):
         }
     }
 
-    # 1. Parent Sn via_device link
+    # 1. Parent Sn via_device_id link
     sensor.entity_description.key = "acP"
     sensor._sn = "INV123"
     sensor._dev_data = coordinator.data["INV123"]
     sensor._metrics = sensor._dev_data["metrics"]
+    sensor.hass = MagicMock()
 
-    assert sensor.device_info["via_device"] == ("hyxi_cloud", "COLLECTOR_123")
+    with patch(
+        "custom_components.hyxi_cloud.sensor.via_device_id",
+        return_value="collector-device-id",
+    ) as mock_via:
+        assert sensor.device_info["via_device_id"] == "collector-device-id"
+    mock_via.assert_called_once_with(
+        sensor.hass, sensor.coordinator.entry.entry_id, "COLLECTOR_123"
+    )
 
     # 1a. acP actually passes through unmodified -- via _handle_coordinator_update
     # so _parser_func/native_value are recomputed the same way a real
