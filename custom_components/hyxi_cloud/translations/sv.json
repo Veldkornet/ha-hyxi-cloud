@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inaktiv",
+        "charge": "Laddning",
+        "discharge": "Urladdning",
+        "self_consume": "Egenförbrukning"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Avbryt prenumeration",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Prenumerationskod",
           "description": "Den 32-tecken långa prenumerationskoden. Du hittar aktiva/övergivna koder i Home Assistants interna lagringsfiler (\".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\" - endast för avancerade användare)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Ställ in batteriläge",
+      "description": "Skickar ett kommando för batteriets driftläge till en HYXI-växelriktare. Kräver att \"Enhetsstyrning och skydd\" är aktiverat för den posten och avvisas medan Energihantering styr målväxelriktaren, om inte Tvinga är inställt.",
+      "fields": {
+        "mode": {
+          "name": "Läge",
+          "description": "Batteriets driftläge att växla till."
+        },
+        "power": {
+          "name": "Effekt",
+          "description": "Laddnings- eller urladdningseffekt i watt. Ignoreras för inaktiv och egenförbrukning. Om det utelämnas används växelriktarens Laddnings-/urladdningseffekt-nummer, eller 100 W om det aldrig har ställts in."
+        },
+        "force": {
+          "name": "Tvinga",
+          "description": "Skickar kommandot även medan Energihantering styr denna växelriktare. Energihantering åsidosätter det igen vid nästa beslut."
         }
       }
     }

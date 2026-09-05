@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inaktiv",
+        "charge": "Opladning",
+        "discharge": "Afladning",
+        "self_consume": "Selvforbrug"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Annuller abonnement",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Abonnementskode",
           "description": "Den 32-tegns abonnementskode. Du kan finde aktive/forældreløse koder i Home Assistants interne lagringsfiler (\".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\" - kun for avancerede brugere)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Indstil batteritilstand",
+      "description": "Send en kommando for batteriets driftstilstand til en HYXI-inverter. Kræver, at \"Enhedsstyring og -beskyttelse\" er aktiveret for den post, og afvises, mens Energistyring styrer målinverteren, medmindre Tving er sat.",
+      "fields": {
+        "mode": {
+          "name": "Tilstand",
+          "description": "Batteriets driftstilstand, der skal skiftes til."
+        },
+        "power": {
+          "name": "Effekt",
+          "description": "Opladnings- eller afladningseffekt i watt. Ignoreres for inaktiv og selvforbrug. Hvis udeladt, bruges inverterens Oplad-/aflad-effekt-tal, eller 100 W hvis det aldrig er sat."
+        },
+        "force": {
+          "name": "Tving",
+          "description": "Send kommandoen, selv mens Energistyring styrer denne inverter. Energistyring tilsidesætter den igen ved sin næste beslutning."
         }
       }
     }

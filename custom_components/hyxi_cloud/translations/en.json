@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Idle",
+        "charge": "Charge",
+        "discharge": "Discharge",
+        "self_consume": "Self-consume"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Cancel Subscription",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Subscription Code",
           "description": "The 32-character subscription code/ID. You can find active/orphaned codes inside Home Assistant's internal storage files (\".storage/core.config_entries\" or \".storage/hyxi_cloud_subscriptions\" - advanced users only)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Set battery mode",
+      "description": "Send a battery operating-mode command to a HYXI inverter. Requires \"Device Control & Protection\" to be enabled for that entry, and is refused while the Energy Manager is managing the target inverter unless Force is set.",
+      "fields": {
+        "mode": {
+          "name": "Mode",
+          "description": "The battery operating mode to switch to."
+        },
+        "power": {
+          "name": "Power",
+          "description": "Charge or discharge power in watts. Ignored for idle and self-consume. When omitted, the inverter's Charge/Discharge Power number is used, or 100 W if that has never been set."
+        },
+        "force": {
+          "name": "Force",
+          "description": "Send the command even while the Energy Manager is managing this inverter. The Energy Manager will override it again on its next decision."
         }
       }
     }

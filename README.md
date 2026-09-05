@@ -87,6 +87,8 @@ Control entities (mode buttons, power targets, switches) are **hidden by default
 
 What appears depends on the device — three-phase mode buttons, single-phase peak shaving and frequency control, microinverter power limits, battery protection thresholds, and the automated **Energy Manager (Beta)**.
 
+For automations, the `hyxi_cloud.set_battery_mode` action sends idle / charge / discharge / self-consume (with an optional power in watts) to a targeted inverter in one call. It needs Device Control enabled and is refused while the Energy Manager is driving that inverter, unless you pass `force: true`.
+
 The full reference — controlId maps, phase detection, the Energy Manager decision logic and every tunable — is in the wiki: **[Device Control][wiki-control]** and **[Energy Manager][wiki-em]**.
 
 ## 📟 Local Modbus (RS485)

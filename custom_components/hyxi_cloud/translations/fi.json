@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Joutokäynti",
+        "charge": "Lataus",
+        "discharge": "Purku",
+        "self_consume": "Omakäyttö"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Peruuta tilaus",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Tilauskoodi",
           "description": "32-merkkinen tilauskoodi. Löydät aktiiviset/orvoksi jääneet koodit Home Assistantin sisäisistä tallennustiedostoista (\".storage/core.config_entries\" tai \".storage/hyxi_cloud_subscriptions\" - vain edistyneille käyttäjille)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Aseta akun tila",
+      "description": "Lähettää akun toimintatilakomennon HYXI-invertterille. Edellyttää, että ”Laitteen ohjaus ja suojaus” on käytössä kyseiselle tietueelle, ja hylätään, kun Energianhallinta ohjaa kohde-invertteriä, ellei Pakota ole asetettu.",
+      "fields": {
+        "mode": {
+          "name": "Tila",
+          "description": "Akun toimintatila, johon vaihdetaan."
+        },
+        "power": {
+          "name": "Teho",
+          "description": "Lataus- tai purkuteho watteina. Ohitetaan joutokäynnillä ja omakäytöllä. Jos jätetään pois, käytetään invertterin Lataus-/purkuteho-numeroa tai 100 W, jos sitä ei ole koskaan asetettu."
+        },
+        "force": {
+          "name": "Pakota",
+          "description": "Lähettää komennon, vaikka Energianhallinta ohjaa tätä invertteriä. Energianhallinta ohittaa sen taas seuraavassa päätöksessään."
         }
       }
     }

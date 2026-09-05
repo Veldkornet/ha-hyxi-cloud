@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Ledig",
+        "charge": "Laai",
+        "discharge": "Ontlaai",
+        "self_consume": "Self-verbruik"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Kanselleer Intekening",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Intekeningkode",
           "description": "Die 32-karakter intekeningkode. U kan aktiewe/wees kodes vind in Home Assistant se interne stoorlêers (\".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\" - slegs gevorderde gebruikers)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Stel batterymodus",
+      "description": "Stuur 'n batterybedryfsmodus-opdrag na 'n HYXI-omsetter. Vereis dat \"Toestelbeheer en -beskerming\" vir daardie inskrywing geaktiveer is, en word geweier terwyl die Energiebestuurder die teiken-omsetter beheer, tensy Forseer gestel is.",
+      "fields": {
+        "mode": {
+          "name": "Modus",
+          "description": "Die batterybedryfsmodus om na oor te skakel."
+        },
+        "power": {
+          "name": "Drywing",
+          "description": "Laai- of ontlaaidrywing in watt. Geïgnoreer vir ledig en self-verbruik. Indien weggelaat, word die omsetter se Laai/Ontlaai-drywingnommer gebruik, of 100 W as dit nog nooit gestel is nie."
+        },
+        "force": {
+          "name": "Forseer",
+          "description": "Stuur die opdrag selfs terwyl die Energiebestuurder hierdie omsetter beheer. Die Energiebestuurder sal dit weer oorheers by sy volgende besluit."
         }
       }
     }

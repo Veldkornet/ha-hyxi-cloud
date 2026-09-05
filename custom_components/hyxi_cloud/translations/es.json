@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inactivo",
+        "charge": "Carga",
+        "discharge": "Descarga",
+        "self_consume": "Autoconsumo"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Cancelar suscripción",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Código de suscripción",
           "description": "El código de suscripción de 32 caracteres. Puede encontrar códigos activos/huérfanos en los archivos de almacenamiento internos de Home Assistant (\".storage/core.config_entries\" o \".storage/hyxi_cloud_subscriptions\" - solo para usuarios avanzados)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Establecer modo de batería",
+      "description": "Envía un comando de modo de funcionamiento de la batería a un inversor HYXI. Requiere que \"Control y protección del dispositivo\" esté activado para esa entrada, y se rechaza mientras el Gestor de Energía controla el inversor de destino, salvo que se active Forzar.",
+      "fields": {
+        "mode": {
+          "name": "Modo",
+          "description": "El modo de funcionamiento de la batería al que cambiar."
+        },
+        "power": {
+          "name": "Potencia",
+          "description": "Potencia de carga o descarga en vatios. Se ignora para inactivo y autoconsumo. Si se omite, se usa el número de Potencia de carga/descarga del inversor, o 100 W si nunca se ha establecido."
+        },
+        "force": {
+          "name": "Forzar",
+          "description": "Envía el comando incluso mientras el Gestor de Energía controla este inversor. El Gestor de Energía lo volverá a anular en su siguiente decisión."
         }
       }
     }

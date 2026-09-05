@@ -286,8 +286,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
         if not hass.data[DOMAIN]:
-            if hass.services.has_service(DOMAIN, "cancel_subscription"):
-                hass.services.async_remove(DOMAIN, "cancel_subscription")
+            _remove_services(hass)
     _LOGGER.debug("HYXI Cloud entry %s unload result: %s", entry.entry_id, unload_ok)
     return unload_ok
 
@@ -1862,6 +1861,16 @@ def _apply_alarm_updates(
     return any_updated
 
 
+_HYXI_SERVICES = ("cancel_subscription", "set_battery_mode")
+
+
+def _remove_services(hass: HomeAssistant) -> None:
+    """Drop the custom services when the last HYXI entry unloads."""
+    for service in _HYXI_SERVICES:
+        if hass.services.has_service(DOMAIN, service):
+            hass.services.async_remove(DOMAIN, service)
+
+
 def setup_services(hass: HomeAssistant) -> None:
     """Set up custom services for HYXI Cloud."""
     if hass.services.has_service(DOMAIN, "cancel_subscription"):
@@ -1919,6 +1928,143 @@ def setup_services(hass: HomeAssistant) -> None:
                 vol.Required("subscribe_code"): cv.string,
             }
         ),
+    )
+
+    _register_set_battery_mode_service(hass)
+
+
+_BATTERY_MODES = ("idle", "charge", "discharge", "self_consume")
+
+
+def _register_set_battery_mode_service(hass: HomeAssistant) -> None:
+    """Register hyxi_cloud.set_battery_mode."""
+    import voluptuous as vol
+    from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
+    from homeassistant.helpers import config_validation as cv
+
+    hass.services.async_register(
+        DOMAIN,
+        "set_battery_mode",
+        _async_handle_set_battery_mode,
+        schema=vol.Schema(
+            {
+                vol.Optional(ATTR_DEVICE_ID, default=list): vol.All(
+                    cv.ensure_list, [cv.string]
+                ),
+                vol.Optional(ATTR_ENTITY_ID, default=list): vol.All(
+                    cv.ensure_list, [cv.string]
+                ),
+                vol.Required("mode"): vol.In(_BATTERY_MODES),
+                vol.Optional("power"): vol.All(
+                    vol.Coerce(int), vol.Range(min=0, max=20000)
+                ),
+                vol.Optional("force", default=False): cv.boolean,
+            }
+        ),
+    )
+
+
+async def _async_handle_set_battery_mode(call) -> None:
+    """Send a battery mode command to every inverter the call targets."""
+    from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
+    from homeassistant.exceptions import ServiceValidationError
+
+    from .const import is_battery_control_enabled
+    from .control import async_send_battery_mode, preflight_battery_mode
+
+    hass = call.hass
+    mode = call.data["mode"]
+    power = call.data.get("power")
+    force = call.data["force"]
+
+    targets = _resolve_battery_mode_targets(
+        hass,
+        set(call.data[ATTR_DEVICE_ID]),
+        set(call.data[ATTR_ENTITY_ID]),
+    )
+    if not targets:
+        raise ServiceValidationError(
+            "No HYXI inverter matched the target -- point the action at the "
+            "inverter device (or one of its entities)."
+        )
+
+    # Validate every matched inverter before touching any, so a rejected
+    # second one doesn't leave the first already switched.
+    for entry, coordinator, sn in targets:
+        if not is_battery_control_enabled(entry):
+            raise ServiceValidationError(
+                f"Device Control is not enabled for {entry.title}. Turn on "
+                "'Device Control & Protection' in the integration options first."
+            )
+        if not force and _energy_manager_manages(coordinator, sn):
+            raise ServiceValidationError(
+                f"The Energy Manager is managing {mask_sn(sn)}. Turn it off, or "
+                "pass force: true to override it for this one command."
+            )
+        preflight_battery_mode(coordinator, sn, mode)
+
+    for _entry, coordinator, sn in targets:
+        await async_send_battery_mode(hass, coordinator, sn, mode, power=power)
+
+
+def _resolve_battery_mode_targets(
+    hass: HomeAssistant, device_ids: set[str], entity_ids: set[str]
+) -> list[tuple[ConfigEntry, HyxiDataUpdateCoordinator, str]]:
+    """Resolve a set_battery_mode target to (entry, coordinator, serial) rows.
+
+    Accepts device ids and entity ids (each entity contributes its device);
+    a device maps to a HYXI inverter through its ``(DOMAIN, serial)``
+    identifier and the coordinator that is currently polling that serial.
+    """
+    dev_reg = dr.async_get(hass)
+    ent_reg = er.async_get(hass)
+
+    all_device_ids = set(device_ids)
+    for entity_id in entity_ids:
+        if (entity := ent_reg.async_get(entity_id)) is not None and entity.device_id:
+            all_device_ids.add(entity.device_id)
+
+    coordinators = hass.data.get(DOMAIN, {})
+    return [
+        row
+        for device_id in all_device_ids
+        if (row := _battery_mode_row(dev_reg.async_get(device_id), coordinators))
+    ]
+
+
+def _battery_mode_row(
+    device, coordinators: dict
+) -> tuple[ConfigEntry, HyxiDataUpdateCoordinator, str] | None:
+    """Map one device to (entry, coordinator, serial), or None if it is not
+    a HYXI inverter this integration is currently polling."""
+    if device is None:
+        return None
+    serial = next(
+        (ident[1] for ident in device.identifiers if ident[0] == DOMAIN), None
+    )
+    if serial is None:
+        return None
+    for entry_id in device.config_entries:
+        coordinator = coordinators.get(entry_id)
+        if coordinator is not None and serial in (coordinator.data or {}):
+            return (coordinator.entry, coordinator, serial)
+    return None
+
+
+def _energy_manager_manages(
+    coordinator: HyxiDataUpdateCoordinator, serial: str
+) -> bool:
+    """True when the Energy Manager engine is actively driving `serial`.
+
+    False when there is no engine, its loop is stopped, its ``em_enabled``
+    switch is off, or it manages a different inverter.
+    """
+    engine = getattr(coordinator, "engine", None)
+    return (
+        engine is not None
+        and engine.enabled
+        and engine.sn == serial
+        and engine.status != "disabled"
     )
 
 

@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Inactief",
+        "charge": "Laden",
+        "discharge": "Ontladen",
+        "self_consume": "Zelfverbruik"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Abonnement annuleren",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Abonnementscode",
           "description": "De 32-tekens abonnementscode. U kunt actieve/zwevende codes vinden in de interne opslagbestanden van Home Assistant (\".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\" - alleen voor geavanceerde gebruikers)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Batterijmodus instellen",
+      "description": "Stuurt een opdracht voor de batterijbedrijfsmodus naar een HYXI-omvormer. Vereist dat \"Apparaatbesturing en -bescherming\" is ingeschakeld voor die invoer, en wordt geweigerd terwijl Energiebeheer de doelomvormer aanstuurt, tenzij Forceren is ingesteld.",
+      "fields": {
+        "mode": {
+          "name": "Modus",
+          "description": "De batterijbedrijfsmodus om naar over te schakelen."
+        },
+        "power": {
+          "name": "Vermogen",
+          "description": "Laad- of ontlaadvermogen in watt. Genegeerd voor inactief en zelfverbruik. Indien weggelaten wordt het Laad-/ontlaadvermogen-getal van de omvormer gebruikt, of 100 W als dat nooit is ingesteld."
+        },
+        "force": {
+          "name": "Forceren",
+          "description": "Stuurt de opdracht ook terwijl Energiebeheer deze omvormer aanstuurt. Energiebeheer overschrijft deze weer bij zijn volgende beslissing."
         }
       }
     }

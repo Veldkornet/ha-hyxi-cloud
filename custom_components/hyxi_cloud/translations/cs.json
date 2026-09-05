@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Klid",
+        "charge": "Nabíjení",
+        "discharge": "Vybíjení",
+        "self_consume": "Vlastní spotřeba"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Zrušit předplatné",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Kód předplatného",
           "description": "32místný kód předplatného. Aktivní/osiřelé kódy najdete v interních souborech Home Assistanta (\".storage/core.config_entries\" nebo \".storage/hyxi_cloud_subscriptions\" - pouze pro pokročilé uživatele)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Nastavit režim baterie",
+      "description": "Odešle příkaz provozního režimu baterie do měniče HYXI. Vyžaduje povolené „Ovládání a ochranu zařízení“ pro danou položku a je odmítnut, dokud správce energie řídí cílový měnič, pokud není nastaveno Vynutit.",
+      "fields": {
+        "mode": {
+          "name": "Režim",
+          "description": "Provozní režim baterie, na který se má přepnout."
+        },
+        "power": {
+          "name": "Výkon",
+          "description": "Nabíjecí nebo vybíjecí výkon ve wattech. Ignorováno u klidu a vlastní spotřeby. Při vynechání se použije hodnota z čísla Nabíjecí/vybíjecí výkon měniče, nebo 100 W, pokud nebyla nikdy nastavena."
+        },
+        "force": {
+          "name": "Vynutit",
+          "description": "Odešle příkaz i tehdy, když správce energie řídí tento měnič. Správce energie jej při svém dalším rozhodnutí opět přepíše."
         }
       }
     }

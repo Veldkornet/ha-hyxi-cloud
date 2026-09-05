@@ -462,12 +462,14 @@ async def test_power_command_button_error(mock_coordinator_fixture):
 async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
     """Test pressing idle and self_consume mode buttons."""
     btn_idle = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")
+    btn_idle.hass = MagicMock()
     await btn_idle.async_press()
     mock_coordinator_fixture.client.set_mode_idle.assert_called_once_with("SN123")
 
     btn_sc = button_mod.HyxiModeButton(
         mock_coordinator_fixture, "SN123", {}, "self_consume"
     )
+    btn_sc.hass = MagicMock()
     await btn_sc.async_press()
     mock_coordinator_fixture.client.set_mode_self_consume.assert_called_once_with(
         "SN123"
@@ -475,7 +477,7 @@ async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
 
 
 @pytest.mark.asyncio
-@patch("custom_components.hyxi_cloud.button._get_power_value", return_value=5000)
+@patch("custom_components.hyxi_cloud.control._get_power_value", return_value=5000)
 async def test_mode_button_press_charge_discharge(
     mock_get_power, mock_coordinator_fixture
 ):
@@ -504,15 +506,25 @@ async def test_mode_button_press_charge_discharge(
 
 
 @pytest.mark.asyncio
-async def test_mode_button_error(mock_coordinator_fixture):
-    """Test error handling in mode button press."""
-    mock_coordinator_fixture.client.set_mode_idle.side_effect = (
-        button_mod.HyxiApiClient.ControlError("Network error")
-    )
-    btn = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "idle")
+async def test_mode_button_delegates_and_does_not_swallow_errors(
+    mock_coordinator_fixture,
+):
+    """The mode button is a thin wrapper over control.async_send_battery_mode:
+    it forwards its args and lets the helper's HomeAssistantError propagate."""
+    btn = button_mod.HyxiModeButton(mock_coordinator_fixture, "SN123", {}, "discharge")
+    btn.hass = MagicMock()
 
-    with pytest.raises(button_mod.HomeAssistantError, match="set mode 'idle'"):
-        await btn.async_press()
+    with patch(
+        "custom_components.hyxi_cloud.button.async_send_battery_mode",
+        new_callable=AsyncMock,
+        side_effect=button_mod.HomeAssistantError("boom"),
+    ) as send:
+        with pytest.raises(button_mod.HomeAssistantError, match="boom"):
+            await btn.async_press()
+
+    send.assert_awaited_once_with(
+        btn.hass, mock_coordinator_fixture, "SN123", "discharge"
+    )
 
 
 @pytest.mark.asyncio
@@ -548,68 +560,6 @@ async def test_peak_shaving_button_error(mock_coordinator_fixture):
             button_mod.mask_sn("SN123"),
             error,
         )
-
-
-def test_get_power_value_valid_state():
-    """Test _get_power_value with a valid number state."""
-    hass = MagicMock()
-    registry = MagicMock()
-    registry.async_get_entity_id.return_value = "number.hyxi_sn123_charge_power"
-
-    # Mock entity registry get
-    with patch(
-        "custom_components.hyxi_cloud.button.er.async_get", return_value=registry
-    ):
-        state = MagicMock()
-        state.state = "3000.0"
-        hass.states.get.return_value = state
-
-        result = button_mod._get_power_value(hass, "SN123", "charge")
-
-        registry.async_get_entity_id.assert_called_once_with(
-            "number", DOMAIN, "hyxi_SN123_charge_power"
-        )
-        hass.states.get.assert_called_once_with("number.hyxi_sn123_charge_power")
-        assert result == 3000
-
-
-def test_get_power_value_entity_not_found():
-    """Test _get_power_value when number entity is missing from registry."""
-    hass = MagicMock()
-    registry = MagicMock()
-    registry.async_get_entity_id.return_value = None
-
-    with patch(
-        "custom_components.hyxi_cloud.button.er.async_get", return_value=registry
-    ):
-        result = button_mod._get_power_value(hass, "SN123", "charge")
-        assert result == 100
-
-
-def test_get_power_value_invalid_state():
-    """Test _get_power_value when state is unknown/unavailable or non-numeric."""
-    hass = MagicMock()
-    registry = MagicMock()
-    registry.async_get_entity_id.return_value = "number.hyxi_sn123_charge_power"
-
-    with patch(
-        "custom_components.hyxi_cloud.button.er.async_get", return_value=registry
-    ):
-        # Test 'unknown' state
-        state_unknown = MagicMock()
-        state_unknown.state = "unknown"
-        hass.states.get.return_value = state_unknown
-        assert button_mod._get_power_value(hass, "SN123", "charge") == 100
-
-        # Test invalid float string
-        state_invalid = MagicMock()
-        state_invalid.state = "abc"
-        hass.states.get.return_value = state_invalid
-        assert button_mod._get_power_value(hass, "SN123", "charge") == 100
-
-        # Test None state (entity missing from state machine)
-        hass.states.get.return_value = None
-        assert button_mod._get_power_value(hass, "SN123", "charge") == 100
 
 
 @pytest.mark.asyncio
@@ -721,121 +671,6 @@ async def test_clear_alarms_button_skips_alarm_with_no_id(mock_coordinator_fixtu
     await btn.async_press()
 
     mock_coordinator_fixture.client.alter_alarm.assert_called_once_with([44733168])
-
-
-def test_block_manual_discharge_if_needed_raises_when_blocked():
-    """Test manual discharge is rejected when the protection controller says so."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    controller.should_block_manual_discharge.return_value = True
-    coordinator.protection_controllers = {"SN123": controller}
-
-    with pytest.raises(button_mod.HomeAssistantError, match="SOC Minimum"):
-        button_mod._block_manual_discharge_if_needed(coordinator, "SN123")
-
-
-def test_block_manual_discharge_if_needed_allows_when_not_blocked():
-    """Test manual discharge proceeds when the controller allows it."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    controller.should_block_manual_discharge.return_value = False
-    coordinator.protection_controllers = {"SN123": controller}
-
-    button_mod._block_manual_discharge_if_needed(coordinator, "SN123")  # no raise
-
-
-def test_block_manual_discharge_if_needed_no_controller():
-    """Test manual discharge proceeds when there's no controller for this SN."""
-    coordinator = MagicMock()
-    coordinator.protection_controllers = {}
-
-    button_mod._block_manual_discharge_if_needed(coordinator, "SN123")  # no raise
-
-
-def test_block_manual_charge_if_needed_raises_when_blocked():
-    """Test manual charge is rejected when the protection controller says so."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    controller.should_block_manual_charge.return_value = True
-    coordinator.protection_controllers = {"SN123": controller}
-
-    with pytest.raises(button_mod.HomeAssistantError, match="SOC Maximum"):
-        button_mod._block_manual_charge_if_needed(coordinator, "SN123")
-
-
-def test_block_manual_charge_if_needed_allows_when_not_blocked():
-    """Test manual charge proceeds when the controller allows it."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    controller.should_block_manual_charge.return_value = False
-    coordinator.protection_controllers = {"SN123": controller}
-
-    button_mod._block_manual_charge_if_needed(coordinator, "SN123")  # no raise
-
-
-def test_block_manual_peak_shaving_if_needed_no_controller():
-    """Test peak shaving proceeds when there's no controller for this SN."""
-    coordinator = MagicMock()
-    coordinator.protection_controllers = {}
-
-    button_mod._block_manual_peak_shaving_if_needed(coordinator, "SN123", "discharge")
-
-
-def test_block_manual_peak_shaving_if_needed_raises_for_discharge():
-    """Test peak-shaving discharge is rejected when SOC is at/below minimum."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    controller.should_block_manual_discharge.return_value = True
-    coordinator.protection_controllers = {"SN123": controller}
-
-    with pytest.raises(button_mod.HomeAssistantError, match="SOC Minimum"):
-        button_mod._block_manual_peak_shaving_if_needed(
-            coordinator, "SN123", "discharge"
-        )
-
-
-def test_block_manual_peak_shaving_if_needed_raises_for_charge():
-    """Test peak-shaving charge is rejected when SOC is at/above maximum."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    controller.should_block_manual_charge.return_value = True
-    coordinator.protection_controllers = {"SN123": controller}
-
-    with pytest.raises(button_mod.HomeAssistantError, match="SOC Maximum"):
-        button_mod._block_manual_peak_shaving_if_needed(coordinator, "SN123", "charge")
-
-
-def test_block_manual_peak_shaving_if_needed_allows_other_options():
-    """Test peak-shaving options other than charge/discharge are never blocked."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    controller.should_block_manual_discharge.return_value = True
-    controller.should_block_manual_charge.return_value = True
-    coordinator.protection_controllers = {"SN123": controller}
-
-    button_mod._block_manual_peak_shaving_if_needed(coordinator, "SN123", "hold")
-    button_mod._block_manual_peak_shaving_if_needed(coordinator, "SN123", "stop")
-    button_mod._block_manual_peak_shaving_if_needed(coordinator, "SN123", "close")
-
-
-def test_note_manual_mode():
-    """Test tracking the last user-sent inverter mode."""
-    coordinator = MagicMock()
-    controller = MagicMock()
-    coordinator.protection_controllers = {"SN123": controller}
-
-    button_mod._note_manual_mode(coordinator, "SN123", "test_mode")
-
-    controller.note_manual_mode.assert_called_once_with("test_mode")
-
-
-def test_note_manual_mode_no_controller():
-    """Test tracking mode does not fail when no controller is available."""
-    coordinator = MagicMock()
-    coordinator.protection_controllers = {}
-
-    # Should not raise an exception
-    button_mod._note_manual_mode(coordinator, "SN123", "test_mode")
 
 
 def test_mode_button_available_delegates_to_super(mock_coordinator_fixture):

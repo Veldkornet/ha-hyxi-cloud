@@ -860,6 +860,16 @@
       }
     }
   },
+  "selector": {
+    "battery_mode": {
+      "options": {
+        "idle": "Tétlen",
+        "charge": "Töltés",
+        "discharge": "Kisütés",
+        "self_consume": "Önfogyasztás"
+      }
+    }
+  },
   "services": {
     "cancel_subscription": {
       "name": "Előfizetés törlése",
@@ -868,6 +878,24 @@
         "subscribe_code": {
           "name": "Előfizetés kódja",
           "description": "A 32 karakteres előfizetés kódja. Az aktív/elárvult kódokat a Home Assistant belső tárolófájljaiban találja (\".storage/core.config_entries\" vagy \".storage/hyxi_cloud_subscriptions\" - csak haladó felhasználóknak)."
+        }
+      }
+    },
+    "set_battery_mode": {
+      "name": "Akkumulátor mód beállítása",
+      "description": "Akkumulátor üzemmód parancsot küld egy HYXI inverternek. Szükséges hozzá, hogy az „Eszközvezérlés és -védelem” engedélyezve legyen az adott bejegyzéshez, és elutasításra kerül, amíg az Energiakezelő vezérli a cél invertert, hacsak nincs beállítva a Kényszerítés.",
+      "fields": {
+        "mode": {
+          "name": "Mód",
+          "description": "Az akkumulátor üzemmódja, amelyre váltani kell."
+        },
+        "power": {
+          "name": "Teljesítmény",
+          "description": "Töltési vagy kisütési teljesítmény wattban. Tétlen és önfogyasztás esetén figyelmen kívül hagyva. Ha nincs megadva, az inverter Töltési/kisütési teljesítmény száma kerül felhasználásra, vagy 100 W, ha az soha nem lett beállítva."
+        },
+        "force": {
+          "name": "Kényszerítés",
+          "description": "Elküldi a parancsot akkor is, amikor az Energiakezelő vezérli ezt az invertert. Az Energiakezelő a következő döntésénél ismét felülírja."
         }
       }
     }

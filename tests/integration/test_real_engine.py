@@ -68,6 +68,7 @@ async def test_engine_lifecycle_and_helpers(hass: HomeAssistant):
 
     # Test basic properties when stopped
     assert engine.enabled is False
+    assert engine.sn == "SN123"
     assert engine.status == "stopped"
     assert engine.decision == ""
     assert engine.last_action == ""

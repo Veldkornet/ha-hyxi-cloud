@@ -185,6 +185,11 @@ class EnergyManagerEngine:
         return self._enabled
 
     @property
+    def sn(self) -> str:
+        """Serial number of the inverter this engine manages."""
+        return self._sn
+
+    @property
     def p1_avg(self) -> float:
         """Rolling 1-minute average of P1 readings."""
         if not self._p1_buffer:
