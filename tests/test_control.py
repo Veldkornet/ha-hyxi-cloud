@@ -283,11 +283,11 @@ async def test_send_battery_mode_blocks_charge_at_soc_max(coord):
     controller.should_block_manual_charge.return_value = True
     coord.protection_controllers = {"SN123": controller}
 
-    send = control_mod.async_send_battery_mode(
-        MagicMock(), coord, "SN123", "charge", power=1000
-    )
+    hass = MagicMock()
     with pytest.raises(HomeAssistantError, match="SOC Maximum"):
-        await send
+        await control_mod.async_send_battery_mode(
+            hass, coord, "SN123", "charge", power=1000
+        )
     coord.client.set_mode_charge.assert_not_awaited()
 
 
@@ -295,6 +295,6 @@ async def test_send_battery_mode_blocks_charge_at_soc_max(coord):
 async def test_send_battery_mode_wraps_a_control_error(coord):
     coord.client.set_mode_idle.side_effect = ControlError("bus down")
 
-    send = control_mod.async_send_battery_mode(MagicMock(), coord, "SN123", "idle")
+    hass = MagicMock()
     with pytest.raises(HomeAssistantError, match="Failed to set mode 'idle'"):
-        await send
+        await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
