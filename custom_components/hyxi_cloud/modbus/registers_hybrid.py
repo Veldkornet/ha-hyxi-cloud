@@ -217,8 +217,10 @@ class HybridBattery(Component):
     'positive' nor 'negative' is stated for charge vs discharge here, unlike
     register 3015 in HybridSettings, which explicitly is. Not assumed equal
     without checking; see docs/modbus-provenance.md."""
-    nominal_capacity = integer(1097, signed=False)
-    """Unit not stated in the document."""
+    nominal_capacity = integer(1097, signed=False, unit="kWh")
+    """Unit not stated in the document; kWh confirmed on a HYX-H -- read 25
+    against a 26.5 kWh nameplate, and the magnitude rules out Ah/Wh. See
+    docs/modbus-provenance.md."""
 
 
 class HybridEnergy(Component):

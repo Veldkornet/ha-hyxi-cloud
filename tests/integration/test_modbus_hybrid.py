@@ -240,7 +240,8 @@ async def test_battery_detail_registers_decode_into_metrics(client):
     assert metrics["batDischargeV"] == 528.5
     assert metrics["batDischargeI"] == 4.2
     assert metrics["batDischargeP"] == 2220
-    # Unit not stated in the document -- passed through raw, not guessed.
+    # Plain integer, no scale -- kWh (confirmed against hardware, see
+    # docs/modbus-provenance.md), so a raw pass-through.
     assert metrics["batNominalCapacity"] == 100
 
     # bat_charge_total/bat_discharge_total alias the same register as

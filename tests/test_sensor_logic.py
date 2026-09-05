@@ -890,6 +890,17 @@ def test_enum_empty_options_accepts_any_value(enum_status_sensor):
     mock_log_once.assert_not_called()
 
 
+def test_hybrid_nominal_capacity_carries_the_hardware_confirmed_kwh_unit():
+    """HYXI's hybrid doc gives no unit for register 1097, but a user with a
+    26.5 kWh nameplate read 25 -- kWh, magnitude rules out Ah/Wh. See
+    docs/modbus-provenance.md."""
+    from homeassistant.components.sensor import SensorDeviceClass
+
+    nominal = sensor_mod.SENSOR_TYPES_BY_KEY["batNominalCapacity"]
+    assert nominal.native_unit_of_measurement == "kWh"
+    assert nominal.device_class == SensorDeviceClass.ENERGY_STORAGE
+
+
 def test_observed_undocumented_enum_values_are_declared_not_hidden():
     """invSts=6 and currentOperatingMode=13/14/15/16 are undocumented but
     observed on real hybrid inverter hardware. Declared with no state

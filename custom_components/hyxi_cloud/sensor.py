@@ -1122,9 +1122,12 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="batNominalCapacity",
+        native_unit_of_measurement="kWh",
+        device_class=SensorDeviceClass.ENERGY_STORAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery-outline",
+        suggested_display_precision=0,
     ),
     SensorEntityDescription(
         key="llcBusVoltage",
