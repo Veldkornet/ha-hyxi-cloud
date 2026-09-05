@@ -356,9 +356,14 @@ class HyxiDispatchSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
     On means the integration is driving the battery through the VPP block
     (HALO, register 4146) or the scheduling register (Hybrid, 3000); off
     hands control back to the inverter's own configured work mode. Every
-    set_mode_* / setpoint write turns it on, so the switch mainly matters
-    as the explicit way off -- there is no other route back to native
-    operation from the integration.
+    idle / charge / discharge write turns it on -- this switch is the
+    deliberate way back off.
+
+    HALO self-consume (VPP mode 3) is a real dispatch sub-mode and leaves
+    dispatch on. The Hybrid scheduling block has no self-use setpoint, so
+    its self-consume can only reach the inverter's native self-use by
+    disabling scheduling -- there it lands in the same "off" state as this
+    switch, for a different reason.
 
     is_on is seeded and kept in sync from the settings block via
     SettingsSyncMixin, the same as HyxiAntiStarvationSwitch.

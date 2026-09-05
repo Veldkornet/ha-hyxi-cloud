@@ -464,16 +464,22 @@ incorrectly:
   writes VPP mode 3 ("selfuse"), a valid sub-mode — VPP stays enabled.
 - **Hybrid**: scheduling enable (3000) + control mode (3004, must be 0 for
   this client) + **one** signed watts register (3015) — positive discharges,
-  negative charges. There is no "self-consume setpoint", so
-  `set_mode_self_consume` here just clears register 3000.
+  negative charges. There is no "self-consume setpoint" and register 1265
+  (operating mode) is read-only, so the only way to reach the inverter's
+  native self-use behaviour is to disable scheduling: `set_mode_self_consume`
+  clears register 3000. This is a hardware limitation of the hybrid's
+  control block, not the same operation as the dispatch switch — the intent
+  is "pick the self-use mode", it just has nowhere else to land.
 
 The **dispatch switch** (`HyxiDispatchSwitch`) is the transport-agnostic
 "is the integration in control at all" toggle: it reads and writes 4146
-(HALO) / 3000 (Hybrid). Every `set_mode_*` / setpoint write turns dispatch
-on, so the switch mainly matters as the explicit way off — clearing 4146 /
-3000 hands the battery back to the inverter's own configured work mode.
-Whether clearing 4146 cleanly resumes that mode on a real HALO is still
-unconfirmed (see "Still unverified").
+(HALO) / 3000 (Hybrid). Every idle / charge / discharge write turns dispatch
+on, so the switch is the deliberate way back off. On HALO, `set_mode_self_consume`
+(VPP mode 3) is a real sub-mode and keeps dispatch on, so the switch is the
+only route off; on Hybrid, self-consume ends up in the same off state for
+the hardware reason above. Clearing 4146 / 3000 hands the battery back to
+the inverter's own configured work mode — whether clearing 4146 cleanly
+resumes that mode on a real HALO is still unconfirmed (see "Still unverified").
 
 Two polarity/semantic differences between the device families, both
 documented explicitly rather than assumed to match:

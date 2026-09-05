@@ -488,11 +488,12 @@ async def test_dispatch_switch_toggles_call_the_client(mock_coordinator_fixture)
     switch.async_write_ha_state = MagicMock()
 
     await switch.async_turn_off()
-    mock_coordinator_fixture.client.set_dispatch_enabled.assert_called_once_with(False)
+    mock_coordinator_fixture.client.set_dispatch_enabled.assert_awaited_once_with(False)
     assert switch._attr_is_on is False
 
+    mock_coordinator_fixture.client.set_dispatch_enabled.reset_mock()
     await switch.async_turn_on()
-    mock_coordinator_fixture.client.set_dispatch_enabled.assert_called_with(True)
+    mock_coordinator_fixture.client.set_dispatch_enabled.assert_awaited_once_with(True)
     assert switch._attr_is_on is True
 
 

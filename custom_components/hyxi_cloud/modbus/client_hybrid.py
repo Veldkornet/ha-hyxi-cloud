@@ -448,9 +448,12 @@ class HyxiHybridModbusClient:
     async def set_mode_self_consume(self, device_sn: str) -> dict:
         """Return the device to its own self-consumption logic.
 
-        The hybrid has no self-consume setpoint -- its only control is one
-        signed watts register -- so "self consume" is turning Modbus
-        scheduling off, the same thing the dispatch switch does.
+        The hybrid scheduling block has no self-use setpoint -- its only
+        control is one signed watts register, and the operating-mode
+        register is read-only -- so the sole way to reach native self-use
+        is to disable scheduling (3000). That coincides with what the
+        dispatch switch writes, but the intent differs: this is "select
+        self-use", not "release control".
         """
         _LOGGER.debug("Modbus: self-consume on %s", _mask(device_sn))
         await self.set_dispatch_enabled(False)
