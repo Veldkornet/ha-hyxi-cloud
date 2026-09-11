@@ -548,7 +548,7 @@ async def test_ensure_mode_swallows_a_rejected_control_write(caplog):
 @pytest.mark.asyncio
 async def test_ensure_mode_permission_denied_gets_distinct_guidance(caplog):
     """A ControlError carrying HYXI's B003026 permission code (the API
-    itself refusing the write as unauthorized) is logged with guidance
+    itself rejecting the write as unauthorized) is logged with guidance
     naming that distinction, not the generic 'inverter may be under
     external control' text -- and switching between the two kinds of
     rejection logs at WARNING again each time, rather than being silently
@@ -579,7 +579,7 @@ async def test_ensure_mode_permission_denied_gets_distinct_guidance(caplog):
         controller._send_control = AsyncMock(side_effect=permission_denied)
         await controller._ensure_mode("idle")  # must not raise
 
-        assert "refusing the write as unauthorized" in caplog.text
+        assert "rejected the write as unauthorized" in caplog.text
         assert "under external control" not in caplog.text
         assert [r.levelno for r in caplog.records if "could not set" in r.message] == [
             logging.WARNING
@@ -601,10 +601,45 @@ async def test_ensure_mode_permission_denied_gets_distinct_guidance(caplog):
         await controller._ensure_mode("idle")
 
         assert "under external control" in caplog.text
-        assert "refusing the write as unauthorized" not in caplog.text
+        assert "rejected the write as unauthorized" not in caplog.text
         assert [r.levelno for r in caplog.records if "could not set" in r.message] == [
             logging.WARNING
         ]
+
+
+@pytest.mark.asyncio
+async def test_ensure_mode_permission_denied_requires_exact_code_boundary(caplog):
+    """A code that merely starts with the same digits as B003026 (e.g. a
+    hypothetical B0030261), or any other text that quotes the digits
+    without HYXI's own "(code=B003026)" formatting, must not be mistaken
+    for the permission-denied response code -- it should fall back to the
+    generic external-control guidance instead.
+    """
+    import logging
+
+    from custom_components.hyxi_cloud import protection as protection_mod
+
+    class _ControlError(Exception):
+        pass
+
+    controller = _build_controller(50, "H5K-HT")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    lookalike_code = _ControlError(
+        "request failed (code=B0030261): unrelated business rule"
+    )
+
+    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+        caplog.set_level(
+            logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
+        )
+
+        controller._send_control = AsyncMock(side_effect=lookalike_code)
+        await controller._ensure_mode("idle")  # must not raise
+
+        assert "under external control" in caplog.text
+        assert "rejected the write as unauthorized" not in caplog.text
 
 
 @pytest.mark.asyncio
@@ -637,7 +672,7 @@ async def test_ensure_mode_control_error_on_modbus_never_gets_cloud_guidance(cap
         await controller._ensure_mode("idle")  # must not raise
 
         assert "under external control" in caplog.text
-        assert "refusing the write as unauthorized" not in caplog.text
+        assert "rejected the write as unauthorized" not in caplog.text
 
 
 @pytest.mark.asyncio

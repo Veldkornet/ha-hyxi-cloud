@@ -30,6 +30,13 @@ MODE_SWITCH_COOLDOWN = 60
 # mode-control rejection here is the same kind of platform-wide block or
 # a per-plant permission level is unconfirmed either way.
 _PERMISSION_DENIED_CODE = "B003026"
+# hyxi_cloud_api's ControlError messages are formatted as
+# "... (code=<code>): <msg>" (see _execute_with_auth_retry/alter_alarm),
+# so anchoring on "code=<code>)" -- rather than a bare substring search
+# for _PERMISSION_DENIED_CODE -- avoids a false match on an unrelated
+# code that merely starts with the same digits (e.g. "B0030261") or a
+# request identifier/message that happens to quote the code.
+_PERMISSION_DENIED_MARKER = f"code={_PERMISSION_DENIED_CODE})"
 
 
 class HyxiBatteryProtectionController:
@@ -320,27 +327,23 @@ class HyxiBatteryProtectionController:
             # "under external control" to "permission denied", or back)
             # is WARNING again, since it's new, actionable information.
             self._last_mode_switch = time.monotonic()
-            # Cloud-only: HYXI's API code, matched the same way as the
-            # B004002 check in __init__.py's push-subscription handling.
-            # Modbus write failures never carry this HYXI response code.
+            # Cloud-only: HYXI's API code. Modbus write failures never
+            # carry this HYXI response code.
             if not is_modbus_entry(
                 self._coordinator.entry
-            ) and _PERMISSION_DENIED_CODE in str(err):
-                # HYXI's own API is refusing the write as unauthorized --
-                # not a token/credentials problem, and not something
-                # toggling our own Device Control & Protection setting can
-                # fix. Whether that's a per-plant permission level or a
-                # platform-side restriction on this control altogether
-                # (as with Micro ESS, see MICRO_ESS_CONTROL_SUPPORTED in
-                # const.py) isn't something we can tell apart from the
-                # response alone.
+            ) and _PERMISSION_DENIED_MARKER in str(err):
+                # HYXI's own API is refusing the write as unauthorized.
+                # Whether that's a per-plant permission level, a
+                # platform-side restriction on this control altogether (as
+                # with Micro ESS, see MICRO_ESS_CONTROL_SUPPORTED in
+                # const.py), or a credentials/authorization issue isn't
+                # something we can tell apart from the response alone --
+                # so the guidance doesn't guess and just points at HYXI
+                # support.
                 kind = "permission_denied"
                 guidance = (
-                    "HYXI's own API is refusing the write as unauthorized "
-                    "(not a credentials problem) -- this may be a per-plant "
-                    "permission level or a platform-side restriction on "
-                    "this control; worth raising with HYXI support to find "
-                    "out which."
+                    "HYXI's API rejected the write as unauthorized. "
+                    "Contact HYXI support for assistance."
                 )
             else:
                 kind = "external_control"
