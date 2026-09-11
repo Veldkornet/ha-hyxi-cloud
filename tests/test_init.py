@@ -839,6 +839,53 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("metric_key", "sn"),
+    [("batSn", "HALO_SN"), ("parentSn", "COLLECTOR_SN")],
+)
+async def test_async_setup_entry_self_sn_skips_link(
+    mock_hass, mock_entry, metric_key, sn
+):
+    """A device that reports batSn/parentSn == its own sn must not be linked
+    as its own via_device.
+
+    A mocked registry accepts that call without complaint, but the real HA
+    device registry raises HomeAssistantError and aborts config entry setup
+    -- see tests/integration/test_device_via_links.py for that path.
+    """
+    with (
+        patch(
+            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+        ) as mock_coordinator_class,
+        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
+        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+    ):
+        mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_preload_cache = AsyncMock()
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock()
+        mock_coordinator.engine = None  # No EM engine
+        mock_coordinator.data = {
+            sn: {"device_name": "Device", "metrics": {metric_key: sn}},
+        }
+
+        mock_registry = MagicMock()
+        mock_dr_get.return_value = mock_registry
+
+        result = await async_setup_entry(mock_hass, mock_entry)
+
+        assert result is True
+
+        # Pass 1: 1 call (sn). Pass 2 makes no call at all -- the reported
+        # serial equals sn, so there's nothing distinct to link.
+        mock_registry.async_get_or_create.assert_called_once()
+        calls = mock_registry.async_get_or_create.call_args_list
+        assert calls[0].kwargs["identifiers"] == {(DOMAIN, sn)}
+
+
+@pytest.mark.asyncio
 async def test_remove_legacy_select_entities(mock_hass):
     """Test removal of legacy select entities."""
     from custom_components.hyxi_cloud.__init__ import _remove_legacy_select_entities

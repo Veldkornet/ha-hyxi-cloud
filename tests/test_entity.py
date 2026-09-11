@@ -68,6 +68,15 @@ def test_via_device_id_is_none_without_a_hass():
     assert via_device_id(None, "entry_1", "PARENT_SN") is None
 
 
+def test_via_device_id_is_none_for_self_reference():
+    """A parent_sn matching the caller's own sn must resolve to None --
+    linking a device as its own via_device is rejected by HA's real device
+    registry (regardless of whether the parent would otherwise resolve).
+    """
+    hass = MagicMock()
+    assert via_device_id(hass, "entry_1", "SN_1", self_sn="SN_1") is None
+
+
 def test_hyxi_entity_initialization_with_complete_data():
     """Test entity initialization with full device data."""
     coordinator = MagicMock()

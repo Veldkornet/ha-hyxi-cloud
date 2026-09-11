@@ -245,7 +245,7 @@ class HyxiDeviceAlarmSensor(
         }
 
         if parent_sn:
-            parent_id = via_device_id(coordinator.hass, entry.entry_id, parent_sn)
+            parent_id = via_device_id(coordinator.hass, entry.entry_id, parent_sn, sn)
             if parent_id is not None:
                 self._attr_device_info["via_device_id"] = parent_id
         self._update_internal_state()

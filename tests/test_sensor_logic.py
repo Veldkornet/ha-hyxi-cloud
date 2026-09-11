@@ -1404,7 +1404,7 @@ def test_hyxi_sensor_advanced_mappings(base_sensor):
     ) as mock_via:
         assert sensor.device_info["via_device_id"] == "collector-device-id"
     mock_via.assert_called_once_with(
-        sensor.hass, sensor.coordinator.entry.entry_id, "COLLECTOR_123"
+        sensor.hass, sensor.coordinator.entry.entry_id, "COLLECTOR_123", "INV123"
     )
 
     # 1a. acP actually passes through unmodified -- via _handle_coordinator_update

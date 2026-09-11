@@ -348,7 +348,7 @@ def test_device_alarm_sensor_child_via_device_link(mock_coordinator, mock_entry)
         sensor = bs_mod.HyxiDeviceAlarmSensor(mock_coordinator, mock_entry, "SN123")
 
     resolve.assert_called_once_with(
-        mock_coordinator.hass, mock_entry.entry_id, "SN_PARENT"
+        mock_coordinator.hass, mock_entry.entry_id, "SN_PARENT", "SN123"
     )
     assert sensor._attr_device_info["via_device_id"] == "parent-dev-id"
 
