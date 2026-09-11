@@ -352,6 +352,56 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
             )
 
 
+def _link_battery_device(
+    device_registry: dr.DeviceRegistry,
+    entry: ConfigEntry,
+    devices: dict[str, dr.DeviceEntry],
+    sn: str,
+    bat_sn: str,
+) -> None:
+    """Register/link the battery that ``sn``'s metrics report.
+
+    Guard: a bat_sn that's already a first-class device was registered in
+    Pass 1 with full metadata -- only set the link, don't re-send the
+    sparse stub over it.
+    """
+    if bat_sn in devices:
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, bat_sn)},
+            via_device_id=devices[sn].id,
+        )
+    else:
+        devices[bat_sn] = device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, bat_sn)},
+            name=f"Battery {bat_sn}",
+            manufacturer=MANUFACTURER,
+            model="Energy Storage System",
+            serial_number=bat_sn,
+            via_device_id=devices[sn].id,
+        )
+
+
+def _link_parent_collector(
+    device_registry: dr.DeviceRegistry,
+    entry: ConfigEntry,
+    devices: dict[str, dr.DeviceEntry],
+    sn: str,
+    parent_sn: str,
+) -> None:
+    """Link ``sn`` under the parent collector it reports, if registered."""
+    parent = devices.get(parent_sn) or device_registry.async_get_device_by_identifier(
+        (DOMAIN, parent_sn), entry.entry_id
+    )
+    if parent is not None:
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, sn)},
+            via_device_id=parent.id,
+        )
+
+
 def _async_register_devices(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -382,42 +432,18 @@ def _async_register_devices(
     for sn, dev_data in coordinator.data.items():
         metrics = dev_data.get("metrics", {})
 
-        # 1. Battery hangs off its inverter.
-        #    Guard: a bat_sn that's already a first-class device was registered
-        #    in Pass 1 with full metadata -- only set the link, don't re-send
-        #    the sparse stub over it.
-        bat_sn = metrics.get("batSn")
-        if bat_sn:
-            if bat_sn in devices:
-                device_registry.async_get_or_create(
-                    config_entry_id=entry.entry_id,
-                    identifiers={(DOMAIN, bat_sn)},
-                    via_device_id=devices[sn].id,
-                )
-            else:
-                devices[bat_sn] = device_registry.async_get_or_create(
-                    config_entry_id=entry.entry_id,
-                    identifiers={(DOMAIN, bat_sn)},
-                    name=f"Battery {bat_sn}",
-                    manufacturer=MANUFACTURER,
-                    model="Energy Storage System",
-                    serial_number=bat_sn,
-                    via_device_id=devices[sn].id,
-                )
+        # 1. Battery hangs off its inverter. Guard: some builds (e.g. HYXI
+        #    Halo all-in-one units) report batSn == the device's own sn --
+        #    there's no separate battery device to hang off it there, and
+        #    linking it would make the device its own via_device, which HA
+        #    rejects.
+        if (bat_sn := metrics.get("batSn")) and bat_sn != sn:
+            _link_battery_device(device_registry, entry, devices, sn, bat_sn)
 
-        # 2. Device hangs off its parent collector.
-        if parent_sn := metrics.get("parentSn"):
-            parent = devices.get(
-                parent_sn
-            ) or device_registry.async_get_device_by_identifier(
-                (DOMAIN, parent_sn), entry.entry_id
-            )
-            if parent is not None:
-                device_registry.async_get_or_create(
-                    config_entry_id=entry.entry_id,
-                    identifiers={(DOMAIN, sn)},
-                    via_device_id=parent.id,
-                )
+        # 2. Device hangs off its parent collector. Guard: same
+        #    self-reference risk as batSn above.
+        if (parent_sn := metrics.get("parentSn")) and parent_sn != sn:
+            _link_parent_collector(device_registry, entry, devices, sn, parent_sn)
 
 
 def _async_setup_energy_manager(

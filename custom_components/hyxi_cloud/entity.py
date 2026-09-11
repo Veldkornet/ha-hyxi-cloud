@@ -18,7 +18,10 @@ if TYPE_CHECKING:
 
 
 def via_device_id(
-    hass: HomeAssistant | None, config_entry_id: str, parent_sn: str
+    hass: HomeAssistant | None,
+    config_entry_id: str,
+    parent_sn: str,
+    self_sn: str | None = None,
 ) -> str | None:
     """Resolve ``(DOMAIN, parent_sn)`` to a device registry id for ``DeviceInfo``.
 
@@ -28,8 +31,12 @@ def via_device_id(
     as "no via device", the same as an unresolvable link used to. Also returns
     ``None`` for a hass-less entity (a device_info read before the entity is
     on a platform), rather than raising.
+
+    ``self_sn``, when given, is the calling device's own sn: a parent_sn
+    that matches it would make the device its own via_device, which HA's
+    device registry rejects, so that's treated as unresolvable too.
     """
-    if hass is None:
+    if hass is None or parent_sn == self_sn:
         return None
     device = dr.async_get(hass).async_get_device_by_identifier(
         (DOMAIN, parent_sn), config_entry_id

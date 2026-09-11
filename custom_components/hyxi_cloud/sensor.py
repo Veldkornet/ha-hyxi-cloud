@@ -1584,8 +1584,16 @@ def _em_sensors(entry, coordinator) -> list[SensorEntity]:
 
 def _battery_device_info(
     hass: HomeAssistant, config_entry_id: str, inverter_sn: str, bat_sn: str
-) -> dict:
-    """DeviceInfo for the battery pack hung off an inverter."""
+) -> dict | None:
+    """DeviceInfo for the battery pack hung off an inverter.
+
+    Returns None when bat_sn matches the inverter's own sn -- some builds
+    (e.g. HYXI Halo all-in-one units) report batSn == sn, and there's no
+    separate battery device to hang off the inverter there; the caller
+    falls back to the inverter's own device info instead.
+    """
+    if bat_sn == inverter_sn:
+        return None
     info: dict = {
         "identifiers": {(DOMAIN, bat_sn)},
         "name": f"Battery {bat_sn}",
@@ -1845,9 +1853,11 @@ class HyxiSensor(HyxiBaseSensor):
         bat_sn = metrics.get("batSn")
 
         if self.entity_description.key in BATTERY_SENSORS and bat_sn:
-            return _battery_device_info(
+            battery_info = _battery_device_info(
                 self.hass, self.coordinator.entry.entry_id, self._sn, bat_sn
             )
+            if battery_info is not None:
+                return battery_info
 
         # Determine if we need to apply any state-mapping for specific types
         sw_version = dev_data.get("_sw_version_cached") or get_software_version(
@@ -1869,7 +1879,7 @@ class HyxiSensor(HyxiBaseSensor):
         parent_sn = metrics.get("parentSn")
         if parent_sn and (
             parent_id := via_device_id(
-                self.hass, self.coordinator.entry.entry_id, parent_sn
+                self.hass, self.coordinator.entry.entry_id, parent_sn, self._sn
             )
         ):
             info["via_device_id"] = parent_id
@@ -2387,9 +2397,11 @@ class HyxiBatteryEnergyPeriodSensor(
         """Attach to the battery device when its serial is known."""
         bat_sn = self._metrics.get("batSn")
         if bat_sn:
-            return _battery_device_info(
+            battery_info = _battery_device_info(
                 self.hass, self.coordinator.entry.entry_id, self._sn, bat_sn
             )
+            if battery_info is not None:
+                return battery_info
         dev_data = self.coordinator.data.get(self._sn) or {}
         return {
             "identifiers": {(DOMAIN, self._sn)},

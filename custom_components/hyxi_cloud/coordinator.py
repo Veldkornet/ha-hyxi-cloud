@@ -16,9 +16,11 @@ from hyxi_cloud_api import HyxiApiClient
 
 from .const import (
     CONF_BACK_DISCOVERY,
+    DEFAULT_MODBUS_INTERVAL,
     DOMAIN,
     get_raw_device_code,
     get_software_version,
+    is_modbus_entry,
     mask_sensitive_key_value,
     mask_sn,
     normalize_device_type,
@@ -85,10 +87,24 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize the coordinator with dynamic interval."""
         interval = entry.options.get("update_interval", 5)
 
+        # The same "update_interval" option means minutes for the rate-limited
+        # cloud API but seconds for local Modbus polling (HyxiModbusCoordinator
+        # overrides self.update_interval accordingly right after this runs) --
+        # log the value and default that will actually apply, not always the
+        # cloud ones.
+        if is_modbus_entry(entry):
+            logged_interval = entry.options.get(
+                "update_interval", DEFAULT_MODBUS_INTERVAL
+            )
+            logged_unit = "seconds"
+        else:
+            logged_interval = interval
+            logged_unit = "minutes"
         _LOGGER.debug(
-            "Initializing HYXI Coordinator for '%s' with polling interval: %s minutes",
+            "Initializing HYXI Coordinator for '%s' with polling interval: %s %s",
             entry.title,
-            interval,
+            logged_interval,
+            logged_unit,
         )
 
         super().__init__(
