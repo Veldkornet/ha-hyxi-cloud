@@ -20,6 +20,7 @@ from .const import (
     CONF_EM_INVERTER_SN,
     DOMAIN,
     MICRO_ESS_CONTROL_SUPPORTED,
+    defaults_to_grid_regulation,
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
@@ -157,8 +158,24 @@ def _build_em_switches(entry: ConfigEntry, coordinator) -> list[SwitchEntity]:
         )
     )
 
-    # Export limiting — single-phase only (uses peak shaving controlId 1021)
     em_dev_data = coordinator.data.get(em_sn, {})
+
+    # Active grid regulation — defaults on only where the inverter has no
+    # meter of its own to run native self-consumption from.
+    em_device_type = normalize_device_type(get_raw_device_code(em_dev_data))
+    entities.append(
+        EMToggleSwitch(
+            coordinator,
+            em_sn,
+            EMToggleDef(
+                "active_grid_regulation",
+                default_on=defaults_to_grid_regulation(entry, em_device_type),
+            ),
+            em_device=True,
+        )
+    )
+
+    # Export limiting — single-phase only (uses peak shaving controlId 1021)
     em_phase = detect_phase_type(em_dev_data)
     if em_phase == "single_phase":
         entities.append(
@@ -483,6 +500,7 @@ class EMToggleSwitch(SwitchEntity, RestoreEntity):
         "night_mode": "mdi:weather-night",
         "high_load_battery_assist": "mdi:flash-alert-outline",
         "export_limiting": "mdi:transmission-tower-off",
+        "active_grid_regulation": "mdi:tune-variant",
     }
 
     def __init__(

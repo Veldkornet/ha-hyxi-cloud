@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Exportação Máx para a Rede"
       },
+      "em_grid_setpoint": {
+        "name": "Setpoint da Rede"
+      },
+      "em_min_regulation_power": {
+        "name": "Potência Mín de Regulação"
+      },
       "em_p1_smoothing_period": {
         "name": "Período de Suavização P1"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Limitação de Exportação"
+      },
+      "em_active_grid_regulation": {
+        "name": "Regulação Ativa da Rede"
       },
       "dispatch": {
         "name": "Controle de despacho da bateria"

@@ -711,11 +711,12 @@ async def test_async_setup_entry_em_switches(
         await switch_mod.async_setup_entry(hass, mock_entry_fixture, async_add_entities)
 
     async_add_entities.assert_called()
-    # Expect 1 frequency control switch + 5 EM switches (grid_charge, enabled, night_mode, high_load, export_limiting)
+    # Expect 1 frequency control switch + 6 EM switches (grid_charge, enabled,
+    # night_mode, high_load, active_grid_regulation, export_limiting)
     entities = async_add_entities.call_args[0][0]
 
     em_switches = [e for e in entities if isinstance(e, switch_mod.EMToggleSwitch)]
-    assert len(em_switches) == 5
+    assert len(em_switches) == 6
 
     keys = {e._attr_translation_key for e in em_switches}
     assert keys == {
@@ -723,6 +724,7 @@ async def test_async_setup_entry_em_switches(
         "em_enabled",
         "em_night_mode",
         "em_high_load_battery_assist",
+        "em_active_grid_regulation",
         "em_export_limiting",
     }
 
@@ -785,3 +787,44 @@ async def test_em_toggle_switch_restore_state_none():
         await switch.async_added_to_hass()
 
     assert switch._attr_is_on is False
+
+
+def _em_switch_defaults(entry_data, dev_data):
+    """Build the EM switches for one device and map key -> initial state."""
+    entry = MagicMock()
+    entry.entry_id = "test_entry_id"
+    entry.data = entry_data
+    entry.options = {"em_enabled": True, "em_inverter_sn": "SN_EM"}
+
+    coordinator = MagicMock()
+    coordinator.data = {"SN_EM": dev_data}
+
+    switches = switch_mod._build_em_switches(entry, coordinator)
+    return {s._attr_translation_key: s._attr_is_on for s in switches}
+
+
+def test_active_grid_regulation_defaults_on_only_for_a_modbus_halo():
+    """A Modbus HALO has no meter for native self-consumption to follow, so
+    it ships with active regulation on; everything else keeps self_consume.
+    """
+    halo = {
+        "device_name": "HALO",
+        "model": "HYX-MS3000AC",
+        "device_type_code": "EMS",
+        "metrics": {},
+    }
+    hybrid = {
+        "device_name": "Hybrid",
+        "model": "H10K-HT",
+        "device_type_code": "1",
+        "metrics": {},
+    }
+    modbus = {"transport": "modbus"}
+    cloud: dict[str, str] = {}
+
+    assert _em_switch_defaults(modbus, halo)["em_active_grid_regulation"] is True
+    assert _em_switch_defaults(modbus, hybrid)["em_active_grid_regulation"] is False
+    assert _em_switch_defaults(cloud, halo)["em_active_grid_regulation"] is False
+
+    # The other EM toggles are unaffected by the transport.
+    assert _em_switch_defaults(modbus, halo)["em_enabled"] is False

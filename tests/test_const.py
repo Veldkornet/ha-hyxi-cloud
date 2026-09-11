@@ -1,9 +1,14 @@
 """Tests for the hyxi_cloud const module."""
 
+from types import SimpleNamespace
+
 from custom_components.hyxi_cloud.const import (
     BASE_URL_DEFAULT,
+    CONF_TRANSPORT,
     DEFAULT_REGION,
+    TRANSPORT_MODBUS,
     default_region_for_country,
+    defaults_to_grid_regulation,
     detect_phase_type,
     get_raw_device_code,
     get_software_version,
@@ -391,3 +396,24 @@ def test_default_region_for_country():
     assert default_region_for_country("ZA") == DEFAULT_REGION
     assert default_region_for_country(None) == DEFAULT_REGION
     assert default_region_for_country("") == DEFAULT_REGION
+
+
+def test_defaults_to_grid_regulation():
+    """Active grid regulation defaults on only for a Modbus HALO.
+
+    That is the one combination with no meter for the inverter's own
+    self-consumption mode to follow, so leaving it off would leave the
+    Energy Manager unable to do anything at all.
+    """
+    modbus = SimpleNamespace(data={CONF_TRANSPORT: TRANSPORT_MODBUS})
+    cloud = SimpleNamespace(data={})
+
+    assert defaults_to_grid_regulation(modbus, "micro_ess") is True
+
+    # A hybrid has its own CT wired, on either transport.
+    assert defaults_to_grid_regulation(modbus, "hybrid_inverter") is False
+    assert defaults_to_grid_regulation(modbus, "all_in_one") is False
+
+    # Over the cloud, even a HALO keeps its native self-consumption.
+    assert defaults_to_grid_regulation(cloud, "micro_ess") is False
+    assert defaults_to_grid_regulation(cloud, "hybrid_inverter") is False

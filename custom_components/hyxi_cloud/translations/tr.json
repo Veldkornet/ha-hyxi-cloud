@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Maks Şebeke İhracatı"
       },
+      "em_grid_setpoint": {
+        "name": "Şebeke Ayar Noktası"
+      },
+      "em_min_regulation_power": {
+        "name": "Min Regülasyon Gücü"
+      },
       "em_p1_smoothing_period": {
         "name": "P1 Yumuşatma Periyodu"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "İhracat Sınırlaması"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktif Şebeke Regülasyonu"
       },
       "dispatch": {
         "name": "Batarya sevk kontrolü"

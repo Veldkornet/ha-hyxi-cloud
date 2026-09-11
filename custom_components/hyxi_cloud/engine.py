@@ -157,9 +157,12 @@ class EnergyManagerEngine:
             return "disabled"
         if self._last_decision == "error":
             return "error"
-        cooldown = self._get_param("mode_switch_cooldown")
-        if (time.monotonic() - self._last_mode_switch) < cooldown:
-            return "cooldown"
+        # Regulation bypasses the mode-switch cooldown, so reporting it would
+        # describe a wait that is not happening.
+        if not self._active_regulation_enabled():
+            cooldown = self._get_param("mode_switch_cooldown")
+            if (time.monotonic() - self._last_mode_switch) < cooldown:
+                return "cooldown"
         if self._dry_run:
             return "dry_run"
         return "running"
@@ -493,10 +496,21 @@ class EnergyManagerEngine:
         """Check if dry-run mode is enabled in options."""
         return bool(self._coordinator.entry.options.get("em_dry_run", False))
 
-    async def _set_mode(self, mode: str, power_w: int | None = None) -> bool:
-        """Set operating mode via direct API call with cooldown enforcement."""
+    async def _set_mode(
+        self, mode: str, power_w: int | None = None, bypass_cooldown: bool = False
+    ) -> bool:
+        """Set operating mode via direct API call with cooldown enforcement.
+
+        ``bypass_cooldown`` skips the mode-switch cooldown, and is reserved
+        for transitions that cannot afford to wait it out -- stopping a
+        discharge that would otherwise keep pushing power into the grid for
+        the rest of the cooldown.
+        """
         cooldown = self._get_param("mode_switch_cooldown")
-        if (time.monotonic() - self._last_mode_switch) < cooldown:
+        if (
+            not bypass_cooldown
+            and (time.monotonic() - self._last_mode_switch) < cooldown
+        ):
             _LOGGER.debug("EM: Mode switch to %s blocked by cooldown", mode)
             return False
 
@@ -504,27 +518,7 @@ class EnergyManagerEngine:
             power_w = int(max(1, min(power_w or 100, 10000)))
 
         if self._dry_run:
-            action = f"{mode} @ {power_w}W" if power_w else mode
-            _LOGGER.info(
-                "EM DRY-RUN: Would set mode -> %s for %s", action, mask_sn(self._sn)
-            )
-            self._last_mode_switch = time.monotonic()
-            prev_mode = self._current_mode
-            self._current_mode = mode
-            self._last_action = f"[dry-run] {action}"
-            self._hass.bus.async_fire(
-                "hyxi_em_mode_changed",
-                {
-                    "sn": self._sn,
-                    "mode": mode,
-                    "power": power_w,
-                    "previous_mode": prev_mode,
-                    "decision": self._last_decision,
-                    "dry_run": True,
-                },
-            )
-            self._notify_sensors()
-            return True
+            return self._record_dry_run_mode(mode, power_w)
 
         client: HyxiApiClient = self._coordinator.client
         try:
@@ -550,16 +544,7 @@ class EnergyManagerEngine:
             _LOGGER.info("EM: Mode -> %s", action)
 
             # Fire HA event for automations / logging
-            self._hass.bus.async_fire(
-                "hyxi_em_mode_changed",
-                {
-                    "sn": self._sn,
-                    "mode": mode,
-                    "power": power_w,
-                    "previous_mode": prev_mode,
-                    "decision": self._last_decision,
-                },
-            )
+            self._fire_mode_changed(mode, power_w, prev_mode)
 
             # Notify protection controller about the mode change
             self._notify_protection(mode)
@@ -569,6 +554,40 @@ class EnergyManagerEngine:
         except HyxiApiClient.ControlError as err:
             _LOGGER.exception("EM: Failed to set mode %s: %s", mode, err)
             return False
+
+    def _fire_mode_changed(
+        self,
+        mode: str,
+        power_w: int | None,
+        prev_mode: str | None,
+        dry_run: bool = False,
+    ) -> None:
+        """Fire the HA event automations listen on for EM mode changes."""
+        data = {
+            "sn": self._sn,
+            "mode": mode,
+            "power": power_w,
+            "previous_mode": prev_mode,
+            "decision": self._last_decision,
+        }
+        if dry_run:
+            data["dry_run"] = True
+        self._hass.bus.async_fire("hyxi_em_mode_changed", data)
+
+    def _record_dry_run_mode(self, mode: str, power_w: int | None) -> bool:
+        """Apply a mode change's bookkeeping without sending it to the
+        inverter, for dry-run mode."""
+        action = f"{mode} @ {power_w}W" if power_w else mode
+        _LOGGER.info(
+            "EM DRY-RUN: Would set mode -> %s for %s", action, mask_sn(self._sn)
+        )
+        self._last_mode_switch = time.monotonic()
+        prev_mode = self._current_mode
+        self._current_mode = mode
+        self._last_action = f"[dry-run] {action}"
+        self._fire_mode_changed(mode, power_w, prev_mode, dry_run=True)
+        self._notify_sensors()
+        return True
 
     async def _adjust_power(self, direction: str, target_w: int) -> bool:
         """Adjust charge/discharge power and resend command to inverter."""
@@ -677,6 +696,110 @@ class EnergyManagerEngine:
         if entity_id:
             return self._get_ha_state_float(entity_id, 0)
         return 0
+
+    # ── Load following ──────────────────────────────────────────────────
+
+    def _active_regulation_enabled(self) -> bool:
+        """Whether to regulate power against P1 rather than use self_consume."""
+        unique_id = f"hyxi_{self._sn}_em_active_grid_regulation"
+        entity_id = self._find_entity_id("switch", unique_id)
+        return self._get_ha_state_bool(entity_id, False)
+
+    async def _enter_load_following(
+        self, p1: float, settled: tuple[str | None, ...] = ("self_consume",)
+    ) -> None:
+        """Cover house load from the battery.
+
+        Either hands the job to the inverter's own self-consumption mode, or
+        -- when active grid regulation is on -- drives charge and discharge
+        power from the P1 meter directly. An inverter with no meter wired to
+        it has nothing for self_consume to follow, so regulation is the only
+        way it can track house load at all.
+
+        ``settled`` lists the modes a branch already considers to be
+        following load, and so worth leaving alone rather than re-sending
+        self_consume over. It does not apply under regulation, which has to
+        retarget every tick as load moves.
+        """
+        if self._active_regulation_enabled():
+            await self._regulate_to_grid_setpoint(p1)
+            return
+
+        if self._current_mode in settled:
+            return
+        await self._set_mode("self_consume")
+
+    def _soc_allows(self, direction: str) -> bool:
+        """Whether SOC leaves room to move power in this direction."""
+        soc = self._get_soc()
+        if direction == "charge":
+            return soc < self._get_protection_param("soc_max", 90)
+        return soc > self._get_protection_param("soc_min", 20)
+
+    def _grid_charge_allowed(self) -> bool:
+        """Whether the user permits pulling from the grid to charge."""
+        unique_id = f"hyxi_{self._sn}_em_grid_charge_allowed"
+        return self._get_ha_state_bool(self._find_entity_id("switch", unique_id))
+
+    def _battery_power(self) -> float:
+        """Battery power as last commanded, signed: + discharging, - charging."""
+        if self._current_mode == "discharge":
+            return float(self._get_current_power_setting("discharge"))
+        if self._current_mode == "charge":
+            return -float(self._get_current_power_setting("charge"))
+        return 0.0
+
+    async def _regulate_to_grid_setpoint(self, p1: float) -> None:
+        """Steer battery power so the meter settles on the grid setpoint.
+
+        Works in terms of battery power as a signed quantity -- positive
+        discharging, negative charging -- and corrects it by the meter's
+        error rather than commanding the error outright. The meter already
+        nets off whatever the battery is doing, so an absolute command would
+        undo itself on the very next tick and oscillate; the correction has
+        to be an adjustment to the power already flowing, which is the same
+        incremental form _solar_tune_logic uses.
+
+        The result is clamped to the direction's power ceiling and rechecked
+        against the SOC bounds, so this is safe to call from any branch.
+        Anything below min_regulation_power settles on idle rather than
+        trickling, which is also what stops a discharge running on into
+        export once house load drops away.
+        """
+        setpoint = self._get_param("grid_setpoint")
+        current = self._battery_power()
+        target = current + (p1 - setpoint)
+
+        # Charging toward a positive setpoint means importing to fill the
+        # battery, which is exactly what the grid-charge toggle governs.
+        # Denied, the target can still absorb a surplus, just not create one.
+        if target < 0 < setpoint and not self._grid_charge_allowed():
+            target = min(0.0, current + p1)
+
+        direction = "discharge" if target > 0 else "charge"
+        ceiling = self._get_param(f"max_{direction}_power")
+        power = int(min(abs(target), ceiling))
+
+        if power < self._get_param("min_regulation_power") or not self._soc_allows(
+            direction
+        ):
+            self._set_decision("grid_regulation_idle")
+            if self._current_mode != "idle":
+                await self._set_mode("idle", bypass_cooldown=True)
+            return
+
+        self._set_decision(f"grid_regulation_{direction}")
+        if self._current_mode != direction:
+            # Regulation retargets every tick and swings between charge,
+            # discharge and idle as the meter moves. The mode-switch cooldown
+            # guards the coarse mode branches from flapping; applied here it
+            # would strand the battery mid-swing -- still charging into a
+            # load spike, or held off a resumed discharge -- for a minute at
+            # a time. Rate limiting comes from the regulator's own deadband
+            # and power_change_threshold instead.
+            await self._set_mode(direction, power, bypass_cooldown=True)
+        else:
+            await self._adjust_power(direction, power)
 
     # ── Night consumption estimation ────────────────────────────────────
 
@@ -807,14 +930,18 @@ class EnergyManagerEngine:
             if await self._check_night(s):
                 return
 
-            # PRIORITY 5: Solar optimization
-            if await self._check_solar(s):
+            # PRIORITY 5: Solar optimization. Regulation subsumes it -- both
+            # size the battery against the same meter, and letting the solar
+            # tuner take over once regulation has entered charge mode would
+            # leave two laws fighting over one signal.
+            if not self._active_regulation_enabled() and await self._check_solar(s):
                 return
 
             # ── DEFAULT: self_consume as safe fallback ─────────────────────
             self._set_decision("idle_default")
-            if self._current_mode in ("charge", "discharge"):
-                await self._set_mode("self_consume")
+            await self._enter_load_following(
+                s.p1, settled=("self_consume", "idle", None)
+            )
         finally:
             self._in_decision = False
 
@@ -836,9 +963,7 @@ class EnergyManagerEngine:
                 await self._adjust_power("charge", int(charge_target))
             return
 
-        grid_charge_uid = f"hyxi_{self._sn}_em_grid_charge_allowed"
-        grid_entity = self._find_entity_id("switch", grid_charge_uid)
-        if self._get_ha_state_bool(grid_entity):
+        if self._grid_charge_allowed():
             grid_charge_w = min(2000, int(s.max_charge))
             self._set_decision("grid_charge_emergency")
             if self._current_mode != "charge":
@@ -937,7 +1062,7 @@ class EnergyManagerEngine:
             and self._last_decision == "export_limit_charge"
         ):
             self._set_decision("export_limit_ok")
-            await self._set_mode("self_consume")
+            await self._enter_load_following(s.p1, settled=())
             return True
 
         return False
@@ -960,8 +1085,7 @@ class EnergyManagerEngine:
 
             if (s.soc - soc_cost) > s.night_soc_target:
                 self._set_decision("high_load_battery_assist")
-                if self._current_mode != "self_consume":
-                    await self._set_mode("self_consume")
+                await self._enter_load_following(s.p1)
             else:
                 self._set_decision("high_load_grid_only")
                 if self._current_mode != "idle":
@@ -981,8 +1105,7 @@ class EnergyManagerEngine:
         if not s.solar_producing and s.is_night:
             if s.soc > s.soc_min:
                 self._set_decision("night_self_consume")
-                if self._current_mode != "self_consume":
-                    await self._set_mode("self_consume")
+                await self._enter_load_following(s.p1)
             else:
                 self._set_decision("night_reserve_hold")
                 if self._current_mode != "idle":
@@ -1017,8 +1140,7 @@ class EnergyManagerEngine:
 
         if s.solar_producing and s.soc >= s.soc_max:
             self._set_decision("solar_battery_full")
-            if self._current_mode != "self_consume":
-                await self._set_mode("self_consume")
+            await self._enter_load_following(s.p1)
             return True
 
         return False
@@ -1067,8 +1189,7 @@ class EnergyManagerEngine:
         """Handle charge entry decision when not currently charging."""
         if s.solar < sc.min_solar_for_charge:
             self._set_decision("solar_self_consume")
-            if self._current_mode not in ("self_consume", "idle"):
-                await self._set_mode("self_consume")
+            await self._enter_load_following(s.p1, settled=("self_consume", "idle"))
             self._charge_entry_export_count = 0
 
         elif s.p1 < -sc.charge_entry_threshold:
@@ -1076,8 +1197,7 @@ class EnergyManagerEngine:
         else:
             self._charge_entry_export_count = 0
             self._set_decision("solar_self_consume")
-            if self._current_mode not in ("self_consume", "idle"):
-                await self._set_mode("self_consume")
+            await self._enter_load_following(s.p1, settled=("self_consume", "idle"))
 
     async def _handle_solar_export_threshold(
         self, s: DecisionState, sc: SolarConfig
@@ -1099,8 +1219,7 @@ class EnergyManagerEngine:
                 self._charge_entry_export_count = 0
         else:
             self._set_decision("solar_export_waiting")
-            if self._current_mode not in ("self_consume", "idle"):
-                await self._set_mode("self_consume")
+            await self._enter_load_following(s.p1, settled=("self_consume", "idle"))
 
     async def _solar_tune_logic(
         self,
@@ -1116,7 +1235,7 @@ class EnergyManagerEngine:
             self._last_charge_exit = time.monotonic()
             self._charge_entry_export_count = 0
             self._charge_bottomout_count = 0
-            await self._set_mode("self_consume")
+            await self._enter_load_following(s.p1, settled=())
 
         elif s.p1 > sc.charge_margin:
             await self._solar_reduce_charge(
@@ -1166,7 +1285,7 @@ class EnergyManagerEngine:
                 self._last_bottomout_exit = time.monotonic()
                 self._charge_entry_export_count = 0
                 self._charge_bottomout_count = 0
-                await self._set_mode("self_consume")
+                await self._enter_load_following(p1, settled=())
             else:
                 self._set_decision("solar_charge_reduced")
                 await self._adjust_power("charge", 100)

@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Max hálózati export"
       },
+      "em_grid_setpoint": {
+        "name": "Hálózati alapérték"
+      },
+      "em_min_regulation_power": {
+        "name": "Min szabályozási teljesítmény"
+      },
       "em_p1_smoothing_period": {
         "name": "P1 simítási időszak"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Export Korlátozás"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktív hálózati szabályozás"
       },
       "dispatch": {
         "name": "Akkumulátor-vezérlés"

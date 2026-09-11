@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "最大电网输出"
       },
+      "em_grid_setpoint": {
+        "name": "电网目标功率"
+      },
+      "em_min_regulation_power": {
+        "name": "最小调节功率"
+      },
       "em_p1_smoothing_period": {
         "name": "P1 平滑周期"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "输出限制"
+      },
+      "em_active_grid_regulation": {
+        "name": "电网主动调节"
       },
       "dispatch": {
         "name": "电池调度控制"

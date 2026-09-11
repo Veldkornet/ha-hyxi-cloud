@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Maks. verkkoon vienti"
       },
+      "em_grid_setpoint": {
+        "name": "Verkon asetusarvo"
+      },
+      "em_min_regulation_power": {
+        "name": "Min. säätöteho"
+      },
       "em_p1_smoothing_period": {
         "name": "P1-tasoitusjakso"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Vientirajoitus"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktiivinen verkkosäätö"
       },
       "dispatch": {
         "name": "Akun ohjaus"

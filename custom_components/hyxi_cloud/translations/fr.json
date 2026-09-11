@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Export réseau max"
       },
+      "em_grid_setpoint": {
+        "name": "Consigne réseau"
+      },
+      "em_min_regulation_power": {
+        "name": "Puissance de régulation min"
+      },
       "em_p1_smoothing_period": {
         "name": "Période de lissage P1"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Limitation d'Export"
+      },
+      "em_active_grid_regulation": {
+        "name": "Régulation réseau active"
       },
       "dispatch": {
         "name": "Pilotage de la batterie"

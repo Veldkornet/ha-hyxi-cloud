@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Max. export do sítě"
       },
+      "em_grid_setpoint": {
+        "name": "Cílový odběr ze sítě"
+      },
+      "em_min_regulation_power": {
+        "name": "Min. regulační výkon"
+      },
       "em_p1_smoothing_period": {
         "name": "Perioda vyhlazování P1"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Omezení exportu"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktivní regulace podle sítě"
       },
       "dispatch": {
         "name": "Řízení dispečinku baterie"

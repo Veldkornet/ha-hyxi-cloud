@@ -300,6 +300,8 @@ EM_NUMBER_DEFS: list[EMNumberDef] = [
     EMNumberDef("bottomout_cooldown", "s", 60, 900, 30, "mdi:timer-alert"),
     EMNumberDef("p1_smoothing_period", "s", 1, 300, 1, "mdi:chart-timeline-variant"),
     EMNumberDef("max_grid_export", "W", 0, 10000, 100, _ICON_TRANSMISSION_TOWER_EXPORT),
+    EMNumberDef("grid_setpoint", "W", -500, 2000, 10, "mdi:transmission-tower"),
+    EMNumberDef("min_regulation_power", "W", 50, 500, 10, "mdi:arrow-collapse-down"),
 ]
 
 

@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Max Grid Export"
       },
+      "em_grid_setpoint": {
+        "name": "Grid Setpoint"
+      },
+      "em_min_regulation_power": {
+        "name": "Min Regulation Power"
+      },
       "em_p1_smoothing_period": {
         "name": "P1 Smoothing Period"
       }
@@ -804,6 +810,9 @@
       },
       "em_export_limiting": {
         "name": "Export Limiting"
+      },
+      "em_active_grid_regulation": {
+        "name": "Active Grid Regulation"
       }
     },
     "button": {

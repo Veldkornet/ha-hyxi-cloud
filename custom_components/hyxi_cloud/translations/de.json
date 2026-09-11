@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Max. Netzeinspeisung"
       },
+      "em_grid_setpoint": {
+        "name": "Netz-Sollwert"
+      },
+      "em_min_regulation_power": {
+        "name": "Min. Regelleistung"
+      },
       "em_p1_smoothing_period": {
         "name": "P1-Glättungszeitraum"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Einspeisebegrenzung"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktive Netzregelung"
       },
       "dispatch": {
         "name": "Batterie-Dispatch-Steuerung"

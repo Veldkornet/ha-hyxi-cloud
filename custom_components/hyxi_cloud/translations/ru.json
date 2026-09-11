@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Макс. экспорт в сеть"
       },
+      "em_grid_setpoint": {
+        "name": "Уставка сети"
+      },
+      "em_min_regulation_power": {
+        "name": "Мин. мощность регулирования"
+      },
       "em_p1_smoothing_period": {
         "name": "Период сглаживания P1"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Ограничение экспорта"
+      },
+      "em_active_grid_regulation": {
+        "name": "Активное регулирование по сети"
       },
       "dispatch": {
         "name": "Управление диспетчеризацией батареи"

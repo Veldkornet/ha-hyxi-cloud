@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Maks Netuitvoer"
       },
+      "em_grid_setpoint": {
+        "name": "Netstelpunt"
+      },
+      "em_min_regulation_power": {
+        "name": "Min Reguleringskrag"
+      },
       "em_p1_smoothing_period": {
         "name": "P1-gladstrykperiode"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Uitvoerbeperking"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktiewe Netregulering"
       },
       "dispatch": {
         "name": "Batterybeheer"

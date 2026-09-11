@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Maks Netudledning"
       },
+      "em_grid_setpoint": {
+        "name": "Netsætpunkt"
+      },
+      "em_min_regulation_power": {
+        "name": "Min Reguleringseffekt"
+      },
       "em_p1_smoothing_period": {
         "name": "P1-udjævningsperiode"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Eksportbegrænsning"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktiv Netregulering"
       },
       "dispatch": {
         "name": "Batteristyring"

@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "最大系統輸出"
       },
+      "em_grid_setpoint": {
+        "name": "系統目標電力"
+      },
+      "em_min_regulation_power": {
+        "name": "最小制御電力"
+      },
       "em_p1_smoothing_period": {
         "name": "P1平滑化期間"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "逆潮流制限"
+      },
+      "em_active_grid_regulation": {
+        "name": "系統アクティブ制御"
       },
       "dispatch": {
         "name": "バッテリー制御"

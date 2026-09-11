@@ -2006,3 +2006,333 @@ async def test_engine_on_p1_change_edge_cases(hass: HomeAssistant):
         mock_decision.assert_called_once()
 
     engine.stop()
+
+
+def _set_em_params(hass, registry, numbers=None, switches=None):
+    """Register and set EM number/switch parameter entities for SN123."""
+    for domain, values in (("number", numbers or {}), ("switch", switches or {})):
+        for key, val in values.items():
+            reg_entry = registry.async_get_or_create(
+                domain,
+                DOMAIN,
+                f"hyxi_SN123_em_{key}",
+                suggested_object_id=f"hyxi_SN123_em_{key}",
+            )
+            hass.states.async_set(reg_entry.entity_id, val)
+
+
+def _make_regulating_halo(
+    hass,
+    *,
+    home_load="1200.0",
+    soc="50.0",
+    dry_run=True,
+    grid_charge="on",
+    **em_numbers,
+):
+    """A PV-less HALO with active grid regulation switched on."""
+    engine, coordinator, _entry = _make_engine(
+        hass,
+        options={"em_dry_run": dry_run},
+        metrics={"batSoc": soc, "home_load": home_load},
+        model="HYX-MS3000AC",
+        device_type_code="EMS",
+    )
+    # The HALO Modbus client emits no ppv key at all, so the solar branches
+    # stay inert and every tick falls through to load following.
+    del coordinator.data["SN123"]["metrics"]["ppv"]
+
+    registry = er.async_get(hass)
+    _set_soc_limits(hass, registry)
+    _set_em_params(
+        hass,
+        registry,
+        numbers={
+            "grid_setpoint": "50",
+            "min_regulation_power": "100",
+            "max_charge_power": "5000",
+            "max_discharge_power": "5000",
+            **em_numbers,
+        },
+        switches={
+            "active_grid_regulation": "on",
+            "grid_charge_allowed": grid_charge,
+        },
+    )
+    hass.states.async_set("sun.sun", "above_horizon", {"elevation": 10.0})
+    return engine, coordinator
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_discharges_a_meterless_halo(hass: HomeAssistant):
+    """With regulation on, a PV-less HALO covers house load from the meter.
+
+    The same tick that leaves it sitting on idle_default with regulation off
+    (test_engine_runs_a_pv_less_halo) has to produce a discharge sized to the
+    gap between the meter and the grid setpoint.
+    """
+    engine, _coordinator = _make_regulating_halo(hass)
+    hass.states.async_set("sensor.p1_meter", "1200")
+
+    await engine._make_decision()
+
+    assert engine.decision == "grid_regulation_discharge"
+    assert engine.current_mode == "discharge"
+    # 1200 W coming in, 50 W of it deliberately left on the grid.
+    assert engine.last_action == "[dry-run] discharge @ 1150W"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_converges_instead_of_oscillating(hass: HomeAssistant):
+    """Regression: the meter nets off the battery's own output.
+
+    Correcting the raw error as an absolute command undoes itself on the
+    next tick -- discharge 1150 W, watch the meter fall to the setpoint,
+    read that as "nothing to do", drop to idle, and see the whole load land
+    back on the grid. The target has to be an adjustment to the power
+    already flowing, so a settled meter holds the battery where it is.
+    """
+    engine, coordinator = _make_regulating_halo(hass, dry_run=False)
+    client = AsyncMock()
+    coordinator.client = client
+
+    # Tick 1: 1200 W of load, nothing from the battery yet.
+    hass.states.async_set("sensor.p1_meter", "1200")
+    await engine._make_decision()
+    client.set_mode_discharge.assert_called_once_with("SN123", 1150)
+    assert engine.current_mode == "discharge"
+
+    # Tick 2: the battery is now covering it, so the meter reads the
+    # setpoint. The battery must stay put rather than stand down.
+    engine._last_power_adjust = -999999.0
+    hass.states.async_set("sensor.p1_meter", "50")
+    await engine._make_decision()
+
+    assert engine.decision == "grid_regulation_discharge"
+    assert engine.current_mode == "discharge"
+    assert engine._last_sent_power["discharge"] == 1150
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_tracks_a_load_step(hass: HomeAssistant):
+    """A load increase is added to what is already flowing, not replaced."""
+    engine, coordinator = _make_regulating_halo(hass, dry_run=False)
+    client = AsyncMock()
+    coordinator.client = client
+    engine._current_mode = "discharge"
+    engine._last_sent_power["discharge"] = 1150
+    engine._last_power_adjust = -999999.0
+
+    # Load doubled to 2400 W: 1150 W still comes from the battery, so the
+    # meter shows the other 1250 W.
+    hass.states.async_set("sensor.p1_meter", "1250")
+    await engine._make_decision()
+
+    # 1150 already flowing + 1200 of error = 2350, holding 50 W on the grid.
+    client.set_mode_discharge.assert_called_once_with("SN123", 2350)
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_charges_from_surplus_without_ppv(hass: HomeAssistant):
+    """Export drives the charge side too, keyed off P1 rather than ppv.
+
+    A PV-less HALO never reports solar, so the solar branches can never size
+    a charge for it; the regulator is what lets it soak up a surplus its own
+    inverter cannot see.
+    """
+    engine, _coordinator = _make_regulating_halo(hass, home_load="200.0")
+    hass.states.async_set("sensor.p1_meter", "-800")
+
+    await engine._make_decision()
+
+    assert engine.decision == "grid_regulation_charge"
+    assert engine.current_mode == "charge"
+    assert engine.last_action == "[dry-run] charge @ 850W"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_will_not_import_to_charge_uninvited(
+    hass: HomeAssistant,
+):
+    """A positive setpoint asks to hold some import, which on the charge side
+    means buying energy -- exactly what the grid-charge toggle governs.
+
+    Denied, the regulator may still absorb a surplus; it just may not create
+    one by pulling from the grid to do it.
+    """
+    engine, _coordinator = _make_regulating_halo(
+        hass, home_load="200.0", grid_charge="off"
+    )
+    hass.states.async_set("sensor.p1_meter", "-800")
+
+    await engine._make_decision()
+
+    # 850 W would hold the meter at +50 W import; capped to the 800 W of
+    # surplus actually there, leaving the meter at zero.
+    assert engine.decision == "grid_regulation_charge"
+    assert engine.last_action == "[dry-run] charge @ 800W"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_idles_immediately_when_load_drops(
+    hass: HomeAssistant,
+):
+    """Coming off a discharge, the snap to idle must not wait out the
+    mode-switch cooldown -- every second of it would be exported."""
+    engine, _coordinator = _make_regulating_halo(hass, mode_switch_cooldown="60")
+    engine._current_mode = "discharge"
+    engine._last_sent_power["discharge"] = 2000
+    engine._last_mode_switch = time.monotonic()
+
+    # The cooldown really is closed: an ordinary mode switch is refused.
+    assert await engine._set_mode("charge", 500) is False
+
+    # Load vanished, so all 2000 W of the discharge is going to the grid.
+    hass.states.async_set("sensor.p1_meter", "-2000")
+    await engine._make_decision()
+
+    assert engine.decision == "grid_regulation_idle"
+    assert engine.current_mode == "idle"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_resumes_out_of_idle_without_waiting(
+    hass: HomeAssistant,
+):
+    """The bypass has to work in both directions.
+
+    Stamping the cooldown on the way into idle and then honouring it on the
+    way out would strand the battery for a minute with load on the meter --
+    turning the anti-export guard into a discharge outage.
+    """
+    engine, _coordinator = _make_regulating_halo(hass, mode_switch_cooldown="60")
+    engine._current_mode = "idle"
+    engine._last_mode_switch = time.monotonic()
+
+    hass.states.async_set("sensor.p1_meter", "1200")
+    await engine._make_decision()
+
+    assert engine.decision == "grid_regulation_discharge"
+    assert engine.current_mode == "discharge"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_flips_charge_to_discharge_without_waiting(
+    hass: HomeAssistant,
+):
+    """A load spike while charging must not leave the battery buying power
+    for a minute because the mode-switch cooldown is still running."""
+    engine, _coordinator = _make_regulating_halo(hass, mode_switch_cooldown="60")
+    engine._current_mode = "charge"
+    engine._last_sent_power["charge"] = 850
+    engine._last_mode_switch = time.monotonic()
+
+    # Charging 850 W into a 1500 W load: 2350 W crossing the meter.
+    hass.states.async_set("sensor.p1_meter", "2350")
+    await engine._make_decision()
+
+    assert engine.decision == "grid_regulation_discharge"
+    assert engine.current_mode == "discharge"
+    # -850 already flowing + 2300 of error = 1450 W of discharge.
+    assert engine.last_action == "[dry-run] discharge @ 1450W"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_holds_within_the_change_threshold(
+    hass: HomeAssistant,
+):
+    """Small meter movements must not put a write on the bus every tick."""
+    engine, coordinator = _make_regulating_halo(
+        hass, power_change_threshold="100", dry_run=False
+    )
+    client = AsyncMock()
+    coordinator.client = client
+    engine._current_mode = "discharge"
+    engine._last_sent_power["discharge"] = 1150
+    engine._last_power_adjust = -999999.0
+
+    # 1150 + (90 - 50) = 1190 W, only 40 W off what is already flowing.
+    hass.states.async_set("sensor.p1_meter", "90")
+    await engine._make_decision()
+    assert engine.decision == "grid_regulation_discharge"
+    client.set_mode_discharge.assert_not_called()
+
+    # 1150 + (250 - 50) = 1350 W clears the threshold and is sent.
+    hass.states.async_set("sensor.p1_meter", "250")
+    engine._last_power_adjust = -999999.0
+    await engine._make_decision()
+    client.set_mode_discharge.assert_called_once_with("SN123", 1350)
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_stays_inside_soc_bounds(hass: HomeAssistant):
+    """The regulator rechecks SOC itself, so it is safe to call from any
+    branch rather than only after _check_soc_limits has run."""
+    engine, coordinator = _make_regulating_halo(hass, soc="90.0")
+
+    # Full battery, surplus on the meter: absorbing it would overcharge.
+    await engine._regulate_to_grid_setpoint(-800)
+    assert engine.decision == "grid_regulation_idle"
+
+    # Empty battery, load on the meter: covering it would overdischarge.
+    coordinator.data["SN123"]["metrics"]["batSoc"] = "20.0"
+    engine._current_mode = None
+    await engine._regulate_to_grid_setpoint(1200)
+    assert engine.decision == "grid_regulation_idle"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_clamps_to_the_power_ceiling(hass: HomeAssistant):
+    """A deficit larger than the inverter can supply is capped, not sent raw."""
+    engine, _coordinator = _make_regulating_halo(hass, max_discharge_power="3000")
+    hass.states.async_set("sensor.p1_meter", "9000")
+
+    await engine._make_decision()
+
+    assert engine.last_action == "[dry-run] discharge @ 3000W"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_is_not_latched_out_by_the_solar_tuner(
+    hass: HomeAssistant,
+):
+    """Two laws must not both size the battery against one meter.
+
+    Once regulation has entered charge mode, _solar_charge_logic would route
+    every later tick to _solar_tune_logic, which knows nothing about the
+    toggle -- so the native margin law would quietly take over the loop.
+    """
+    engine, coordinator = _make_regulating_halo(hass, home_load="200.0")
+    # A HALO reports no ppv; give this one solar so _check_solar would bite.
+    coordinator.data["SN123"]["metrics"]["ppv"] = "2000.0"
+    engine._current_mode = "charge"
+    engine._last_sent_power["charge"] = 850
+    engine._last_power_adjust = -999999.0
+
+    hass.states.async_set("sensor.p1_meter", "-800")
+    await engine._make_decision()
+
+    assert engine.decision == "grid_regulation_charge"
+
+
+@pytest.mark.asyncio
+async def test_regulation_off_leaves_self_consume_untouched(hass: HomeAssistant):
+    """With the toggle off the engine still delegates to the inverter's own
+    self-consumption mode, on exactly the branch it always did."""
+    engine, coordinator, _entry = _make_engine(
+        hass,
+        options={"em_dry_run": True},
+        metrics={"batSoc": "50.0", "home_load": "1200.0"},
+    )
+    registry = er.async_get(hass)
+    _set_soc_limits(hass, registry)
+    _set_em_params(hass, registry, switches={"active_grid_regulation": "off"})
+    hass.states.async_set("sensor.p1_meter", "1200")
+    hass.states.async_set("sun.sun", "above_horizon", {"elevation": 10.0})
+    coordinator.data["SN123"]["metrics"]["ppv"] = "0.0"
+    engine._current_mode = "charge"
+
+    await engine._make_decision()
+
+    assert engine.decision == "idle_default"
+    assert engine.current_mode == "self_consume"

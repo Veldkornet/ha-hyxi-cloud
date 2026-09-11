@@ -6,6 +6,7 @@ import pytest
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import (
@@ -724,3 +725,98 @@ async def test_reconfigure_aborts_when_the_new_address_belongs_to_another_entry(
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+@pytest.mark.asyncio
+async def test_grid_regulation_entities_register_with_real_hass(hass: HomeAssistant):
+    """The regulation entities have to survive Home Assistant's own
+    validation, not just the engine's reads.
+
+    grid_setpoint is the only EM number with a negative minimum -- every
+    other one bottoms out at zero -- so its range is the part a hand-rolled
+    double would happily accept while the real NumberEntity rejects a set
+    below native_min_value.
+    """
+    from custom_components.hyxi_cloud.const import (
+        CONF_EM_ENABLED,
+        CONF_EM_INVERTER_SN,
+        CONF_EM_P1_ENTITY,
+    )
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ACCESS_KEY: "test_access_key", CONF_SECRET_KEY: "test_secret_key"},
+        options={
+            "update_interval": 30,
+            "enable_battery_control": True,
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+        unique_id="test_access_key",
+    )
+    entry.add_to_hass(hass)
+
+    mock_data = {
+        "SN123": {
+            "device_name": "Test Inverter",
+            "model": "HYX-H10K-HT",
+            "device_type": 1,
+            "metrics": {"batSoc": "50"},
+        }
+    }
+
+    with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client._refresh_token.return_value = True
+        mock_client.get_all_device_data.return_value = {
+            "data": mock_data,
+            "attempts": 1,
+        }
+        mock_client_class.return_value = mock_client
+
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert entry.state == ConfigEntryState.LOADED
+
+        setpoint_id = "number.energy_manager_grid_setpoint"
+        floor_id = "number.energy_manager_min_regulation_power"
+        toggle_id = "switch.energy_manager_active_grid_regulation"
+
+        assert hass.states.get(setpoint_id).state == "50.0"
+        assert hass.states.get(floor_id).state == "100.0"
+        # A cloud hybrid keeps its own self-consumption mode.
+        assert hass.states.get(toggle_id).state == "off"
+
+        # Exporting on purpose: the negative end of the range has to be
+        # reachable through the real number platform.
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": setpoint_id, "value": -200},
+            blocking=True,
+        )
+        await hass.async_block_till_done()
+        assert hass.states.get(setpoint_id).state == "-200.0"
+
+        # And the engine reads back what the platform stored.
+        engine = hass.data[DOMAIN][entry.entry_id].engine
+        assert engine._get_param("grid_setpoint") == -200.0  # pylint: disable=protected-access
+
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(
+                "number",
+                "set_value",
+                {"entity_id": setpoint_id, "value": -600},
+                blocking=True,
+            )
+
+        await hass.services.async_call(
+            "switch",
+            "turn_on",
+            {"entity_id": toggle_id},
+            blocking=True,
+        )
+        await hass.async_block_till_done()
+        assert hass.states.get(toggle_id).state == "on"
+        assert engine._active_regulation_enabled() is True  # pylint: disable=protected-access

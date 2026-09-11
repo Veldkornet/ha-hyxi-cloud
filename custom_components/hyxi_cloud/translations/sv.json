@@ -770,6 +770,12 @@
       "em_max_grid_export": {
         "name": "Max Nätexport"
       },
+      "em_grid_setpoint": {
+        "name": "Nätbörvärde"
+      },
+      "em_min_regulation_power": {
+        "name": "Min Regleringseffekt"
+      },
       "em_p1_smoothing_period": {
         "name": "P1-utjämningsperiod"
       }
@@ -801,6 +807,9 @@
       },
       "em_export_limiting": {
         "name": "Exportbegränsning"
+      },
+      "em_active_grid_regulation": {
+        "name": "Aktiv Nätreglering"
       },
       "dispatch": {
         "name": "Batteristyrning"

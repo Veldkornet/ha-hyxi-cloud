@@ -658,6 +658,28 @@ def is_control_capable_device_type(entry: Any, device_type: str) -> bool:
     return False
 
 
+def defaults_to_grid_regulation(entry: Any, device_type: str) -> bool:
+    """Whether the Energy Manager should actively regulate this device's
+    power against the P1 meter rather than delegating to the inverter's
+    own self-consumption mode.
+
+    Native self_consume only tracks house load when the inverter can see a
+    meter of its own. A HALO under local Modbus control cannot: it has no
+    meter input the integration can drive, and taking VPP dispatch overrides
+    whatever native metering it had. Left on self_consume it simply sits
+    idle, so active regulation is the only mode that works there.
+
+    Everything else -- the cloud transport, and hybrid inverters on either
+    transport -- is expected to have its own CT or meter wired, where the
+    inverter's own loop reacts faster than a 15-second decision tick can.
+    Those default to off.
+
+    This is only the initial value of the user-facing toggle; the switch is
+    a RestoreEntity, so a user's own choice survives restarts either way.
+    """
+    return device_type == "micro_ess" and is_modbus_entry(entry)
+
+
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
@@ -695,6 +717,8 @@ EM_DEFAULTS: dict[str, int | float] = {
     "bottomout_cooldown": 300,
     "p1_smoothing_period": 60,
     "max_grid_export": 0,
+    "grid_setpoint": 50,
+    "min_regulation_power": 100,
 }
 EM_LOOP_INTERVAL = 15  # seconds
 
