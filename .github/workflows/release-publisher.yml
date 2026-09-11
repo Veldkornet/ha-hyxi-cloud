@@ -90,7 +90,7 @@ jobs:
           # Pinned to match .pre-commit-config.yaml's uv-lock hook rev, so
           # this uv lock and pre-commit.ci's `uv-lock --check` never
           # disagree over resolver/schema behavior between uv releases.
-          version: "0.12.5"
+          version: "0.12.10"
           python-version: '3.14'
           enable-cache: true
           cache-python: true
