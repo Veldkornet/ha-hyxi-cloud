@@ -24,6 +24,20 @@ DEFAULT_SOC_MIN_HYSTERESIS = 2
 DEFAULT_SOC_MAX_HYSTERESIS = 2
 MODE_SWITCH_COOLDOWN = 60
 
+# HYXI's "the current application does not have permission to call this
+# API" response code. Confirmed as a platform-wide block for Micro ESS
+# Power On/Off (see MICRO_ESS_CONTROL_SUPPORTED in const.py); whether a
+# mode-control rejection here is the same kind of platform-wide block or
+# a per-plant permission level is unconfirmed either way.
+_PERMISSION_DENIED_CODE = "B003026"
+# hyxi_cloud_api's ControlError messages are formatted as
+# "... (code=<code>): <msg>" (see _execute_with_auth_retry/alter_alarm),
+# so anchoring on "code=<code>)" -- rather than a bare substring search
+# for _PERMISSION_DENIED_CODE -- avoids a false match on an unrelated
+# code that merely starts with the same digits (e.g. "B0030261") or a
+# request identifier/message that happens to quote the code.
+_PERMISSION_DENIED_MARKER = f"code={_PERMISSION_DENIED_CODE})"
+
 
 class HyxiBatteryProtectionController:
     """Protect battery SOC limits for supported HYXI manual controls."""
@@ -42,7 +56,7 @@ class HyxiBatteryProtectionController:
         self._low_soc_hold = False
         self._high_soc_hold = False
         self._last_mode_switch = -999999.0
-        self._control_error_logged = False
+        self._last_control_error_kind: str | None = None
         self._unsub_listener: CALLBACK_TYPE | None = None
         self._eval_task: asyncio.Task | None = None
 
@@ -305,25 +319,54 @@ class HyxiBatteryProtectionController:
         try:
             await self._send_control(mode)
         except HyxiApiClient.ControlError as err:
-            # The write was rejected -- most often because the inverter is
-            # already under external control (a VPP / energy-provider
-            # schedule). Throttle retries to the cooldown and don't let it
-            # escape as an unhandled task exception; log once at WARNING,
-            # then quietly at DEBUG while it keeps failing.
+            # The write was rejected. Throttle retries to the cooldown and
+            # don't let it escape as an unhandled task exception; log at
+            # WARNING the first time a given kind of rejection is seen,
+            # then quietly at DEBUG while that same kind keeps failing --
+            # but a *different* kind of rejection (e.g. switching from
+            # "under external control" to "permission denied", or back)
+            # is WARNING again, since it's new, actionable information.
             self._last_mode_switch = time.monotonic()
+            # Cloud-only: HYXI's API code. Modbus write failures never
+            # carry this HYXI response code.
+            if not is_modbus_entry(
+                self._coordinator.entry
+            ) and _PERMISSION_DENIED_MARKER in str(err):
+                # HYXI's own API is refusing the write as unauthorized.
+                # Whether that's a per-plant permission level, a
+                # platform-side restriction on this control altogether (as
+                # with Micro ESS, see MICRO_ESS_CONTROL_SUPPORTED in
+                # const.py), or a credentials/authorization issue isn't
+                # something we can tell apart from the response alone --
+                # so the guidance doesn't guess and just points at HYXI
+                # support.
+                kind = "permission_denied"
+                guidance = (
+                    "HYXI's API rejected the write as unauthorized. "
+                    "Contact HYXI support for assistance."
+                )
+            else:
+                kind = "external_control"
+                guidance = (
+                    "The inverter may be under external control; turn off "
+                    "Device Control & Protection for it if it is managed "
+                    "elsewhere."
+                )
             _LOGGER.log(
-                logging.DEBUG if self._control_error_logged else logging.WARNING,
+                logging.WARNING
+                if kind != self._last_control_error_kind
+                else logging.DEBUG,
                 "Protection %s: could not set mode '%s' to keep SOC within "
-                "limits: %s. The inverter may be under external control; turn "
-                "off Device Control & Protection for it if it is managed elsewhere.",
+                "limits: %s. %s",
                 mask_sn(self._sn),
                 mode,
                 err,
+                guidance,
             )
-            self._control_error_logged = True
+            self._last_control_error_kind = kind
             return
 
-        self._control_error_logged = False
+        self._last_control_error_kind = None
         self._last_sent_mode = mode
         self._last_mode_switch = time.monotonic()
         await self._coordinator.async_request_refresh()
