@@ -546,6 +546,101 @@ async def test_ensure_mode_swallows_a_rejected_control_write(caplog):
 
 
 @pytest.mark.asyncio
+async def test_ensure_mode_permission_denied_gets_distinct_guidance(caplog):
+    """A ControlError carrying HYXI's B003026 permission code (the API
+    itself refusing the write as unauthorized) is logged with guidance
+    naming that distinction, not the generic 'inverter may be under
+    external control' text -- and switching between the two kinds of
+    rejection logs at WARNING again each time, rather than being silently
+    downgraded to DEBUG because *some* rejection was already logged once.
+    """
+    import logging
+
+    from custom_components.hyxi_cloud import protection as protection_mod
+
+    class _ControlError(Exception):
+        pass
+
+    controller = _build_controller(50, "H5K-HT")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    permission_denied = _ControlError(
+        "request failed (code=B003026): The current application does "
+        "not have permission to call this API."
+    )
+    external_control = _ControlError("request failed (code=B003099): busy")
+
+    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+        caplog.set_level(
+            logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
+        )
+
+        controller._send_control = AsyncMock(side_effect=permission_denied)
+        await controller._ensure_mode("idle")  # must not raise
+
+        assert "refusing the write as unauthorized" in caplog.text
+        assert "under external control" not in caplog.text
+        assert [r.levelno for r in caplog.records if "could not set" in r.message] == [
+            logging.WARNING
+        ]
+
+        # Same kind again (cooldown bypassed): drops to DEBUG.
+        caplog.clear()
+        controller._last_mode_switch = -999999.0
+        await controller._ensure_mode("idle")
+        assert [r.levelno for r in caplog.records if "could not set" in r.message] == [
+            logging.DEBUG
+        ]
+
+        # A *different* kind of rejection is new, actionable information,
+        # so it's WARNING again rather than staying suppressed at DEBUG.
+        caplog.clear()
+        controller._send_control = AsyncMock(side_effect=external_control)
+        controller._last_mode_switch = -999999.0
+        await controller._ensure_mode("idle")
+
+        assert "under external control" in caplog.text
+        assert "refusing the write as unauthorized" not in caplog.text
+        assert [r.levelno for r in caplog.records if "could not set" in r.message] == [
+            logging.WARNING
+        ]
+
+
+@pytest.mark.asyncio
+async def test_ensure_mode_control_error_on_modbus_never_gets_cloud_guidance(caplog):
+    """The B003026 guidance is a HYXI Cloud API response code and has no
+    meaning for a local Modbus entry, so even an error text that happens
+    to contain that substring must still fall back to the generic
+    external-control guidance on a Modbus transport.
+    """
+    import logging
+
+    from custom_components.hyxi_cloud import protection as protection_mod
+
+    class _ControlError(Exception):
+        pass
+
+    controller = _build_controller(50, "H5K-HT", transport="modbus")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    controller._send_control = AsyncMock(
+        side_effect=_ControlError("Modbus write failed: code=B003026 coincidence")
+    )
+
+    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+        caplog.set_level(
+            logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
+        )
+
+        await controller._ensure_mode("idle")  # must not raise
+
+        assert "under external control" in caplog.text
+        assert "refusing the write as unauthorized" not in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_send_control_three_phase_exceptions():
     """Verify three-phase send_control raises ValueError for unsupported modes."""
     controller = _build_controller(50, "H5K-HT")
