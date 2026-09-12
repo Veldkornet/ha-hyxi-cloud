@@ -932,8 +932,11 @@ async def test_on_verify_result_inconclusive_is_a_no_op():
 
 def test_handle_device_rejected_first_time_warns_and_clears_mode(caplog):
     """Verify the first device-level rejection for the currently-tracked
-    trace_id logs at WARNING and clears _last_sent_mode/_last_sent_trace_id
-    so the next evaluation retries."""
+    trace_id logs at WARNING, clears _last_sent_mode/_last_sent_trace_id
+    so the next evaluation retries, and requests a coordinator refresh so
+    a stale HyxiLastSentModeSensor and a delayed retry (otherwise waiting
+    on the next unrelated Cloud poll, up to 5 minutes away) don't have to
+    wait on an unrelated poll to happen to occur."""
     import logging
 
     controller = _build_controller(50)
@@ -951,6 +954,7 @@ def test_handle_device_rejected_first_time_warns_and_clears_mode(caplog):
     assert [
         r.levelno for r in caplog.records if "rejected by the device" in r.message
     ] == [logging.WARNING]
+    controller._coordinator.async_request_refresh.assert_called_once()
 
 
 def test_handle_device_rejected_repeated_logs_debug():
@@ -993,6 +997,7 @@ def test_handle_device_rejected_leaves_superseded_send_alone(caplog):
     assert [r.levelno for r in caplog.records if "no action needed" in r.message] == [
         logging.DEBUG
     ]
+    controller._coordinator.async_request_refresh.assert_not_called()
 
 
 def test_note_manual_mode_invalidates_pending_verification():

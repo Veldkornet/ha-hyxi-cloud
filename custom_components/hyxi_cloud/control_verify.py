@@ -88,18 +88,21 @@ async def verify_control_result(  # pylint: disable=too-many-arguments,too-many-
         )
         try:
             response = await client.query_control_result(trace_id)
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
             # A transient lookup failure (rate limit, network blip) on one
             # attempt shouldn't give up on the whole poll budget -- log it
             # and let the loop retry, same as an "issuing" result would.
-            _LOGGER.debug(
-                "%s %s: could not confirm mode '%s' result (attempt %d/%d): %s",
+            # Logged with a traceback (not just the message) specifically
+            # because this catches broadly: a real bug here must still be
+            # diagnosable from the logs rather than silently blending in
+            # with an ordinary transient network failure.
+            _LOGGER.exception(
+                "%s %s: could not confirm mode '%s' result (attempt %d/%d)",
                 log_tag,
                 mask_sn(sn),
                 mode,
                 attempt + 1,
                 _VERIFY_MAX_ATTEMPTS,
-                err,
             )
             continue
 

@@ -475,6 +475,14 @@ class HyxiBatteryProtectionController:
         optimistic record so the next evaluation actually retries once
         the mode-switch cooldown allows it, instead of assuming the
         device is already in `mode`.
+
+        Also requests a coordinator refresh: protection only re-evaluates
+        on a coordinator update (see async_start's listener), and a Cloud
+        entry's default poll interval is 5 minutes -- without this,
+        HyxiLastSentModeSensor (a CoordinatorEntity reading
+        last_sent_mode) could keep showing the rejected mode, and the
+        actual retry could wait several minutes for an unrelated poll to
+        happen to occur, well past the cooldown that's meant to gate it.
         """
         if self._last_sent_trace_id != trace_id:
             _LOGGER.debug(
@@ -496,6 +504,9 @@ class HyxiBatteryProtectionController:
         self._last_device_rejected_logged = True
         self._last_sent_mode = None
         self._last_sent_trace_id = None
+        task = self._hass.async_create_task(self._coordinator.async_request_refresh())
+        self._verify_tasks.add(task)
+        task.add_done_callback(self._verify_tasks.discard)
 
     async def _send_control(self, mode: str) -> dict:
         """Send the requested control using the correct transport-specific API.

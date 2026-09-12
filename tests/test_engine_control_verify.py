@@ -335,6 +335,42 @@ def test_handle_peak_shaving_rejected_leaves_superseded_send_alone():
     assert engine._pv_curtail_trace_id == "NEWER_TRACE"
 
 
+@pytest.mark.asyncio
+async def test_release_pv_curtailment_does_not_force_state_when_hold_is_blocked():
+    """Regression test: _release_pv_curtailment must not declare
+    curtailment released when its own "hold" write never actually sent
+    anything (blocked by _set_peak_shaving's own cooldown, or a raised
+    ControlError) -- doing so previously left _pv_curtailed=False while
+    _pv_curtail_trace_id still pointed at the earlier "stop" send, so
+    that stop's later-confirmed rejection would flip _pv_curtailed back
+    on top of the wrong baseline."""
+    engine = _build_engine()
+    engine._pv_curtailed = True
+    engine._pv_curtail_trace_id = "STOP_TRACE"
+    engine._set_peak_shaving = AsyncMock(return_value=False)  # blocked/failed
+
+    await engine._release_pv_curtailment()
+
+    engine._set_peak_shaving.assert_awaited_once_with("hold")
+    assert engine._pv_curtailed is True  # unchanged: nothing was actually sent
+    assert engine._pv_curtail_trace_id == "STOP_TRACE"  # unchanged
+
+
+@pytest.mark.asyncio
+async def test_release_pv_curtailment_clears_state_via_successful_hold():
+    """Verify a successful "hold" send clears _pv_curtailed the normal
+    way -- through _set_peak_shaving's own state update, not a redundant
+    unconditional set in the caller."""
+    engine = _build_engine()
+    engine._pv_curtailed = True
+    engine._last_pv_curtail_toggle = -999999.0
+
+    await engine._release_pv_curtailment()
+
+    assert engine._pv_curtailed is False
+    assert engine._pv_curtail_trace_id == "TRACE123"
+
+
 def test_stop_cancels_pending_verify_tasks():
     """Verify stop() cancels any pending control-result verification tasks."""
     engine = _build_engine()

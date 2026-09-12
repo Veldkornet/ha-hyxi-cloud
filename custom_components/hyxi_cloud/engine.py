@@ -830,8 +830,15 @@ class EnergyManagerEngine:
         if not self._pv_curtailed:
             return
         _LOGGER.info("EM: Releasing PV curtailment — resuming production")
+        # _set_peak_shaving already sets _pv_curtailed (and its trace_id)
+        # on an actual send -- don't also set it here unconditionally.
+        # This call can return False without sending anything (blocked by
+        # its own cooldown, or a raised ControlError), and previously this
+        # still forced _pv_curtailed False in that case: state claimed
+        # "released" with nothing sent and _pv_curtail_trace_id still
+        # pointing at the earlier "stop", so that stop's rejection could
+        # later flip _pv_curtailed back on top of the wrong baseline.
         await self._set_peak_shaving("hold")
-        self._pv_curtailed = False
 
     def _get_current_power_setting(self, direction: str) -> float:
         """Get the last-sent power for the given direction.
