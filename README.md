@@ -71,8 +71,8 @@ The integration adapts to whatever HYXI Cloud reports (or what the Modbus probe 
 
 | Device | Cloud | Local Modbus |
 | :--- | :--- | :--- |
-| Hybrid Inverter / All-in-One | ✅ Tested | ⚠️ Reads only |
-| Micro ESS (HALO) | ✅ Tested | ⚠️ Untested |
+| Hybrid Inverter / All-in-One | ✅ Tested | ✅ Tested |
+| Micro ESS (HALO) | ✅ Tested | ✅ Tested |
 | Data Collector | ✅ Tested | — |
 | Micro Inverter | ✅ Tested | — |
 | String Inverter / Smart Meter | ⚠️ Untested | — |
