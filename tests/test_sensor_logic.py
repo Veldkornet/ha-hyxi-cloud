@@ -926,6 +926,67 @@ def test_observed_undocumented_enum_values_are_declared_not_hidden():
     ]
 
 
+def _invsts_sensor(device_type: str, *, modbus: bool) -> sensor_mod.HyxiSensor:
+    """Build an invSts HyxiSensor for a given device family/transport."""
+    coordinator = MagicMock()
+    coordinator.data = {"SN123": {"metrics": {"invSts": "1"}}}
+    coordinator.entry.data = (
+        {const_mod.CONF_TRANSPORT: const_mod.TRANSPORT_MODBUS} if modbus else {}
+    )
+    with patch.object(sensor_mod, "normalize_device_type", return_value=device_type):
+        return sensor_mod.HyxiSensor(
+            coordinator, "SN123", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+        )
+
+
+def test_invsts_gets_the_hybrid_translation_and_options_on_modbus():
+    """A hybrid-inverter Modbus entry sees register 22's own labels, not
+    Cloud's unrelated invsts scheme (docs/modbus-provenance.md rule 6).
+
+    Asserts on `_attr_translation_key` too, not just entity_description:
+    HA's real Entity.translation_key property checks _attr_translation_key
+    *first* and only falls back to entity_description.translation_key if
+    that attribute is absent, so it's the one that actually decides what
+    label HA looks up -- a stale `_attr_translation_key` would make the
+    whole override a no-op despite entity_description looking correct.
+    """
+    sensor = _invsts_sensor("hybrid_inverter", modbus=True)
+    assert sensor.entity_description.translation_key == "invsts_hybrid"
+    assert sensor._attr_translation_key == "invsts_hybrid"
+    assert sensor.entity_description.options == [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+    ]
+
+
+def test_invsts_gets_the_halo_translation_and_options_on_modbus():
+    """A HALO (all_in_one) Modbus entry sees register 4101's own labels."""
+    sensor = _invsts_sensor("all_in_one", modbus=True)
+    assert sensor.entity_description.translation_key == "invsts_halo"
+    assert sensor._attr_translation_key == "invsts_halo"
+    assert sensor.entity_description.options == ["1", "3", "6", "7"]
+
+
+def test_invsts_keeps_the_cloud_default_when_not_modbus():
+    """Cloud entries keep the shared SENSOR_TYPES description untouched,
+    even for a device_type that has a Modbus override (hybrid_inverter is
+    a valid Cloud device type too -- only the transport decides here)."""
+    sensor = _invsts_sensor("hybrid_inverter", modbus=False)
+    assert sensor.entity_description is sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+
+
+def test_invsts_keeps_the_cloud_default_for_an_unmapped_modbus_family():
+    """A Modbus device_type with no entry in _INVSTS_MODBUS_OVERRIDES (not
+    hybrid or HALO) falls back to the Cloud default rather than crashing."""
+    sensor = _invsts_sensor("micro_inverter", modbus=True)
+    assert sensor.entity_description is sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+
+
 @pytest.mark.asyncio
 async def test_base_sensor_added_to_hass_invalid_restoration():
     """Verify that HyxiBaseSensor handles TypeError and fallback to entity_id."""

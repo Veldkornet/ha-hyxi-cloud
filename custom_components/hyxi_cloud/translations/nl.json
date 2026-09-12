@@ -440,13 +440,30 @@
         "name": "Meter online"
       },
       "gridmode": {
-        "name": "Netmodus"
+        "name": "Netmodus",
+        "state": {
+          "0": "Off-grid",
+          "1": "Grid connection"
+        }
       },
       "runcommand": {
-        "name": "Startopdracht"
+        "name": "Startopdracht",
+        "state": {
+          "0": "Stop",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Bedrijfsmodus"
+        "name": "Bedrijfsmodus",
+        "state": {
+          "1": "Self-use",
+          "2": "Backup (green)",
+          "3": "Backup (grid)",
+          "4": "Feed-in",
+          "5": "Off-grid mode",
+          "6": "Battery SOC calibration mode",
+          "7": "Battery forced charging mode"
+        }
       },
       "insulationresistance": {
         "name": "Isolatieweerstand"
@@ -662,6 +679,27 @@
       },
       "home_load_today": {
         "name": "Huisverbruik vandaag"
+      },
+      "invsts_hybrid": {
+        "name": "Inverter Status",
+        "state": {
+          "0": "Initialization",
+          "1": "Standby",
+          "2": "DC-side startup",
+          "3": "Self-test startup",
+          "4": "Self-test wait",
+          "5": "Inverter operation",
+          "6": "Steady state operation"
+        }
+      },
+      "invsts_halo": {
+        "name": "Inverter Status",
+        "state": {
+          "1": "Standby",
+          "3": "Self-test",
+          "6": "Running",
+          "7": "Stopped"
+        }
       }
     },
     "number": {

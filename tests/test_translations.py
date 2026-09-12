@@ -51,6 +51,19 @@ def get_translation_keys():
                 for period in ("today", "week", "month", "year"):
                     keys["sensor"].add(f"bat_{direction}_{period}")
 
+        # invSts gets its translation_key swapped per Modbus device family
+        # (HyxiSensor's _INVSTS_MODBUS_OVERRIDES) rather than declared as a
+        # literal on a SensorEntityDescription -- see docs/modbus-provenance.md.
+        # Scoped to that dict's own literal, not the whole file, so an
+        # unrelated future "invsts_..." string elsewhere can't be mistaken
+        # for one of its translation keys.
+        overrides_match = re.search(
+            r"_INVSTS_MODBUS_OVERRIDES\s*:.*?=\s*\{(.*?)\n    \}", content, re.DOTALL
+        )
+        if overrides_match:
+            for k in re.findall(r'"(invsts_[a-z_]+)"', overrides_match.group(1)):
+                keys["sensor"].add(k)
+
     # 2. Binary Sensors from binary_sensor.py
     binary_path = (
         Path(__file__).parent / "../custom_components/hyxi_cloud/binary_sensor.py"

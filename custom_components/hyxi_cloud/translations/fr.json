@@ -440,13 +440,30 @@
         "name": "Compteur en ligne"
       },
       "gridmode": {
-        "name": "Mode réseau"
+        "name": "Mode réseau",
+        "state": {
+          "0": "Off-grid",
+          "1": "Grid connection"
+        }
       },
       "runcommand": {
-        "name": "Commande de marche"
+        "name": "Commande de marche",
+        "state": {
+          "0": "Stop",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Mode de fonctionnement"
+        "name": "Mode de fonctionnement",
+        "state": {
+          "1": "Self-use",
+          "2": "Backup (green)",
+          "3": "Backup (grid)",
+          "4": "Feed-in",
+          "5": "Off-grid mode",
+          "6": "Battery SOC calibration mode",
+          "7": "Battery forced charging mode"
+        }
       },
       "insulationresistance": {
         "name": "Résistance d'isolement"
@@ -662,6 +679,27 @@
       },
       "home_load_today": {
         "name": "Consommation maison aujourd'hui"
+      },
+      "invsts_hybrid": {
+        "name": "Inverter Status",
+        "state": {
+          "0": "Initialization",
+          "1": "Standby",
+          "2": "DC-side startup",
+          "3": "Self-test startup",
+          "4": "Self-test wait",
+          "5": "Inverter operation",
+          "6": "Steady state operation"
+        }
+      },
+      "invsts_halo": {
+        "name": "Inverter Status",
+        "state": {
+          "1": "Standby",
+          "3": "Self-test",
+          "6": "Running",
+          "7": "Stopped"
+        }
       }
     },
     "number": {

@@ -440,13 +440,30 @@
         "name": "Medidor online"
       },
       "gridmode": {
-        "name": "Modo de rede"
+        "name": "Modo de rede",
+        "state": {
+          "0": "Off-grid",
+          "1": "Grid connection"
+        }
       },
       "runcommand": {
-        "name": "Comando de execução"
+        "name": "Comando de execução",
+        "state": {
+          "0": "Stop",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Modo de funcionamento"
+        "name": "Modo de funcionamento",
+        "state": {
+          "1": "Self-use",
+          "2": "Backup (green)",
+          "3": "Backup (grid)",
+          "4": "Feed-in",
+          "5": "Off-grid mode",
+          "6": "Battery SOC calibration mode",
+          "7": "Battery forced charging mode"
+        }
       },
       "insulationresistance": {
         "name": "Resistência de isolamento"
@@ -662,6 +679,27 @@
       },
       "home_load_today": {
         "name": "Consumo doméstico hoje"
+      },
+      "invsts_hybrid": {
+        "name": "Inverter Status",
+        "state": {
+          "0": "Initialization",
+          "1": "Standby",
+          "2": "DC-side startup",
+          "3": "Self-test startup",
+          "4": "Self-test wait",
+          "5": "Inverter operation",
+          "6": "Steady state operation"
+        }
+      },
+      "invsts_halo": {
+        "name": "Inverter Status",
+        "state": {
+          "1": "Standby",
+          "3": "Self-test",
+          "6": "Running",
+          "7": "Stopped"
+        }
       }
     },
     "number": {
