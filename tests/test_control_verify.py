@@ -154,12 +154,35 @@ async def test_verify_control_result_malformed_data_treated_as_inconclusive():
 
 
 @pytest.mark.asyncio
-async def test_verify_control_result_stops_on_any_exception(caplog):
+async def test_verify_control_result_non_dict_response_treated_as_inconclusive():
+    """Verify a response that isn't even a dict (a malformed API reply,
+    or a test double that doesn't return one) doesn't crash -- it's
+    treated the same as "issuing" and polling continues, rather than
+    raising AttributeError from response.get(...) outside the try block."""
+    client = AsyncMock()
+    client.query_control_result = AsyncMock(return_value="not-a-dict")
+    results: list[str | None] = []
+
+    with patch.object(control_verify.asyncio, "sleep", AsyncMock()):
+        await control_verify.verify_control_result(
+            client, "SN123", "Test", "idle", "TRACE123", results.append
+        )
+
+    assert (
+        client.query_control_result.await_count == control_verify._VERIFY_MAX_ATTEMPTS
+    )
+    assert results == [None]
+
+
+@pytest.mark.asyncio
+async def test_verify_control_result_retries_after_exception(caplog):
     """Verify any exception from query_control_result itself (a transient
     auth/transport failure, or a raw error the client didn't wrap) is
-    logged and swallowed, reporting None, rather than escaping the
-    background task -- this is a secondary confirmation of a write HYXI's
-    cloud already reported accepting, not the write itself."""
+    logged and swallowed rather than escaping the background task, and
+    that the loop retries on the remaining attempt budget instead of
+    giving up on the first hiccup -- this is a secondary confirmation of
+    a write HYXI's cloud already reported accepting, not the write
+    itself, so one bad lookup shouldn't cost the whole confirmation."""
     import logging
 
     client = AsyncMock()
@@ -172,9 +195,34 @@ async def test_verify_control_result_stops_on_any_exception(caplog):
             client, "SN123", "Test", "idle", "TRACE123", results.append
         )  # must not raise
 
-    client.query_control_result.assert_awaited_once()
+    assert (
+        client.query_control_result.await_count == control_verify._VERIFY_MAX_ATTEMPTS
+    )
     assert results == [None]
     assert "could not confirm mode" in caplog.text
+    assert "still unconfirmed" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_verify_control_result_recovers_after_a_transient_exception():
+    """Verify a transient exception on an early attempt doesn't prevent a
+    later, successful attempt from being observed."""
+    client = AsyncMock()
+    client.query_control_result = AsyncMock(
+        side_effect=[
+            TimeoutError("timed out"),
+            {"success": True, "data": {"result": "3"}},
+        ]
+    )
+    results: list[str | None] = []
+
+    with patch.object(control_verify.asyncio, "sleep", AsyncMock()):
+        await control_verify.verify_control_result(
+            client, "SN123", "Test", "idle", "TRACE123", results.append
+        )
+
+    assert client.query_control_result.await_count == 2
+    assert results == [control_verify.RESULT_SUCCESS]
 
 
 def test_cancel_pending_cancels_only_undone_tasks():
@@ -200,7 +248,7 @@ async def test_cancel_pending_with_real_tasks():
     """Verify cancel_pending against real asyncio tasks (not just mocks)."""
     pending = asyncio.ensure_future(asyncio.sleep(10))
     finished = asyncio.ensure_future(asyncio.sleep(0))
-    await finished
+    await asyncio.gather(finished)
 
     tasks = {pending, finished}
     control_verify.cancel_pending(tasks)
@@ -211,4 +259,4 @@ async def test_cancel_pending_with_real_tasks():
     # Let the cancellation actually propagate so pytest-asyncio doesn't
     # warn about a task destroyed while pending at test teardown.
     with pytest.raises(asyncio.CancelledError):
-        await pending
+        await asyncio.gather(pending)

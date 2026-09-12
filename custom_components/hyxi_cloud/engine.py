@@ -134,7 +134,11 @@ class EnergyManagerEngine:
         # reflects, if any -- see _handle_device_rejected.
         self._current_mode_trace_id: str | None = None
         self._pv_curtail_trace_id: str | None = None
-        self._last_device_rejected_logged = False
+        # Independent WARNING/DEBUG throttle flags: mode and peak-shaving
+        # writes are two unrelated rejection streams, so a success in one
+        # must not silently reset the other's "already warned" state.
+        self._mode_rejected_logged = False
+        self._peak_shaving_rejected_logged = False
         self._verify_tasks: set[asyncio.Task] = set()
         self._last_sent_power: dict[str, int] = {"charge": 0, "discharge": 0}
 
@@ -524,9 +528,17 @@ class EnergyManagerEngine:
     def _on_verify_result(self, mode: str, trace_id: str, result: str | None) -> None:
         """Handle the outcome control_verify.verify_control_result reports
         for one Cloud write; it already logged the confirm/timeout cases,
-        so this only reacts to a confirmed outcome."""
+        so this only reacts to a confirmed outcome.
+
+        A success only clears the throttle when it's still for the
+        currently-tracked send -- a stale, superseded trace resolving
+        successfully after a newer one has already been rejected must not
+        reset the "already warned" flag for that newer, still-relevant
+        rejection.
+        """
         if result == control_verify.RESULT_SUCCESS:
-            self._last_device_rejected_logged = False
+            if self._current_mode_trace_id == trace_id:
+                self._mode_rejected_logged = False
         elif result == control_verify.RESULT_FAILURE:
             self._handle_device_rejected(mode, trace_id)
 
@@ -555,12 +567,12 @@ class EnergyManagerEngine:
             return
 
         _LOGGER.log(
-            logging.DEBUG if self._last_device_rejected_logged else logging.WARNING,
+            logging.DEBUG if self._mode_rejected_logged else logging.WARNING,
             "EM %s: mode '%s' was accepted by HYXI's cloud but rejected by the device.",
             mask_sn(self._sn),
             mode,
         )
-        self._last_device_rejected_logged = True
+        self._mode_rejected_logged = True
         self._current_mode = None
         self._current_mode_trace_id = None
 
@@ -774,9 +786,15 @@ class EnergyManagerEngine:
         self, option: str, trace_id: str, result: str | None
     ) -> None:
         """Handle the outcome control_verify.verify_control_result reports
-        for one peak-shaving Cloud write."""
+        for one peak-shaving Cloud write.
+
+        A success only clears the throttle when it's still for the
+        currently-tracked send -- see _on_verify_result's equivalent
+        guard for the mode stream.
+        """
         if result == control_verify.RESULT_SUCCESS:
-            self._last_device_rejected_logged = False
+            if self._pv_curtail_trace_id == trace_id:
+                self._peak_shaving_rejected_logged = False
         elif result == control_verify.RESULT_FAILURE:
             self._handle_peak_shaving_rejected(option, trace_id)
 
@@ -797,13 +815,13 @@ class EnergyManagerEngine:
             return
 
         _LOGGER.log(
-            logging.DEBUG if self._last_device_rejected_logged else logging.WARNING,
+            logging.DEBUG if self._peak_shaving_rejected_logged else logging.WARNING,
             "EM %s: peak shaving '%s' was accepted by HYXI's cloud but "
             "rejected by the device.",
             mask_sn(self._sn),
             option,
         )
-        self._last_device_rejected_logged = True
+        self._peak_shaving_rejected_logged = True
         self._pv_curtailed = not self._pv_curtailed
         self._pv_curtail_trace_id = None
 

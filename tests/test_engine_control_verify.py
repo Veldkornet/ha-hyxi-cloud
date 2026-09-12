@@ -99,7 +99,7 @@ async def test_maybe_verify_control_result_schedules_and_tracks_task():
 
     mock_create.assert_called_once()
     assert real_task in engine._verify_tasks
-    await real_task
+    await asyncio.gather(real_task)
     assert real_task not in engine._verify_tasks
 
 
@@ -237,7 +237,7 @@ async def test_maybe_verify_peak_shaving_result_schedules_and_tracks_task():
 
     mock_create.assert_called_once()
     assert real_task in engine._verify_tasks
-    await real_task
+    await asyncio.gather(real_task)
     assert real_task not in engine._verify_tasks
 
 
@@ -255,15 +255,58 @@ def test_on_peak_shaving_verify_result_failure_delegates():
 
 
 def test_on_peak_shaving_verify_result_success_clears_rejection_flag():
-    """Verify a confirmed success clears the rejection-log throttle flag."""
+    """Verify a confirmed success for the currently-tracked trace_id
+    clears the peak-shaving rejection-log throttle flag."""
     engine = _build_engine()
-    engine._last_device_rejected_logged = True
+    engine._peak_shaving_rejected_logged = True
+    engine._pv_curtail_trace_id = "TRACE123"
 
     engine._on_peak_shaving_verify_result(
         "stop", "TRACE123", control_verify.RESULT_SUCCESS
     )
 
-    assert engine._last_device_rejected_logged is False
+    assert engine._peak_shaving_rejected_logged is False
+
+
+def test_on_peak_shaving_verify_result_stale_success_does_not_clear_flag():
+    """Verify a confirmed success for a superseded trace_id doesn't clear
+    the throttle flag for a still-current rejection."""
+    engine = _build_engine()
+    engine._peak_shaving_rejected_logged = True
+    engine._pv_curtail_trace_id = "NEWER_TRACE"
+
+    engine._on_peak_shaving_verify_result(
+        "stop", "OLD_TRACE", control_verify.RESULT_SUCCESS
+    )
+
+    assert engine._peak_shaving_rejected_logged is True
+
+
+def test_on_verify_result_success_clears_mode_rejection_flag():
+    """Verify a confirmed success for the currently-tracked trace_id
+    clears the mode rejection-log throttle flag, independently of the
+    peak-shaving stream's own flag."""
+    engine = _build_engine()
+    engine._mode_rejected_logged = True
+    engine._peak_shaving_rejected_logged = True
+    engine._current_mode_trace_id = "TRACE123"
+
+    engine._on_verify_result("idle", "TRACE123", control_verify.RESULT_SUCCESS)
+
+    assert engine._mode_rejected_logged is False
+    assert engine._peak_shaving_rejected_logged is True  # untouched
+
+
+def test_on_verify_result_stale_success_does_not_clear_mode_flag():
+    """Verify a confirmed success for a superseded trace_id doesn't clear
+    the mode-rejection throttle flag for a still-current rejection."""
+    engine = _build_engine()
+    engine._mode_rejected_logged = True
+    engine._current_mode_trace_id = "NEWER_TRACE"
+
+    engine._on_verify_result("idle", "OLD_TRACE", control_verify.RESULT_SUCCESS)
+
+    assert engine._mode_rejected_logged is True
 
 
 def test_handle_peak_shaving_rejected_reverts_when_still_current():

@@ -350,20 +350,25 @@ def test_maybe_verify_control_result_skips_when_no_trace_id():
     hass.async_create_task.assert_not_called()
 
 
-def test_on_verify_result_failure_warns_and_notifies_protection():
+def test_on_verify_result_failure_delegates_without_its_own_duplicate_log(caplog):
+    """When a protection controller exists, it owns logging the rejection
+    (via note_manual_mode_rejected -> _handle_device_rejected) -- this
+    must not also log its own warning for the same event."""
     coordinator = MagicMock()
     controller = MagicMock()
     coordinator.protection_controllers = {"SN123": controller}
 
-    control_mod._on_verify_result(
-        coordinator,
-        "SN123",
-        "idle",
-        "TRACE123",
-        control_mod.control_verify.RESULT_FAILURE,
-    )
+    with caplog.at_level("WARNING", logger="custom_components.hyxi_cloud.control"):
+        control_mod._on_verify_result(
+            coordinator,
+            "SN123",
+            "idle",
+            "TRACE123",
+            control_mod.control_verify.RESULT_FAILURE,
+        )
 
     controller.note_manual_mode_rejected.assert_called_once_with("idle", "TRACE123")
+    assert caplog.text == ""
 
 
 def test_on_verify_result_success_and_none_are_no_ops():
@@ -383,14 +388,19 @@ def test_on_verify_result_success_and_none_are_no_ops():
     controller.note_manual_mode_rejected.assert_not_called()
 
 
-def test_on_verify_result_failure_with_no_controller_does_not_raise():
+def test_on_verify_result_failure_with_no_controller_logs_its_own_warning(caplog):
+    """With no protection controller to own the log, this is the only
+    place the rejection would ever be recorded, so it logs it directly."""
     coordinator = MagicMock()
     coordinator.protection_controllers = {}
 
-    control_mod._on_verify_result(
-        coordinator,
-        "SN123",
-        "idle",
-        "TRACE123",
-        control_mod.control_verify.RESULT_FAILURE,
-    )
+    with caplog.at_level("WARNING", logger="custom_components.hyxi_cloud.control"):
+        control_mod._on_verify_result(
+            coordinator,
+            "SN123",
+            "idle",
+            "TRACE123",
+            control_mod.control_verify.RESULT_FAILURE,
+        )
+
+    assert "rejected by the device" in caplog.text

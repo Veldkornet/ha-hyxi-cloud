@@ -108,16 +108,24 @@ def _on_verify_result(
     one manually-issued Cloud write; it already logged the confirm/
     timeout cases, so this only reacts to a confirmed device-level
     rejection.
+
+    When a protection controller exists, note_manual_mode_rejected's own
+    _handle_device_rejected already logs the rejection (throttled), so
+    this doesn't log its own -- doing both would print two WARNING lines
+    for the same event. The controller is only absent in practice for an
+    sn protection wasn't set up for at all, which is when this function's
+    own log is the only one that will ever fire.
     """
     if result != control_verify.RESULT_FAILURE:
+        return
+    if controller := _get_protection_controller(coordinator, sn):
+        controller.note_manual_mode_rejected(mode, trace_id)
         return
     _LOGGER.warning(
         "Mode '%s' for %s was accepted by HYXI's cloud but rejected by the device.",
         mode,
         mask_sn(sn),
     )
-    if controller := _get_protection_controller(coordinator, sn):
-        controller.note_manual_mode_rejected(mode, trace_id)
 
 
 def _block_manual_discharge_if_needed(coordinator, sn: str) -> None:

@@ -446,9 +446,16 @@ class HyxiBatteryProtectionController:
         """Handle the outcome control_verify.verify_control_result reports
         for one Cloud write; it already logged the confirm/timeout cases,
         so this only reacts to what protection's own state needs to know.
+
+        A success only clears the throttle when it's still for the
+        currently-tracked send -- a stale, superseded trace resolving
+        successfully after a newer one has already been rejected must not
+        reset the "already warned" flag for that newer, still-relevant
+        rejection.
         """
         if result == control_verify.RESULT_SUCCESS:
-            self._last_device_rejected_logged = False
+            if self._last_sent_trace_id == trace_id:
+                self._last_device_rejected_logged = False
         elif result == control_verify.RESULT_FAILURE:
             self._handle_device_rejected(mode, trace_id)
         # None (a lookup failure, or still "issuing"/unrecognized past the

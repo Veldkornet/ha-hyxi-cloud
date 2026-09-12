@@ -871,20 +871,36 @@ async def test_maybe_verify_control_result_schedules_and_tracks_task():
 
     mock_create.assert_called_once()
     assert real_task in controller._verify_tasks
-    await real_task  # let the done callback fire
+    await asyncio.gather(real_task)  # let the done callback fire
     assert real_task not in controller._verify_tasks
 
 
 @pytest.mark.asyncio
 async def test_on_verify_result_success_clears_rejection_flag():
-    """Verify a confirmed "3" (success) outcome clears any prior
-    device-rejection flag, so a later, different failure warns again."""
+    """Verify a confirmed "3" (success) outcome for the currently-tracked
+    trace_id clears any prior device-rejection flag, so a later,
+    different failure warns again."""
     controller = _build_controller(50)
     controller._last_device_rejected_logged = True
+    controller._last_sent_trace_id = "TRACE123"
 
     controller._on_verify_result("idle", "TRACE123", control_verify.RESULT_SUCCESS)
 
     assert controller._last_device_rejected_logged is False
+
+
+async def test_on_verify_result_stale_success_does_not_clear_rejection_flag():
+    """Verify a confirmed success for a trace_id that's no longer current
+    (an older, superseded send resolving late) doesn't clear the flag --
+    a newer send may still be genuinely rejected, and this must not reset
+    that warning back to needing to fire again at WARNING."""
+    controller = _build_controller(50)
+    controller._last_device_rejected_logged = True
+    controller._last_sent_trace_id = "NEWER_TRACE"  # a newer send is current
+
+    controller._on_verify_result("idle", "OLD_TRACE", control_verify.RESULT_SUCCESS)
+
+    assert controller._last_device_rejected_logged is True
 
 
 @pytest.mark.asyncio
