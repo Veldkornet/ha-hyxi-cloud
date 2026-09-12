@@ -1,10 +1,12 @@
 """Tests for minimal battery protection logic."""
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from custom_components.hyxi_cloud import control_verify
 from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 
 
@@ -26,6 +28,7 @@ class FakeCoordinator:
             set_mode_discharge=AsyncMock(),
             set_mode_self_consume=AsyncMock(),
             set_peak_shaving=AsyncMock(),
+            query_control_result=AsyncMock(),
         )
         self.async_request_refresh = AsyncMock()
         # A real coordinator always has .entry; default matches every
@@ -38,12 +41,25 @@ class FakeCoordinator:
         return lambda: None
 
 
+def _fake_async_create_task(coro):
+    """Stand in for HomeAssistant.async_create_task.
+
+    Existing tests assert on synchronous side effects and don't need the
+    coroutine to actually run, so this doesn't schedule it -- but it does
+    close it, so a background task the code under test fires (e.g.
+    protection's control-result verification) doesn't leave a "coroutine
+    was never awaited" RuntimeWarning behind.
+    """
+    coro.close()
+    return MagicMock()
+
+
 def _build_controller(
     soc: float, model: str = "H5K-HT", transport: str = "cloud"
 ) -> HyxiBatteryProtectionController:
     """Create a controller with parameter lookups stubbed."""
     hass = MagicMock()
-    hass.async_create_task = MagicMock()
+    hass.async_create_task = MagicMock(side_effect=_fake_async_create_task)
     controller = HyxiBatteryProtectionController(
         hass, FakeCoordinator(soc, model, transport), "SN123"
     )
@@ -296,7 +312,8 @@ async def test_async_start_already_running():
 
 @pytest.mark.asyncio
 async def test_async_stop_cancels_evaluation_task():
-    """Verify stop() unsubscribes and cancels the running evaluation task."""
+    """Verify stop() unsubscribes and cancels the running evaluation task,
+    and cancels any pending control-result verification tasks too."""
     controller = _build_controller(50)
     mock_unsub = MagicMock()
     controller._unsub_listener = mock_unsub
@@ -305,12 +322,21 @@ async def test_async_stop_cancels_evaluation_task():
     mock_task.done.return_value = False
     controller._eval_task = mock_task
 
+    pending_verify = MagicMock()
+    pending_verify.done.return_value = False
+    finished_verify = MagicMock()
+    finished_verify.done.return_value = True
+    controller._verify_tasks = {pending_verify, finished_verify}
+
     controller.stop()
 
     mock_unsub.assert_called_once()
     assert controller._unsub_listener is None
     mock_task.cancel.assert_called_once()
     assert controller._eval_task is None
+    pending_verify.cancel.assert_called_once()
+    finished_verify.cancel.assert_not_called()
+    assert controller._verify_tasks == set()
 
 
 def test_note_manual_mode():
@@ -781,3 +807,285 @@ def test_metric_float_exceptions():
     assert HyxiBatteryProtectionController._metric_float(None) is None
     assert HyxiBatteryProtectionController._metric_float("invalid") is None
     assert HyxiBatteryProtectionController._metric_float([]) is None
+
+
+# --- Control-result verification ---
+#
+# A Cloud set_device_control write is fire-and-forget: HYXI's response
+# only confirms the cloud accepted it, not that the device applied it.
+# The actual polling (control_verify.verify_control_result) and traceId
+# extraction (control_verify.extract_trace_id) are shared with
+# control.py/engine.py and tested directly in test_control_verify.py.
+# These tests cover protection's own wiring on top of that: scheduling,
+# interpreting the outcome (_on_verify_result), and correcting state on a
+# confirmed rejection (_handle_device_rejected).
+
+_CONTROL_RESPONSE = {
+    "success": True,
+    "data": [{"traceId": "TRACE123", "deviceSn": "SN123"}],
+}
+
+
+@pytest.mark.asyncio
+async def test_maybe_verify_control_result_skips_modbus():
+    """Verify Modbus writes never schedule a verification task -- there's
+    no traceId/async-confirmation concept for a local register write."""
+    controller = _build_controller(50, transport="modbus")
+
+    with patch.object(controller._hass, "async_create_task") as mock_create:
+        controller._maybe_verify_control_result("idle", "TRACE123")
+        mock_create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_maybe_verify_control_result_skips_when_no_trace_id():
+    """Verify a None trace_id (no traceId extracted, or a Modbus write)
+    schedules nothing."""
+    controller = _build_controller(50)
+
+    with patch.object(controller._hass, "async_create_task") as mock_create:
+        controller._maybe_verify_control_result("idle", None)
+        mock_create.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_maybe_verify_control_result_schedules_and_tracks_task():
+    """Verify a real traceId schedules _verify_control_result as a tracked
+    background task that discards itself once done."""
+    controller = _build_controller(50)
+
+    real_task = asyncio.ensure_future(asyncio.sleep(0))
+
+    def _create_task(coro):
+        # The real verify_control_result(...) coroutine built by
+        # _maybe_verify_control_result is discarded in favor of
+        # real_task below -- close it so it doesn't leave a "coroutine
+        # was never awaited" warning behind.
+        coro.close()
+        return real_task
+
+    with patch.object(
+        controller._hass, "async_create_task", side_effect=_create_task
+    ) as mock_create:
+        controller._maybe_verify_control_result("idle", "TRACE123")
+
+    mock_create.assert_called_once()
+    assert real_task in controller._verify_tasks
+    await real_task  # let the done callback fire
+    assert real_task not in controller._verify_tasks
+
+
+@pytest.mark.asyncio
+async def test_on_verify_result_success_clears_rejection_flag():
+    """Verify a confirmed "3" (success) outcome clears any prior
+    device-rejection flag, so a later, different failure warns again."""
+    controller = _build_controller(50)
+    controller._last_device_rejected_logged = True
+
+    controller._on_verify_result("idle", "TRACE123", control_verify.RESULT_SUCCESS)
+
+    assert controller._last_device_rejected_logged is False
+
+
+@pytest.mark.asyncio
+async def test_on_verify_result_failure_delegates_to_handle_device_rejected():
+    """Verify a confirmed "6" (failure) outcome is handed to
+    _handle_device_rejected with the same mode/trace_id."""
+    controller = _build_controller(50)
+    controller._handle_device_rejected = MagicMock()
+
+    controller._on_verify_result("idle", "TRACE123", control_verify.RESULT_FAILURE)
+
+    controller._handle_device_rejected.assert_called_once_with("idle", "TRACE123")
+
+
+@pytest.mark.asyncio
+async def test_on_verify_result_inconclusive_is_a_no_op():
+    """Verify a None outcome (lookup failure, or still-issuing past the
+    attempt budget -- already logged by verify_control_result itself)
+    doesn't touch any state."""
+    controller = _build_controller(50)
+    controller._handle_device_rejected = MagicMock()
+    controller._last_device_rejected_logged = True
+
+    controller._on_verify_result("idle", "TRACE123", None)
+
+    controller._handle_device_rejected.assert_not_called()
+    assert controller._last_device_rejected_logged is True
+
+
+def test_handle_device_rejected_first_time_warns_and_clears_mode(caplog):
+    """Verify the first device-level rejection for the currently-tracked
+    trace_id logs at WARNING and clears _last_sent_mode/_last_sent_trace_id
+    so the next evaluation retries."""
+    import logging
+
+    controller = _build_controller(50)
+    controller._last_sent_mode = "idle"
+    controller._last_sent_trace_id = "TRACE123"
+
+    with caplog.at_level(
+        logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
+    ):
+        controller._handle_device_rejected("idle", "TRACE123")
+
+    assert controller._last_device_rejected_logged is True
+    assert controller._last_sent_mode is None
+    assert controller._last_sent_trace_id is None
+    assert [
+        r.levelno for r in caplog.records if "rejected by the device" in r.message
+    ] == [logging.WARNING]
+
+
+def test_handle_device_rejected_repeated_logs_debug():
+    """Verify a repeated device-level rejection (already logged once)
+    for the same current trace_id drops to DEBUG."""
+    import logging
+
+    controller = _build_controller(50)
+    controller._last_device_rejected_logged = True
+    controller._last_sent_mode = "idle"
+    controller._last_sent_trace_id = "TRACE123"
+
+    with patch.object(protection_module_logger(), "log") as mock_log:
+        controller._handle_device_rejected("idle", "TRACE123")
+
+    mock_log.assert_called_once()
+    assert mock_log.call_args[0][0] == logging.DEBUG
+
+
+def test_handle_device_rejected_leaves_superseded_send_alone(caplog):
+    """Verify a rejection for a trace_id that's no longer the currently
+    tracked one (superseded by a newer send, automatic or manual) does
+    not clobber that newer state, and logs quietly rather than warning
+    about a mode nothing relies on anymore."""
+    import logging
+
+    controller = _build_controller(50)
+    controller._last_sent_mode = "charge"
+    controller._last_sent_trace_id = "NEWER_TRACE"  # a newer command already sent
+
+    with caplog.at_level(
+        logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
+    ):
+        controller._handle_device_rejected("idle", "OLD_TRACE")  # stale rejection
+
+    assert controller._last_sent_mode == "charge"
+    assert controller._last_sent_trace_id == "NEWER_TRACE"
+    assert controller._last_device_rejected_logged is False
+    assert "no action needed" in caplog.text
+    assert [r.levelno for r in caplog.records if "no action needed" in r.message] == [
+        logging.DEBUG
+    ]
+
+
+def test_note_manual_mode_invalidates_pending_verification():
+    """Verify a manual mode command for a genuinely *different* mode
+    clears any trace_id an in-flight automatic verification was tracking
+    for the old mode, so a later rejection of that earlier automatic send
+    can't clobber the manual command's mode."""
+    controller = _build_controller(50)
+    controller._last_sent_mode = "idle"
+    controller._last_sent_trace_id = "AUTO_TRACE"
+
+    controller.note_manual_mode("charge")
+
+    assert controller._last_sent_mode == "charge"
+    assert controller._last_sent_trace_id is None
+
+
+def test_note_manual_mode_same_mode_reaffirmation_preserves_pending_verification():
+    """Regression test: EM's routine _notify_protection(mode) call (which
+    never carries a trace_id) must not cancel protection's own pending
+    verification just because it happens to reaffirm the same mode
+    protection already sent -- EM and protection can share a controller
+    for the same device, and EM's decision loop calls this on every
+    successful send, not just ones that actually change the mode.
+    """
+    controller = _build_controller(50)
+    controller._last_sent_mode = "idle"
+    controller._last_sent_trace_id = "AUTO_TRACE"
+
+    controller.note_manual_mode("idle")  # e.g. EM's _notify_protection
+
+    assert controller._last_sent_mode == "idle"
+    assert controller._last_sent_trace_id == "AUTO_TRACE"  # untouched
+
+
+def test_note_manual_mode_same_mode_with_new_trace_updates_tracking():
+    """Verify a same-mode notification that *does* carry a real trace_id
+    (e.g. a double-clicked manual button, both sends for 'idle') updates
+    tracking to the newest send rather than leaving the first one's trace
+    in place -- so a later rejection of the superseded first send is
+    correctly recognized as stale instead of clobbering the second."""
+    controller = _build_controller(50)
+    controller.note_manual_mode("idle", "TRACE_OLD")
+
+    controller.note_manual_mode("idle", "TRACE_NEW")
+
+    assert controller._last_sent_mode == "idle"
+    assert controller._last_sent_trace_id == "TRACE_NEW"
+
+
+def test_note_manual_mode_rejected_delegates_to_handle_device_rejected():
+    """Verify note_manual_mode_rejected delegates to the same trace_id-based
+    staleness check protection's own automatic sends use, rather than a
+    separate, weaker mode-string-only comparison."""
+    controller = _build_controller(50)
+    controller._handle_device_rejected = MagicMock()
+
+    controller.note_manual_mode_rejected("idle", "TRACE123")
+
+    controller._handle_device_rejected.assert_called_once_with("idle", "TRACE123")
+
+
+def test_note_manual_mode_rejected_clears_matching_send():
+    """Verify a rejected manual command (with its own recorded trace_id
+    via note_manual_mode) clears _last_sent_mode when it's still current."""
+    controller = _build_controller(50)
+    controller.note_manual_mode("idle", "TRACE123")
+
+    controller.note_manual_mode_rejected("idle", "TRACE123")
+
+    assert controller._last_sent_mode is None
+    assert controller._last_sent_trace_id is None
+
+
+def test_note_manual_mode_rejected_leaves_superseded_send_alone():
+    """Verify a rejection for a trace_id that's no longer current (a
+    newer manual or automatic send has replaced it) doesn't clobber that
+    newer state -- fixing the double-click race a mode-string-only check
+    couldn't tell apart."""
+    controller = _build_controller(50)
+    controller.note_manual_mode("idle", "TRACE_OLD")
+    controller.note_manual_mode("idle", "TRACE_NEW")  # e.g. a double-click retry
+
+    controller.note_manual_mode_rejected("idle", "TRACE_OLD")
+
+    assert controller._last_sent_mode == "idle"
+    assert controller._last_sent_trace_id == "TRACE_NEW"
+
+
+def protection_module_logger():
+    """Return protection.py's module logger, for asserting on _LOGGER.log calls."""
+    from custom_components.hyxi_cloud import protection as protection_mod
+
+    return protection_mod._LOGGER
+
+
+@pytest.mark.asyncio
+async def test_ensure_mode_schedules_verification_after_successful_cloud_send():
+    """Verify _ensure_mode extracts the traceId from the client's response,
+    records it as the currently-tracked send, and passes it through to
+    _maybe_verify_control_result after a successful send."""
+    controller = _build_controller(50, "H5K-HT")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    controller._send_control = AsyncMock(return_value=_CONTROL_RESPONSE)
+    controller._maybe_verify_control_result = MagicMock()
+
+    await controller._ensure_mode("idle")
+
+    controller._maybe_verify_control_result.assert_called_once_with("idle", "TRACE123")
+    assert controller._last_sent_trace_id == "TRACE123"

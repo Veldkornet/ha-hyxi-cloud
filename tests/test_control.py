@@ -192,7 +192,7 @@ def test_note_manual_mode():
 
     control_mod._note_manual_mode(coordinator, "SN123", "test_mode")
 
-    controller.note_manual_mode.assert_called_once_with("test_mode")
+    controller.note_manual_mode.assert_called_once_with("test_mode", None)
 
 
 def test_note_manual_mode_no_controller():
@@ -298,3 +298,99 @@ async def test_send_battery_mode_wraps_a_control_error(coord):
     hass = MagicMock()
     with pytest.raises(HomeAssistantError, match="Failed to set mode 'idle'"):
         await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
+
+
+# ── Control-result verification ─────────────────────────────────────────
+#
+# async_send_battery_mode's Cloud write is fire-and-forget: HYXI's
+# response only confirms the cloud accepted it, not that the device
+# applied it. The actual polling is shared (control_verify, tested in
+# test_control_verify.py); these tests cover control.py's own wiring:
+# scheduling, and what a confirmed rejection should correct.
+
+_CONTROL_RESPONSE = {
+    "success": True,
+    "data": [{"traceId": "TRACE123", "deviceSn": "SN123"}],
+}
+
+
+@pytest.mark.asyncio
+async def test_send_battery_mode_schedules_verification_on_success(coord):
+    coord.client.set_mode_idle.return_value = _CONTROL_RESPONSE
+    hass = MagicMock()
+    # async_create_task's argument is a real coroutine here (unlike the
+    # rest of this file's bare MagicMock hass) -- close it so it doesn't
+    # leave a "coroutine was never awaited" warning behind, since nothing
+    # actually runs it in this test.
+    hass.async_create_task = MagicMock(side_effect=lambda coro: coro.close())
+
+    await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
+
+    hass.async_create_task.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_send_battery_mode_skips_verification_for_modbus(coord):
+    coord.entry = MagicMock(data={"transport": "modbus"})
+    coord.client.set_mode_idle.return_value = _CONTROL_RESPONSE
+    hass = MagicMock()
+
+    await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
+
+    hass.async_create_task.assert_not_called()
+
+
+def test_maybe_verify_control_result_skips_when_no_trace_id():
+    coordinator = MagicMock()
+    coordinator.entry = MagicMock(data={"transport": "cloud"})
+    hass = MagicMock()
+
+    control_mod._maybe_verify_control_result(hass, coordinator, "SN123", "idle", None)
+
+    hass.async_create_task.assert_not_called()
+
+
+def test_on_verify_result_failure_warns_and_notifies_protection():
+    coordinator = MagicMock()
+    controller = MagicMock()
+    coordinator.protection_controllers = {"SN123": controller}
+
+    control_mod._on_verify_result(
+        coordinator,
+        "SN123",
+        "idle",
+        "TRACE123",
+        control_mod.control_verify.RESULT_FAILURE,
+    )
+
+    controller.note_manual_mode_rejected.assert_called_once_with("idle", "TRACE123")
+
+
+def test_on_verify_result_success_and_none_are_no_ops():
+    coordinator = MagicMock()
+    controller = MagicMock()
+    coordinator.protection_controllers = {"SN123": controller}
+
+    control_mod._on_verify_result(
+        coordinator,
+        "SN123",
+        "idle",
+        "TRACE123",
+        control_mod.control_verify.RESULT_SUCCESS,
+    )
+    control_mod._on_verify_result(coordinator, "SN123", "idle", "TRACE123", None)
+
+    controller.note_manual_mode_rejected.assert_not_called()
+
+
+def test_on_verify_result_failure_with_no_controller_does_not_raise():
+    coordinator = MagicMock()
+    coordinator.protection_controllers = {}
+
+    control_mod._on_verify_result(
+        coordinator,
+        "SN123",
+        "idle",
+        "TRACE123",
+        control_mod.control_verify.RESULT_FAILURE,
+    )
