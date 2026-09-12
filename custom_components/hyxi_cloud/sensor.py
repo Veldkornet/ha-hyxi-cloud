@@ -838,16 +838,16 @@ SENSOR_TYPES = [
         key="currentOperatingMode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # 1-7 have confirmed labels below. 13, 14, 15 and 16 are undocumented
-        # but observed on real hardware under different conditions -- see
-        # invSts above for why they're listed with no translation rather
-        # than guessed or hidden.
+        # 1-7 have confirmed labels below. 11, 13, 14, 15 and 16 are
+        # undocumented but observed on real hardware under different
+        # conditions -- see invSts above for why they're listed with no
+        # translation rather than guessed or hidden.
         # pylint: disable-next=fixme
         # TODO: the vendor's 1-7 table looks more incomplete than a single
         # stray value would suggest. Keep adding newly observed values
         # here as they show up, and add a translated label once any of
         # them gets a confirmed meaning.
-        options=["1", "2", "3", "4", "5", "6", "7", "13", "14", "15", "16"],
+        options=["1", "2", "3", "4", "5", "6", "7", "11", "13", "14", "15", "16"],
         icon="mdi:state-machine",
     ),
     # Raw diagnostic values with no documented unit or value table --

@@ -902,15 +902,28 @@ def test_hybrid_nominal_capacity_carries_the_hardware_confirmed_kwh_unit():
 
 
 def test_observed_undocumented_enum_values_are_declared_not_hidden():
-    """invSts=6 and currentOperatingMode=13/14/15/16 are undocumented but
-    observed on real hybrid inverter hardware. Declared with no state
+    """invSts=6 and currentOperatingMode=11/13/14/15/16 are undocumented
+    but observed on real hybrid inverter hardware. Declared with no state
     translation -- shown as the raw number rather than "unknown" --
     without guessing what any of them actually means."""
     invsts = sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
     assert invsts.options == ["0", "1", "2", "3", "4", "6"]
 
     mode = sensor_mod.SENSOR_TYPES_BY_KEY["currentOperatingMode"]
-    assert mode.options == ["1", "2", "3", "4", "5", "6", "7", "13", "14", "15", "16"]
+    assert mode.options == [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "11",
+        "13",
+        "14",
+        "15",
+        "16",
+    ]
 
 
 @pytest.mark.asyncio
