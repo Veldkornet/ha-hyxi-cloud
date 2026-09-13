@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
@@ -777,6 +778,10 @@ SENSOR_TYPES = [
         key="invSts",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
+        # This is the Cloud-transport default. Modbus overrides both the
+        # translation and these options per device family in HyxiSensor --
+        # see _INVSTS_MODBUS_OVERRIDES -- since register 22 (hybrid) and
+        # register 4101 (HALO) use their own, unrelated numbering schemes.
         # 0-4 have confirmed labels below. 6 is undocumented but observed
         # on real hardware -- listed with no state translation so it
         # displays as the raw number rather than "unknown", without
@@ -838,16 +843,36 @@ SENSOR_TYPES = [
         key="currentOperatingMode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # 1-7 have confirmed labels below. 13, 14, 15 and 16 are undocumented
-        # but observed on real hardware under different conditions -- see
-        # invSts above for why they're listed with no translation rather
-        # than guessed or hidden.
+        # 1-7 have confirmed labels below. 11, 13, 14, 15 and 16 are
+        # undocumented but observed on real hardware under different
+        # conditions -- see invSts above for why they're listed with no
+        # translation rather than guessed or hidden. 12 and 17 have not
+        # actually been observed yet -- declared ahead of time on the
+        # hypothesis that 11/13-16 are 1-7's VPP-controlled counterparts
+        # (value+10: 1->11, 3->13, ... 6->16), which would make 2->12 and
+        # 7->17 the two gaps in that pattern. Unconfirmed; remove if that
+        # turns out to be wrong rather than leaving a guessed label here.
         # pylint: disable-next=fixme
         # TODO: the vendor's 1-7 table looks more incomplete than a single
         # stray value would suggest. Keep adding newly observed values
         # here as they show up, and add a translated label once any of
         # them gets a confirmed meaning.
-        options=["1", "2", "3", "4", "5", "6", "7", "13", "14", "15", "16"],
+        options=[
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+        ],
         icon="mdi:state-machine",
     ),
     # Raw diagnostic values with no documented unit or value table --
@@ -1799,11 +1824,56 @@ class HyxiSensor(HyxiBaseSensor):
     _DEMOTE_WHEN_PRESENT: ClassVar[dict[str, str]] = {
         "eTodayIn": "grid_import_today",
     }
+    # invSts is shared vocabulary with Cloud's own status field, but Modbus
+    # reports each family's raw register value under that same name --
+    # register 22 (hybrid) and register 4101 (HALO) use two different,
+    # HYXI-document-confirmed numbering schemes, and neither matches
+    # Cloud's own (phone-app-derived, unverified) one. Per
+    # docs/modbus-provenance.md's rule against reconciling independent
+    # sources, each family gets its own translation instead of forcing a
+    # shared label set that would be wrong for at least one side.
+    # Keyed by normalize_device_type()'s output, not the raw device code --
+    # a real HALO reports device_type_code "MICRO_STORAGE_ALL_IN_ONE",
+    # which DEVICE_TYPE_KEYS maps straight to "micro_ess", never
+    # "all_in_one" (that's a different, Cloud-only device family this
+    # override doesn't apply to). Using the wrong key here doesn't error --
+    # _invsts_override_for's dict.get() just silently no-ops -- so a real
+    # HALO Modbus device would keep Cloud's incompatible invsts labels with
+    # nothing calling that out.
+    _INVSTS_MODBUS_OVERRIDES: ClassVar[dict[str, tuple[str, list[str]]]] = {
+        "hybrid_inverter": ("invsts_hybrid", ["0", "1", "2", "3", "4", "5", "6"]),
+        "micro_ess": ("invsts_halo", ["1", "3", "6", "7"]),
+    }
+
+    def _invsts_override_for(self, coordinator: Any, description: Any) -> Any:
+        """Return `description` with invSts's translation/options swapped
+        for this device's Modbus family, or unchanged if none applies."""
+        if description.key != "invSts" or not is_modbus_entry(coordinator.entry):
+            return description
+        override = self._INVSTS_MODBUS_OVERRIDES.get(self._device_type)
+        if override is None:
+            return description
+        translation_key, options = override
+        # Copy the list rather than handing out the ClassVar's own list by
+        # reference -- entity_description.options is otherwise the same
+        # object shared by every hybrid (or every HALO) invSts sensor in
+        # the process, and nothing stops a future `.options.append(...)`
+        # from corrupting it for all of them at once.
+        options = list(options)
+        if is_dataclass(description):
+            dc: Any = description
+            return replace(dc, translation_key=translation_key, options=options)
+        # Test doubles for SensorEntityDescription aren't real (frozen)
+        # dataclasses -- copy first so the shared SENSOR_TYPES singleton
+        # isn't mutated for every other entity that reads it.
+        description = copy.copy(description)
+        description.translation_key = translation_key
+        description.options = options
+        return description
 
     def __init__(self, coordinator: Any, sn: str, description: Any) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self.entity_description = description
         self._sn = sn
 
         # Cache dev_data and metrics to avoid repeated lookups
@@ -1812,6 +1882,9 @@ class HyxiSensor(HyxiBaseSensor):
 
         raw_code = get_raw_device_code(self._dev_data)
         self._device_type = normalize_device_type(raw_code)
+
+        description = self._invsts_override_for(coordinator, description)
+        self.entity_description = description
 
         sentinel = self._DEMOTE_WHEN_PRESENT.get(description.key)
         if sentinel is not None and sentinel in self._metrics:

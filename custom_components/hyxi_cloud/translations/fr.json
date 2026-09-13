@@ -440,13 +440,30 @@
         "name": "Compteur en ligne"
       },
       "gridmode": {
-        "name": "Mode réseau"
+        "name": "Mode réseau",
+        "state": {
+          "0": "Hors réseau",
+          "1": "Connexion réseau"
+        }
       },
       "runcommand": {
-        "name": "Commande de marche"
+        "name": "Commande de marche",
+        "state": {
+          "0": "Arrêt",
+          "1": "Marche"
+        }
       },
       "currentoperatingmode": {
-        "name": "Mode de fonctionnement"
+        "name": "Mode de fonctionnement",
+        "state": {
+          "1": "Autoconsommation",
+          "2": "Secours (vert)",
+          "3": "Secours (réseau)",
+          "4": "Injection réseau",
+          "5": "Mode hors réseau",
+          "6": "Mode d'étalonnage du SOC batterie",
+          "7": "Mode de charge forcée de la batterie"
+        }
       },
       "insulationresistance": {
         "name": "Résistance d'isolement"
@@ -536,7 +553,13 @@
         "name": "État du BMS"
       },
       "batoperatingstatus": {
-        "name": "État de fonctionnement de la batterie"
+        "name": "État de fonctionnement de la batterie",
+        "state": {
+          "0": "Veille",
+          "1": "Charge",
+          "2": "Décharge",
+          "3": "Inactif"
+        }
       },
       "batalarm1": {
         "name": "Alarme batterie 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Consommation maison aujourd'hui"
+      },
+      "invsts_hybrid": {
+        "name": "Statut de l'onduleur",
+        "state": {
+          "0": "Initialisation",
+          "1": "Veille",
+          "2": "Démarrage côté CC",
+          "3": "Démarrage de l'autotest",
+          "4": "Attente de l'autotest",
+          "5": "Fonctionnement de l'onduleur",
+          "6": "Fonctionnement en régime stable"
+        }
+      },
+      "invsts_halo": {
+        "name": "Statut de l'onduleur",
+        "state": {
+          "1": "Veille",
+          "3": "Autotest",
+          "6": "En marche",
+          "7": "Arrêté"
+        }
       }
     },
     "number": {

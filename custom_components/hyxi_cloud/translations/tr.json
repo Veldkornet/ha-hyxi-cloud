@@ -440,13 +440,30 @@
         "name": "Sayaç Çevrimiçi"
       },
       "gridmode": {
-        "name": "Şebeke Modu"
+        "name": "Şebeke Modu",
+        "state": {
+          "0": "Şebeke Dışı",
+          "1": "Şebeke Bağlantısı"
+        }
       },
       "runcommand": {
-        "name": "Çalıştırma Komutu"
+        "name": "Çalıştırma Komutu",
+        "state": {
+          "0": "Durdur",
+          "1": "Başlat"
+        }
       },
       "currentoperatingmode": {
-        "name": "Çalışma Modu"
+        "name": "Çalışma Modu",
+        "state": {
+          "1": "Öz Tüketim",
+          "2": "Yedek (yeşil)",
+          "3": "Yedek (şebeke)",
+          "4": "Şebekeye Aktarım",
+          "5": "Şebeke Dışı Modu",
+          "6": "Batarya SOC Kalibrasyon Modu",
+          "7": "Batarya Zorunlu Şarj Modu"
+        }
       },
       "insulationresistance": {
         "name": "Yalıtım Direnci"
@@ -536,7 +553,13 @@
         "name": "BMS Durumu"
       },
       "batoperatingstatus": {
-        "name": "Batarya Çalışma Durumu"
+        "name": "Batarya Çalışma Durumu",
+        "state": {
+          "0": "Uyku",
+          "1": "Şarj",
+          "2": "Deşarj",
+          "3": "Bekleme"
+        }
       },
       "batalarm1": {
         "name": "Batarya Alarmı 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Bugün ev tüketimi"
+      },
+      "invsts_hybrid": {
+        "name": "İnverter Durumu",
+        "state": {
+          "0": "Başlatılıyor",
+          "1": "Bekleme",
+          "2": "DC Taraf Başlatma",
+          "3": "Kendi Kendini Test Başlatma",
+          "4": "Kendi Kendini Test Bekleniyor",
+          "5": "İnverter Çalışması",
+          "6": "Kararlı Durum Çalışması"
+        }
+      },
+      "invsts_halo": {
+        "name": "İnverter Durumu",
+        "state": {
+          "1": "Bekleme",
+          "3": "Kendi Kendini Test",
+          "6": "Çalışıyor",
+          "7": "Durduruldu"
+        }
       }
     },
     "number": {

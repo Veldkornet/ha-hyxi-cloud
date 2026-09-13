@@ -440,13 +440,30 @@
         "name": "Licznik online"
       },
       "gridmode": {
-        "name": "Tryb sieci"
+        "name": "Tryb sieci",
+        "state": {
+          "0": "Poza siecią",
+          "1": "Połączenie z siecią"
+        }
       },
       "runcommand": {
-        "name": "Polecenie uruchomienia"
+        "name": "Polecenie uruchomienia",
+        "state": {
+          "0": "Stop",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Tryb pracy"
+        "name": "Tryb pracy",
+        "state": {
+          "1": "Autokonsumpcja",
+          "2": "Zasilanie awaryjne (zielone)",
+          "3": "Zasilanie awaryjne (sieć)",
+          "4": "Oddawanie do sieci",
+          "5": "Tryb pracy wyspowej",
+          "6": "Tryb kalibracji SOC baterii",
+          "7": "Tryb wymuszonego ładowania baterii"
+        }
       },
       "insulationresistance": {
         "name": "Rezystancja izolacji"
@@ -536,7 +553,13 @@
         "name": "Stan BMS"
       },
       "batoperatingstatus": {
-        "name": "Stan pracy akumulatora"
+        "name": "Stan pracy akumulatora",
+        "state": {
+          "0": "Uśpienie",
+          "1": "Ładowanie",
+          "2": "Rozładowanie",
+          "3": "Bezczynność"
+        }
       },
       "batalarm1": {
         "name": "Alarm baterii 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Zużycie domowe dzisiaj"
+      },
+      "invsts_hybrid": {
+        "name": "Status falownika",
+        "state": {
+          "0": "Inicjalizacja",
+          "1": "Czuwanie",
+          "2": "Rozruch strony DC",
+          "3": "Rozpoczęcie autotestu",
+          "4": "Oczekiwanie na autotest",
+          "5": "Praca falownika",
+          "6": "Praca w stanie ustalonym"
+        }
+      },
+      "invsts_halo": {
+        "name": "Status falownika",
+        "state": {
+          "1": "Czuwanie",
+          "3": "Autotest",
+          "6": "Pracuje",
+          "7": "Zatrzymany"
+        }
       }
     },
     "number": {

@@ -440,13 +440,30 @@
         "name": "Měřič online"
       },
       "gridmode": {
-        "name": "Režim sítě"
+        "name": "Režim sítě",
+        "state": {
+          "0": "Mimo síť",
+          "1": "Připojení k síti"
+        }
       },
       "runcommand": {
-        "name": "Příkaz spuštění"
+        "name": "Příkaz spuštění",
+        "state": {
+          "0": "Stop",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Provozní režim"
+        "name": "Provozní režim",
+        "state": {
+          "1": "Vlastní spotřeba",
+          "2": "Záloha (zelená)",
+          "3": "Záloha (síť)",
+          "4": "Dodávka do sítě",
+          "5": "Režim mimo síť",
+          "6": "Kalibrace SOC baterie",
+          "7": "Nucené nabíjení baterie"
+        }
       },
       "insulationresistance": {
         "name": "Izolační odpor"
@@ -536,7 +553,13 @@
         "name": "Stav BMS"
       },
       "batoperatingstatus": {
-        "name": "Provozní stav baterie"
+        "name": "Provozní stav baterie",
+        "state": {
+          "0": "Spánek",
+          "1": "Nabíjení",
+          "2": "Vybíjení",
+          "3": "Nečinnost"
+        }
       },
       "batalarm1": {
         "name": "Alarm baterie 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Spotřeba domácnosti dnes"
+      },
+      "invsts_hybrid": {
+        "name": "Stav střídače",
+        "state": {
+          "0": "Inicializace",
+          "1": "Pohotovost",
+          "2": "Spouštění na DC straně",
+          "3": "Spuštění samotestu",
+          "4": "Čekání na samotest",
+          "5": "Provoz střídače",
+          "6": "Ustálený provoz"
+        }
+      },
+      "invsts_halo": {
+        "name": "Stav střídače",
+        "state": {
+          "1": "Pohotovost",
+          "3": "Samotest",
+          "6": "Běh",
+          "7": "Zastaveno"
+        }
       }
     },
     "number": {

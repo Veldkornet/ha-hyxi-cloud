@@ -399,7 +399,7 @@
         "name": "Interne Temperatuur"
       },
       "invsts": {
-        "name": "Inuiterstatus",
+        "name": "Inverterstatus",
         "state": {
           "0": "Gereedheid",
           "1": "Normaal",
@@ -440,13 +440,30 @@
         "name": "Meter Aanlyn"
       },
       "gridmode": {
-        "name": "Netmodus"
+        "name": "Netmodus",
+        "state": {
+          "0": "Af-die-net",
+          "1": "Netverbinding"
+        }
       },
       "runcommand": {
-        "name": "Loopbevel"
+        "name": "Loopbevel",
+        "state": {
+          "0": "Stop",
+          "1": "Begin"
+        }
       },
       "currentoperatingmode": {
-        "name": "Bedryfsmodus"
+        "name": "Bedryfsmodus",
+        "state": {
+          "1": "Selfgebruik",
+          "2": "Rugsteun (groen)",
+          "3": "Rugsteun (net)",
+          "4": "Terugvoer",
+          "5": "Af-die-net-modus",
+          "6": "Battery SOC-kalibreringsmodus",
+          "7": "Battery se geforseerde laaimodus"
+        }
       },
       "insulationresistance": {
         "name": "Isolasieweerstand"
@@ -536,7 +553,13 @@
         "name": "BMS-status"
       },
       "batoperatingstatus": {
-        "name": "Battery-bedryfstatus"
+        "name": "Battery-bedryfstatus",
+        "state": {
+          "0": "Slaap",
+          "1": "Laai",
+          "2": "Ontlaai",
+          "3": "Rustend"
+        }
       },
       "batalarm1": {
         "name": "Battery-alarm 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Huisverbruik vandag"
+      },
+      "invsts_hybrid": {
+        "name": "Inverterstatus",
+        "state": {
+          "0": "Inisialisering",
+          "1": "Gereedheid",
+          "2": "Gelykstroomkant-opstart",
+          "3": "Selftoets-opstart",
+          "4": "Selftoets wag",
+          "5": "Omvormerbedryf",
+          "6": "Bestendige-toestand-bedryf"
+        }
+      },
+      "invsts_halo": {
+        "name": "Inverterstatus",
+        "state": {
+          "1": "Gereedheid",
+          "3": "Selftoets",
+          "6": "Loop",
+          "7": "Gestop"
+        }
       }
     },
     "number": {

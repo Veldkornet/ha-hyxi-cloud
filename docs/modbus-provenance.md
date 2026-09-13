@@ -507,6 +507,31 @@ documented explicitly rather than assumed to match:
   the limit (writes 1). This is not a bug in either — they are different
   registers on different hardware with different documented meanings.
 
+### 6. `invSts` has the same three-schemes problem as work-mode -- don't reconcile it either
+
+Same shape as rule 1, different field. `invSts` is shared Cloud/Modbus
+vocabulary (`sensor.py`'s `SENSOR_TYPES`), but three independent sources
+disagree on what its numbers mean:
+
+| | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Cloud (`invsts` translation) | Standby | Normal | Alarm | Fault | Shutdown | — | — | — |
+| Hybrid document, register 22 | Initialization | Standby | DC-side startup | Self-test startup | Self-test wait | Inverter operation | Steady state operation | — |
+| HALO document, register 4101 | — | Standby | — | Self-test | — | — | Running | Stopped |
+
+The cloud set predates this file's HYXI documents and was never checked
+against either of them (see rule 1 -- same phone-app-derived origin as
+`VPP_ACTIVE_MODES`). It is left alone for the Cloud transport rather than
+"corrected" to match a document describing different hardware.
+
+Because a Modbus entry shows this sensor under the same `invSts` key as
+Cloud, `HyxiSensor` overrides both the translation key and the options list
+per family at construction time (`_INVSTS_MODBUS_OVERRIDES`) rather than
+changing the shared `SENSOR_TYPES` entry, which stays the Cloud default.
+HALO's document only confirms 1/3/6/7 — 0/2/4/5 are left undeclared
+(falls back to the raw number) rather than guessed or borrowed from the
+hybrid's scheme for the same reason rule 2 gives.
+
 ## How family is picked (auto-detection, unconfirmed on hardware)
 
 The setup flow doesn't ask which device family it's talking to. It reads one

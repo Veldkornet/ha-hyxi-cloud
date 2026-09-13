@@ -440,13 +440,30 @@
         "name": "Mérő online"
       },
       "gridmode": {
-        "name": "Hálózati mód"
+        "name": "Hálózati mód",
+        "state": {
+          "0": "Hálózaton kívül",
+          "1": "Hálózati kapcsolat"
+        }
       },
       "runcommand": {
-        "name": "Futtatási parancs"
+        "name": "Futtatási parancs",
+        "state": {
+          "0": "Leállítás",
+          "1": "Indítás"
+        }
       },
       "currentoperatingmode": {
-        "name": "Üzemmód"
+        "name": "Üzemmód",
+        "state": {
+          "1": "Saját fogyasztás",
+          "2": "Tartalék (zöld)",
+          "3": "Tartalék (hálózat)",
+          "4": "Hálózatba táplálás",
+          "5": "Sziget üzemmód",
+          "6": "Akkumulátor SOC kalibrálási mód",
+          "7": "Akkumulátor kényszerített töltési mód"
+        }
       },
       "insulationresistance": {
         "name": "Szigetelési ellenállás"
@@ -536,7 +553,13 @@
         "name": "BMS állapota"
       },
       "batoperatingstatus": {
-        "name": "Akkumulátor üzemállapota"
+        "name": "Akkumulátor üzemállapota",
+        "state": {
+          "0": "Alvás",
+          "1": "Töltés",
+          "2": "Kisütés",
+          "3": "Készenléti"
+        }
       },
       "batalarm1": {
         "name": "Akkumulátor riasztás 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Otthoni fogyasztás ma"
+      },
+      "invsts_hybrid": {
+        "name": "Inverter állapota",
+        "state": {
+          "0": "Inicializálás",
+          "1": "Készenlét",
+          "2": "DC oldali indítás",
+          "3": "Önteszt indítása",
+          "4": "Önteszt várakozás",
+          "5": "Inverter üzem",
+          "6": "Állandósult üzem"
+        }
+      },
+      "invsts_halo": {
+        "name": "Inverter állapota",
+        "state": {
+          "1": "Készenlét",
+          "3": "Önteszt",
+          "6": "Fut",
+          "7": "Leállítva"
+        }
       }
     },
     "number": {

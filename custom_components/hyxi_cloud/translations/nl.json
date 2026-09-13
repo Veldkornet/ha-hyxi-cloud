@@ -440,13 +440,30 @@
         "name": "Meter online"
       },
       "gridmode": {
-        "name": "Netmodus"
+        "name": "Netmodus",
+        "state": {
+          "0": "Off-grid",
+          "1": "Netverbinding"
+        }
       },
       "runcommand": {
-        "name": "Startopdracht"
+        "name": "Startopdracht",
+        "state": {
+          "0": "Stop",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Bedrijfsmodus"
+        "name": "Bedrijfsmodus",
+        "state": {
+          "1": "Zelfverbruik",
+          "2": "Back-up (groen)",
+          "3": "Back-up (net)",
+          "4": "Teruglevering",
+          "5": "Off-grid-modus",
+          "6": "Accu SOC-kalibratiemodus",
+          "7": "Accu geforceerd laadmodus"
+        }
       },
       "insulationresistance": {
         "name": "Isolatieweerstand"
@@ -536,7 +553,13 @@
         "name": "BMS-status"
       },
       "batoperatingstatus": {
-        "name": "Bedrijfsstatus batterij"
+        "name": "Bedrijfsstatus batterij",
+        "state": {
+          "0": "Slaapstand",
+          "1": "Laden",
+          "2": "Ontladen",
+          "3": "Inactief"
+        }
       },
       "batalarm1": {
         "name": "Batterijalarm 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Huisverbruik vandaag"
+      },
+      "invsts_hybrid": {
+        "name": "Omvormer status",
+        "state": {
+          "0": "Initialisatie",
+          "1": "Stand-by",
+          "2": "DC-zijde opstarten",
+          "3": "Zelftest opstarten",
+          "4": "Wachten op zelftest",
+          "5": "Omvormer in bedrijf",
+          "6": "Stabiele werking"
+        }
+      },
+      "invsts_halo": {
+        "name": "Omvormer status",
+        "state": {
+          "1": "Stand-by",
+          "3": "Zelftest",
+          "6": "Actief",
+          "7": "Gestopt"
+        }
       }
     },
     "number": {

@@ -440,13 +440,30 @@
         "name": "Zähler online"
       },
       "gridmode": {
-        "name": "Netzmodus"
+        "name": "Netzmodus",
+        "state": {
+          "0": "Netzunabhängig",
+          "1": "Netzverbindung"
+        }
       },
       "runcommand": {
-        "name": "Laufbefehl"
+        "name": "Laufbefehl",
+        "state": {
+          "0": "Stopp",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Betriebsmodus"
+        "name": "Betriebsmodus",
+        "state": {
+          "1": "Eigenverbrauch",
+          "2": "Backup (grün)",
+          "3": "Backup (Netz)",
+          "4": "Einspeisung",
+          "5": "Inselbetrieb-Modus",
+          "6": "Batterie-SOC-Kalibriermodus",
+          "7": "Batterie-Zwangsladung"
+        }
       },
       "insulationresistance": {
         "name": "Isolationswiderstand"
@@ -536,7 +553,13 @@
         "name": "BMS-Status"
       },
       "batoperatingstatus": {
-        "name": "Batterie-Betriebsstatus"
+        "name": "Batterie-Betriebsstatus",
+        "state": {
+          "0": "Schlafmodus",
+          "1": "Laden",
+          "2": "Entladen",
+          "3": "Leerlauf"
+        }
       },
       "batalarm1": {
         "name": "Batteriealarm 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Hausverbrauch heute"
+      },
+      "invsts_hybrid": {
+        "name": "Wechselrichter-Status",
+        "state": {
+          "0": "Initialisierung",
+          "1": "Standby",
+          "2": "DC-seitiger Start",
+          "3": "Selbsttest-Start",
+          "4": "Warten auf Selbsttest",
+          "5": "Wechselrichterbetrieb",
+          "6": "Stationärer Betrieb"
+        }
+      },
+      "invsts_halo": {
+        "name": "Wechselrichter-Status",
+        "state": {
+          "1": "Standby",
+          "3": "Selbsttest",
+          "6": "Läuft",
+          "7": "Gestoppt"
+        }
       }
     },
     "number": {

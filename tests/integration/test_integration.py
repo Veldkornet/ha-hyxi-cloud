@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.hyxi_cloud import sensor as sensor_mod
 from custom_components.hyxi_cloud.const import (
     CONF_ACCESS_KEY,
     CONF_MODBUS_BAUDRATE,
@@ -369,6 +370,78 @@ async def test_enum_sensor_survives_out_of_range_api_value(hass: HomeAssistant):
         total_e_state = hass.states.get("sensor.hyxi_sn123_totale")
         assert total_e_state is not None
         assert total_e_state.state == "100.5"
+
+
+def test_invsts_translation_key_resolves_correctly_against_real_ha():
+    """Regression test against HA's real Entity.translation_key property,
+    not a hand-rolled mock's `_attr_translation_key` field.
+
+    HA's real property checks `_attr_translation_key` *before* falling
+    back to `entity_description.translation_key` -- a version of this fix
+    that swapped entity_description.translation_key but left a stale
+    `_attr_translation_key` in place would look correct to a naive check
+    of entity_description alone, while HA's actual translation lookup
+    stayed on Cloud's unrelated invsts labels. This constructs a real
+    (unmocked) SensorEntityDescription -- unlike tests/test_sensor_logic.py,
+    this integration suite doesn't replace homeassistant.components.sensor
+    with fakes -- so `dataclasses.replace()` runs against the genuine
+    frozen dataclass HA ships, exactly as it does in production.
+    """
+    # Raw device_type_code, not the normalized family name: real clients
+    # publish HYBRID_INVERTER / MICRO_STORAGE_ALL_IN_ONE, and letting the
+    # real normalize_device_type() run on those (rather than patching its
+    # return value) is what caught a real bug -- HALO's raw code normalizes
+    # to "micro_ess" via DEVICE_TYPE_KEYS' direct lookup, never "all_in_one".
+    coordinator = MagicMock()
+    coordinator.entry.data = {CONF_TRANSPORT: TRANSPORT_MODBUS}
+
+    coordinator.data = {
+        "SN1": {"metrics": {"invSts": "1"}, "device_type_code": "HYBRID_INVERTER"}
+    }
+    hybrid_sensor = sensor_mod.HyxiSensor(
+        coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+    )
+    assert hybrid_sensor.translation_key == "invsts_hybrid"
+    assert hybrid_sensor.entity_description.options == [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+    ]
+
+    coordinator.data = {
+        "SN1": {
+            "metrics": {"invSts": "1"},
+            "device_type_code": "MICRO_STORAGE_ALL_IN_ONE",
+        }
+    }
+    halo_sensor = sensor_mod.HyxiSensor(
+        coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+    )
+    assert halo_sensor.translation_key == "invsts_halo"
+    assert halo_sensor.entity_description.options == ["1", "3", "6", "7"]
+
+    # Cloud (no transport override) keeps the shared default untouched --
+    # confirms the fix didn't mutate SENSOR_TYPES_BY_KEY's own singleton.
+    coordinator.entry.data = {}
+    coordinator.data = {
+        "SN1": {"metrics": {"invSts": "1"}, "device_type_code": "HYBRID_INVERTER"}
+    }
+    cloud_sensor = sensor_mod.HyxiSensor(
+        coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+    )
+    assert cloud_sensor.translation_key == "invsts"
+    assert cloud_sensor.entity_description.options == [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "6",
+    ]
 
 
 @pytest.mark.asyncio

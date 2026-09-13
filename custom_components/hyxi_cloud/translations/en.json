@@ -481,13 +481,30 @@
         "name": "Meter Online"
       },
       "gridmode": {
-        "name": "Grid Mode"
+        "name": "Grid Mode",
+        "state": {
+          "0": "Off-grid",
+          "1": "Grid connection"
+        }
       },
       "runcommand": {
-        "name": "Run Command"
+        "name": "Run Command",
+        "state": {
+          "0": "Stop",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Operating Mode"
+        "name": "Operating Mode",
+        "state": {
+          "1": "Self-use",
+          "2": "Backup (green)",
+          "3": "Backup (grid)",
+          "4": "Feed-in",
+          "5": "Off-grid mode",
+          "6": "Battery SOC calibration mode",
+          "7": "Battery forced charging mode"
+        }
       },
       "insulationresistance": {
         "name": "Insulation Resistance"
@@ -580,7 +597,13 @@
         "name": "BMS State"
       },
       "batoperatingstatus": {
-        "name": "Battery Operating Status"
+        "name": "Battery Operating Status",
+        "state": {
+          "0": "Sleep",
+          "1": "Charge",
+          "2": "Discharge",
+          "3": "Idle"
+        }
       },
       "batalarm1": {
         "name": "Battery Alarm 1"
@@ -662,6 +685,27 @@
       },
       "micro_daily_yield_total": {
         "name": "Microinverters Total Daily Yield"
+      },
+      "invsts_hybrid": {
+        "name": "Inverter Status",
+        "state": {
+          "0": "Initialization",
+          "1": "Standby",
+          "2": "DC-side startup",
+          "3": "Self-test startup",
+          "4": "Self-test wait",
+          "5": "Inverter operation",
+          "6": "Steady state operation"
+        }
+      },
+      "invsts_halo": {
+        "name": "Inverter Status",
+        "state": {
+          "1": "Standby",
+          "3": "Self-test",
+          "6": "Running",
+          "7": "Stopped"
+        }
       }
     },
     "number": {

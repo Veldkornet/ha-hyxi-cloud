@@ -440,13 +440,30 @@
         "name": "Mittari verkossa"
       },
       "gridmode": {
-        "name": "Verkkotila"
+        "name": "Verkkotila",
+        "state": {
+          "0": "Verkon ulkopuolella",
+          "1": "Verkkoyhteys"
+        }
       },
       "runcommand": {
-        "name": "Käyntikäsky"
+        "name": "Käyntikäsky",
+        "state": {
+          "0": "Pysäytys",
+          "1": "Käynnistys"
+        }
       },
       "currentoperatingmode": {
-        "name": "Käyttötila"
+        "name": "Käyttötila",
+        "state": {
+          "1": "Omakäyttö",
+          "2": "Varavirta (vihreä)",
+          "3": "Varavirta (verkko)",
+          "4": "Verkkoon syöttö",
+          "5": "Verkosta irrallaan -tila",
+          "6": "Akun SOC-kalibrointitila",
+          "7": "Akun pakotettu lataustila"
+        }
       },
       "insulationresistance": {
         "name": "Eristysvastus"
@@ -536,7 +553,13 @@
         "name": "BMS:n tila"
       },
       "batoperatingstatus": {
-        "name": "Akun käyttötila"
+        "name": "Akun käyttötila",
+        "state": {
+          "0": "Lepotila",
+          "1": "Lataus",
+          "2": "Purku",
+          "3": "Valmiustila"
+        }
       },
       "batalarm1": {
         "name": "Akun hälytys 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Kodin kulutus tänään"
+      },
+      "invsts_hybrid": {
+        "name": "Invertterin tila",
+        "state": {
+          "0": "Alustus",
+          "1": "Valmiustila",
+          "2": "DC-puolen käynnistys",
+          "3": "Itsetestauksen käynnistys",
+          "4": "Odottaa itsetestausta",
+          "5": "Invertterin toiminta",
+          "6": "Vakaan tilan toiminta"
+        }
+      },
+      "invsts_halo": {
+        "name": "Invertterin tila",
+        "state": {
+          "1": "Valmiustila",
+          "3": "Itsetestaus",
+          "6": "Käynnissä",
+          "7": "Pysäytetty"
+        }
       }
     },
     "number": {

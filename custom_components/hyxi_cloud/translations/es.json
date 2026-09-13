@@ -440,13 +440,30 @@
         "name": "Medidor en línea"
       },
       "gridmode": {
-        "name": "Modo de red"
+        "name": "Modo de red",
+        "state": {
+          "0": "Fuera de red",
+          "1": "Conexión a red"
+        }
       },
       "runcommand": {
-        "name": "Comando de ejecución"
+        "name": "Comando de ejecución",
+        "state": {
+          "0": "Detener",
+          "1": "Iniciar"
+        }
       },
       "currentoperatingmode": {
-        "name": "Modo de funcionamiento"
+        "name": "Modo de funcionamiento",
+        "state": {
+          "1": "Autoconsumo",
+          "2": "Respaldo (verde)",
+          "3": "Respaldo (red)",
+          "4": "Inyección a red",
+          "5": "Modo sin red",
+          "6": "Modo de calibración de SOC de batería",
+          "7": "Modo de carga forzada de batería"
+        }
       },
       "insulationresistance": {
         "name": "Resistencia de aislamiento"
@@ -536,7 +553,13 @@
         "name": "Estado del BMS"
       },
       "batoperatingstatus": {
-        "name": "Estado de funcionamiento de la batería"
+        "name": "Estado de funcionamiento de la batería",
+        "state": {
+          "0": "Reposo",
+          "1": "Carga",
+          "2": "Descarga",
+          "3": "Inactivo"
+        }
       },
       "batalarm1": {
         "name": "Alarma de batería 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Consumo del hogar hoy"
+      },
+      "invsts_hybrid": {
+        "name": "Estado del inversor",
+        "state": {
+          "0": "Inicialización",
+          "1": "Espera",
+          "2": "Arranque lado CC",
+          "3": "Arranque de autoprueba",
+          "4": "Espera de autoprueba",
+          "5": "Funcionamiento del inversor",
+          "6": "Funcionamiento en estado estable"
+        }
+      },
+      "invsts_halo": {
+        "name": "Estado del inversor",
+        "state": {
+          "1": "Espera",
+          "3": "Autoprueba",
+          "6": "En funcionamiento",
+          "7": "Detenido"
+        }
       }
     },
     "number": {

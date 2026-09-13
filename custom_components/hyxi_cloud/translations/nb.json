@@ -440,13 +440,30 @@
         "name": "Måler online"
       },
       "gridmode": {
-        "name": "Nettmodus"
+        "name": "Nettmodus",
+        "state": {
+          "0": "Utenfor nettet",
+          "1": "Nettilkobling"
+        }
       },
       "runcommand": {
-        "name": "Kjørekommando"
+        "name": "Kjørekommando",
+        "state": {
+          "0": "Stopp",
+          "1": "Start"
+        }
       },
       "currentoperatingmode": {
-        "name": "Driftsmodus"
+        "name": "Driftsmodus",
+        "state": {
+          "1": "Eget forbruk",
+          "2": "Backup (grønn)",
+          "3": "Backup (nett)",
+          "4": "Nettinnmating",
+          "5": "Off-grid-modus",
+          "6": "Batteri SOC-kalibreringsmodus",
+          "7": "Batteri tvungen ladning-modus"
+        }
       },
       "insulationresistance": {
         "name": "Isolasjonsmotstand"
@@ -536,7 +553,13 @@
         "name": "BMS-status"
       },
       "batoperatingstatus": {
-        "name": "Batteriets driftsstatus"
+        "name": "Batteriets driftsstatus",
+        "state": {
+          "0": "Hvile",
+          "1": "Lading",
+          "2": "Utlading",
+          "3": "Inaktiv"
+        }
       },
       "batalarm1": {
         "name": "Batterialarm 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Husforbruk i dag"
+      },
+      "invsts_hybrid": {
+        "name": "Inverterstatus",
+        "state": {
+          "0": "Initialisering",
+          "1": "Standby",
+          "2": "DC-side oppstart",
+          "3": "Selvtest oppstart",
+          "4": "Venter på selvtest",
+          "5": "Inverterdrift",
+          "6": "Stabil drift"
+        }
+      },
+      "invsts_halo": {
+        "name": "Inverterstatus",
+        "state": {
+          "1": "Standby",
+          "3": "Selvtest",
+          "6": "Kjører",
+          "7": "Stoppet"
+        }
       }
     },
     "number": {

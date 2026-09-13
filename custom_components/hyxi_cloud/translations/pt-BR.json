@@ -440,13 +440,30 @@
         "name": "Medidor online"
       },
       "gridmode": {
-        "name": "Modo de rede"
+        "name": "Modo de rede",
+        "state": {
+          "0": "Fora da rede",
+          "1": "Conexão à rede"
+        }
       },
       "runcommand": {
-        "name": "Comando de execução"
+        "name": "Comando de execução",
+        "state": {
+          "0": "Parar",
+          "1": "Iniciar"
+        }
       },
       "currentoperatingmode": {
-        "name": "Modo de operação"
+        "name": "Modo de operação",
+        "state": {
+          "1": "Autoconsumo",
+          "2": "Backup (verde)",
+          "3": "Backup (rede)",
+          "4": "Injeção na rede",
+          "5": "Modo fora da rede",
+          "6": "Modo de calibração de SOC da bateria",
+          "7": "Modo de carregamento forçado da bateria"
+        }
       },
       "insulationresistance": {
         "name": "Resistência de isolamento"
@@ -536,7 +553,13 @@
         "name": "Status do BMS"
       },
       "batoperatingstatus": {
-        "name": "Status Operacional da Bateria"
+        "name": "Status Operacional da Bateria",
+        "state": {
+          "0": "Repouso",
+          "1": "Carga",
+          "2": "Descarga",
+          "3": "Inativo"
+        }
       },
       "batalarm1": {
         "name": "Alarme da Bateria 1"
@@ -662,6 +685,27 @@
       },
       "home_load_today": {
         "name": "Consumo doméstico hoje"
+      },
+      "invsts_hybrid": {
+        "name": "Status do inversor",
+        "state": {
+          "0": "Inicialização",
+          "1": "Espera",
+          "2": "Partida do lado CC",
+          "3": "Início do autoteste",
+          "4": "Aguardando autoteste",
+          "5": "Operação do inversor",
+          "6": "Operação em regime estável"
+        }
+      },
+      "invsts_halo": {
+        "name": "Status do inversor",
+        "state": {
+          "1": "Espera",
+          "3": "Autoteste",
+          "6": "Em operação",
+          "7": "Parado"
+        }
       }
     },
     "number": {
