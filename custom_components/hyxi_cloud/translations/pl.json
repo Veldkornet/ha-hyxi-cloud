@@ -442,8 +442,8 @@
       "gridmode": {
         "name": "Tryb sieci",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "Poza siecią",
+          "1": "Połączenie z siecią"
         }
       },
       "runcommand": {
@@ -456,13 +456,13 @@
       "currentoperatingmode": {
         "name": "Tryb pracy",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "Autokonsumpcja",
+          "2": "Zasilanie awaryjne (zielone)",
+          "3": "Zasilanie awaryjne (sieć)",
+          "4": "Oddawanie do sieci",
+          "5": "Tryb pracy wyspowej",
+          "6": "Tryb kalibracji SOC baterii",
+          "7": "Tryb wymuszonego ładowania baterii"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "Stan BMS"
       },
       "batoperatingstatus": {
-        "name": "Stan pracy akumulatora"
+        "name": "Stan pracy akumulatora",
+        "state": {
+          "0": "Uśpienie",
+          "1": "Ładowanie",
+          "2": "Rozładowanie",
+          "3": "Bezczynność"
+        }
       },
       "batalarm1": {
         "name": "Alarm baterii 1"
@@ -681,24 +687,24 @@
         "name": "Zużycie domowe dzisiaj"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "Status falownika",
         "state": {
-          "0": "Initialization",
-          "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "0": "Inicjalizacja",
+          "1": "Czuwanie",
+          "2": "Rozruch strony DC",
+          "3": "Rozpoczęcie autotestu",
+          "4": "Oczekiwanie na autotest",
+          "5": "Praca falownika",
+          "6": "Praca w stanie ustalonym"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "Status falownika",
         "state": {
-          "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "1": "Czuwanie",
+          "3": "Autotest",
+          "6": "Pracuje",
+          "7": "Zatrzymany"
         }
       }
     },

@@ -442,27 +442,27 @@
       "gridmode": {
         "name": "电网模式",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "离网",
+          "1": "并网"
         }
       },
       "runcommand": {
         "name": "运行命令",
         "state": {
-          "0": "Stop",
-          "1": "Start"
+          "0": "停止",
+          "1": "启动"
         }
       },
       "currentoperatingmode": {
         "name": "运行模式",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "自发自用",
+          "2": "备电（绿色）",
+          "3": "备电（电网）",
+          "4": "馈网",
+          "5": "离网模式",
+          "6": "电池SOC校准模式",
+          "7": "电池强制充电模式"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "BMS状态"
       },
       "batoperatingstatus": {
-        "name": "电池运行状态"
+        "name": "电池运行状态",
+        "state": {
+          "0": "休眠",
+          "1": "充电",
+          "2": "放电",
+          "3": "待机"
+        }
       },
       "batalarm1": {
         "name": "电池报警1"
@@ -681,24 +687,24 @@
         "name": "今日家庭用电量"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "逆变器状态",
         "state": {
-          "0": "Initialization",
-          "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "0": "初始化",
+          "1": "待机",
+          "2": "直流侧启动",
+          "3": "自检启动",
+          "4": "自检等待",
+          "5": "逆变器运行",
+          "6": "稳态运行"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "逆变器状态",
         "state": {
-          "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "1": "待机",
+          "3": "自检",
+          "6": "运行中",
+          "7": "已停止"
         }
       }
     },

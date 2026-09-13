@@ -442,27 +442,27 @@
       "gridmode": {
         "name": "Netzmodus",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "Netzunabhängig",
+          "1": "Netzverbindung"
         }
       },
       "runcommand": {
         "name": "Laufbefehl",
         "state": {
-          "0": "Stop",
+          "0": "Stopp",
           "1": "Start"
         }
       },
       "currentoperatingmode": {
         "name": "Betriebsmodus",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "Eigenverbrauch",
+          "2": "Backup (grün)",
+          "3": "Backup (Netz)",
+          "4": "Einspeisung",
+          "5": "Inselbetrieb-Modus",
+          "6": "Batterie-SOC-Kalibriermodus",
+          "7": "Batterie-Zwangsladung"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "BMS-Status"
       },
       "batoperatingstatus": {
-        "name": "Batterie-Betriebsstatus"
+        "name": "Batterie-Betriebsstatus",
+        "state": {
+          "0": "Schlafmodus",
+          "1": "Laden",
+          "2": "Entladen",
+          "3": "Leerlauf"
+        }
       },
       "batalarm1": {
         "name": "Batteriealarm 1"
@@ -681,24 +687,24 @@
         "name": "Hausverbrauch heute"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "Wechselrichter-Status",
         "state": {
-          "0": "Initialization",
+          "0": "Initialisierung",
           "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "2": "DC-seitiger Start",
+          "3": "Selbsttest-Start",
+          "4": "Warten auf Selbsttest",
+          "5": "Wechselrichterbetrieb",
+          "6": "Stationärer Betrieb"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "Wechselrichter-Status",
         "state": {
           "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "3": "Selbsttest",
+          "6": "Läuft",
+          "7": "Gestoppt"
         }
       }
     },

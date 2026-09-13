@@ -442,27 +442,27 @@
       "gridmode": {
         "name": "Hálózati mód",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "Hálózaton kívül",
+          "1": "Hálózati kapcsolat"
         }
       },
       "runcommand": {
         "name": "Futtatási parancs",
         "state": {
-          "0": "Stop",
-          "1": "Start"
+          "0": "Leállítás",
+          "1": "Indítás"
         }
       },
       "currentoperatingmode": {
         "name": "Üzemmód",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "Saját fogyasztás",
+          "2": "Tartalék (zöld)",
+          "3": "Tartalék (hálózat)",
+          "4": "Hálózatba táplálás",
+          "5": "Sziget üzemmód",
+          "6": "Akkumulátor SOC kalibrálási mód",
+          "7": "Akkumulátor kényszerített töltési mód"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "BMS állapota"
       },
       "batoperatingstatus": {
-        "name": "Akkumulátor üzemállapota"
+        "name": "Akkumulátor üzemállapota",
+        "state": {
+          "0": "Alvás",
+          "1": "Töltés",
+          "2": "Kisütés",
+          "3": "Készenléti"
+        }
       },
       "batalarm1": {
         "name": "Akkumulátor riasztás 1"
@@ -681,24 +687,24 @@
         "name": "Otthoni fogyasztás ma"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "Inverter állapota",
         "state": {
-          "0": "Initialization",
-          "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "0": "Inicializálás",
+          "1": "Készenlét",
+          "2": "DC oldali indítás",
+          "3": "Önteszt indítása",
+          "4": "Önteszt várakozás",
+          "5": "Inverter üzem",
+          "6": "Állandósult üzem"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "Inverter állapota",
         "state": {
-          "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "1": "Készenlét",
+          "3": "Önteszt",
+          "6": "Fut",
+          "7": "Leállítva"
         }
       }
     },

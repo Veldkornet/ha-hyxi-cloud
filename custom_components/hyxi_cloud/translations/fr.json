@@ -442,27 +442,27 @@
       "gridmode": {
         "name": "Mode réseau",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "Hors réseau",
+          "1": "Connexion réseau"
         }
       },
       "runcommand": {
         "name": "Commande de marche",
         "state": {
-          "0": "Stop",
-          "1": "Start"
+          "0": "Arrêt",
+          "1": "Marche"
         }
       },
       "currentoperatingmode": {
         "name": "Mode de fonctionnement",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "Autoconsommation",
+          "2": "Secours (vert)",
+          "3": "Secours (réseau)",
+          "4": "Injection réseau",
+          "5": "Mode hors réseau",
+          "6": "Mode d'étalonnage du SOC batterie",
+          "7": "Mode de charge forcée de la batterie"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "État du BMS"
       },
       "batoperatingstatus": {
-        "name": "État de fonctionnement de la batterie"
+        "name": "État de fonctionnement de la batterie",
+        "state": {
+          "0": "Veille",
+          "1": "Charge",
+          "2": "Décharge",
+          "3": "Inactif"
+        }
       },
       "batalarm1": {
         "name": "Alarme batterie 1"
@@ -681,24 +687,24 @@
         "name": "Consommation maison aujourd'hui"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "Statut de l'onduleur",
         "state": {
-          "0": "Initialization",
-          "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "0": "Initialisation",
+          "1": "Veille",
+          "2": "Démarrage côté CC",
+          "3": "Démarrage de l'autotest",
+          "4": "Attente de l'autotest",
+          "5": "Fonctionnement de l'onduleur",
+          "6": "Fonctionnement en régime stable"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "Statut de l'onduleur",
         "state": {
-          "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "1": "Veille",
+          "3": "Autotest",
+          "6": "En marche",
+          "7": "Arrêté"
         }
       }
     },

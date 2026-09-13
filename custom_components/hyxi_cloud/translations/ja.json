@@ -442,27 +442,27 @@
       "gridmode": {
         "name": "グリッドモード",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "オフグリッド",
+          "1": "系統連系"
         }
       },
       "runcommand": {
         "name": "運転コマンド",
         "state": {
-          "0": "Stop",
-          "1": "Start"
+          "0": "停止",
+          "1": "開始"
         }
       },
       "currentoperatingmode": {
         "name": "動作モード",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "自家消費",
+          "2": "バックアップ（グリーン）",
+          "3": "バックアップ（系統）",
+          "4": "系統への逆潮流",
+          "5": "オフグリッドモード",
+          "6": "バッテリーSOCキャリブレーションモード",
+          "7": "バッテリー強制充電モード"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "BMS状態"
       },
       "batoperatingstatus": {
-        "name": "バッテリー動作状態"
+        "name": "バッテリー動作状態",
+        "state": {
+          "0": "スリープ",
+          "1": "充電",
+          "2": "放電",
+          "3": "アイドル"
+        }
       },
       "batalarm1": {
         "name": "バッテリーアラーム1"
@@ -681,24 +687,24 @@
         "name": "本日の宅内消費量"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "インバータ状態",
         "state": {
-          "0": "Initialization",
-          "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "0": "初期化",
+          "1": "待機",
+          "2": "DC側起動",
+          "3": "セルフテスト開始",
+          "4": "セルフテスト待機",
+          "5": "インバータ運転",
+          "6": "定常運転"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "インバータ状態",
         "state": {
-          "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "1": "待機",
+          "3": "セルフテスト",
+          "6": "運転中",
+          "7": "停止"
         }
       }
     },

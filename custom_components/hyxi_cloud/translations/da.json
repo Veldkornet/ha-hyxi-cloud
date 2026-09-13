@@ -442,8 +442,8 @@
       "gridmode": {
         "name": "Nettilstand",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "Uden for nettet",
+          "1": "Nettilslutning"
         }
       },
       "runcommand": {
@@ -456,13 +456,13 @@
       "currentoperatingmode": {
         "name": "Driftstilstand",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "Eget forbrug",
+          "2": "Backup (grøn)",
+          "3": "Backup (net)",
+          "4": "Nettilførsel",
+          "5": "Off-grid-tilstand",
+          "6": "Batteri SOC-kalibreringstilstand",
+          "7": "Batteri tvungen opladningstilstand"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "BMS-status"
       },
       "batoperatingstatus": {
-        "name": "Batteriets driftsstatus"
+        "name": "Batteriets driftsstatus",
+        "state": {
+          "0": "Dvale",
+          "1": "Opladning",
+          "2": "Afladning",
+          "3": "Inaktiv"
+        }
       },
       "batalarm1": {
         "name": "Batterialarm 1"
@@ -681,24 +687,24 @@
         "name": "Husforbrug i dag"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "Inverterstatus",
         "state": {
-          "0": "Initialization",
+          "0": "Initialisering",
           "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "2": "DC-side opstart",
+          "3": "Selvtest opstart",
+          "4": "Venter på selvtest",
+          "5": "Inverterdrift",
+          "6": "Stabil drift"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "Inverterstatus",
         "state": {
           "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "3": "Selvtest",
+          "6": "Kører",
+          "7": "Stoppet"
         }
       }
     },

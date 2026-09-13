@@ -597,7 +597,13 @@
         "name": "BMS State"
       },
       "batoperatingstatus": {
-        "name": "Battery Operating Status"
+        "name": "Battery Operating Status",
+        "state": {
+          "0": "Sleep",
+          "1": "Charge",
+          "2": "Discharge",
+          "3": "Idle"
+        }
       },
       "batalarm1": {
         "name": "Battery Alarm 1"

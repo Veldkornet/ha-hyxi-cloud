@@ -442,27 +442,27 @@
       "gridmode": {
         "name": "Modalità rete",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "Fuori rete",
+          "1": "Connessione alla rete"
         }
       },
       "runcommand": {
         "name": "Comando di avvio",
         "state": {
           "0": "Stop",
-          "1": "Start"
+          "1": "Avvio"
         }
       },
       "currentoperatingmode": {
         "name": "Modalità operativa",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "Autoconsumo",
+          "2": "Backup (verde)",
+          "3": "Backup (rete)",
+          "4": "Immissione in rete",
+          "5": "Modalità fuori rete",
+          "6": "Modalità calibrazione SOC batteria",
+          "7": "Modalità carica forzata batteria"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "Stato BMS"
       },
       "batoperatingstatus": {
-        "name": "Stato operativo della batteria"
+        "name": "Stato operativo della batteria",
+        "state": {
+          "0": "Sospensione",
+          "1": "Carica",
+          "2": "Scarica",
+          "3": "Inattivo"
+        }
       },
       "batalarm1": {
         "name": "Allarme batteria 1"
@@ -681,24 +687,24 @@
         "name": "Consumo domestico oggi"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "Stato inverter",
         "state": {
-          "0": "Initialization",
+          "0": "Inizializzazione",
           "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "2": "Avvio lato DC",
+          "3": "Avvio autotest",
+          "4": "Attesa autotest",
+          "5": "Funzionamento inverter",
+          "6": "Funzionamento a regime stabile"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "Stato inverter",
         "state": {
           "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "3": "Autotest",
+          "6": "In funzione",
+          "7": "Arrestato"
         }
       }
     },

@@ -442,27 +442,27 @@
       "gridmode": {
         "name": "Nettmodus",
         "state": {
-          "0": "Off-grid",
-          "1": "Grid connection"
+          "0": "Utenfor nettet",
+          "1": "Nettilkobling"
         }
       },
       "runcommand": {
         "name": "Kjørekommando",
         "state": {
-          "0": "Stop",
+          "0": "Stopp",
           "1": "Start"
         }
       },
       "currentoperatingmode": {
         "name": "Driftsmodus",
         "state": {
-          "1": "Self-use",
-          "2": "Backup (green)",
-          "3": "Backup (grid)",
-          "4": "Feed-in",
-          "5": "Off-grid mode",
-          "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "1": "Eget forbruk",
+          "2": "Backup (grønn)",
+          "3": "Backup (nett)",
+          "4": "Nettinnmating",
+          "5": "Off-grid-modus",
+          "6": "Batteri SOC-kalibreringsmodus",
+          "7": "Batteri tvungen ladning-modus"
         }
       },
       "insulationresistance": {
@@ -553,7 +553,13 @@
         "name": "BMS-status"
       },
       "batoperatingstatus": {
-        "name": "Batteriets driftsstatus"
+        "name": "Batteriets driftsstatus",
+        "state": {
+          "0": "Hvile",
+          "1": "Lading",
+          "2": "Utlading",
+          "3": "Inaktiv"
+        }
       },
       "batalarm1": {
         "name": "Batterialarm 1"
@@ -681,24 +687,24 @@
         "name": "Husforbruk i dag"
       },
       "invsts_hybrid": {
-        "name": "Inverter Status",
+        "name": "Inverterstatus",
         "state": {
-          "0": "Initialization",
+          "0": "Initialisering",
           "1": "Standby",
-          "2": "DC-side startup",
-          "3": "Self-test startup",
-          "4": "Self-test wait",
-          "5": "Inverter operation",
-          "6": "Steady state operation"
+          "2": "DC-side oppstart",
+          "3": "Selvtest oppstart",
+          "4": "Venter på selvtest",
+          "5": "Inverterdrift",
+          "6": "Stabil drift"
         }
       },
       "invsts_halo": {
-        "name": "Inverter Status",
+        "name": "Inverterstatus",
         "state": {
           "1": "Standby",
-          "3": "Self-test",
-          "6": "Running",
-          "7": "Stopped"
+          "3": "Selvtest",
+          "6": "Kjører",
+          "7": "Stoppet"
         }
       }
     },
