@@ -1087,6 +1087,25 @@ def test_note_manual_mode_rejected_leaves_superseded_send_alone():
     assert controller._last_sent_trace_id == "TRACE_NEW"
 
 
+def test_note_manual_mode_ignores_a_send_older_than_one_already_applied():
+    """Regression test: a send's completion order isn't its issue order --
+    if a send reserved via begin_send() resolves after a *later-issued*
+    send has already been recorded, it must be ignored outright, even
+    though on its own it would look like a legitimate mode change with
+    its own real trace_id. This is the exact race Copilot flagged between
+    protection's own automatic sends and manual/EM ones sharing this
+    state -- see begin_send()."""
+    controller = _build_controller(50)
+    seq_old = controller.begin_send()
+    seq_new = controller.begin_send()
+
+    controller.note_manual_mode("charge", "TRACE_NEW", seq_new)
+    controller.note_manual_mode("discharge", "TRACE_OLD", seq_old)
+
+    assert controller._last_sent_mode == "charge"
+    assert controller._last_sent_trace_id == "TRACE_NEW"
+
+
 def protection_module_logger():
     """Return protection.py's module logger, for asserting on _LOGGER.log calls."""
     from custom_components.hyxi_cloud import protection as protection_mod
@@ -1110,3 +1129,31 @@ async def test_ensure_mode_schedules_verification_after_successful_cloud_send():
 
     controller._maybe_verify_control_result.assert_called_once_with("idle", "123456789")
     assert controller._last_sent_trace_id == "123456789"
+
+
+@pytest.mark.asyncio
+async def test_ensure_mode_ignores_a_stale_completion():
+    """Regression test: a manual or EM command issued after this
+    automatic send started, but whose write completes first, must win --
+    _ensure_mode's own result, arriving after, must not clobber it just
+    because its own network round-trip happened to finish last. See
+    begin_send()."""
+    controller = _build_controller(50, "H5K-HT")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    controller._maybe_verify_control_result = MagicMock()
+
+    async def _racing_send_control(mode):
+        # A manual command, issued after this automatic send reserved its
+        # sequence number, whose write resolves before this one does.
+        controller.note_manual_mode("charge", "MANUAL_TRACE", controller.begin_send())
+        return _CONTROL_RESPONSE
+
+    controller._send_control = AsyncMock(side_effect=_racing_send_control)
+
+    await controller._ensure_mode("idle")
+
+    controller._maybe_verify_control_result.assert_not_called()
+    assert controller._last_sent_mode == "charge"
+    assert controller._last_sent_trace_id == "MANUAL_TRACE"

@@ -59,6 +59,13 @@ class HyxiBatteryProtectionController:
         # (_handle_device_rejected) tell whether it's still current or has
         # since been superseded by another send (automatic or manual).
         self._last_sent_trace_id: str | None = None
+        # Guards the pair above against out-of-order write completions:
+        # protection's own automatic sends, control.py's manual commands,
+        # and engine.py's EM writes all update this same state, and their
+        # network round-trips can resolve in a different order than they
+        # were issued in. See begin_send()/_stale_send()/_record_send().
+        self._send_seq = 0
+        self._applied_send_seq = 0
         self._low_soc_hold = False
         self._high_soc_hold = False
         self._last_mode_switch = -999999.0
@@ -72,6 +79,37 @@ class HyxiBatteryProtectionController:
     def last_sent_mode(self) -> str | None:
         """Return the last tracked mode command."""
         return self._last_sent_mode
+
+    def begin_send(self) -> int:
+        """Reserve the next monotonic send sequence number.
+
+        Call this before issuing a Cloud write that will (eventually)
+        update last_sent_mode/last_sent_trace_id -- _ensure_mode below,
+        control.py's manual async_send_battery_mode, and engine.py's EM
+        writes (_set_mode/_adjust_power) all do this before their own
+        await, then pass the number through to note_manual_mode (or use
+        it directly, for _ensure_mode's own send) once their write
+        completes. Recording the number at send time rather than at
+        completion time means whichever send was issued last always wins
+        the tracked state via _record_send, regardless of which one's
+        network round-trip happens to resolve first.
+        """
+        self._send_seq += 1
+        return self._send_seq
+
+    def _stale_send(self, seq: int | None) -> bool:
+        """Whether `seq` (from begin_send(), or None for a caller with no
+        ordering info of its own) is older than the highest-numbered send
+        already recorded -- see begin_send()."""
+        return seq is not None and seq <= self._applied_send_seq
+
+    def _record_send(self, seq: int | None, mode: str, trace_id: str | None) -> None:
+        """Unconditionally record `mode`/`trace_id` as the current tracked
+        send, advancing _applied_send_seq to `seq` if given."""
+        if seq is not None:
+            self._applied_send_seq = seq
+        self._last_sent_mode = mode
+        self._last_sent_trace_id = trace_id
 
     async def async_start(self) -> None:
         """Start listening for coordinator updates."""
@@ -114,7 +152,9 @@ class HyxiBatteryProtectionController:
         self._eval_task = None
         control_verify.cancel_pending(self._verify_tasks)
 
-    def note_manual_mode(self, mode: str, trace_id: str | None = None) -> None:
+    def note_manual_mode(
+        self, mode: str, trace_id: str | None = None, seq: int | None = None
+    ) -> None:
         """Track a mode command sent outside _ensure_mode: a genuine
         manual command (control.py's button/service path, which does
         pass `trace_id` once it has one -- see async_send_battery_mode),
@@ -132,13 +172,23 @@ class HyxiBatteryProtectionController:
         its own (EM's routine notifications never carry one) leaves
         whatever's already tracked alone, rather than silently cancelling
         a still-pending verification of that same mode.
+
+        `seq`, reserved by the caller's own begin_send() call before it
+        issued its write, guards against that same write racing with a
+        different write (protection's own automatic send, or another
+        manual/EM one) that was issued later but happens to complete
+        first -- see begin_send(). A caller not passing one (or a bare
+        reaffirmation that changes nothing, below) doesn't advance
+        _applied_send_seq, since there's nothing new to protect a later,
+        genuinely older completion from overwriting.
         """
+        if self._stale_send(seq):
+            return
         if mode != self._last_sent_mode:
-            self._last_sent_mode = mode
-            self._last_sent_trace_id = trace_id
+            self._record_send(seq, mode, trace_id)
             return
         if trace_id is not None:
-            self._last_sent_trace_id = trace_id
+            self._record_send(seq, mode, trace_id)
 
     def note_manual_mode_rejected(self, mode: str, trace_id: str) -> None:
         """A manually-issued `mode` (button/service, see control.py) was
@@ -360,6 +410,7 @@ class HyxiBatteryProtectionController:
             )
             return
 
+        seq = self.begin_send()
         try:
             response = await self._send_control(mode)
         except HyxiApiClient.ControlError as err:
@@ -410,13 +461,18 @@ class HyxiBatteryProtectionController:
             self._last_control_error_kind = kind
             return
 
+        if self._stale_send(seq):
+            # A manual or EM send issued after this one already completed
+            # and was recorded first -- this write still happened (the
+            # device got the command), but it's no longer the send
+            # anything should be tracked against.
+            return
+
         self._last_control_error_kind = None
-        self._last_sent_mode = mode
-        self._last_sent_trace_id = control_verify.extract_trace_id(
-            response, self._sn, "Protection"
-        )
+        trace_id = control_verify.extract_trace_id(response, self._sn, "Protection")
+        self._record_send(seq, mode, trace_id)
         self._last_mode_switch = time.monotonic()
-        self._maybe_verify_control_result(mode, self._last_sent_trace_id)
+        self._maybe_verify_control_result(mode, trace_id)
         await self._coordinator.async_request_refresh()
 
     def _maybe_verify_control_result(self, mode: str, trace_id: str | None) -> None:

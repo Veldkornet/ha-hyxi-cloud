@@ -62,16 +62,25 @@ def _get_protection_controller(coordinator, sn: str):
 
 
 def _note_manual_mode(
-    coordinator, sn: str, mode: str, trace_id: str | None = None
+    coordinator,
+    sn: str,
+    mode: str,
+    trace_id: str | None = None,
+    seq: int | None = None,
 ) -> None:
     """Track the last user-sent inverter mode for battery protection telemetry.
 
     `trace_id`, once extracted, is passed through too, so a later
     confirmed rejection (_on_verify_result) can correct it precisely via
     note_manual_mode_rejected instead of guessing from the mode alone.
+
+    `seq`, reserved via the controller's begin_send() before this send's
+    write was issued (see async_send_battery_mode), guards against this
+    send racing with protection's own automatic one or another manual/EM
+    send -- see HyxiBatteryProtectionController.begin_send().
     """
     if controller := _get_protection_controller(coordinator, sn):
-        controller.note_manual_mode(mode, trace_id)
+        controller.note_manual_mode(mode, trace_id, seq)
 
 
 def _maybe_verify_control_result(
@@ -197,6 +206,11 @@ async def async_send_battery_mode(
     falls back to the paired power number entity, then 100 W.
     """
     client = coordinator.client
+    controller = _get_protection_controller(coordinator, sn)
+    # Reserved before the write below, not after -- see
+    # HyxiBatteryProtectionController.begin_send() for why completion
+    # order isn't a safe stand-in for issue order.
+    seq = controller.begin_send() if controller else None
     try:
         response: dict = {}
         if mode == "idle":
@@ -216,7 +230,7 @@ async def async_send_battery_mode(
         elif mode == "self_consume":
             response = await client.set_mode_self_consume(sn)
         trace_id = control_verify.extract_trace_id(response, sn, "Control")
-        _note_manual_mode(coordinator, sn, mode, trace_id)
+        _note_manual_mode(coordinator, sn, mode, trace_id, seq)
         _maybe_verify_control_result(hass, coordinator, sn, mode, trace_id)
         _LOGGER.info("Mode '%s' command sent to %s", mode, mask_sn(sn))
         await coordinator.async_request_refresh()

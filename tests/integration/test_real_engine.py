@@ -756,7 +756,9 @@ async def test_engine_protection_and_forecast_helpers(hass: HomeAssistant):
     coordinator.protection_controllers["SN123"] = protection_controller
     assert engine._get_protection_controller() is protection_controller
     engine._notify_protection("discharge")
-    protection_controller.note_manual_mode.assert_called_once_with("discharge")
+    protection_controller.note_manual_mode.assert_called_once_with(
+        "discharge", seq=None
+    )
 
     # --- _get_forecast_remaining_wh ---
     hass.states.async_set("sensor.solar_forecast", "3.5")  # 3.5 kWh

@@ -192,7 +192,7 @@ def test_note_manual_mode():
 
     control_mod._note_manual_mode(coordinator, "SN123", "test_mode")
 
-    controller.note_manual_mode.assert_called_once_with("test_mode", None)
+    controller.note_manual_mode.assert_called_once_with("test_mode", None, None)
 
 
 def test_note_manual_mode_no_controller():

@@ -495,10 +495,17 @@ class EnergyManagerEngine:
         """Get the existing battery protection controller for this SN."""
         return self._coordinator.protection_controllers.get(self._sn)
 
-    def _notify_protection(self, mode: str) -> None:
-        """Notify the protection controller about a mode change."""
+    def _notify_protection(self, mode: str, seq: int | None = None) -> None:
+        """Notify the protection controller about a mode change.
+
+        `seq`, reserved via the controller's begin_send() before this
+        write was issued (see _set_mode/_adjust_power), guards against
+        this write racing with protection's own automatic send or
+        another manual/EM one -- see
+        HyxiBatteryProtectionController.begin_send().
+        """
         if controller := self._get_protection_controller():
-            controller.note_manual_mode(mode)
+            controller.note_manual_mode(mode, seq=seq)
 
     # ── Control-result verification ──────────────────────────────────────
     #
@@ -619,6 +626,11 @@ class EnergyManagerEngine:
             self._notify_sensors()
             return True
 
+        protection = self._get_protection_controller()
+        # Reserved before the write below, not after -- see
+        # HyxiBatteryProtectionController.begin_send() for why completion
+        # order isn't a safe stand-in for issue order.
+        seq = protection.begin_send() if protection else None
         client: HyxiApiClient = self._coordinator.client
         try:
             if mode == "idle":
@@ -659,7 +671,7 @@ class EnergyManagerEngine:
             )
 
             # Notify protection controller about the mode change
-            self._notify_protection(mode)
+            self._notify_protection(mode, seq)
 
             return True
 
@@ -695,6 +707,11 @@ class EnergyManagerEngine:
             self._current_mode_trace_id = None
             return True
 
+        protection = self._get_protection_controller()
+        # Reserved before the write below, not after -- see
+        # HyxiBatteryProtectionController.begin_send() for why completion
+        # order isn't a safe stand-in for issue order.
+        seq = protection.begin_send() if protection else None
         client: HyxiApiClient = self._coordinator.client
         try:
             if direction == "charge":
@@ -713,7 +730,7 @@ class EnergyManagerEngine:
             _LOGGER.debug("EM: %s power -> %dW", direction, target_w)
 
             # Notify protection controller about the mode change
-            self._notify_protection(direction)
+            self._notify_protection(direction, seq)
             self._notify_sensors()
 
             return True
