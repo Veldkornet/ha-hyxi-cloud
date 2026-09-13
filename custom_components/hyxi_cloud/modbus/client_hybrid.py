@@ -65,6 +65,31 @@ def _sum_or_none(*values: float | None) -> float | None:
     return sum(present) if present else None
 
 
+def _fix_battery_serial_byte_order(value: str | None) -> str | None:
+    """Undo a byte-order mismatch in the decoded battery serial number.
+
+    modbus_connection's decode_string() always reads each register as
+    high-byte-then-low-byte ASCII, with no per-field override. HYX-H's
+    battery_serial_number register packs each register the other way
+    round -- confirmed live: a battery printed "1234567890" read back as
+    "2143658709", exactly what swapping every decoded character pair back
+    undoes. Register/word order (which register comes first) is unaffected
+    and already correct; this is purely the two bytes within one register.
+
+    An odd-length serial's last register holds one real character plus a
+    null pad byte. decode_string() already stripped trailing nulls off its
+    own (byte-swapped, and therefore wrong) reading, but on the swapped
+    device that pad byte was never actually trailing -- it sat right
+    before the final real character -- so it survives decode_string()'s
+    rstrip and only becomes trailing again after the swap below undoes it.
+    Stripping again here catches exactly that case.
+    """
+    if not value:
+        return value
+    pairs = (value[i : i + 2] for i in range(0, len(value), 2))
+    return "".join(pair[::-1] for pair in pairs).rstrip("\x00")
+
+
 class HyxiHybridModbusClient:
     """Talks to one HYX-H hybrid inverter over Modbus, cloud client shaped."""
 
@@ -113,7 +138,7 @@ class HyxiHybridModbusClient:
             return
         try:
             await self.identity.async_update()
-            self._serial = str(self.identity.serial_number)
+            self._serial = _hex_identifier(self.identity.serial_number)
             _LOGGER.debug(
                 "Modbus identity on unit %s: serial=%s protocol_v=%s "
                 "main_dsp=%s main_program=%s battery_sn=%s",
@@ -122,7 +147,9 @@ class HyxiHybridModbusClient:
                 self.identity.protocol_version,
                 _hex_identifier(self.identity.main_dsp_version),
                 _hex_identifier(self.identity.main_program_version),
-                _mask(self.identity.battery_serial_number),
+                _mask(
+                    _fix_battery_serial_byte_order(self.identity.battery_serial_number)
+                ),
             )
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning(
@@ -296,7 +323,9 @@ class HyxiHybridModbusClient:
             # onto a separate "Battery {sn}" device, matching the HALO
             # client -- omitting it (as this client previously did) leaves
             # them attached to the inverter device instead.
-            "batSn": self.identity.battery_serial_number,
+            "batSn": _fix_battery_serial_byte_order(
+                self.identity.battery_serial_number
+            ),
             "batSoc": self.battery.soc,
             "batSoh": self.battery.soh,
             "batTmp": self.battery.temperature,
