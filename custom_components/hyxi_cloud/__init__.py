@@ -434,7 +434,14 @@ def _migrate_hybrid_inverter_serial(
     sn: str,
 ) -> None:
     """Rename one hybrid inverter's device, and every entity's unique_id,
-    from the old decimal-misread serial to the corrected hex one."""
+    from the old decimal-misread serial to the corrected hex one.
+
+    Scans every entity on the config entry rather than just the ones
+    attached to the inverter's own device_id: HyxiBatteryEnergyPeriodSensor
+    (and potentially others) keys its unique_id on the inverter's sn but
+    attaches to the *battery's* device via device_info, so a device_id-
+    scoped scan silently misses it.
+    """
     try:
         old_sn = str(int(sn, 16))
     except ValueError:
@@ -452,9 +459,7 @@ def _migrate_hybrid_inverter_serial(
     device_registry.async_update_device(
         device.id, new_identifiers={(DOMAIN, sn)}, serial_number=sn
     )
-    for reg_entry in er.async_entries_for_device(
-        entity_registry, device.id, include_disabled_entities=True
-    ):
+    for reg_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
         if old_sn not in reg_entry.unique_id:
             continue
         new_unique_id = reg_entry.unique_id.replace(old_sn, sn)

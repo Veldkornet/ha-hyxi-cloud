@@ -126,6 +126,53 @@ async def test_inverter_device_and_entities_are_renamed_in_place(
 
 
 @pytest.mark.asyncio
+async def test_inverter_keyed_entities_attached_to_the_battery_device_are_still_rekeyed(
+    hass: HomeAssistant,
+):
+    """Regression test: HyxiBatteryEnergyPeriodSensor (and any other
+    entity like it) keys its unique_id on the inverter's sn but attaches
+    to the *battery's* device via device_info, not the inverter's own
+    device_id -- e.g. sensor.hyxi_<inverter_sn>_bat_charge_month. A
+    device_id-scoped entity scan misses these entirely; the migration
+    must scan every entity on the config entry instead."""
+    entry = _modbus_entry(hass)
+
+    device_registry = dr.async_get(hass)
+    inverter = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, OLD_INVERTER_SN)},
+        name="Old Inverter",
+    )
+    battery = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, OLD_BATTERY_SN_EVEN)},
+        name=f"Battery {OLD_BATTERY_SN_EVEN}",
+        via_device_id=inverter.id,
+    )
+
+    entity_registry = er.async_get(hass)
+    battery_period_sensor = entity_registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"hyxi_{OLD_INVERTER_SN}_bat_charge_month",
+        config_entry=entry,
+        device_id=battery.id,
+        suggested_object_id=f"hyxi_{OLD_INVERTER_SN}_bat_charge_month",
+    )
+
+    _migrate_hybrid_serial_decoding(
+        hass, entry, _hybrid_devices(NEW_INVERTER_SN, NEW_BATTERY_SN_EVEN)
+    )
+
+    moved = entity_registry.async_get(battery_period_sensor.entity_id)
+    assert moved is not None
+    assert moved.unique_id == f"hyxi_{NEW_INVERTER_SN}_bat_charge_month"
+    assert moved.entity_id == battery_period_sensor.entity_id
+    # Still attached to the (now also renamed) battery device, unmoved.
+    assert moved.device_id == battery.id
+
+
+@pytest.mark.asyncio
 async def test_inverter_migration_running_before_registration_avoids_a_duplicate_device(
     hass: HomeAssistant,
 ):
