@@ -412,7 +412,9 @@ class HyxiBatteryProtectionController:
 
         self._last_control_error_kind = None
         self._last_sent_mode = mode
-        self._last_sent_trace_id = control_verify.extract_trace_id(response)
+        self._last_sent_trace_id = control_verify.extract_trace_id(
+            response, self._sn, "Protection"
+        )
         self._last_mode_switch = time.monotonic()
         self._maybe_verify_control_result(mode, self._last_sent_trace_id)
         await self._coordinator.async_request_refresh()

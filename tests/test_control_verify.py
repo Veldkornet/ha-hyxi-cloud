@@ -18,30 +18,58 @@ from custom_components.hyxi_cloud import control_verify
 
 _CONTROL_RESPONSE = {
     "success": True,
-    "data": [{"traceId": "TRACE123", "deviceSn": "SN123"}],
+    "data": [{"traceId": "123456789", "deviceSn": "SN123"}],
 }
+
+
+def _extract(response: dict) -> str | None:
+    """extract_trace_id with placeholder sn/log_tag, for tests that only
+    care about the extraction logic itself, not the log line's content."""
+    return control_verify.extract_trace_id(response, "SN123", "Test")
 
 
 def test_extract_trace_id_valid():
     """Verify extract_trace_id pulls traceId out of a well-formed
     set_device_control response."""
-    assert control_verify.extract_trace_id(_CONTROL_RESPONSE) == "TRACE123"
+    assert _extract(_CONTROL_RESPONSE) == "123456789"
 
 
 def test_extract_trace_id_malformed_shapes():
     """Verify extract_trace_id returns None for every malformed shape,
     including a Modbus response (which carries no `data` at all)."""
-    extract = control_verify.extract_trace_id
+    assert _extract({"code": "0", "msg": "ok"}) is None  # Modbus-shaped
+    assert _extract({"data": None}) is None
+    assert _extract({"data": "not-a-list"}) is None
+    assert _extract({"data": []}) is None
+    assert _extract({"data": ["not-a-dict"]}) is None
+    assert _extract({"data": [{"deviceSn": "SN123"}]}) is None  # no traceId
+    assert _extract({"data": [{"traceId": 12345}]}) is None  # not a string
+    assert _extract({"data": [{"traceId": ""}]}) is None  # empty string
+    assert _extract({"data": [{"traceId": "   "}]}) is None  # whitespace-only
 
-    assert extract({"code": "0", "msg": "ok"}) is None  # Modbus-shaped
-    assert extract({"data": None}) is None
-    assert extract({"data": "not-a-list"}) is None
-    assert extract({"data": []}) is None
-    assert extract({"data": ["not-a-dict"]}) is None
-    assert extract({"data": [{"deviceSn": "SN123"}]}) is None  # no traceId
-    assert extract({"data": [{"traceId": 12345}]}) is None  # not a string
-    assert extract({"data": [{"traceId": ""}]}) is None  # empty string
-    assert extract({"data": [{"traceId": "   "}]}) is None  # whitespace-only
+
+def test_extract_trace_id_rejects_the_skipped_sentinel(caplog):
+    """Regression test: observed live against a device under active
+    third-party (energy-provider) VPP dispatch, HYXI returned the literal
+    string "SKIPPED" as traceId instead of a real one or an absent field.
+    query_control_result("SKIPPED") returns data: None forever (there's
+    nothing by that identifier to look up), so this must be treated the
+    same as no traceId at all rather than scheduled for a poll that can
+    only ever time out. Every genuine traceId (docs and confirmed real
+    traffic) is purely numeric, so anything else is rejected the same way.
+
+    Unlike a plain absent traceId, this is logged -- it's a distinct,
+    informative signal, not just "nothing to report".
+    """
+    import logging
+
+    with caplog.at_level(logging.DEBUG, logger="custom_components.hyxi_cloud"):
+        assert _extract({"data": [{"traceId": "SKIPPED"}]}) is None
+        assert _extract({"data": [{"traceId": " 123456789 "}]}) == "123456789"
+
+    assert "non-trackable traceId" in caplog.text
+    assert "'SKIPPED'" in caplog.text
+    assert caplog.text.count("non-trackable traceId") == 1  # not for the valid one
 
 
 @pytest.mark.asyncio

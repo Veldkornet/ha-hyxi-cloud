@@ -636,7 +636,9 @@ class EnergyManagerEngine:
             self._last_mode_switch = time.monotonic()
             prev_mode = self._current_mode
             self._current_mode = mode
-            self._current_mode_trace_id = control_verify.extract_trace_id(response)
+            self._current_mode_trace_id = control_verify.extract_trace_id(
+                response, self._sn, "EM"
+            )
             self._maybe_verify_control_result(mode, self._current_mode_trace_id)
             if power_w and mode in ("charge", "discharge"):
                 self._last_sent_power[mode] = power_w
@@ -702,7 +704,9 @@ class EnergyManagerEngine:
 
             self._last_power_adjust = time.monotonic()
             self._current_mode = direction
-            self._current_mode_trace_id = control_verify.extract_trace_id(response)
+            self._current_mode_trace_id = control_verify.extract_trace_id(
+                response, self._sn, "EM"
+            )
             self._maybe_verify_control_result(direction, self._current_mode_trace_id)
             self._last_sent_power[direction] = target_w
             self._last_action = f"{direction} @ {target_w}W"
@@ -750,7 +754,9 @@ class EnergyManagerEngine:
             response = await client.set_peak_shaving(self._sn, option)
             self._last_pv_curtail_toggle = time.monotonic()
             self._pv_curtailed = option == "stop"
-            self._pv_curtail_trace_id = control_verify.extract_trace_id(response)
+            self._pv_curtail_trace_id = control_verify.extract_trace_id(
+                response, self._sn, "EM"
+            )
             self._maybe_verify_peak_shaving_result(option, self._pv_curtail_trace_id)
             self._last_action = f"peak_shaving_{option}"
             _LOGGER.info("EM: Peak shaving -> %s for %s", option, mask_sn(self._sn))

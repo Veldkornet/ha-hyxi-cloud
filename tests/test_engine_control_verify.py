@@ -21,7 +21,7 @@ from custom_components.hyxi_cloud.engine import EMEntityConfig, EnergyManagerEng
 
 _CONTROL_RESPONSE = {
     "success": True,
-    "data": [{"traceId": "TRACE123", "deviceSn": "SN123"}],
+    "data": [{"traceId": "123456789", "deviceSn": "SN123"}],
 }
 
 
@@ -162,8 +162,8 @@ async def test_set_mode_schedules_verification_after_successful_cloud_send():
 
     assert await engine._set_mode("idle") is True
 
-    engine._maybe_verify_control_result.assert_called_once_with("idle", "TRACE123")
-    assert engine._current_mode_trace_id == "TRACE123"
+    engine._maybe_verify_control_result.assert_called_once_with("idle", "123456789")
+    assert engine._current_mode_trace_id == "123456789"
 
 
 @pytest.mark.asyncio
@@ -177,8 +177,8 @@ async def test_adjust_power_schedules_verification_after_successful_cloud_send()
 
     assert await engine._adjust_power("charge", 700) is True
 
-    engine._maybe_verify_control_result.assert_called_once_with("charge", "TRACE123")
-    assert engine._current_mode_trace_id == "TRACE123"
+    engine._maybe_verify_control_result.assert_called_once_with("charge", "123456789")
+    assert engine._current_mode_trace_id == "123456789"
 
 
 @pytest.mark.asyncio
@@ -192,8 +192,10 @@ async def test_set_peak_shaving_schedules_verification_after_successful_cloud_se
 
     assert await engine._set_peak_shaving("stop") is True
 
-    engine._maybe_verify_peak_shaving_result.assert_called_once_with("stop", "TRACE123")
-    assert engine._pv_curtail_trace_id == "TRACE123"
+    engine._maybe_verify_peak_shaving_result.assert_called_once_with(
+        "stop", "123456789"
+    )
+    assert engine._pv_curtail_trace_id == "123456789"
 
 
 @pytest.mark.asyncio
@@ -368,7 +370,7 @@ async def test_release_pv_curtailment_clears_state_via_successful_hold():
     await engine._release_pv_curtailment()
 
     assert engine._pv_curtailed is False
-    assert engine._pv_curtail_trace_id == "TRACE123"
+    assert engine._pv_curtail_trace_id == "123456789"
 
 
 def test_stop_cancels_pending_verify_tasks():

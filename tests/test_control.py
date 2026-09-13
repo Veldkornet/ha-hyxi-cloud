@@ -310,7 +310,7 @@ async def test_send_battery_mode_wraps_a_control_error(coord):
 
 _CONTROL_RESPONSE = {
     "success": True,
-    "data": [{"traceId": "TRACE123", "deviceSn": "SN123"}],
+    "data": [{"traceId": "123456789", "deviceSn": "SN123"}],
 }
 
 
@@ -333,6 +333,25 @@ async def test_send_battery_mode_schedules_verification_on_success(coord):
 async def test_send_battery_mode_skips_verification_for_modbus(coord):
     coord.entry = MagicMock(data={"transport": "modbus"})
     coord.client.set_mode_idle.return_value = _CONTROL_RESPONSE
+    hass = MagicMock()
+
+    await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
+
+    hass.async_create_task.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_send_battery_mode_skips_verification_for_a_skipped_traceid(coord):
+    """Regression test: observed live against a device under active
+    third-party (energy-provider) VPP dispatch, HYXI returned traceId:
+    "SKIPPED" rather than a real, pollable one -- must not schedule a
+    verification task for it (control_verify.extract_trace_id already
+    rejects it; this proves the rejection reaches all the way through
+    the real async_send_battery_mode call path)."""
+    coord.client.set_mode_idle.return_value = {
+        "success": True,
+        "data": [{"traceId": "SKIPPED", "deviceSn": "SN123"}],
+    }
     hass = MagicMock()
 
     await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")

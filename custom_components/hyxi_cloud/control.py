@@ -214,7 +214,7 @@ async def async_send_battery_mode(
             response = await client.set_mode_discharge(sn, watts)
         elif mode == "self_consume":
             response = await client.set_mode_self_consume(sn)
-        trace_id = control_verify.extract_trace_id(response)
+        trace_id = control_verify.extract_trace_id(response, sn, "Control")
         _note_manual_mode(coordinator, sn, mode, trace_id)
         _maybe_verify_control_result(hass, coordinator, sn, mode, trace_id)
         _LOGGER.info("Mode '%s' command sent to %s", mode, mask_sn(sn))

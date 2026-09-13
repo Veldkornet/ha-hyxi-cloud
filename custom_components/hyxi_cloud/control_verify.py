@@ -34,7 +34,7 @@ _VERIFY_RETRY_DELAY = 5.0
 _VERIFY_MAX_ATTEMPTS = 3
 
 
-def extract_trace_id(response: dict) -> str | None:
+def extract_trace_id(response: dict, sn: str, log_tag: str) -> str | None:
     """Pull the traceId out of a Cloud set_device_control response.
 
     HYXI's v2 control endpoint returns `data` as a list with one
@@ -42,6 +42,29 @@ def extract_trace_id(response: dict) -> str | None:
     always exactly one here, since set_device_control is always called
     with a single device_sn. A Modbus response carries no `data`/traceId
     at all, so this returns None for those too.
+
+    HYXI's own docs mark traceId as not required in the response, and
+    real traffic confirms why: observed live against a device under
+    active third-party (energy-provider) VPP dispatch, `traceId` came
+    back as the literal string "SKIPPED" rather than an absent field or
+    a real one -- query_control_result("SKIPPED") returns data: None
+    forever, since there's nothing by that identifier to look up.
+    Every genuine traceId across HYXI's docs and confirmed real traffic
+    is purely numeric (e.g. "1858391884548935680"), so a value that
+    isn't gets treated the same as no traceId at all, rather than being
+    scheduled for a poll that can only ever time out -- but unlike a
+    plain absent traceId (unremarkable, not logged), a present-but-
+    non-numeric one is logged, since it's a distinct, informative signal
+    rather than just "nothing to report".
+
+    HYXI's Device Control Appendix independently supports the likely
+    cause: every controlId set_mode_*/set_peak_shaving/set_frequency_
+    control send (1011/1020/1021/1062-1066) is documented there as "VPP
+    business usage". A third-party VPP aggregator dispatching the same
+    device over that same control surface is a plausible reason our own
+    write gets silently declined rather than actually rejected -- though
+    HYXI hasn't documented "SKIPPED" itself or confirmed this mechanism,
+    so it remains a well-supported inference, not a confirmed one.
     """
     if not isinstance(response, dict):
         return None
@@ -52,10 +75,22 @@ def extract_trace_id(response: dict) -> str | None:
     if not isinstance(entry, dict):
         return None
     trace_id = entry.get("traceId")
-    # query_control_result itself rejects a blank/whitespace-only
-    # trace_id (ValueError); matching that here means a malformed
-    # traceId is treated as "none extracted" in one place, not two.
-    return trace_id if isinstance(trace_id, str) and trace_id.strip() else None
+    if not isinstance(trace_id, str):
+        return None
+    trace_id = trace_id.strip()
+    if trace_id.isdigit():
+        return trace_id
+    if trace_id:
+        _LOGGER.debug(
+            "%s %s: HYXI returned a non-trackable traceId (%r) instead of "
+            "a real one -- not polling it. Seen in practice when the "
+            "device is under active third-party (energy-provider) "
+            "control, though that correlation isn't confirmed.",
+            log_tag,
+            mask_sn(sn),
+            trace_id,
+        )
+    return None
 
 
 async def verify_control_result(  # pylint: disable=too-many-arguments,too-many-positional-arguments

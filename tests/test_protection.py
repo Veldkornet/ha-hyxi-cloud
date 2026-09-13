@@ -822,7 +822,7 @@ def test_metric_float_exceptions():
 
 _CONTROL_RESPONSE = {
     "success": True,
-    "data": [{"traceId": "TRACE123", "deviceSn": "SN123"}],
+    "data": [{"traceId": "123456789", "deviceSn": "SN123"}],
 }
 
 
@@ -1108,5 +1108,5 @@ async def test_ensure_mode_schedules_verification_after_successful_cloud_send():
 
     await controller._ensure_mode("idle")
 
-    controller._maybe_verify_control_result.assert_called_once_with("idle", "TRACE123")
-    assert controller._last_sent_trace_id == "TRACE123"
+    controller._maybe_verify_control_result.assert_called_once_with("idle", "123456789")
+    assert controller._last_sent_trace_id == "123456789"
