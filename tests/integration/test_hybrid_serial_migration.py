@@ -389,6 +389,61 @@ async def test_entity_unique_id_collision_drops_the_legacy_duplicate(
 
 
 @pytest.mark.asyncio
+async def test_entity_collision_log_masks_both_serials_even_in_a_preserved_prefix(
+    hass: HomeAssistant, caplog
+):
+    """Regression test: the collision-drop debug log must not leak either
+    serial, including when old_sn's digits happen to sit inside the
+    entry_id-like prefix this rekey deliberately leaves untouched (see
+    test_unique_id_rekey_does_not_corrupt_an_entry_id_that_contains_the_old_sn).
+    A masking call that only targets the *expected* serial per string (old_sn
+    in the legacy id, sn in the renamed one) misses this -- old_sn can
+    legitimately appear in either string once it's embedded in a prefix."""
+    import logging
+
+    entry = _modbus_entry(hass)
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, OLD_INVERTER_SN)},
+        name="Old Inverter",
+    )
+    entity_registry = er.async_get(hass)
+    prefixed_object_id = f"prefix{OLD_INVERTER_SN}suffix_{OLD_INVERTER_SN}_totale"
+    legacy = entity_registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"prefix{OLD_INVERTER_SN}suffix_{OLD_INVERTER_SN}_totalE",
+        config_entry=entry,
+        device_id=device.id,
+        suggested_object_id=prefixed_object_id,
+    )
+    entity_registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"prefix{OLD_INVERTER_SN}suffix_{NEW_INVERTER_SN}_totalE",
+        config_entry=entry,
+        suggested_object_id=f"prefix{OLD_INVERTER_SN}suffix_{NEW_INVERTER_SN}_totale",
+    )
+
+    with caplog.at_level(logging.DEBUG, logger="custom_components.hyxi_cloud"):
+        # The entity-registry setup above already logged its own (unmasked)
+        # INFO records -- e.g. HA's "Registered new ... entity" -- which
+        # legitimately embed the raw serial in the entity's own object_id.
+        # Those aren't our migration's output, so clear them before invoking
+        # the code under test to keep the assertions below scoped to what
+        # the migration itself logs.
+        caplog.clear()
+        _migrate_hybrid_serial_decoding(
+            hass, entry, _hybrid_devices(NEW_INVERTER_SN, None)
+        )
+
+    assert entity_registry.async_get(legacy.entity_id) is None
+    assert OLD_INVERTER_SN not in caplog.text
+    assert NEW_INVERTER_SN not in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_inverter_migration_is_a_no_op_for_a_non_hex_serial(hass: HomeAssistant):
     """sn can be the "modbus_{unit_id}" fallback used when identity was
     unreadable at setup -- not a hex string at all, so there is nothing to
@@ -594,6 +649,49 @@ async def test_energy_manager_option_is_repointed_at_the_corrected_serial(
 
     _migrate_energy_manager_inverter_sn(hass, entry, OLD_INVERTER_SN, NEW_INVERTER_SN)
 
+    assert entry.options[CONF_EM_INVERTER_SN] == NEW_INVERTER_SN
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{OLD_INVERTER_SN}_energy_manager"), entry.entry_id
+        )
+        is None
+    )
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{NEW_INVERTER_SN}_energy_manager"), entry.entry_id
+        )
+        is not None
+    )
+
+
+@pytest.mark.asyncio
+async def test_energy_manager_device_is_still_renamed_when_the_option_was_already_migrated(
+    hass: HomeAssistant,
+):
+    """Regression test: an install that already went through the
+    option-only version of this migration has CONF_EM_INVERTER_SN == sn
+    already, with the EM device still stranded under old_sn. Gating the
+    device rename on `option == old_sn` (as the first version of this fix
+    did) makes it permanently unreachable for exactly the installs this
+    fix exists for -- the option's own guard must not block the device
+    half from running."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TRANSPORT: TRANSPORT_MODBUS},
+        options={"enable_battery_control": True, CONF_EM_INVERTER_SN: NEW_INVERTER_SN},
+        unique_id="modbus-em-migration-test-already-migrated",
+    )
+    entry.add_to_hass(hass)
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{OLD_INVERTER_SN}_energy_manager")},
+        name="Energy Manager",
+    )
+
+    _migrate_energy_manager_inverter_sn(hass, entry, OLD_INVERTER_SN, NEW_INVERTER_SN)
+
+    # Option was already correct -- untouched, not reset to something odd.
     assert entry.options[CONF_EM_INVERTER_SN] == NEW_INVERTER_SN
     assert (
         device_registry.async_get_device_by_identifier(

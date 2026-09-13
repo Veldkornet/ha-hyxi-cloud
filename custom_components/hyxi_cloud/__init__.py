@@ -427,6 +427,15 @@ def _reconstruct_pre_fix_battery_serial(value: str) -> str | None:
     return f"{swapped}\x00{value[-1]}" if odd else swapped
 
 
+def _mask_serials_in(text: str, *serials: str) -> str:
+    """Replace every occurrence of any of `serials` in `text` with its
+    mask_sn() hash, for logging a compound string (an entity_id or
+    unique_id) that might embed more than one of them."""
+    for serial in serials:
+        text = text.replace(serial, mask_sn(serial))
+    return text
+
+
 def _rename_or_merge_device_identifier(
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
@@ -538,13 +547,16 @@ def _migrate_hybrid_inverter_serial(
             # completed) -- keep the already-renamed one and drop the
             # dangling legacy duplicate, same rationale as
             # _migrate_vpp_dispatch_to_work_mode below. entity_id and
-            # unique_id both embed the serial, so mask it the same way
-            # the device-level logs above do rather than logging either
-            # verbatim.
+            # unique_id can each embed *either* serial -- the entry_id
+            # prefix this rekey deliberately preserves untouched can itself
+            # coincidentally contain old_sn's digits (see
+            # test_unique_id_rekey_does_not_corrupt_an_entry_id_that_contains_the_old_sn) --
+            # so mask both, not just whichever one each string is expected
+            # to carry.
             _LOGGER.debug(
                 "Removing orphaned legacy entity %s; %s already exists",
-                reg_entry.entity_id.replace(old_sn, mask_sn(old_sn)),
-                new_unique_id.replace(sn, mask_sn(sn)),
+                _mask_serials_in(reg_entry.entity_id, old_sn, sn),
+                _mask_serials_in(new_unique_id, old_sn, sn),
             )
             entity_registry.async_remove(reg_entry.entity_id)
     return old_sn
@@ -589,17 +601,28 @@ def _migrate_energy_manager_inverter_sn(
     generic unique_id scan (they're all hyxi_{sn}_em_*, matching that
     scan's delimited pattern), but the device identifier itself is not, so
     it's handled here the same way as the inverter/battery devices.
+
+    The option and the device are migrated independently, not gated behind
+    one shared check: an install that already went through the option-only
+    version of this migration has CONF_EM_INVERTER_SN == sn already, with
+    the EM device still stranded under old_sn -- gating the device rename
+    on `option == old_sn` would make it permanently unreachable for
+    exactly the installs this fix is for, the same lesson as
+    _migrate_hybrid_inverter_serial's entity-rekey/device-rename split.
     """
-    if entry.options.get(CONF_EM_INVERTER_SN) != old_sn:
+    current = entry.options.get(CONF_EM_INVERTER_SN)
+    if current == old_sn:
+        _LOGGER.debug(
+            "Migrating Energy Manager inverter_sn option %s -> %s",
+            mask_sn(old_sn),
+            mask_sn(sn),
+        )
+        hass.config_entries.async_update_entry(
+            entry, options={**entry.options, CONF_EM_INVERTER_SN: sn}
+        )
+    elif current != sn:
+        # EM isn't configured for this device at all -- nothing to migrate.
         return
-    _LOGGER.debug(
-        "Migrating Energy Manager inverter_sn option %s -> %s",
-        mask_sn(old_sn),
-        mask_sn(sn),
-    )
-    hass.config_entries.async_update_entry(
-        entry, options={**entry.options, CONF_EM_INVERTER_SN: sn}
-    )
     _rename_or_merge_device_identifier(
         dr.async_get(hass),
         er.async_get(hass),
