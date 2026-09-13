@@ -574,7 +574,10 @@ async def test_energy_manager_option_is_repointed_at_the_corrected_serial(
     must not have EM silently disable itself after the upgrade --
     _async_setup_energy_manager's `em_sn not in coordinator.data` guard
     would otherwise never match again, since coordinator.data is now keyed
-    on the corrected sn."""
+    on the corrected sn. Also confirms EM's own virtual device
+    ({sn}_energy_manager, a different identifier from the inverter's own)
+    is renamed alongside the option -- entities alone re-keying via the
+    generic scan wouldn't rescue this otherwise-orphaned device."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_TRANSPORT: TRANSPORT_MODBUS},
@@ -582,10 +585,28 @@ async def test_energy_manager_option_is_repointed_at_the_corrected_serial(
         unique_id="modbus-em-migration-test",
     )
     entry.add_to_hass(hass)
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{OLD_INVERTER_SN}_energy_manager")},
+        name="Energy Manager",
+    )
 
     _migrate_energy_manager_inverter_sn(hass, entry, OLD_INVERTER_SN, NEW_INVERTER_SN)
 
     assert entry.options[CONF_EM_INVERTER_SN] == NEW_INVERTER_SN
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{OLD_INVERTER_SN}_energy_manager"), entry.entry_id
+        )
+        is None
+    )
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{NEW_INVERTER_SN}_energy_manager"), entry.entry_id
+        )
+        is not None
+    )
 
 
 @pytest.mark.asyncio

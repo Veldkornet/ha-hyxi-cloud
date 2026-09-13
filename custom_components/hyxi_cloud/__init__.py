@@ -537,11 +537,14 @@ def _migrate_hybrid_inverter_serial(
             # this entity (e.g. a previous migration attempt partially
             # completed) -- keep the already-renamed one and drop the
             # dangling legacy duplicate, same rationale as
-            # _migrate_vpp_dispatch_to_work_mode below.
+            # _migrate_vpp_dispatch_to_work_mode below. entity_id and
+            # unique_id both embed the serial, so mask it the same way
+            # the device-level logs above do rather than logging either
+            # verbatim.
             _LOGGER.debug(
                 "Removing orphaned legacy entity %s; %s already exists",
-                reg_entry.entity_id,
-                new_unique_id,
+                reg_entry.entity_id.replace(old_sn, mask_sn(old_sn)),
+                new_unique_id.replace(sn, mask_sn(sn)),
             )
             entity_registry.async_remove(reg_entry.entity_id)
     return old_sn
@@ -575,10 +578,17 @@ def _migrate_energy_manager_inverter_sn(
     """Point the Energy Manager at the corrected inverter serial if it was
     configured against the pre-fix one.
 
-    Otherwise CONF_EM_INVERTER_SN stops matching any key in
-    coordinator.data and _async_setup_energy_manager's own `em_sn not in
-    coordinator.data` guard silently disables EM instead of raising
-    anything a user would notice.
+    Two independent things would otherwise stay on the old sn: the
+    CONF_EM_INVERTER_SN option itself -- _async_setup_energy_manager's own
+    `em_sn not in coordinator.data` guard would silently disable EM once
+    coordinator.data is keyed on the corrected sn instead, with nothing
+    surfacing that to a user -- and EM's own virtual device, registered
+    under identifiers={(DOMAIN, f"{em_sn}_energy_manager")} (see
+    binary_sensor.py/number.py/sensor.py/switch.py's EM device_info). Its
+    entities are already covered by _migrate_hybrid_inverter_serial's
+    generic unique_id scan (they're all hyxi_{sn}_em_*, matching that
+    scan's delimited pattern), but the device identifier itself is not, so
+    it's handled here the same way as the inverter/battery devices.
     """
     if entry.options.get(CONF_EM_INVERTER_SN) != old_sn:
         return
@@ -589,6 +599,13 @@ def _migrate_energy_manager_inverter_sn(
     )
     hass.config_entries.async_update_entry(
         entry, options={**entry.options, CONF_EM_INVERTER_SN: sn}
+    )
+    _rename_or_merge_device_identifier(
+        dr.async_get(hass),
+        er.async_get(hass),
+        entry,
+        f"{old_sn}_energy_manager",
+        f"{sn}_energy_manager",
     )
 
 
