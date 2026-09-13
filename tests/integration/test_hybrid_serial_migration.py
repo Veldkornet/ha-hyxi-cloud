@@ -477,20 +477,25 @@ async def test_entity_collision_log_masks_both_serials_even_in_a_preserved_prefi
     )
 
     with caplog.at_level(logging.DEBUG, logger="custom_components.hyxi_cloud"):
-        # The entity-registry setup above already logged its own (unmasked)
-        # INFO records -- e.g. HA's "Registered new ... entity" -- which
-        # legitimately embed the raw serial in the entity's own object_id.
-        # Those aren't our migration's output, so clear them before invoking
-        # the code under test to keep the assertions below scoped to what
-        # the migration itself logs.
-        caplog.clear()
         _migrate_hybrid_serial_decoding(
             hass, entry, _hybrid_devices(NEW_INVERTER_SN, None)
         )
 
+    # Scoped to our own logger, not caplog.text as a whole: HA's core event
+    # bus logs its own DEBUG "device_registry_updated"/"entity_registry_
+    # updated" records at every step here (setup's entity registration, and
+    # the rename itself), and those legitimately carry a raw serial -- it's
+    # HA's own internal diagnostic logging of the identifier that changed,
+    # not something this integration emits or could reasonably mask. Only
+    # our own log lines are the masking contract this test is guarding.
+    our_text = "\n".join(
+        record.getMessage()
+        for record in caplog.records
+        if record.name.startswith("custom_components.hyxi_cloud")
+    )
     assert entity_registry.async_get(legacy.entity_id) is None
-    assert OLD_INVERTER_SN not in caplog.text
-    assert NEW_INVERTER_SN not in caplog.text
+    assert OLD_INVERTER_SN not in our_text
+    assert NEW_INVERTER_SN not in our_text
 
 
 @pytest.mark.asyncio
