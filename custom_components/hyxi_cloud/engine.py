@@ -590,6 +590,23 @@ class EnergyManagerEngine:
         """Check if dry-run mode is enabled in options."""
         return bool(self._coordinator.entry.options.get("em_dry_run", False))
 
+    async def _send_mode_control(self, mode: str, power_w: int | None) -> dict | None:
+        """Dispatch to the client method for `mode`, or None if `mode`
+        isn't one of the four EM writes -- split out of _set_mode to keep
+        the mode-command dispatch separate from that method's own
+        cooldown/tracking/notification logic (mirroring protection.py's
+        own _send_control)."""
+        client: HyxiApiClient = self._coordinator.client
+        if mode == "idle":
+            return await client.set_mode_idle(self._sn)
+        if mode == "charge":
+            return await client.set_mode_charge(self._sn, power_w)
+        if mode == "discharge":
+            return await client.set_mode_discharge(self._sn, power_w)
+        if mode == "self_consume":
+            return await client.set_mode_self_consume(self._sn)
+        return None
+
     async def _set_mode(self, mode: str, power_w: int | None = None) -> bool:
         """Set operating mode via direct API call with cooldown enforcement."""
         cooldown = self._get_param("mode_switch_cooldown")
@@ -631,17 +648,9 @@ class EnergyManagerEngine:
         # HyxiBatteryProtectionController.begin_send() for why completion
         # order isn't a safe stand-in for issue order.
         seq = protection.begin_send() if protection else None
-        client: HyxiApiClient = self._coordinator.client
         try:
-            if mode == "idle":
-                response = await client.set_mode_idle(self._sn)
-            elif mode == "charge":
-                response = await client.set_mode_charge(self._sn, power_w)
-            elif mode == "discharge":
-                response = await client.set_mode_discharge(self._sn, power_w)
-            elif mode == "self_consume":
-                response = await client.set_mode_self_consume(self._sn)
-            else:
+            response = await self._send_mode_control(mode, power_w)
+            if response is None:
                 _LOGGER.error("EM: Unknown mode: %s", mode)
                 return False
 
