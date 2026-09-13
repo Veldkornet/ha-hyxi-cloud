@@ -223,6 +223,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_setup_push_subscription(hass, entry, coordinator)
         await _async_setup_alarm_subscription(hass, entry, coordinator)
 
+    _migrate_hybrid_serial_decoding(hass, entry, coordinator.data)
     _async_register_devices(hass, entry, coordinator)
 
     _remove_legacy_select_entities(hass, coordinator.data)
@@ -400,6 +401,141 @@ def _link_parent_collector(
             identifiers={(DOMAIN, sn)},
             via_device_id=parent.id,
         )
+
+
+def _reconstruct_pre_fix_battery_serial(value: str) -> str | None:
+    """Rebuild the exact identifier a hybrid battery would have been
+    registered under before client_hybrid.py's byte-order fix, from the
+    now-correct value.
+
+    Mirrors the bug precisely -- see
+    client_hybrid._fix_battery_serial_byte_order's own docstring for the
+    forward direction. Full register pairs come out swapped, but for an
+    odd-length serial, the final (partially null-padded) register's high
+    byte was the pad, not a character: decode_string()'s big-endian read
+    then puts that null *before* the last real character rather than
+    after it, so decode_string()'s own rstrip never saw a trailing null to
+    strip. A straight double-swap misses this and reconstructs the wrong
+    identifier -- verified against the exact bytes the fix's own test
+    fixture uses.
+    """
+    if not value:
+        return None
+    odd = len(value) % 2 == 1
+    full_pairs = value[:-1] if odd else value
+    swapped = "".join(full_pairs[i : i + 2][::-1] for i in range(0, len(full_pairs), 2))
+    return f"{swapped}\x00{value[-1]}" if odd else swapped
+
+
+def _migrate_hybrid_inverter_serial(
+    device_registry: dr.DeviceRegistry,
+    entity_registry: er.EntityRegistry,
+    entry: ConfigEntry,
+    sn: str,
+) -> None:
+    """Rename one hybrid inverter's device, and every entity's unique_id,
+    from the old decimal-misread serial to the corrected hex one."""
+    try:
+        old_sn = str(int(sn, 16))
+    except ValueError:
+        # sn isn't a hex string -- e.g. the "modbus_{unit_id}" fallback
+        # used when identity was unreadable. Nothing to migrate from.
+        return
+    if old_sn == sn:
+        return
+    device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, old_sn), entry.entry_id
+    )
+    if device is None:
+        return
+    _LOGGER.debug("Migrating hybrid inverter device %s -> %s", old_sn, sn)
+    device_registry.async_update_device(
+        device.id, new_identifiers={(DOMAIN, sn)}, serial_number=sn
+    )
+    for reg_entry in er.async_entries_for_device(
+        entity_registry, device.id, include_disabled_entities=True
+    ):
+        if old_sn not in reg_entry.unique_id:
+            continue
+        new_unique_id = reg_entry.unique_id.replace(old_sn, sn)
+        try:
+            entity_registry.async_update_entity(
+                reg_entry.entity_id, new_unique_id=new_unique_id
+            )
+        except ValueError:
+            # Both the legacy and the renamed unique_id already exist for
+            # this entity (e.g. a previous migration attempt partially
+            # completed) -- keep the already-renamed one and drop the
+            # dangling legacy duplicate, same rationale as
+            # _migrate_vpp_dispatch_to_work_mode below.
+            _LOGGER.debug(
+                "Removing orphaned legacy entity %s; %s already exists",
+                reg_entry.entity_id,
+                new_unique_id,
+            )
+            entity_registry.async_remove(reg_entry.entity_id)
+
+
+def _migrate_hybrid_battery_serial(
+    device_registry: dr.DeviceRegistry, entry: ConfigEntry, bat_sn: str
+) -> None:
+    """Rename one hybrid battery's device from the old byte-swapped serial
+    to the corrected one.
+
+    No entity unique_id embeds bat_sn -- every entity is keyed on the
+    inverter's own sn regardless of which device it displays under (see
+    _battery_device_info) -- so only the device registry entry itself
+    needs renaming.
+    """
+    old_bat_sn = _reconstruct_pre_fix_battery_serial(bat_sn)
+    if not old_bat_sn or old_bat_sn == bat_sn:
+        return
+    device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, old_bat_sn), entry.entry_id
+    )
+    if device is None:
+        return
+    _LOGGER.debug("Migrating hybrid battery device %s -> %s", old_bat_sn, bat_sn)
+    device_registry.async_update_device(
+        device.id, new_identifiers={(DOMAIN, bat_sn)}, serial_number=bat_sn
+    )
+
+
+def _migrate_hybrid_serial_decoding(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Rename hybrid Modbus devices onboarded under two now-fixed decoding
+    bugs in client_hybrid.py, so they keep their history and entity_ids
+    instead of silently reappearing as brand-new devices.
+
+    The inverter's own serial (register 1007, H64) used to be read as a
+    plain decimal integer instead of the hex-formatted value the document
+    specifies; the battery serial (register 1015, S20 string) used to have
+    its two per-register bytes read in the wrong order. Both feed a device
+    registry identifier (`identifiers={(DOMAIN, sn)}` /
+    `{(DOMAIN, bat_sn)}`) directly, so fixing the decoding alone would
+    silently orphan every already-onboarded install's inverter and battery
+    devices.
+
+    Must run before _async_register_devices: that call's own
+    async_get_or_create only finds an existing device by its *current*
+    identifier, so it would create a second, duplicate device under the
+    new identifier if this hasn't already renamed the old one in place.
+    Cheap and safe to run on every setup: a no-op once the old identifiers
+    no longer exist. HALO devices and Cloud entries are unaffected -- both
+    are correctly decoded already -- so this only touches hybrid inverters.
+    """
+    if not is_modbus_entry(entry):
+        return
+    device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(hass)
+    for sn, dev_data in devices.items():
+        if normalize_device_type(get_raw_device_code(dev_data)) != "hybrid_inverter":
+            continue
+        _migrate_hybrid_inverter_serial(device_registry, entity_registry, entry, sn)
+        bat_sn = (dev_data.get("metrics") or {}).get("batSn")
+        if bat_sn:
+            _migrate_hybrid_battery_serial(device_registry, entry, bat_sn)
 
 
 def _async_register_devices(
