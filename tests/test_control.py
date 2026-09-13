@@ -1,7 +1,7 @@
 """Tests for the shared battery-control primitives (control.py)."""
 
 # pylint: disable=missing-function-docstring, wrong-import-position
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -318,15 +318,17 @@ _CONTROL_RESPONSE = {
 async def test_send_battery_mode_schedules_verification_on_success(coord):
     coord.client.set_mode_idle.return_value = _CONTROL_RESPONSE
     hass = MagicMock()
-    # async_create_task's argument is a real coroutine here (unlike the
-    # rest of this file's bare MagicMock hass) -- close it so it doesn't
-    # leave a "coroutine was never awaited" warning behind, since nothing
-    # actually runs it in this test.
-    hass.async_create_task = MagicMock(side_effect=lambda coro: coro.close())
+    # async_create_background_task's target is a real coroutine here
+    # (unlike the rest of this file's bare MagicMock hass/entry) -- close
+    # it so it doesn't leave a "coroutine was never awaited" warning
+    # behind, since nothing actually runs it in this test.
+    coord.entry.async_create_background_task = MagicMock(
+        side_effect=lambda hass, coro, name: coro.close()
+    )
 
     await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
 
-    hass.async_create_task.assert_called_once()
+    coord.entry.async_create_background_task.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -337,7 +339,7 @@ async def test_send_battery_mode_skips_verification_for_modbus(coord):
 
     await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
 
-    hass.async_create_task.assert_not_called()
+    coord.entry.async_create_background_task.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -356,7 +358,7 @@ async def test_send_battery_mode_skips_verification_for_a_skipped_traceid(coord)
 
     await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
 
-    hass.async_create_task.assert_not_called()
+    coord.entry.async_create_background_task.assert_not_called()
 
 
 def test_maybe_verify_control_result_skips_when_no_trace_id():
@@ -366,7 +368,27 @@ def test_maybe_verify_control_result_skips_when_no_trace_id():
 
     control_mod._maybe_verify_control_result(hass, coordinator, "SN123", "idle", None)
 
-    hass.async_create_task.assert_not_called()
+    coordinator.entry.async_create_background_task.assert_not_called()
+
+
+def test_maybe_verify_control_result_ties_the_task_to_the_config_entry(coord):
+    """Regression test: a manual mode command has no persistent controller
+    of its own to track/cancel its verify task on unload (unlike
+    protection.py/engine.py) -- it must tie into ConfigEntry.
+    async_create_background_task instead, which HA already cancels
+    automatically on unload/reload, rather than firing a bare
+    hass.async_create_task that would keep running (and could invoke
+    _on_verify_result against a torn-down coordinator) past unload."""
+    hass = MagicMock()
+    coord.entry.async_create_background_task = MagicMock(
+        side_effect=lambda hass, coro, name: coro.close()
+    )
+
+    control_mod._maybe_verify_control_result(hass, coord, "SN123", "idle", "123456789")
+
+    coord.entry.async_create_background_task.assert_called_once_with(
+        hass, ANY, "hyxi_control_verify"
+    )
 
 
 def test_on_verify_result_failure_delegates_without_its_own_duplicate_log(caplog):

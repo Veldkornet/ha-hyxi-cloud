@@ -80,16 +80,16 @@ def _maybe_verify_control_result(
     """Schedule a background check that the device actually applied
     `mode`, for a Cloud write with a traceId to look up.
 
-    Unlike protection.py/engine.py, this has no persistent controller
-    instance of its own to track the task on for cancellation on unload --
-    a manual mode command is one-shot and low-stakes enough (bounded to a
-    few poll attempts, a few seconds each) that letting it run to
-    completion in the background is an acceptable, deliberate trade-off
-    rather than building lifecycle tracking for a bare function.
+    Unlike protection.py/engine.py, this is a bare function with no
+    persistent controller instance of its own to hold a tracked-tasks set
+    on -- so instead of hand-rolling one, this ties the task to the
+    config entry itself via ConfigEntry.async_create_background_task,
+    which HA already cancels automatically on unload/reload.
     """
     if is_modbus_entry(coordinator.entry) or trace_id is None:
         return
-    hass.async_create_task(
+    coordinator.entry.async_create_background_task(
+        hass,
         control_verify.verify_control_result(
             coordinator.client,
             sn,
@@ -97,7 +97,8 @@ def _maybe_verify_control_result(
             mode,
             trace_id,
             lambda result: _on_verify_result(coordinator, sn, mode, trace_id, result),
-        )
+        ),
+        "hyxi_control_verify",
     )
 
 
