@@ -58,6 +58,56 @@ def _modbus_entry(hass: HomeAssistant) -> MockConfigEntry:
     return entry
 
 
+def _em_migration_entry(
+    hass: HomeAssistant, *, current_em_option: str, unique_id: str
+) -> tuple[MockConfigEntry, dr.DeviceRegistry]:
+    """Shared setup for the two EM-device-rename tests below: a Modbus
+    entry with battery control enabled and an EM device already
+    registered under the old {OLD_INVERTER_SN}_energy_manager identifier.
+
+    current_em_option is the CONF_EM_INVERTER_SN value the test starts
+    from -- old_sn for a fresh install, new_sn for one where a prior
+    option-only migration already ran, leaving the device still stranded.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TRANSPORT: TRANSPORT_MODBUS},
+        options={
+            "enable_battery_control": True,
+            CONF_EM_INVERTER_SN: current_em_option,
+        },
+        unique_id=unique_id,
+    )
+    entry.add_to_hass(hass)
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{OLD_INVERTER_SN}_energy_manager")},
+        name="Energy Manager",
+    )
+    return entry, device_registry
+
+
+def _assert_energy_manager_device_renamed(
+    device_registry: dr.DeviceRegistry, entry: MockConfigEntry
+) -> None:
+    """Shared assertion for the two EM-device-rename tests below: the old
+    {OLD_INVERTER_SN}_energy_manager identifier is gone and the new
+    {NEW_INVERTER_SN}_energy_manager one exists."""
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{OLD_INVERTER_SN}_energy_manager"), entry.entry_id
+        )
+        is None
+    )
+    assert (
+        device_registry.async_get_device_by_identifier(
+            (DOMAIN, f"{NEW_INVERTER_SN}_energy_manager"), entry.entry_id
+        )
+        is not None
+    )
+
+
 def _hybrid_devices(sn: str, bat_sn: str | None) -> dict:
     metrics = {"batSn": bat_sn} if bat_sn else {}
     return {
@@ -633,35 +683,16 @@ async def test_energy_manager_option_is_repointed_at_the_corrected_serial(
     ({sn}_energy_manager, a different identifier from the inverter's own)
     is renamed alongside the option -- entities alone re-keying via the
     generic scan wouldn't rescue this otherwise-orphaned device."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={CONF_TRANSPORT: TRANSPORT_MODBUS},
-        options={"enable_battery_control": True, CONF_EM_INVERTER_SN: OLD_INVERTER_SN},
+    entry, device_registry = _em_migration_entry(
+        hass,
+        current_em_option=OLD_INVERTER_SN,
         unique_id="modbus-em-migration-test",
-    )
-    entry.add_to_hass(hass)
-    device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, f"{OLD_INVERTER_SN}_energy_manager")},
-        name="Energy Manager",
     )
 
     _migrate_energy_manager_inverter_sn(hass, entry, OLD_INVERTER_SN, NEW_INVERTER_SN)
 
     assert entry.options[CONF_EM_INVERTER_SN] == NEW_INVERTER_SN
-    assert (
-        device_registry.async_get_device_by_identifier(
-            (DOMAIN, f"{OLD_INVERTER_SN}_energy_manager"), entry.entry_id
-        )
-        is None
-    )
-    assert (
-        device_registry.async_get_device_by_identifier(
-            (DOMAIN, f"{NEW_INVERTER_SN}_energy_manager"), entry.entry_id
-        )
-        is not None
-    )
+    _assert_energy_manager_device_renamed(device_registry, entry)
 
 
 @pytest.mark.asyncio
@@ -675,36 +706,17 @@ async def test_energy_manager_device_is_still_renamed_when_the_option_was_alread
     did) makes it permanently unreachable for exactly the installs this
     fix exists for -- the option's own guard must not block the device
     half from running."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={CONF_TRANSPORT: TRANSPORT_MODBUS},
-        options={"enable_battery_control": True, CONF_EM_INVERTER_SN: NEW_INVERTER_SN},
+    entry, device_registry = _em_migration_entry(
+        hass,
+        current_em_option=NEW_INVERTER_SN,
         unique_id="modbus-em-migration-test-already-migrated",
-    )
-    entry.add_to_hass(hass)
-    device_registry = dr.async_get(hass)
-    device_registry.async_get_or_create(
-        config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, f"{OLD_INVERTER_SN}_energy_manager")},
-        name="Energy Manager",
     )
 
     _migrate_energy_manager_inverter_sn(hass, entry, OLD_INVERTER_SN, NEW_INVERTER_SN)
 
     # Option was already correct -- untouched, not reset to something odd.
     assert entry.options[CONF_EM_INVERTER_SN] == NEW_INVERTER_SN
-    assert (
-        device_registry.async_get_device_by_identifier(
-            (DOMAIN, f"{OLD_INVERTER_SN}_energy_manager"), entry.entry_id
-        )
-        is None
-    )
-    assert (
-        device_registry.async_get_device_by_identifier(
-            (DOMAIN, f"{NEW_INVERTER_SN}_energy_manager"), entry.entry_id
-        )
-        is not None
-    )
+    _assert_energy_manager_device_renamed(device_registry, entry)
 
 
 @pytest.mark.asyncio
