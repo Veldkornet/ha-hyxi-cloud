@@ -23,12 +23,18 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.__init__ import (
     _async_register_devices,
+    _migrate_energy_manager_inverter_sn,
     _migrate_hybrid_battery_serial,
     _migrate_hybrid_inverter_serial,
     _migrate_hybrid_serial_decoding,
     _reconstruct_pre_fix_battery_serial,
 )
-from custom_components.hyxi_cloud.const import CONF_TRANSPORT, DOMAIN, TRANSPORT_MODBUS
+from custom_components.hyxi_cloud.const import (
+    CONF_EM_INVERTER_SN,
+    CONF_TRANSPORT,
+    DOMAIN,
+    TRANSPORT_MODBUS,
+)
 
 # The exact values used throughout this session's investigation: a real
 # user's inverter/battery, and the client_hybrid.py fix's own worked
@@ -170,6 +176,58 @@ async def test_inverter_keyed_entities_attached_to_the_battery_device_are_still_
     assert moved.entity_id == battery_period_sensor.entity_id
     # Still attached to the (now also renamed) battery device, unmoved.
     assert moved.device_id == battery.id
+
+
+@pytest.mark.asyncio
+async def test_stranded_entity_is_still_rekeyed_after_the_device_was_already_renamed(
+    hass: HomeAssistant,
+):
+    """Regression test for a real-world sequence: an earlier, narrower
+    version of this migration already renamed the inverter device but
+    missed a battery-attached entity (the exact scenario the test above
+    guards going forward). On a *later* restart there is no longer any
+    device registered under the old identifier -- it was already renamed
+    -- so the migration must not use "found an old-identified device" as
+    the signal for whether to also scan for stranded entities. Without
+    this, a user who already hit the narrower bug once could never
+    recover without manually removing the entity."""
+    entry = _modbus_entry(hass)
+
+    device_registry = dr.async_get(hass)
+    inverter = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, NEW_INVERTER_SN)},  # already renamed
+        name="Inverter",
+    )
+    battery = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, NEW_BATTERY_SN_EVEN)},  # already renamed too
+        name=f"Battery {NEW_BATTERY_SN_EVEN}",
+        via_device_id=inverter.id,
+    )
+
+    entity_registry = er.async_get(hass)
+    stranded = entity_registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"hyxi_{OLD_INVERTER_SN}_bat_charge_month",  # never got rekeyed
+        config_entry=entry,
+        device_id=battery.id,
+        suggested_object_id=f"hyxi_{OLD_INVERTER_SN}_bat_charge_month",
+    )
+
+    _migrate_hybrid_serial_decoding(
+        hass, entry, _hybrid_devices(NEW_INVERTER_SN, NEW_BATTERY_SN_EVEN)
+    )
+
+    moved = entity_registry.async_get(stranded.entity_id)
+    assert moved is not None
+    assert moved.unique_id == f"hyxi_{NEW_INVERTER_SN}_bat_charge_month"
+    assert moved.entity_id == stranded.entity_id
+    # Exactly one inverter and one battery device -- the fix must not have
+    # tried (and failed, or duplicated anything) to rename an already-
+    # correct device.
+    assert len(dr.async_entries_for_config_entry(device_registry, entry.entry_id)) == 2
 
 
 @pytest.mark.asyncio
@@ -402,7 +460,149 @@ async def test_battery_migration_is_a_no_op_for_an_empty_serial(hass: HomeAssist
     itself must still degrade gracefully if ever called with one directly."""
     entry = _modbus_entry(hass)
     device_registry = dr.async_get(hass)
+    entity_registry = er.async_get(hass)
 
-    _migrate_hybrid_battery_serial(device_registry, entry, "")
+    _migrate_hybrid_battery_serial(device_registry, entity_registry, entry, "")
 
     assert dr.async_entries_for_config_entry(device_registry, entry.entry_id) == []
+
+
+@pytest.mark.asyncio
+async def test_inverter_collision_merges_the_legacy_device_instead_of_raising(
+    hass: HomeAssistant,
+):
+    """Regression test: if a device already exists under the corrected
+    identifier (e.g. a setup that ran once between the decode fix landing
+    and this migration reaching it, registering a fresh device before the
+    legacy one could be renamed), device_registry.async_update_device
+    would raise DeviceIdentifierCollisionError rather than silently
+    overwriting it. The migration must instead move any entities still on
+    the legacy device onto the correct one and remove the legacy device,
+    without that exception ever reaching setup."""
+    entry = _modbus_entry(hass)
+    device_registry = dr.async_get(hass)
+    legacy_device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, OLD_INVERTER_SN)},
+        name="Old Inverter",
+    )
+    correct_device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, NEW_INVERTER_SN)},
+        name="Correct Inverter",
+    )
+
+    entity_registry = er.async_get(hass)
+    stranded = entity_registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"hyxi_{OLD_INVERTER_SN}_totalE",
+        config_entry=entry,
+        device_id=legacy_device.id,
+        suggested_object_id=f"hyxi_{OLD_INVERTER_SN}_totale",
+    )
+
+    _migrate_hybrid_serial_decoding(hass, entry, _hybrid_devices(NEW_INVERTER_SN, None))
+
+    # Exactly one device left, the pre-existing correct one -- not a third.
+    devices = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
+    assert len(devices) == 1
+    assert devices[0].id == correct_device.id
+
+    # The entity that was stranded on the legacy device now lives on the
+    # correct one, unique_id rekeyed, entity_id (and so its history) intact.
+    moved = entity_registry.async_get(stranded.entity_id)
+    assert moved is not None
+    assert moved.device_id == correct_device.id
+    assert moved.unique_id == f"hyxi_{NEW_INVERTER_SN}_totalE"
+
+
+@pytest.mark.asyncio
+async def test_battery_collision_merges_the_legacy_device_instead_of_raising(
+    hass: HomeAssistant,
+):
+    """Same collision-handling requirement, for the battery device."""
+    entry = _modbus_entry(hass)
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, OLD_BATTERY_SN_EVEN)},
+        name="Old Battery",
+    )
+    correct_battery = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, NEW_BATTERY_SN_EVEN)},
+        name="Correct Battery",
+    )
+
+    _migrate_hybrid_serial_decoding(
+        hass, entry, _hybrid_devices(NEW_INVERTER_SN, NEW_BATTERY_SN_EVEN)
+    )
+
+    devices = dr.async_entries_for_config_entry(device_registry, entry.entry_id)
+    assert len(devices) == 1
+    assert devices[0].id == correct_battery.id
+
+
+def test_unique_id_rekey_does_not_corrupt_an_entry_id_that_contains_the_old_sn():
+    """Regression test for a reviewer-flagged edge case: a naive
+    `unique_id.replace(old_sn, sn)` would also corrupt the entry_id prefix
+    on unique_ids like f"{entry.entry_id}_{sn}_work_mode" if entry_id ever
+    happened to contain old_sn's digits as a bare substring. Delimiting the
+    match as f"_{old_sn}_" avoids this, since entry_id is a contiguous
+    random id with no underscores of its own to create a false boundary."""
+    old_sn = "123"
+    sn = "7b1"
+    fake_entry_id_containing_old_sn = f"abc{old_sn}def"
+    unique_id = f"{fake_entry_id_containing_old_sn}_{old_sn}_work_mode"
+
+    delimited_old = f"_{old_sn}_"
+    delimited_new = f"_{sn}_"
+    assert delimited_old in unique_id
+    new_unique_id = unique_id.replace(delimited_old, delimited_new)
+
+    assert new_unique_id == f"{fake_entry_id_containing_old_sn}_{sn}_work_mode"
+    assert old_sn in new_unique_id  # only inside the untouched entry_id prefix
+    assert fake_entry_id_containing_old_sn in new_unique_id
+
+
+@pytest.mark.asyncio
+async def test_energy_manager_option_is_repointed_at_the_corrected_serial(
+    hass: HomeAssistant,
+):
+    """A user with the Energy Manager configured against a hybrid inverter
+    must not have EM silently disable itself after the upgrade --
+    _async_setup_energy_manager's `em_sn not in coordinator.data` guard
+    would otherwise never match again, since coordinator.data is now keyed
+    on the corrected sn."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TRANSPORT: TRANSPORT_MODBUS},
+        options={"enable_battery_control": True, CONF_EM_INVERTER_SN: OLD_INVERTER_SN},
+        unique_id="modbus-em-migration-test",
+    )
+    entry.add_to_hass(hass)
+
+    _migrate_energy_manager_inverter_sn(hass, entry, OLD_INVERTER_SN, NEW_INVERTER_SN)
+
+    assert entry.options[CONF_EM_INVERTER_SN] == NEW_INVERTER_SN
+
+
+@pytest.mark.asyncio
+async def test_energy_manager_option_is_untouched_when_it_points_elsewhere(
+    hass: HomeAssistant,
+):
+    """Only repoint the option when it actually matches the sn being
+    migrated -- an EM configured against a different (unaffected) device
+    must be left alone."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_TRANSPORT: TRANSPORT_MODBUS},
+        options={"enable_battery_control": True, CONF_EM_INVERTER_SN: "SOME_OTHER_SN"},
+        unique_id="modbus-em-migration-test-2",
+    )
+    entry.add_to_hass(hass)
+
+    _migrate_energy_manager_inverter_sn(hass, entry, OLD_INVERTER_SN, NEW_INVERTER_SN)
+
+    assert entry.options[CONF_EM_INVERTER_SN] == "SOME_OTHER_SN"
