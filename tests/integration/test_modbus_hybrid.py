@@ -46,7 +46,11 @@ def _fill(registers: dict[int, int]) -> dict[int, int]:
 INPUT_REGISTERS: dict[int, int] = {
     **_spread(1, 0x02030021),  # main DSP version, H32
     **_spread(1001, 0x02030021),  # main program version, H32
-    **_spread(1007, 10201234567810, 4),  # serial, H64
+    # serial, H64 -- 0x10201234567810 is the raw register bit pattern, per
+    # the document's own worked example: _hex_identifier() renders it as
+    # the printed serial "10201234567810" (a plain decimal reading of the
+    # same bits, 4538862186952720, is not the serial at all).
+    **_spread(1007, 0x10201234567810, 4),
     20: 312,  # boost converter temperature, 1dp -> 31.2 C
     21: 298,  # DSP temperature, 1dp -> 29.8 C
     22: 6,  # steady state operation
@@ -90,13 +94,19 @@ INPUT_REGISTERS: dict[int, int] = {
     819: 5290,  # charge voltage, 1dp -> 529.0 V
     820: 38,  # charge current, 1dp -> 3.8 A
     821: 2010,  # charge power, 0dp -> 2010 W
-    # Battery serial "BAT13571357", H10-encoded (2 ASCII chars/register).
-    1015: 16961,
-    1016: 21553,
-    1017: 13109,
-    1018: 14129,
-    1019: 13109,
-    1020: 14080,
+    # Battery serial "BAT13571357", 2 ASCII chars/register -- but with the
+    # device's real byte order confirmed live (a battery printed
+    # "1234567890" read back "2143658709"): each register holds its two
+    # characters low-byte-first, the opposite of what decode_string()
+    # assumes, so client_hybrid.py's _fix_battery_serial_byte_order()
+    # swaps them back. 1020's high byte is the null pad after the final,
+    # odd-numbered-out "7".
+    1015: 0x4142,  # "AB" on the wire -> "BA" once corrected
+    1016: 0x3154,  # "1T" -> "T1"
+    1017: 0x3533,  # "53" -> "35"
+    1018: 0x3137,  # "17" -> "71"
+    1019: 0x3533,  # "53" -> "35"
+    1020: 0x0037,  # "\x007" -> "7" (trailing null stripped after the swap)
     1051: 1,  # operating status: charge
     1052: 52900,  # BMS voltage, 2dp -> 529.00 V
     1053: (-42) & 0xFFFF,  # BMS current, 1dp -> -4.2 A
@@ -186,7 +196,8 @@ async def test_read_all_decodes_realistic_values(client):
 async def test_previously_unexposed_registers_now_decode_into_metrics(client):
     """Mirrors test_modbus.py's equivalent test for the HALO client -- these
     registers already decoded correctly; only the _build_metrics() wiring is
-    new."""
+    new. Except batSn, which didn't -- see
+    test_battery_serial_characters_are_not_swapped_in_pairs below."""
     devices = await client.async_read_all()
     metrics = devices["10201234567810"]["metrics"]
 
@@ -212,10 +223,6 @@ async def test_previously_unexposed_registers_now_decode_into_metrics(client):
     # Energy counters
     assert metrics["totalEb"] == 843.3
     assert metrics["totalEc"] == 843.4
-
-    # Battery serial routes the battery metrics onto their own device --
-    # this client previously never populated it.
-    assert metrics["batSn"] == "BAT13571357"
 
     # main_program (main control) and main_dsp (power electronics
     # co-processor) versions, matching the same primary/secondary split
@@ -340,6 +347,39 @@ async def test_derived_metrics_come_from_the_shared_cloud_helper(client):
     ):
         assert key in metrics, key
     assert metrics["home_load"] == 276.0
+
+
+@pytest.mark.asyncio
+async def test_inverter_serial_is_hex_formatted_not_a_decimal_reading(client):
+    """Regression test: the inverter's own serial (register 1007, H64) was
+    rendered with plain str(int) instead of _hex_identifier() -- correct
+    for main_dsp_version/main_program_version two lines below it in the
+    same client, and for the HALO client's own serial two files over, but
+    missed here. A user reported their Modbus-read inverter serial as
+    completely unrelated to the one the Cloud API shows, with no visible
+    pattern -- exactly what decimal-vs-hex confusion looks like (unlike a
+    byte-order bug, which still leaves a recognizable, if scrambled,
+    digit sequence). This device key would have read "4538862186952720"
+    (the plain decimal value of the same bits) before the fix."""
+    devices = await client.async_read_all()
+    assert next(iter(devices)) == "10201234567810"
+
+
+@pytest.mark.asyncio
+async def test_battery_serial_characters_are_not_swapped_in_pairs(client):
+    """Regression test: a user reported their battery's printed serial
+    "1234567890" reading back via Modbus as "2143658709" -- every adjacent
+    character pair swapped. modbus_connection's decode_string() always
+    reads a register's two ASCII bytes high-byte-first, with no per-field
+    override, but this device's battery_serial_number register (1015)
+    packs them the other way round. client_hybrid.py's
+    _fix_battery_serial_byte_order() undoes it; INPUT_REGISTERS above
+    encodes the fixture with the device's real (swapped) byte order, not
+    the order that would make decode_string() alone produce the right
+    answer, so this test would fail if the fix were reverted."""
+    devices = await client.async_read_all()
+    metrics = next(iter(devices.values()))["metrics"]
+    assert metrics["batSn"] == "BAT13571357"
 
 
 @pytest.mark.asyncio
