@@ -16,6 +16,7 @@ Modes used:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections import deque
@@ -34,6 +35,7 @@ from homeassistant.helpers.event import (
 )
 from hyxi_cloud_api import HyxiApiClient
 
+from . import control_verify
 from .const import (
     AVG_NIGHT_CONSUMPTION_MAX,
     AVG_NIGHT_CONSUMPTION_MIN,
@@ -44,6 +46,7 @@ from .const import (
     EM_LOOP_INTERVAL,
     detect_phase_type,
     get_raw_device_code,
+    is_modbus_entry,
     mask_sn,
     normalize_device_type,
 )
@@ -127,6 +130,16 @@ class EnergyManagerEngine:
         self._charge_entry_export_count: int = 0
         self._charge_bottomout_count: int = 0
         self._current_mode: str | None = None
+        # Which in-flight Cloud write's result _current_mode currently
+        # reflects, if any -- see _handle_device_rejected.
+        self._current_mode_trace_id: str | None = None
+        self._pv_curtail_trace_id: str | None = None
+        # Independent WARNING/DEBUG throttle flags: mode and peak-shaving
+        # writes are two unrelated rejection streams, so a success in one
+        # must not silently reset the other's "already warned" state.
+        self._mode_rejected_logged = False
+        self._peak_shaving_rejected_logged = False
+        self._verify_tasks: set[asyncio.Task] = set()
         self._last_sent_power: dict[str, int] = {"charge": 0, "discharge": 0}
 
         # PV curtailment state (peak shaving stop/hold cycling)
@@ -259,6 +272,7 @@ class EnergyManagerEngine:
         for unsub in self._unsub_listeners:
             unsub()
         self._unsub_listeners.clear()
+        control_verify.cancel_pending(self._verify_tasks)
         _LOGGER.info("Energy Manager stopped for %s", mask_sn(self._sn))
         self._notify_sensors()
 
@@ -486,6 +500,82 @@ class EnergyManagerEngine:
         if controller := self._get_protection_controller():
             controller.note_manual_mode(mode)
 
+    # ── Control-result verification ──────────────────────────────────────
+    #
+    # set_mode_*/set_peak_shaving over Cloud are fire-and-forget: a
+    # success response only confirms HYXI's cloud accepted the write, not
+    # that the device applied it. See control_verify and protection.py's
+    # own equivalent for the shared polling logic this wraps.
+
+    def _maybe_verify_control_result(self, mode: str, trace_id: str | None) -> None:
+        """Schedule a background check that the device actually applied
+        `mode`, for a Cloud write with a traceId to look up."""
+        if is_modbus_entry(self._coordinator.entry) or trace_id is None:
+            return
+        task = self._hass.async_create_task(
+            control_verify.verify_control_result(
+                self._coordinator.client,
+                self._sn,
+                "EM",
+                mode,
+                trace_id,
+                lambda result: self._on_verify_result(mode, trace_id, result),
+            )
+        )
+        self._verify_tasks.add(task)
+        task.add_done_callback(self._verify_tasks.discard)
+
+    def _on_verify_result(self, mode: str, trace_id: str, result: str | None) -> None:
+        """Handle the outcome control_verify.verify_control_result reports
+        for one Cloud write; it already logged the confirm/timeout cases,
+        so this only reacts to a confirmed outcome.
+
+        A success only clears the throttle when it's still for the
+        currently-tracked send -- a stale, superseded trace resolving
+        successfully after a newer one has already been rejected must not
+        reset the "already warned" flag for that newer, still-relevant
+        rejection.
+        """
+        if result == control_verify.RESULT_SUCCESS:
+            if self._current_mode_trace_id == trace_id:
+                self._mode_rejected_logged = False
+        elif result == control_verify.RESULT_FAILURE:
+            self._handle_device_rejected(mode, trace_id)
+
+    def _handle_device_rejected(self, mode: str, trace_id: str) -> None:
+        """HYXI's cloud accepted the write but the device itself rejected
+        it. `trace_id` identifies which send this is confirming: if a
+        newer command has since replaced it, this rejection is stale news
+        about a mode nothing relies on anymore, so _current_mode is left
+        alone. Otherwise, undo the optimistic record -- EM's own cooldown
+        already rate-limits how often it re-decides a mode, so the next
+        decision tick naturally retries once _current_mode no longer looks
+        like the (never actually applied) target.
+
+        Throttled the same way as protection.py's equivalent: WARNING the
+        first time, then quietly at DEBUG while the same condition
+        persists, so a device that keeps rejecting the same retried mode
+        doesn't spam the log once per cooldown interval indefinitely.
+        """
+        if self._current_mode_trace_id != trace_id:
+            _LOGGER.debug(
+                "EM %s: mode '%s' was rejected by the device, but a newer "
+                "command has since been sent -- no action needed.",
+                mask_sn(self._sn),
+                mode,
+            )
+            return
+
+        _LOGGER.log(
+            logging.DEBUG if self._mode_rejected_logged else logging.WARNING,
+            "EM %s: mode '%s' was accepted by HYXI's cloud but rejected by the device.",
+            mask_sn(self._sn),
+            mode,
+        )
+        self._mode_rejected_logged = True
+        self._current_mode = None
+        self._current_mode_trace_id = None
+
     # ── Control methods: direct API calls matching stateless button controls ──
 
     @property
@@ -511,6 +601,9 @@ class EnergyManagerEngine:
             self._last_mode_switch = time.monotonic()
             prev_mode = self._current_mode
             self._current_mode = mode
+            # A dry run sends nothing, so any trace_id from an earlier
+            # real send no longer describes what _current_mode reflects.
+            self._current_mode_trace_id = None
             self._last_action = f"[dry-run] {action}"
             self._hass.bus.async_fire(
                 "hyxi_em_mode_changed",
@@ -529,13 +622,13 @@ class EnergyManagerEngine:
         client: HyxiApiClient = self._coordinator.client
         try:
             if mode == "idle":
-                await client.set_mode_idle(self._sn)
+                response = await client.set_mode_idle(self._sn)
             elif mode == "charge":
-                await client.set_mode_charge(self._sn, power_w)
+                response = await client.set_mode_charge(self._sn, power_w)
             elif mode == "discharge":
-                await client.set_mode_discharge(self._sn, power_w)
+                response = await client.set_mode_discharge(self._sn, power_w)
             elif mode == "self_consume":
-                await client.set_mode_self_consume(self._sn)
+                response = await client.set_mode_self_consume(self._sn)
             else:
                 _LOGGER.error("EM: Unknown mode: %s", mode)
                 return False
@@ -543,6 +636,10 @@ class EnergyManagerEngine:
             self._last_mode_switch = time.monotonic()
             prev_mode = self._current_mode
             self._current_mode = mode
+            self._current_mode_trace_id = control_verify.extract_trace_id(
+                response, self._sn, "EM"
+            )
+            self._maybe_verify_control_result(mode, self._current_mode_trace_id)
             if power_w and mode in ("charge", "discharge"):
                 self._last_sent_power[mode] = power_w
             action = f"{mode} @ {power_w}W" if power_w else mode
@@ -593,17 +690,24 @@ class EnergyManagerEngine:
             )
             self._last_power_adjust = time.monotonic()
             self._current_mode = direction
+            # A dry run sends nothing, so any trace_id from an earlier
+            # real send no longer describes what _current_mode reflects.
+            self._current_mode_trace_id = None
             return True
 
         client: HyxiApiClient = self._coordinator.client
         try:
             if direction == "charge":
-                await client.set_mode_charge(self._sn, target_w)
+                response = await client.set_mode_charge(self._sn, target_w)
             else:
-                await client.set_mode_discharge(self._sn, target_w)
+                response = await client.set_mode_discharge(self._sn, target_w)
 
             self._last_power_adjust = time.monotonic()
             self._current_mode = direction
+            self._current_mode_trace_id = control_verify.extract_trace_id(
+                response, self._sn, "EM"
+            )
+            self._maybe_verify_control_result(direction, self._current_mode_trace_id)
             self._last_sent_power[direction] = target_w
             self._last_action = f"{direction} @ {target_w}W"
             _LOGGER.debug("EM: %s power -> %dW", direction, target_w)
@@ -638,15 +742,22 @@ class EnergyManagerEngine:
             )
             self._last_pv_curtail_toggle = time.monotonic()
             self._pv_curtailed = option == "stop"
+            # A dry run sends nothing, so any trace_id from an earlier
+            # real send no longer describes what _pv_curtailed reflects.
+            self._pv_curtail_trace_id = None
             self._last_action = f"[dry-run] peak_shaving_{option}"
             self._notify_sensors()
             return True
 
         client: HyxiApiClient = self._coordinator.client
         try:
-            await client.set_peak_shaving(self._sn, option)
+            response = await client.set_peak_shaving(self._sn, option)
             self._last_pv_curtail_toggle = time.monotonic()
             self._pv_curtailed = option == "stop"
+            self._pv_curtail_trace_id = control_verify.extract_trace_id(
+                response, self._sn, "EM"
+            )
+            self._maybe_verify_peak_shaving_result(option, self._pv_curtail_trace_id)
             self._last_action = f"peak_shaving_{option}"
             _LOGGER.info("EM: Peak shaving -> %s for %s", option, mask_sn(self._sn))
             self._notify_sensors()
@@ -655,13 +766,85 @@ class EnergyManagerEngine:
             _LOGGER.exception("EM: Failed to set peak shaving '%s': %s", option, err)
             return False
 
+    def _maybe_verify_peak_shaving_result(
+        self, option: str, trace_id: str | None
+    ) -> None:
+        """Schedule a background check that the device actually applied
+        peak-shaving `option`, for a Cloud write with a traceId to look up."""
+        if is_modbus_entry(self._coordinator.entry) or trace_id is None:
+            return
+        task = self._hass.async_create_task(
+            control_verify.verify_control_result(
+                self._coordinator.client,
+                self._sn,
+                "EM",
+                f"peak_shaving_{option}",
+                trace_id,
+                lambda result: self._on_peak_shaving_verify_result(
+                    option, trace_id, result
+                ),
+            )
+        )
+        self._verify_tasks.add(task)
+        task.add_done_callback(self._verify_tasks.discard)
+
+    def _on_peak_shaving_verify_result(
+        self, option: str, trace_id: str, result: str | None
+    ) -> None:
+        """Handle the outcome control_verify.verify_control_result reports
+        for one peak-shaving Cloud write.
+
+        A success only clears the throttle when it's still for the
+        currently-tracked send -- see _on_verify_result's equivalent
+        guard for the mode stream.
+        """
+        if result == control_verify.RESULT_SUCCESS:
+            if self._pv_curtail_trace_id == trace_id:
+                self._peak_shaving_rejected_logged = False
+        elif result == control_verify.RESULT_FAILURE:
+            self._handle_peak_shaving_rejected(option, trace_id)
+
+    def _handle_peak_shaving_rejected(self, option: str, trace_id: str) -> None:
+        """HYXI's cloud accepted the peak-shaving write but the device
+        itself rejected it -- same trace_id-staleness and WARNING/DEBUG
+        throttling as _handle_device_rejected, but correcting
+        _pv_curtailed (a plain bool, so "undo the optimistic flip" rather
+        than "clear to unknown") instead of _current_mode.
+        """
+        if self._pv_curtail_trace_id != trace_id:
+            _LOGGER.debug(
+                "EM %s: peak shaving '%s' was rejected by the device, but a "
+                "newer command has since been sent -- no action needed.",
+                mask_sn(self._sn),
+                option,
+            )
+            return
+
+        _LOGGER.log(
+            logging.DEBUG if self._peak_shaving_rejected_logged else logging.WARNING,
+            "EM %s: peak shaving '%s' was accepted by HYXI's cloud but "
+            "rejected by the device.",
+            mask_sn(self._sn),
+            option,
+        )
+        self._peak_shaving_rejected_logged = True
+        self._pv_curtailed = not self._pv_curtailed
+        self._pv_curtail_trace_id = None
+
     async def _release_pv_curtailment(self) -> None:
         """Resume PV production after curtailment by sending peak shaving 'hold'."""
         if not self._pv_curtailed:
             return
         _LOGGER.info("EM: Releasing PV curtailment — resuming production")
+        # _set_peak_shaving already sets _pv_curtailed (and its trace_id)
+        # on an actual send -- don't also set it here unconditionally.
+        # This call can return False without sending anything (blocked by
+        # its own cooldown, or a raised ControlError), and previously this
+        # still forced _pv_curtailed False in that case: state claimed
+        # "released" with nothing sent and _pv_curtail_trace_id still
+        # pointing at the earlier "stop", so that stop's rejection could
+        # later flip _pv_curtailed back on top of the wrong baseline.
         await self._set_peak_shaving("hold")
-        self._pv_curtailed = False
 
     def _get_current_power_setting(self, direction: str) -> float:
         """Get the last-sent power for the given direction.

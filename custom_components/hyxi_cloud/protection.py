@@ -11,6 +11,7 @@ from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from hyxi_cloud_api import HyxiApiClient
 
+from . import control_verify
 from .const import DOMAIN, detect_phase_type, is_modbus_entry, mask_sn
 
 if TYPE_CHECKING:
@@ -53,12 +54,19 @@ class HyxiBatteryProtectionController:
         self._coordinator = coordinator
         self._sn = sn
         self._last_sent_mode: str | None = None
+        # Which in-flight control write's result _last_sent_mode currently
+        # reflects, if any -- lets a delayed query_control_result outcome
+        # (_handle_device_rejected) tell whether it's still current or has
+        # since been superseded by another send (automatic or manual).
+        self._last_sent_trace_id: str | None = None
         self._low_soc_hold = False
         self._high_soc_hold = False
         self._last_mode_switch = -999999.0
         self._last_control_error_kind: str | None = None
+        self._last_device_rejected_logged = False
         self._unsub_listener: CALLBACK_TYPE | None = None
         self._eval_task: asyncio.Task | None = None
+        self._verify_tasks: set[asyncio.Task] = set()
 
     @property
     def last_sent_mode(self) -> str | None:
@@ -103,11 +111,47 @@ class HyxiBatteryProtectionController:
             )
         if self._eval_task is not None and not self._eval_task.done():
             self._eval_task.cancel()
-            self._eval_task = None
+        self._eval_task = None
+        control_verify.cancel_pending(self._verify_tasks)
 
-    def note_manual_mode(self, mode: str) -> None:
-        """Track a user-triggered mode command."""
-        self._last_sent_mode = mode
+    def note_manual_mode(self, mode: str, trace_id: str | None = None) -> None:
+        """Track a mode command sent outside _ensure_mode: a genuine
+        manual command (control.py's button/service path, which does
+        pass `trace_id` once it has one -- see async_send_battery_mode),
+        or the Energy Manager notifying protection of its own mode
+        changes (engine.py's _notify_protection, which doesn't -- EM
+        tracks its own trace_id separately for its own verification).
+
+        A change in `mode` always updates both fields, trace_id included
+        (even to None), since tracking for the old mode is no longer
+        relevant once the tracked mode itself has moved on. When `mode`
+        merely reaffirms what's already tracked, a real trace_id (a new
+        send, e.g. a double-clicked manual command) still replaces the
+        old one -- the newest send is what a later rejection should be
+        checked against -- but a bare reaffirmation with no trace_id of
+        its own (EM's routine notifications never carry one) leaves
+        whatever's already tracked alone, rather than silently cancelling
+        a still-pending verification of that same mode.
+        """
+        if mode != self._last_sent_mode:
+            self._last_sent_mode = mode
+            self._last_sent_trace_id = trace_id
+            return
+        if trace_id is not None:
+            self._last_sent_trace_id = trace_id
+
+    def note_manual_mode_rejected(self, mode: str, trace_id: str) -> None:
+        """A manually-issued `mode` (button/service, see control.py) was
+        accepted by HYXI's cloud but rejected by the device.
+
+        Delegates to the same trace_id-based staleness check
+        _handle_device_rejected uses for protection's own automatic
+        sends, now that note_manual_mode records the manual send's
+        trace_id too -- so two same-mode sends in quick succession (e.g.
+        a double-clicked button) are told apart correctly instead of
+        matching on the mode string alone.
+        """
+        self._handle_device_rejected(mode, trace_id)
 
     def restore_last_sent_mode(self, mode: str) -> None:
         """Restore the last tracked mode from restored state."""
@@ -317,7 +361,7 @@ class HyxiBatteryProtectionController:
             return
 
         try:
-            await self._send_control(mode)
+            response = await self._send_control(mode)
         except HyxiApiClient.ControlError as err:
             # The write was rejected. Throttle retries to the cooldown and
             # don't let it escape as an unhandled task exception; log at
@@ -368,11 +412,111 @@ class HyxiBatteryProtectionController:
 
         self._last_control_error_kind = None
         self._last_sent_mode = mode
+        self._last_sent_trace_id = control_verify.extract_trace_id(
+            response, self._sn, "Protection"
+        )
         self._last_mode_switch = time.monotonic()
+        self._maybe_verify_control_result(mode, self._last_sent_trace_id)
         await self._coordinator.async_request_refresh()
 
-    async def _send_control(self, mode: str) -> None:
-        """Send the requested control using the correct transport-specific API."""
+    def _maybe_verify_control_result(self, mode: str, trace_id: str | None) -> None:
+        """Schedule a background check that the device actually applied
+        `mode`, for a Cloud write with a traceId to look up.
+
+        Modbus has no such concept -- a write either already raised above
+        or is final, and extract_trace_id already returns None for its
+        response shape -- but the transport is also checked explicitly
+        here, so that stays true even if a future Modbus response shape
+        ever coincidentally looked traceId-shaped.
+        """
+        if is_modbus_entry(self._coordinator.entry) or trace_id is None:
+            return
+        task = self._hass.async_create_task(
+            control_verify.verify_control_result(
+                self._coordinator.client,
+                self._sn,
+                "Protection",
+                mode,
+                trace_id,
+                lambda result: self._on_verify_result(mode, trace_id, result),
+            )
+        )
+        self._verify_tasks.add(task)
+        task.add_done_callback(self._verify_tasks.discard)
+
+    def _on_verify_result(self, mode: str, trace_id: str, result: str | None) -> None:
+        """Handle the outcome control_verify.verify_control_result reports
+        for one Cloud write; it already logged the confirm/timeout cases,
+        so this only reacts to what protection's own state needs to know.
+
+        A success only clears the throttle when it's still for the
+        currently-tracked send -- a stale, superseded trace resolving
+        successfully after a newer one has already been rejected must not
+        reset the "already warned" flag for that newer, still-relevant
+        rejection.
+        """
+        if result == control_verify.RESULT_SUCCESS:
+            if self._last_sent_trace_id == trace_id:
+                self._last_device_rejected_logged = False
+        elif result == control_verify.RESULT_FAILURE:
+            self._handle_device_rejected(mode, trace_id)
+        # None (a lookup failure, or still "issuing"/unrecognized past the
+        # attempt budget): nothing to correct here.
+
+    def _handle_device_rejected(self, mode: str, trace_id: str) -> None:
+        """HYXI's cloud accepted the write but the device itself rejected it.
+
+        Unlike a transport-level ControlError (caught synchronously in
+        _ensure_mode), this is only known once query_control_result
+        confirms it, well after _ensure_mode already optimistically
+        recorded `mode` as sent. `trace_id` identifies which send this is
+        confirming: if a newer command (automatic or manual, see
+        note_manual_mode) has since replaced it, this rejection is stale
+        news about a mode nothing is relying on anymore, so it's logged
+        quietly and _last_sent_mode is left alone. Otherwise, undo the
+        optimistic record so the next evaluation actually retries once
+        the mode-switch cooldown allows it, instead of assuming the
+        device is already in `mode`.
+
+        Also requests a coordinator refresh: protection only re-evaluates
+        on a coordinator update (see async_start's listener), and a Cloud
+        entry's default poll interval is 5 minutes -- without this,
+        HyxiLastSentModeSensor (a CoordinatorEntity reading
+        last_sent_mode) could keep showing the rejected mode, and the
+        actual retry could wait several minutes for an unrelated poll to
+        happen to occur, well past the cooldown that's meant to gate it.
+        """
+        if self._last_sent_trace_id != trace_id:
+            _LOGGER.debug(
+                "Protection %s: mode '%s' was rejected by the device, but a "
+                "newer command has since been sent -- no action needed.",
+                mask_sn(self._sn),
+                mode,
+            )
+            return
+
+        _LOGGER.log(
+            logging.DEBUG if self._last_device_rejected_logged else logging.WARNING,
+            "Protection %s: mode '%s' was accepted by HYXI's cloud but "
+            "rejected by the device; will retry once the mode-switch "
+            "cooldown allows it.",
+            mask_sn(self._sn),
+            mode,
+        )
+        self._last_device_rejected_logged = True
+        self._last_sent_mode = None
+        self._last_sent_trace_id = None
+        task = self._hass.async_create_task(self._coordinator.async_request_refresh())
+        self._verify_tasks.add(task)
+        task.add_done_callback(self._verify_tasks.discard)
+
+    async def _send_control(self, mode: str) -> dict:
+        """Send the requested control using the correct transport-specific API.
+
+        Returns the client's raw response so callers can pull a Cloud
+        control's traceId out of it (a Modbus response carries no such
+        field, but the interface is shared -- see modbus/client.py).
+        """
         client = self._coordinator.client
 
         if is_modbus_entry(self._coordinator.entry):
@@ -397,22 +541,22 @@ class HyxiBatteryProtectionController:
 
         if mode_control:
             if mode == "idle":
-                await client.set_mode_idle(self._sn)
-            elif mode == "charge":
-                await client.set_mode_charge(self._sn, self._get_power_value("charge"))
-            elif mode == "discharge":
-                await client.set_mode_discharge(
+                return await client.set_mode_idle(self._sn)
+            if mode == "charge":
+                return await client.set_mode_charge(
+                    self._sn, self._get_power_value("charge")
+                )
+            if mode == "discharge":
+                return await client.set_mode_discharge(
                     self._sn, self._get_power_value("discharge")
                 )
-            elif mode == "self_consume":
-                await client.set_mode_self_consume(self._sn)
-            else:
-                raise ValueError(f"Unsupported three-phase protection mode: {mode}")
-            return
+            if mode == "self_consume":
+                return await client.set_mode_self_consume(self._sn)
+            raise ValueError(f"Unsupported three-phase protection mode: {mode}")
 
         if mode not in {"close", "charge", "discharge", "stop", "hold"}:
             raise ValueError(f"Unsupported single-phase protection mode: {mode}")
-        await client.set_peak_shaving(self._sn, mode)
+        return await client.set_peak_shaving(self._sn, mode)
 
     def _get_param(self, key: str, default: int) -> int:
         """Read a protection number value from the entity registry."""
