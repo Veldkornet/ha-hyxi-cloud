@@ -387,16 +387,20 @@ def test_invsts_translation_key_resolves_correctly_against_real_ha():
     with fakes -- so `dataclasses.replace()` runs against the genuine
     frozen dataclass HA ships, exactly as it does in production.
     """
+    # Raw device_type_code, not the normalized family name: real clients
+    # publish HYBRID_INVERTER / MICRO_STORAGE_ALL_IN_ONE, and letting the
+    # real normalize_device_type() run on those (rather than patching its
+    # return value) is what caught a real bug -- HALO's raw code normalizes
+    # to "micro_ess" via DEVICE_TYPE_KEYS' direct lookup, never "all_in_one".
     coordinator = MagicMock()
-    coordinator.data = {"SN1": {"metrics": {"invSts": "1"}}}
     coordinator.entry.data = {CONF_TRANSPORT: TRANSPORT_MODBUS}
 
-    with patch.object(
-        sensor_mod, "normalize_device_type", return_value="hybrid_inverter"
-    ):
-        hybrid_sensor = sensor_mod.HyxiSensor(
-            coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
-        )
+    coordinator.data = {
+        "SN1": {"metrics": {"invSts": "1"}, "device_type_code": "HYBRID_INVERTER"}
+    }
+    hybrid_sensor = sensor_mod.HyxiSensor(
+        coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+    )
     assert hybrid_sensor.translation_key == "invsts_hybrid"
     assert hybrid_sensor.entity_description.options == [
         "0",
@@ -408,22 +412,27 @@ def test_invsts_translation_key_resolves_correctly_against_real_ha():
         "6",
     ]
 
-    with patch.object(sensor_mod, "normalize_device_type", return_value="all_in_one"):
-        halo_sensor = sensor_mod.HyxiSensor(
-            coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
-        )
+    coordinator.data = {
+        "SN1": {
+            "metrics": {"invSts": "1"},
+            "device_type_code": "MICRO_STORAGE_ALL_IN_ONE",
+        }
+    }
+    halo_sensor = sensor_mod.HyxiSensor(
+        coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+    )
     assert halo_sensor.translation_key == "invsts_halo"
     assert halo_sensor.entity_description.options == ["1", "3", "6", "7"]
 
     # Cloud (no transport override) keeps the shared default untouched --
     # confirms the fix didn't mutate SENSOR_TYPES_BY_KEY's own singleton.
     coordinator.entry.data = {}
-    with patch.object(
-        sensor_mod, "normalize_device_type", return_value="hybrid_inverter"
-    ):
-        cloud_sensor = sensor_mod.HyxiSensor(
-            coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
-        )
+    coordinator.data = {
+        "SN1": {"metrics": {"invSts": "1"}, "device_type_code": "HYBRID_INVERTER"}
+    }
+    cloud_sensor = sensor_mod.HyxiSensor(
+        coordinator, "SN1", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+    )
     assert cloud_sensor.translation_key == "invsts"
     assert cloud_sensor.entity_description.options == [
         "0",

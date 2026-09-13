@@ -399,7 +399,7 @@
         "name": "Interne Temperatuur"
       },
       "invsts": {
-        "name": "Inuiterstatus",
+        "name": "Inverterstatus",
         "state": {
           "0": "Gereedheid",
           "1": "Normaal",
@@ -687,7 +687,7 @@
         "name": "Huisverbruik vandag"
       },
       "invsts_hybrid": {
-        "name": "Inuiterstatus",
+        "name": "Inverterstatus",
         "state": {
           "0": "Inisialisering",
           "1": "Gereedheid",
@@ -699,7 +699,7 @@
         }
       },
       "invsts_halo": {
-        "name": "Inuiterstatus",
+        "name": "Inverterstatus",
         "state": {
           "1": "Gereedheid",
           "3": "Selftoets",

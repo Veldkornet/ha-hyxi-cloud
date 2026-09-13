@@ -513,7 +513,7 @@ disagree on what its numbers mean:
 
 | | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Cloud (`invsts` translation) | — | Standby | Normal | Alarm | Fault | Shutdown | — | — |
+| Cloud (`invsts` translation) | Standby | Normal | Alarm | Fault | Shutdown | — | — | — |
 | Hybrid document, register 22 | Initialization | Standby | DC-side startup | Self-test startup | Self-test wait | Inverter operation | Steady state operation | — |
 | HALO document, register 4101 | — | Standby | — | Self-test | — | — | Running | Stopped |
 

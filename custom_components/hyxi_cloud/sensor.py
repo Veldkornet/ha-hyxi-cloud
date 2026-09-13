@@ -1832,9 +1832,17 @@ class HyxiSensor(HyxiBaseSensor):
     # docs/modbus-provenance.md's rule against reconciling independent
     # sources, each family gets its own translation instead of forcing a
     # shared label set that would be wrong for at least one side.
+    # Keyed by normalize_device_type()'s output, not the raw device code --
+    # a real HALO reports device_type_code "MICRO_STORAGE_ALL_IN_ONE",
+    # which DEVICE_TYPE_KEYS maps straight to "micro_ess", never
+    # "all_in_one" (that's a different, Cloud-only device family this
+    # override doesn't apply to). Using the wrong key here doesn't error --
+    # _invsts_override_for's dict.get() just silently no-ops -- so a real
+    # HALO Modbus device would keep Cloud's incompatible invsts labels with
+    # nothing calling that out.
     _INVSTS_MODBUS_OVERRIDES: ClassVar[dict[str, tuple[str, list[str]]]] = {
         "hybrid_inverter": ("invsts_hybrid", ["0", "1", "2", "3", "4", "5", "6"]),
-        "all_in_one": ("invsts_halo", ["1", "3", "6", "7"]),
+        "micro_ess": ("invsts_halo", ["1", "3", "6", "7"]),
     }
 
     def _invsts_override_for(self, coordinator: Any, description: Any) -> Any:

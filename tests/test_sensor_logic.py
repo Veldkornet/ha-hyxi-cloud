@@ -930,17 +930,28 @@ def test_observed_undocumented_enum_values_are_declared_not_hidden():
     ]
 
 
-def _invsts_sensor(device_type: str, *, modbus: bool) -> sensor_mod.HyxiSensor:
-    """Build an invSts HyxiSensor for a given device family/transport."""
+def _invsts_sensor(raw_device_code: str, *, modbus: bool) -> sensor_mod.HyxiSensor:
+    """Build an invSts HyxiSensor for a given device family/transport.
+
+    Takes the *raw* device_type_code (what a real client actually
+    publishes, e.g. "MICRO_STORAGE_ALL_IN_ONE" for HALO) and lets the real
+    get_raw_device_code()/normalize_device_type() run on it, rather than
+    patching normalize_device_type's return value directly. A previous
+    version of this helper did the latter and it masked a real bug: HALO's
+    real raw code normalizes to "micro_ess", not the "all_in_one" this
+    suite was patching in, so _INVSTS_MODBUS_OVERRIDES's HALO entry never
+    actually matched in production while these tests stayed green.
+    """
     coordinator = MagicMock()
-    coordinator.data = {"SN123": {"metrics": {"invSts": "1"}}}
+    coordinator.data = {
+        "SN123": {"metrics": {"invSts": "1"}, "device_type_code": raw_device_code}
+    }
     coordinator.entry.data = (
         {const_mod.CONF_TRANSPORT: const_mod.TRANSPORT_MODBUS} if modbus else {}
     )
-    with patch.object(sensor_mod, "normalize_device_type", return_value=device_type):
-        return sensor_mod.HyxiSensor(
-            coordinator, "SN123", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
-        )
+    return sensor_mod.HyxiSensor(
+        coordinator, "SN123", sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
+    )
 
 
 def test_invsts_gets_the_hybrid_translation_and_options_on_modbus():
@@ -954,7 +965,7 @@ def test_invsts_gets_the_hybrid_translation_and_options_on_modbus():
     label HA looks up -- a stale `_attr_translation_key` would make the
     whole override a no-op despite entity_description looking correct.
     """
-    sensor = _invsts_sensor("hybrid_inverter", modbus=True)
+    sensor = _invsts_sensor("HYBRID_INVERTER", modbus=True)
     assert sensor.entity_description.translation_key == "invsts_hybrid"
     assert sensor._attr_translation_key == "invsts_hybrid"
     assert sensor.entity_description.options == [
@@ -969,8 +980,15 @@ def test_invsts_gets_the_hybrid_translation_and_options_on_modbus():
 
 
 def test_invsts_gets_the_halo_translation_and_options_on_modbus():
-    """A HALO (all_in_one) Modbus entry sees register 4101's own labels."""
-    sensor = _invsts_sensor("all_in_one", modbus=True)
+    """A HALO Modbus entry sees register 4101's own labels.
+
+    Uses HALO's real device_type_code (MICRO_STORAGE_ALL_IN_ONE, matching
+    client.py's MICRO_ESS_DEVICE_CODE), not the "all_in_one" family name --
+    normalize_device_type maps that code to "micro_ess" via DEVICE_TYPE_KEYS'
+    direct lookup, never "all_in_one" (a separate, Cloud-only family this
+    override doesn't apply to).
+    """
+    sensor = _invsts_sensor("MICRO_STORAGE_ALL_IN_ONE", modbus=True)
     assert sensor.entity_description.translation_key == "invsts_halo"
     assert sensor._attr_translation_key == "invsts_halo"
     assert sensor.entity_description.options == ["1", "3", "6", "7"]
@@ -980,14 +998,14 @@ def test_invsts_keeps_the_cloud_default_when_not_modbus():
     """Cloud entries keep the shared SENSOR_TYPES description untouched,
     even for a device_type that has a Modbus override (hybrid_inverter is
     a valid Cloud device type too -- only the transport decides here)."""
-    sensor = _invsts_sensor("hybrid_inverter", modbus=False)
+    sensor = _invsts_sensor("HYBRID_INVERTER", modbus=False)
     assert sensor.entity_description is sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
 
 
 def test_invsts_keeps_the_cloud_default_for_an_unmapped_modbus_family():
     """A Modbus device_type with no entry in _INVSTS_MODBUS_OVERRIDES (not
     hybrid or HALO) falls back to the Cloud default rather than crashing."""
-    sensor = _invsts_sensor("micro_inverter", modbus=True)
+    sensor = _invsts_sensor("MICRO_INVERTER", modbus=True)
     assert sensor.entity_description is sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
 
 
