@@ -84,13 +84,32 @@ jobs:
           tag_name: ${{ github.event.release.tag_name }}
           overwrite_files: true
 
+      - name: 🔍 Read uv version from .pre-commit-config.yaml
+        # .pre-commit-config.yaml's uv-pre-commit `rev:` is the single
+        # source of truth for the uv version. Reading it here -- rather
+        # than hardcoding a second copy of the same version below -- is
+        # what keeps this uv lock and pre-commit.ci's `uv-lock --check`
+        # from disagreeing over resolver/schema behavior between uv
+        # releases: pre-commit.ci's autoupdate PRs only ever touch the one
+        # file, so a hardcoded copy here would silently drift out of sync
+        # every time uv-pre-commit cuts a new release (as happened in #745).
+        id: uv-version
+        run: |
+          UV_VERSION=$(python3 -c "
+          import re, pathlib, sys
+          text = pathlib.Path('.pre-commit-config.yaml').read_text(encoding='utf-8')
+          match = re.search(r'repo:\s*https://github\.com/astral-sh/uv-pre-commit\s*\n\s*rev:\s*(\S+)', text)
+          if not match:
+              print('Error: could not find uv-pre-commit rev in .pre-commit-config.yaml', file=sys.stderr)
+              sys.exit(1)
+          print(match.group(1))
+          ")
+          echo "version=${UV_VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: 🔧 Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
-          # Pinned to match .pre-commit-config.yaml's uv-lock hook rev, so
-          # this uv lock and pre-commit.ci's `uv-lock --check` never
-          # disagree over resolver/schema behavior between uv releases.
-          version: "0.12.10"
+          version: ${{ steps.uv-version.outputs.version }}
           python-version: '3.14'
           enable-cache: true
           cache-python: true
