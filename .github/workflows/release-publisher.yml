@@ -98,7 +98,13 @@ jobs:
           UV_VERSION=$(python3 -c "
           import re, pathlib, sys
           text = pathlib.Path('.pre-commit-config.yaml').read_text(encoding='utf-8')
-          match = re.search(r'repo:\s*https://github\.com/astral-sh/uv-pre-commit\s*\n\s*rev:\s*(\S+)', text)
+          # repo: and rev: are both plain YAML scalars here today, but the
+          # format also allows quoting either one -- match optional quotes
+          # around both rather than assume the file stays unquoted forever.
+          match = re.search(
+              r'repo:\s*[\'\"]?https://github\.com/astral-sh/uv-pre-commit[\'\"]?\s*\n\s*rev:\s*[\'\"]?([^\'\"\s]+)[\'\"]?',
+              text,
+          )
           if not match:
               print('Error: could not find uv-pre-commit rev in .pre-commit-config.yaml', file=sys.stderr)
               sys.exit(1)
