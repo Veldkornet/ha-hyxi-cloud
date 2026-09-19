@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Mód: Önfogyasztás"
       },
+      "work_mode_self_use": {
+        "name": "Üzemmód: Önfogyasztás"
+      },
+      "work_mode_grid_backup": {
+        "name": "Üzemmód: Hálózati tartalék"
+      },
+      "work_mode_tou": {
+        "name": "Üzemmód: Időszakos tarifa (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Csúcskisímítás: Kikapcsolás"
       },

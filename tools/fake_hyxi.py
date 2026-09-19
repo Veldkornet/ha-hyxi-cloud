@@ -142,6 +142,7 @@ HALO_INPUT: tuple[Reg, ...] = (
 # input map and a completely separate address space -- 4152 is grid power
 # above and VPP minimum SOC here.
 HALO_HOLDING: tuple[Reg, ...] = (
+    Reg(4024, "u16", 1),  # work mode setting: 1 = self-use
     Reg(4048, "u16", 0),  # dispatch mode: 0 = absolute power
     Reg(4049, "i32", 0),  # active power setpoint, 3dp kW
     Reg(4051, "u16", 10000),  # active power percentage, 2dp -> 100.00 %

@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Läge: Egenförbrukning"
       },
+      "work_mode_self_use": {
+        "name": "Driftläge: Egenanvändning"
+      },
+      "work_mode_grid_backup": {
+        "name": "Driftläge: Nätbackup"
+      },
+      "work_mode_tou": {
+        "name": "Driftläge: Tidsstyrt (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Topplastreducering: Stäng av"
       },

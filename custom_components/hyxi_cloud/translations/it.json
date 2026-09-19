@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Modalità: Autoconsumo"
       },
+      "work_mode_self_use": {
+        "name": "Modalità di lavoro: Autoconsumo"
+      },
+      "work_mode_grid_backup": {
+        "name": "Modalità di lavoro: Backup di rete"
+      },
+      "work_mode_tou": {
+        "name": "Modalità di lavoro: Fasce orarie (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Rasatura dei picchi: Disattiva"
       },

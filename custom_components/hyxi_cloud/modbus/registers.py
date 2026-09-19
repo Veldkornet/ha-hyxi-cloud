@@ -334,6 +334,27 @@ class HaloSettings(Component):
     """Export power limit."""
 
 
+class HaloWorkModeSetting(Component):
+    """The mode the device runs on its own, holding register 4024.
+
+    A component of its own, and never read: every field of a component is
+    read together, so declaring this in HaloSettings would add a separate
+    block to the settings read (4024 is further than max_gap from the next
+    field), and that read succeeds or fails as a whole for every number and
+    switch seeded from it. The register is only vendor-documented, so a
+    firmware that refused a read of it must not cost those entities their
+    values. It is written with FC 0x10 like every other single-register
+    field here.
+    """
+
+    register_space = "holding"
+    max_span = MAX_SPAN
+
+    mode = integer(4024, signed=False, writable=True, force_fc16=True)
+    """1 self-use, 3 grid backup, 21 custom discharge, 22 TOU. Read back as
+    4102 (HaloStatus.work_mode) unless VPP dispatch is on."""
+
+
 #: Components read on every poll, in the order they are read.
 TELEMETRY_COMPONENTS = (
     HaloStatus,

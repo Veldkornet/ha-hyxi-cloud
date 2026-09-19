@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Tilstand: Egetforbrug"
       },
+      "work_mode_self_use": {
+        "name": "Arbejdstilstand: Egetforbrug"
+      },
+      "work_mode_grid_backup": {
+        "name": "Arbejdstilstand: Netbackup"
+      },
+      "work_mode_tou": {
+        "name": "Arbejdstilstand: Tidsbaseret (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Spidsbelastningsudjævning: Slå fra"
       },

@@ -143,6 +143,14 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4162 | `feed_in_enable` | Number (unsigned) | RW |  |  | used by a control method |
 | 4163 | `feed_in_power_limit` | Number (signed) | RW | ×0.001 | kW | used by a control method |
 
+### HaloWorkModeSetting  (space=holding)
+
+Never read: a separate component so that the all-or-nothing settings read does not depend on a register nothing has confirmed the device serves.
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4024 | `mode` | Number (unsigned) | RW |  |  | used by a control method |
+
 ## Hybrid register map (from registers_hybrid.py)
 
 Same generation and legend, from the hybrid Component classes and `client_hybrid.py`.
@@ -485,8 +493,9 @@ The **dispatch switch** (`HyxiDispatchSwitch`) is the transport-agnostic
 "is the integration in control at all" toggle: it reads and writes 4146
 (HALO) / 3000 (Hybrid). Every idle / charge / discharge write turns dispatch
 on, so the switch is the deliberate way back off. On HALO, `set_mode_self_consume`
-(VPP mode 3) is a real sub-mode and keeps dispatch on, so the switch is the
-only route off; on Hybrid, self-consume ends up in the same off state for
+(VPP mode 3) is a real sub-mode and keeps dispatch on, so the switch and the
+"Work Mode" buttons (`set_work_mode`, which also clears 4146) are the routes off;
+on Hybrid, self-consume ends up in the same off state for
 the hardware reason above. Clearing 4146 / 3000 hands the battery back to
 the inverter's own configured work mode — whether clearing 4146 cleanly
 resumes that mode on a real HALO is still unconfirmed (see "Still unverified").
@@ -578,6 +587,7 @@ and update this file with the result.
 | Battery capacity unit at 5020 | HALO | Documented in **Ah**; the cloud's `batCap` is kWh. Needs nominal pack voltage to convert — currently not mapped at all rather than mapped wrongly. |
 | BMS fault word addresses | HALO | See rule 3. |
 | Whether 4146 must enable dispatch before 4147 takes effect | HALO | `_write_vpp` writes the enable every time on the assumption it does. Harmless if unnecessary. |
+| Whether writing the work mode setting (4024: 1 self-use, 3 grid backup, 22 TOU) takes effect, and whether it needs 4146 cleared first | HALO | `set_work_mode` (the "Work Mode: …" buttons) writes 4146=0 and then 4024. The document lists 4024 as a writable holding register and 4102 reads the same numbering back, but no HALO has confirmed either that the write is accepted or that the device leaves VPP mode for it. 4024 is deliberately never read back, so the write can only be checked against the app or 4102. 21 (custom discharge) is not offered: the document only shows it taking its power from a TOU slot (4184). Selecting TOU relies on a schedule already stored on the device (4178+, set up in the HYXI app) -- nothing here writes one. |
 | Whether clearing 4146 cleanly resumes the configured work mode (4024) | HALO | The dispatch switch writes `vpp_enable=0` to release control. Expected to drop dispatch and let the inverter resume self-use / TOU, but not yet confirmed the device doesn't instead sit idle until a mode is re-selected in the app. |
 | Whether a VPP dispatch survives a power cycle, or a watchdog reverts it | HALO | Decides whether the integration needs a heartbeat write to hold a mode. |
 | **How `dispatch_mode`/`active_power_setpoint` (4048/4049, "dispatch mode 1") relate to the VPP block (4146–4152, "dispatch mode 2")** | HALO | The document names both as separate dispatch modes but never states whether they're independent, mutually exclusive, or one overrides the other. `set_mode_*` only ever writes the VPP block; 4048/4049 are deliberately left unexposed rather than guessed. A public search for the vendor's Micro Storage RS485 protocol document (2026-08-23) turned up nothing beyond what's already transcribed here — no public copy of the register-level document was found, only marketing-level descriptions of "dispatch"/"VPP" as product concepts, which don't answer this question either. Resolve by testing against hardware: write 4048/4049 while the VPP block is enabled and observe whether it fights the VPP writes. |

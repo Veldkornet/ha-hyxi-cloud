@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "モード: 自家消費"
       },
+      "work_mode_self_use": {
+        "name": "動作モード: 自家消費"
+      },
+      "work_mode_grid_backup": {
+        "name": "動作モード: 系統バックアップ"
+      },
+      "work_mode_tou": {
+        "name": "動作モード: 時間帯別 (TOU)"
+      },
       "peak_shaving_close": {
         "name": "ピークカット: オフにする"
       },

@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Mode: Self-Consumption"
       },
+      "work_mode_self_use": {
+        "name": "Work Mode: Self-Use"
+      },
+      "work_mode_grid_backup": {
+        "name": "Work Mode: Grid Backup"
+      },
+      "work_mode_tou": {
+        "name": "Work Mode: Time of Use"
+      },
       "peak_shaving_close": {
         "name": "Peak Shaving: Turn Off"
       },

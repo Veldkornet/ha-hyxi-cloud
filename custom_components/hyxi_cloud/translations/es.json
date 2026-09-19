@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Modo: Autoconsumo"
       },
+      "work_mode_self_use": {
+        "name": "Modo de trabajo: Autoconsumo"
+      },
+      "work_mode_grid_backup": {
+        "name": "Modo de trabajo: Respaldo de red"
+      },
+      "work_mode_tou": {
+        "name": "Modo de trabajo: Tarifa por horas (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Control de picos de demanda: Desactivar"
       },

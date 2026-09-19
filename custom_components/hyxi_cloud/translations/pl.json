@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Tryb: Autokonsumpcja"
       },
+      "work_mode_self_use": {
+        "name": "Tryb pracy: Autokonsumpcja"
+      },
+      "work_mode_grid_backup": {
+        "name": "Tryb pracy: Zasilanie awaryjne z sieci"
+      },
+      "work_mode_tou": {
+        "name": "Tryb pracy: Taryfa czasowa (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Redukcja szczytów: Wyłącz"
       },
