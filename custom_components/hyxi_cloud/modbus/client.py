@@ -45,6 +45,7 @@ from .registers import (
     HaloIdentity,
     HaloSettings,
     HaloStatus,
+    HaloWorkModeSetting,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -87,6 +88,11 @@ VPP_IDLE = 0
 VPP_CHARGE = 1
 VPP_DISCHARGE = 2
 VPP_SELF_USE = 3
+
+# Work mode setting, register 4024, keyed by the name set_work_mode takes.
+# 21 (custom discharge) is left out: it draws its power from a TOU slot
+# (4184) rather than from anything this integration writes.
+WORK_MODES = {"self_use": 1, "grid_backup": 3, "tou": 22}
 
 # How often async_read_settings re-reads the settings block instead of
 # trusting its last read. Plain seconds against time.monotonic(), not a
@@ -208,6 +214,7 @@ class HyxiModbusClient:
         self.faults = HaloFaults(unit)
         self.battery = HaloBattery(unit)
         self.settings = HaloSettings(unit)
+        self.work_mode_setting = HaloWorkModeSetting(unit)
 
         self._components: dict[type[Component], Component] = {
             HaloStatus: self.status,
@@ -314,7 +321,8 @@ class HyxiModbusClient:
         of the refresh window -- backs the manual "Refresh Settings"
         button, for a user who just changed something from the app or
         another Modbus master and doesn't want to wait for the hourly
-        window to notice."""
+        window to notice. set_work_mode calls it too: it clears 4146 through
+        something other than the switch that shows it."""
         self._settings_read_at = None
 
     async def async_read_all(self) -> dict[str, dict]:
@@ -584,6 +592,24 @@ class HyxiModbusClient:
         """
         await self._write_setting("vpp_enable", 1 if enabled else 0, 4146)
 
+    async def set_work_mode(self, mode: str) -> None:
+        """Select the work mode the device runs on its own (register 4024).
+
+        VPP dispatch is released first: while it is on the device reports a
+        VPP mode rather than the configured one, so a bare 4024 write could
+        not be told apart from no write at all. The settings re-read is
+        forced even when the second write fails, since dispatch has already
+        been released by then and the dispatch switch has to show it.
+        """
+        register_value = WORK_MODES[mode]
+        try:
+            await self._write_setting("vpp_enable", 0, 4146)
+            await self._write_setting(
+                "mode", register_value, 4024, self.work_mode_setting
+            )
+        finally:
+            self.force_settings_refresh()
+
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict:
         """Limit or release export.
 
@@ -610,15 +636,23 @@ class HyxiModbusClient:
         )
         return {"code": "0", "msg": "ok"}
 
-    async def _write_setting(self, field: str, value: Any, register: int) -> None:
-        """Write one HaloSettings field, wrapping failures uniformly.
+    async def _write_setting(
+        self,
+        field: str,
+        value: Any,
+        register: int,
+        component: Component | None = None,
+    ) -> None:
+        """Write one HaloSettings field (or one of `component`'s), wrapping
+        failures uniformly.
 
         A shared helper rather than repeating the try/except in every
         setting method below -- unlike _write_vpp and set_peak_shaving,
         these are plain single-field writes with nothing else to sequence.
         """
+        target = self.settings if component is None else component
         try:
-            await self.settings.write(field, value)
+            await target.write(field, value)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.debug(
                 "Modbus %s write failed on unit %s (value=%s): %s",

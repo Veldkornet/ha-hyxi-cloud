@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Mode : Autoconsommation"
       },
+      "work_mode_self_use": {
+        "name": "Mode de fonctionnement : Autoconsommation"
+      },
+      "work_mode_grid_backup": {
+        "name": "Mode de fonctionnement : Secours réseau"
+      },
+      "work_mode_tou": {
+        "name": "Mode de fonctionnement : Heures tarifaires (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Écrêtement des pics : Désactiver"
       },

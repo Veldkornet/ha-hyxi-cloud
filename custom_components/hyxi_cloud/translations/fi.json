@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Tila: Omakulutus"
       },
+      "work_mode_self_use": {
+        "name": "Toimintatila: Omakäyttö"
+      },
+      "work_mode_grid_backup": {
+        "name": "Toimintatila: Verkkovarmistus"
+      },
+      "work_mode_tou": {
+        "name": "Toimintatila: Aikaperusteinen (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Huipputehon leikkaus: Poista käytöstä"
       },

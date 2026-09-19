@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Režim: Vlastní spotřeba"
       },
+      "work_mode_self_use": {
+        "name": "Pracovní režim: Vlastní spotřeba"
+      },
+      "work_mode_grid_backup": {
+        "name": "Pracovní režim: Záloha ze sítě"
+      },
+      "work_mode_tou": {
+        "name": "Pracovní režim: Časové tarify (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Omezování špiček: Vypnout"
       },

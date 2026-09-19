@@ -1170,7 +1170,7 @@ def _cleanup_control_entities(
     # by the time either function actually runs, so the cycle pylint sees
     # in the static import graph never manifests as a real ImportError.
     # pylint: disable-next=cyclic-import
-    from .button import POWER_COMMAND_ICONS
+    from .button import POWER_COMMAND_ICONS, WORK_MODE_ICONS
     from .const import is_battery_control_enabled
     from .number import (  # pylint: disable=cyclic-import
         HALO_SETTING_NUMBER_DEFS,
@@ -1228,6 +1228,7 @@ def _cleanup_control_entities(
         | {d.key for d in HALO_SETTING_NUMBER_DEFS}
         | {d.key for d in HYBRID_SETTING_NUMBER_DEFS}
         | POWER_COMMAND_ICONS.keys()
+        | {f"work_mode_{mode}" for mode in WORK_MODE_ICONS}
     )
 
     unique_ids_to_remove = {

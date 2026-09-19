@@ -105,6 +105,7 @@ INPUT_REGISTERS: dict[int, int] = {
 }
 
 HOLDING_REGISTERS: dict[int, int] = {
+    4024: 1,  # work mode setting: self-use
     4048: 0,
     **_spread(4049, 0),
     4051: 10000,
@@ -495,6 +496,94 @@ async def test_set_dispatch_enabled_toggles_the_vpp_enable_register(client):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("mode", "register_value"),
+    [("self_use", 1), ("grid_backup", 3), ("tou", 22)],
+)
+async def test_set_work_mode_releases_dispatch_before_writing_4024(
+    client, mode, register_value
+):
+    """The order matters: while 4146 is set the device reports a VPP mode, so
+    4024 must be written after dispatch is released, never before."""
+    await client.set_mode_charge("SN", 1000)  # leaves dispatch enabled
+    events = []
+    client.settings.modbus_unit.on_write(events.append)
+
+    await client.set_work_mode(mode)
+
+    assert [(e.address, e.values) for e in events] == [
+        (4146, [0]),
+        (4024, [register_value]),
+    ]
+    await client.settings.async_update()
+    await client.work_mode_setting.async_update()
+    assert client.settings.vpp_enable == 0
+    assert client.work_mode_setting.mode == register_value
+
+
+@pytest.mark.asyncio
+async def test_set_work_mode_validates_before_writing_anything(client):
+    """An unknown mode must fail before dispatch is released, not after."""
+    events = []
+    client.settings.modbus_unit.on_write(events.append)
+
+    with pytest.raises(KeyError):
+        await client.set_work_mode("bogus")
+
+    assert not events
+
+
+@pytest.mark.asyncio
+async def test_a_failed_4024_write_still_forces_the_settings_read(client):
+    """4146 is already cleared by the time the 4024 write fails, so the
+    dispatch switch must still be refreshed to show it."""
+    await client.async_read_settings()
+
+    with patch.object(
+        client.work_mode_setting, "write", side_effect=OSError("bus fell over")
+    ):
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_work_mode("tou")
+
+    assert client._settings_read_at is None
+
+
+@pytest.mark.asyncio
+async def test_the_settings_read_never_touches_4024(client):
+    """4024 is only vendor-documented. The settings read succeeds or fails as
+    a whole for every number and switch, so it must not depend on 4024."""
+    await client.settings.async_update()
+
+    reads = client.settings.modbus_unit.read_events
+    assert reads  # the assertion below must not be vacuous
+    assert not any(
+        e.register_type == "holding" and e.address <= 4024 < e.address + e.count
+        for e in reads
+    )
+
+
+def test_every_work_mode_button_has_a_client_mode():
+    """The buttons are named after the client's modes; the two dicts live in
+    different modules and nothing else keeps them in step."""
+    from custom_components.hyxi_cloud.button import WORK_MODE_ICONS
+    from custom_components.hyxi_cloud.modbus.client import WORK_MODES
+
+    assert set(WORK_MODE_ICONS) == set(WORK_MODES)
+
+
+@pytest.mark.asyncio
+async def test_set_work_mode_forces_the_next_settings_read(client):
+    """The dispatch switch only learns 4146 was cleared from a settings
+    re-read, so the write must reopen the refresh window."""
+    await client.async_read_settings()
+    assert client._settings_read_at is not None
+
+    await client.set_work_mode("tou")
+
+    assert client._settings_read_at is None
+
+
+@pytest.mark.asyncio
 async def test_single_register_settings_writes_use_function_code_16(client):
     """The HALO document's function-code table lists only 0x03/0x04/0x10 --
     unlike the hybrid one, this firmware does not implement 0x06 (write
@@ -518,6 +607,7 @@ async def test_single_register_settings_writes_use_function_code_16(client):
     await client.set_self_use_soc(12)
     await client.set_discharge_min_soc(12)
     await client.set_anti_starvation(True)
+    await client.set_work_mode("tou")
 
     single_register_writes = [e for e in events if len(e.values) == 1]
     assert single_register_writes  # the FC assertion below must not be vacuous
@@ -545,6 +635,9 @@ async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
 
         with pytest.raises(HyxiModbusClient.ControlError):
             await client.set_anti_starvation(True)
+
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_work_mode("tou")
 
 
 def test_register_model_declares_the_right_spaces():
@@ -1502,6 +1595,95 @@ async def test_hybrid_power_command_buttons_appear_and_write_through(hass):
             "button", "press", {"entity_id": restart_id}, blocking=True
         )
     spy.assert_awaited_once_with(sn)
+
+
+@pytest.mark.asyncio
+async def test_halo_work_mode_buttons_appear_and_write_through(hass):
+    """The three work-mode buttons exist on a HALO and pressing one lands in
+    the device's holding registers: dispatch released, 4024 set."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+    connection = _seeded_connection()
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    for key in ("work_mode_self_use", "work_mode_grid_backup", "work_mode_tou"):
+        assert _entity_id(hass, "button", sn, key) is not None, key
+
+    coordinator = next(iter(hass.data[DOMAIN].values()))
+    await coordinator.client.set_mode_charge(sn, 1000)  # dispatch on
+    entity_id = _entity_id(hass, "button", sn, "work_mode_tou")
+    await hass.services.async_call(
+        "button", "press", {"entity_id": entity_id}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    await coordinator.client.settings.async_update()
+    await coordinator.client.work_mode_setting.async_update()
+    assert coordinator.client.settings.vpp_enable == 0
+    assert coordinator.client.work_mode_setting.mode == 22
+
+
+@pytest.mark.asyncio
+async def test_halo_work_mode_button_refreshes_the_dispatch_switch(hass):
+    """Pressing a work-mode button clears 4146, and the dispatch switch
+    follows on the very next poll rather than waiting out the hourly
+    settings window."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+    connection = _seeded_connection()
+    connection.for_unit(1).load_raw({"holding": {4146: 1}})
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    switch_id = _entity_id(hass, "switch", sn, "dispatch")
+    assert hass.states.get(switch_id).state == "on"  # seed 4146 = 1
+
+    await hass.services.async_call(
+        "button",
+        "press",
+        {"entity_id": _entity_id(hass, "button", sn, "work_mode_self_use")},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    assert hass.states.get(switch_id).state == "off"
+
+
+@pytest.mark.asyncio
+async def test_hybrid_has_no_work_mode_buttons(hass):
+    """The hybrid's operating mode (1265) is read-only; 4024 is HALO's."""
+    entry = _modbus_entry(
+        hass, modbus_family="hybrid", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=_seeded_hybrid_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    for key in ("work_mode_self_use", "work_mode_grid_backup", "work_mode_tou"):
+        assert _entity_id(hass, "button", sn, key) is None, key
 
 
 @pytest.mark.asyncio

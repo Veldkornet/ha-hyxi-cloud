@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Modus: Selfverbruik"
       },
+      "work_mode_self_use": {
+        "name": "Werkmodus: Selfgebruik"
+      },
+      "work_mode_grid_backup": {
+        "name": "Werkmodus: Netrugsteun"
+      },
+      "work_mode_tou": {
+        "name": "Werkmodus: Tyd van gebruik"
+      },
       "peak_shaving_close": {
         "name": "Piekbesnoeiing: Skakel af"
       },

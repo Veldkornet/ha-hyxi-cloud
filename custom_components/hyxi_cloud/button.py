@@ -41,6 +41,7 @@ from .control import (
     _note_manual_mode,
     async_send_battery_mode,
 )
+from .entity import HyxiEntity
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -68,6 +69,14 @@ POWER_COMMAND_ICONS: dict[str, str] = {
     "restart": "mdi:restart",
 }
 
+# Keyed by the name the Modbus client's set_work_mode takes; the entity key
+# (unique_id suffix and translation key) is that name behind "work_mode_".
+WORK_MODE_ICONS: dict[str, str] = {
+    "self_use": "mdi:home-battery-outline",
+    "grid_backup": "mdi:transmission-tower",
+    "tou": "mdi:clock-time-four-outline",
+}
+
 
 def _mode_buttons(coordinator, sn: str, dev_data: dict) -> list[HyxiModeButton]:
     """The four operating-mode buttons, shared by the three-phase cloud path
@@ -90,6 +99,17 @@ def _power_command_buttons(
         HyxiPowerCommandButton(coordinator, sn, dev_data, "power_on"),
         HyxiPowerCommandButton(coordinator, sn, dev_data, "power_off"),
         HyxiPowerCommandButton(coordinator, sn, dev_data, "restart"),
+    ]
+
+
+def _work_mode_buttons(
+    coordinator, sn: str, dev_data: dict
+) -> list[HyxiWorkModeButton]:
+    """Self-use / grid backup / TOU -- register 4024, HALO Modbus only. The
+    hybrid's operating mode (1265) is read-only, and the cloud API refuses
+    Micro ESS control outright."""
+    return [
+        HyxiWorkModeButton(coordinator, sn, dev_data, mode) for mode in WORK_MODE_ICONS
     ]
 
 
@@ -169,6 +189,8 @@ def _build_device_buttons(
         # so device_type reliably tells the two register maps apart.
         if device_type == "hybrid_inverter":
             entities.extend(_power_command_buttons(coordinator, sn, dev_data))
+        elif device_type == "micro_ess":
+            entities.extend(_work_mode_buttons(coordinator, sn, dev_data))
         return entities
 
     phase = detect_phase_type(dev_data)
@@ -453,6 +475,44 @@ class HyxiPowerCommandButton(
     def available(self) -> bool:
         """Unavailable when battery control is not enabled."""
         return super().available
+
+
+class HyxiWorkModeButton(HyxiEntity, ButtonEntity):
+    """Button to hand the battery back to one of the device's own work modes
+    (HALO Modbus, write-only, register 4024).
+
+    Unlike HyxiModeButton, which drives the battery through VPP dispatch,
+    this releases dispatch and lets the device run the chosen mode itself.
+    """
+
+    def __init__(self, coordinator, sn: str, dev_data: dict, mode: str) -> None:
+        """Initialize the work mode button."""
+        super().__init__(coordinator, sn, dev_data)
+        self._mode = mode
+        self._attr_unique_id = f"hyxi_{sn}_work_mode_{mode}"
+        self._attr_translation_key = f"work_mode_{mode}"
+        self._attr_icon = WORK_MODE_ICONS[mode]
+
+    async def async_press(self) -> None:
+        """Send the work mode to the device."""
+        try:
+            await self.coordinator.client.set_work_mode(self._mode)
+            # The device is back under its own control, which is what
+            # protection's "self_consume" means -- without this it would
+            # still believe its last hold command is in force.
+            _note_manual_mode(self.coordinator, self._sn, "self_consume")
+            _LOGGER.info("Work mode '%s' sent to %s", self._mode, mask_sn(self._sn))
+            await self.coordinator.async_request_refresh()
+        except HyxiApiClient.ControlError as err:
+            _LOGGER.exception(
+                "Failed to set work mode '%s' for %s: %s",
+                self._mode,
+                mask_sn(self._sn),
+                err,
+            )
+            raise HomeAssistantError(
+                f"Failed to set work mode '{self._mode}': {err}"
+            ) from err
 
 
 class HyxiRenewSubscriptionButton(ButtonEntity):

@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "Mod: Öz Tüketim"
       },
+      "work_mode_self_use": {
+        "name": "Çalışma Modu: Öz Tüketim"
+      },
+      "work_mode_grid_backup": {
+        "name": "Çalışma Modu: Şebeke Yedeği"
+      },
+      "work_mode_tou": {
+        "name": "Çalışma Modu: Zamana Göre Tarife (TOU)"
+      },
       "peak_shaving_close": {
         "name": "Pik Tıraşlama: Kapat"
       },

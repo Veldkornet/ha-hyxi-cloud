@@ -458,6 +458,82 @@ async def test_power_command_button_error(mock_coordinator_fixture):
         await btn.async_press()
 
 
+def test_device_buttons_include_work_mode_buttons_for_halo_only(
+    mock_coordinator_fixture, mock_entry_fixture
+):
+    """HALO over Modbus gets the three work-mode buttons; the hybrid, whose
+    operating mode register is read-only, does not."""
+    mock_entry_fixture.data = {"transport": "modbus"}
+    mock_entry_fixture.options = {"enable_battery_control": True}
+
+    def _work_mode_keys(device_code: str) -> list[str]:
+        entities = button_mod._build_device_buttons(
+            mock_entry_fixture,
+            mock_coordinator_fixture,
+            "SN123",
+            {"device_type_code": device_code},
+        )
+        return sorted(
+            e._attr_translation_key
+            for e in entities
+            if isinstance(e, button_mod.HyxiWorkModeButton)
+        )
+
+    with patch(
+        "custom_components.hyxi_cloud.button.get_raw_device_code",
+        side_effect=lambda dev_data: dev_data["device_type_code"],
+    ):
+        assert _work_mode_keys("MICRO_STORAGE_ALL_IN_ONE") == [
+            "work_mode_grid_backup",
+            "work_mode_self_use",
+            "work_mode_tou",
+        ]
+        assert _work_mode_keys("HYBRID_INVERTER") == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["self_use", "grid_backup", "tou"])
+async def test_work_mode_button_press_sends_the_mode(mock_coordinator_fixture, mode):
+    """Each button hands the client its own mode name, then refreshes."""
+    btn = button_mod.HyxiWorkModeButton(mock_coordinator_fixture, "SN123", {}, mode)
+
+    await btn.async_press()
+
+    assert btn._attr_unique_id == f"hyxi_SN123_work_mode_{mode}"
+    assert btn._attr_translation_key == f"work_mode_{mode}"
+    mock_coordinator_fixture.client.set_work_mode.assert_awaited_once_with(mode)
+    mock_coordinator_fixture.async_request_refresh.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_work_mode_button_tells_protection_the_device_is_released(
+    mock_coordinator_fixture,
+):
+    """Protection tracks the last mode it (or the user) sent. After a work
+    mode the device runs on its own, so it must not still believe an earlier
+    hold command is in force -- it would never re-assert the hold."""
+    controller = MagicMock()
+    mock_coordinator_fixture.protection_controllers = {"SN123": controller}
+    btn = button_mod.HyxiWorkModeButton(mock_coordinator_fixture, "SN123", {}, "tou")
+
+    await btn.async_press()
+
+    controller.note_manual_mode.assert_called_once_with("self_consume", None, None)
+
+
+@pytest.mark.asyncio
+async def test_work_mode_button_error(mock_coordinator_fixture):
+    """A failed write surfaces as HomeAssistantError, not a raw ControlError."""
+    mock_coordinator_fixture.client.set_work_mode.side_effect = (
+        button_mod.HyxiApiClient.ControlError("bus fell over")
+    )
+    btn = button_mod.HyxiWorkModeButton(mock_coordinator_fixture, "SN123", {}, "tou")
+
+    with pytest.raises(button_mod.HomeAssistantError, match="work mode 'tou'"):
+        await btn.async_press()
+    mock_coordinator_fixture.async_request_refresh.assert_not_awaited()
+
+
 @pytest.mark.asyncio
 async def test_mode_button_press_idle_self_consume(mock_coordinator_fixture):
     """Test pressing idle and self_consume mode buttons."""

@@ -866,6 +866,15 @@
       "mode_self_consume": {
         "name": "模式：自发自用"
       },
+      "work_mode_self_use": {
+        "name": "工作模式：自发自用"
+      },
+      "work_mode_grid_backup": {
+        "name": "工作模式：电网备电"
+      },
+      "work_mode_tou": {
+        "name": "工作模式：TOU 模式"
+      },
       "peak_shaving_close": {
         "name": "削峰填谷：关闭"
       },

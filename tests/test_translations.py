@@ -1,5 +1,6 @@
 """Tests for HYXI Cloud translations."""
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -128,6 +129,40 @@ def test_all_code_keys_are_translated(lang_file):
     for key in code_keys["binary_sensor"]:
         assert key in translated_binary_sensors, (
             f"Binary sensor key '{key}' is missing from {lang_file}"
+        )
+
+
+def get_work_mode_button_keys() -> set[str]:
+    """Entity keys of the HALO work-mode buttons, read from WORK_MODE_ICONS in
+    button.py. Parsed rather than imported: button.py can't be imported here
+    without the HA mocks the platform tests install."""
+    path = Path(__file__).parent / "../custom_components/hyxi_cloud/button.py"
+    for node in ast.parse(path.read_text(encoding="utf-8")).body:
+        if (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "WORK_MODE_ICONS"
+            and isinstance(node.value, ast.Dict)
+        ):
+            return {
+                f"work_mode_{ast.literal_eval(k)}"
+                for k in node.value.keys
+                if k is not None
+            }
+    raise AssertionError("WORK_MODE_ICONS not found in button.py")
+
+
+@pytest.mark.parametrize("lang_file", get_all_languages())
+def test_work_mode_button_names_are_translated(lang_file):
+    """Buttons have no code-key coverage above, so a missing name would only
+    show up as a nameless entity on a user's dashboard."""
+    keys = get_work_mode_button_keys()
+    assert keys  # the check below must not be vacuous
+
+    translated = load_translation(lang_file).get("entity", {}).get("button", {})
+    for key in keys:
+        assert translated.get(key, {}).get("name"), (
+            f"Work-mode button '{key}' has no name in {lang_file}"
         )
 
 
