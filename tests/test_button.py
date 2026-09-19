@@ -514,16 +514,23 @@ async def test_work_mode_button_tells_protection_the_device_is_released(
     hold command is in force -- it would never re-assert the hold."""
     controller = MagicMock()
     mock_coordinator_fixture.protection_controllers = {"SN123": controller}
+    mock_coordinator_fixture.client.dispatch_on = False
     btn = button_mod.HyxiWorkModeButton(mock_coordinator_fixture, "SN123", {}, "tou")
 
     await btn.async_press()
 
-    controller.note_manual_mode.assert_called_once_with("self_consume", None, None)
+    # The send is sequenced like every other manual one: reserved first, then
+    # passed back so a slower earlier send can't overwrite it.
+    controller.begin_send.assert_called_once_with()
+    controller.note_manual_mode.assert_called_once_with(
+        "self_consume", None, controller.begin_send.return_value
+    )
 
 
 @pytest.mark.asyncio
 async def test_work_mode_button_error(mock_coordinator_fixture):
-    """A failed write surfaces as HomeAssistantError, not a raw ControlError."""
+    """A failed write surfaces as HomeAssistantError, not a raw ControlError,
+    and the coordinator is still refreshed so the dispatch switch catches up."""
     mock_coordinator_fixture.client.set_work_mode.side_effect = (
         button_mod.HyxiApiClient.ControlError("bus fell over")
     )
@@ -531,7 +538,35 @@ async def test_work_mode_button_error(mock_coordinator_fixture):
 
     with pytest.raises(button_mod.HomeAssistantError, match="work mode 'tou'"):
         await btn.async_press()
-    mock_coordinator_fixture.async_request_refresh.assert_not_awaited()
+    mock_coordinator_fixture.async_request_refresh.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("dispatch_on", "protection_told"),
+    [
+        # 4146=0 landed before the mode write failed: the device is released.
+        (False, True),
+        # The release write itself failed: still holding, nothing changed.
+        (True, False),
+        (None, False),
+    ],
+)
+async def test_a_failed_work_mode_press_tells_protection_only_if_released(
+    mock_coordinator_fixture, dispatch_on, protection_told
+):
+    controller = MagicMock()
+    mock_coordinator_fixture.protection_controllers = {"SN123": controller}
+    mock_coordinator_fixture.client.dispatch_on = dispatch_on
+    mock_coordinator_fixture.client.set_work_mode.side_effect = (
+        button_mod.HyxiApiClient.ControlError("bus fell over")
+    )
+    btn = button_mod.HyxiWorkModeButton(mock_coordinator_fixture, "SN123", {}, "tou")
+
+    with pytest.raises(button_mod.HomeAssistantError):
+        await btn.async_press()
+
+    assert controller.note_manual_mode.called is protection_told
 
 
 @pytest.mark.asyncio

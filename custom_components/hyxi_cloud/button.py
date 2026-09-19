@@ -38,6 +38,7 @@ from .const import (
 )
 from .control import (
     _block_manual_peak_shaving_if_needed,
+    _get_protection_controller,
     _note_manual_mode,
     async_send_battery_mode,
 )
@@ -495,14 +496,15 @@ class HyxiWorkModeButton(HyxiEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Send the work mode to the device."""
+        client = self.coordinator.client
+        controller = _get_protection_controller(self.coordinator, self._sn)
+        # Reserved before the writes, so a slower earlier send finishing
+        # late can't overwrite this one's outcome -- see
+        # HyxiBatteryProtectionController.begin_send().
+        seq = controller.begin_send() if controller else None
         try:
-            await self.coordinator.client.set_work_mode(self._mode)
-            # The device is back under its own control, which is what
-            # protection's "self_consume" means -- without this it would
-            # still believe its last hold command is in force.
-            _note_manual_mode(self.coordinator, self._sn, "self_consume")
+            await client.set_work_mode(self._mode)
             _LOGGER.info("Work mode '%s' sent to %s", self._mode, mask_sn(self._sn))
-            await self.coordinator.async_request_refresh()
         except HyxiApiClient.ControlError as err:
             _LOGGER.exception(
                 "Failed to set work mode '%s' for %s: %s",
@@ -513,6 +515,15 @@ class HyxiWorkModeButton(HyxiEntity, ButtonEntity):
             raise HomeAssistantError(
                 f"Failed to set work mode '{self._mode}': {err}"
             ) from err
+        finally:
+            # Dispatch is released before the mode write, so it can be off
+            # even when that write failed. Off is the device back under its
+            # own control, which is what protection's "self_consume" means --
+            # without this it would still believe its last hold command is
+            # in force.
+            if client.dispatch_on is False:
+                _note_manual_mode(self.coordinator, self._sn, "self_consume", seq=seq)
+            await self.coordinator.async_request_refresh()
 
 
 class HyxiRenewSubscriptionButton(ButtonEntity):

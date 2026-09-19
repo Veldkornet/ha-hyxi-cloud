@@ -476,6 +476,26 @@ async def test_vpp_commands_do_not_defeat_the_failed_read_throttle(client):
 
 
 @pytest.mark.asyncio
+async def test_a_vpp_command_that_fails_after_the_enable_still_records_it(client):
+    """4146=1 landed, so dispatch is on and the dispatch switch has to catch
+    up, even though the power write after it failed."""
+    await client.async_read_settings()  # seed: 4146 = 0
+    real_write = client.settings.write
+
+    async def fail_on_the_power_write(field, value):
+        if field == "vpp_charge_power":
+            raise OSError("bus fell over")
+        await real_write(field, value)
+
+    with patch.object(client.settings, "write", side_effect=fail_on_the_power_write):
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_mode_charge("SN", 1000)
+
+    assert client.dispatch_on is True
+    assert client._settings_read_at is None
+
+
+@pytest.mark.asyncio
 async def test_peak_shaving_closes_the_real_export_switch(client):
     """The cloud approximates this; locally there is an actual register."""
     await client.set_peak_shaving("SN", "on")
@@ -597,6 +617,23 @@ async def test_a_failed_4024_write_still_forces_the_settings_read(client):
             await client.set_work_mode("tou")
 
     assert client._settings_read_at is None
+    # The 4146=0 write landed, so the client must say so -- the work mode
+    # button relies on it to tell protection the device is released.
+    assert client.dispatch_on is False
+
+
+@pytest.mark.asyncio
+async def test_a_failed_release_write_leaves_the_dispatch_state_alone(client):
+    """If 4146=0 itself fails nothing changed on the device, so the client
+    must not claim dispatch was released."""
+    await client.set_mode_charge("SN", 1000)
+    assert client.dispatch_on is True
+
+    with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
+        with pytest.raises(HyxiModbusClient.ControlError):
+            await client.set_work_mode("tou")
+
+    assert client.dispatch_on is True
 
 
 @pytest.mark.asyncio

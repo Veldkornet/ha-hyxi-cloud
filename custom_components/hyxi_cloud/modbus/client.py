@@ -234,6 +234,12 @@ class HyxiModbusClient:
         self._vpp_on: bool | None = None
 
     @property
+    def dispatch_on(self) -> bool | None:
+        """Whether VPP dispatch (4146) is on, as far as this client last saw
+        or wrote it; None until known."""
+        return self._vpp_on
+
+    @property
     def serial_number(self) -> str:
         """The device serial, or a stable fallback if identity is unreadable.
 
@@ -546,6 +552,15 @@ class HyxiModbusClient:
         """
         try:
             await self.settings.write("vpp_enable", 1)
+            # A write doesn't update the cached settings, so the dispatch
+            # switch only learns 4146 turned on from a re-read. Recorded
+            # here rather than after the last write, since dispatch is on
+            # even if a later write fails; skipped when already known to be
+            # on, so repeated commands (the Energy Manager's, say) don't each
+            # cost a settings read.
+            if self._vpp_on is not True:
+                self.force_settings_refresh()
+            self._vpp_on = True
             if watts is not None:
                 field = (
                     "vpp_charge_power" if mode == VPP_CHARGE else "vpp_discharge_power"
@@ -561,13 +576,6 @@ class HyxiModbusClient:
                 err,
             )
             raise self.ControlError(f"Modbus write failed: {err}") from err
-        # A write doesn't update the cached settings, so the dispatch switch
-        # only learns 4146 turned on from a re-read. Skipped when it is
-        # already known to be on, so repeated commands (the Energy Manager's,
-        # say) don't each cost a settings read.
-        if self._vpp_on is not True:
-            self.force_settings_refresh()
-        self._vpp_on = True
         _LOGGER.debug(
             "Modbus VPP write ok on unit %s: 4146=1, 4147=%s, power=%s",
             self._unit_id,
