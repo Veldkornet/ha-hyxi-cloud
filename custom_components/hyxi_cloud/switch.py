@@ -357,7 +357,8 @@ class HyxiDispatchSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
     (HALO, register 4146) or the scheduling register (Hybrid, 3000); off
     hands control back to the inverter's own configured work mode. Every
     idle / charge / discharge write turns it on -- this switch is the
-    deliberate way back off.
+    deliberate way back off, and on a HALO so are the "Work Mode" buttons,
+    which also clear it.
 
     HALO self-consume (VPP mode 3) is a real dispatch sub-mode and leaves
     dispatch on. The Hybrid scheduling block has no self-use setpoint, so

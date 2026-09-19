@@ -228,6 +228,10 @@ class HyxiModbusClient:
         self._identity_read = False
         self._settings_read_at: float | None = None
         self._settings_confirmed_at: float | None = None
+        # What this client last saw or wrote at 4146 (VPP dispatch enable);
+        # None until known. Decides whether a VPP command has to reopen the
+        # settings read for the dispatch switch -- see _write_vpp.
+        self._vpp_on: bool | None = None
 
     @property
     def serial_number(self) -> str:
@@ -305,6 +309,7 @@ class HyxiModbusClient:
         which relies on that to avoid adopting data from a poll that never
         actually got published.
         """
+        previously_confirmed = self._settings_confirmed_at
         (
             self._settings_read_at,
             self._settings_confirmed_at,
@@ -315,14 +320,16 @@ class HyxiModbusClient:
             self._unit_id,
             _LOGGER,
         )
+        if self._settings_confirmed_at != previously_confirmed:
+            self._vpp_on = _enabled_when(self.settings.vpp_enable, enabled_value=1)
 
     def force_settings_refresh(self) -> None:
         """Make the next async_read_settings re-read the block regardless
         of the refresh window -- backs the manual "Refresh Settings"
         button, for a user who just changed something from the app or
         another Modbus master and doesn't want to wait for the hourly
-        window to notice. set_work_mode calls it too: it clears 4146 through
-        something other than the switch that shows it."""
+        window to notice. set_work_mode and _write_vpp call it too: they
+        change 4146 through something other than the switch that shows it."""
         self._settings_read_at = None
 
     async def async_read_all(self) -> dict[str, dict]:
@@ -554,6 +561,13 @@ class HyxiModbusClient:
                 err,
             )
             raise self.ControlError(f"Modbus write failed: {err}") from err
+        # A write doesn't update the cached settings, so the dispatch switch
+        # only learns 4146 turned on from a re-read. Skipped when it is
+        # already known to be on, so repeated commands (the Energy Manager's,
+        # say) don't each cost a settings read.
+        if self._vpp_on is not True:
+            self.force_settings_refresh()
+        self._vpp_on = True
         _LOGGER.debug(
             "Modbus VPP write ok on unit %s: 4146=1, 4147=%s, power=%s",
             self._unit_id,
@@ -591,6 +605,7 @@ class HyxiModbusClient:
         implicitly, so this is mostly a way back from "off".
         """
         await self._write_setting("vpp_enable", 1 if enabled else 0, 4146)
+        self._vpp_on = enabled
 
     async def set_work_mode(self, mode: str) -> None:
         """Select the work mode the device runs on its own (register 4024).
@@ -604,6 +619,7 @@ class HyxiModbusClient:
         register_value = WORK_MODES[mode]
         try:
             await self._write_setting("vpp_enable", 0, 4146)
+            self._vpp_on = False
             await self._write_setting(
                 "mode", register_value, 4024, self.work_mode_setting
             )

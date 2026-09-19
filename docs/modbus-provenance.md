@@ -143,10 +143,6 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4162 | `feed_in_enable` | Number (unsigned) | RW |  |  | used by a control method |
 | 4163 | `feed_in_power_limit` | Number (signed) | RW | ×0.001 | kW | used by a control method |
 
-## Hybrid register map (from registers_hybrid.py)
-
-Same generation and legend, from the hybrid Component classes and `client_hybrid.py`.
-
 ### HaloWorkModeSetting  (space=holding)
 
 Never read: a separate component so that the all-or-nothing settings read does not depend on a register nothing has confirmed the device serves.
@@ -154,6 +150,10 @@ Never read: a separate component so that the all-or-nothing settings read does n
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
 | ---: | :--- | :--- | :--- | :--- | :--- | :--- |
 | 4024 | `mode` | Number (unsigned) | RW |  |  | used by a control method |
+
+## Hybrid register map (from registers_hybrid.py)
+
+Same generation and legend, from the hybrid Component classes and `client_hybrid.py`.
 
 ### HybridIdentity  (space=input)
 
@@ -493,8 +493,9 @@ The **dispatch switch** (`HyxiDispatchSwitch`) is the transport-agnostic
 "is the integration in control at all" toggle: it reads and writes 4146
 (HALO) / 3000 (Hybrid). Every idle / charge / discharge write turns dispatch
 on, so the switch is the deliberate way back off. On HALO, `set_mode_self_consume`
-(VPP mode 3) is a real sub-mode and keeps dispatch on, so the switch is the
-only route off; on Hybrid, self-consume ends up in the same off state for
+(VPP mode 3) is a real sub-mode and keeps dispatch on, so the switch and the
+"Work Mode" buttons (`set_work_mode`, which also clears 4146) are the routes off;
+on Hybrid, self-consume ends up in the same off state for
 the hardware reason above. Clearing 4146 / 3000 hands the battery back to
 the inverter's own configured work mode — whether clearing 4146 cleanly
 resumes that mode on a real HALO is still unconfirmed (see "Still unverified").

@@ -425,6 +425,57 @@ async def test_control_writes_land_in_the_vpp_block(
 
 
 @pytest.mark.asyncio
+async def test_a_vpp_command_that_turns_dispatch_on_forces_a_settings_read(client):
+    """Writes don't update the cached settings, so without this the dispatch
+    switch would keep showing off until the hourly re-read."""
+    await client.async_read_settings()  # seed: 4146 = 0
+    assert client.settings.vpp_enable == 0
+
+    await client.set_mode_charge("SN", 1000)
+
+    assert client._settings_read_at is None
+
+
+@pytest.mark.asyncio
+async def test_a_vpp_command_with_dispatch_already_on_does_not_reread(client):
+    """The Energy Manager repeats commands; each must not cost a settings
+    read once the cache already shows dispatch on."""
+    await client.set_mode_charge("SN", 1000)
+    await client.async_read_settings()  # picks up 4146 = 1
+    assert client.settings.vpp_enable == 1
+
+    await client.set_mode_discharge("SN", 900)
+
+    assert client._settings_read_at is not None
+
+
+@pytest.mark.asyncio
+async def test_a_vpp_command_after_dispatch_was_switched_off_refreshes(client):
+    """The cached 4146 still says on after the switch turns it off, so the
+    decision can't rest on the cache alone."""
+    await client.set_mode_charge("SN", 1000)
+    await client.async_read_settings()  # picks up 4146 = 1
+    await client.set_dispatch_enabled(False)  # the cache still says 1
+
+    await client.set_mode_discharge("SN", 900)
+
+    assert client._settings_read_at is None
+
+
+@pytest.mark.asyncio
+async def test_vpp_commands_do_not_defeat_the_failed_read_throttle(client):
+    """With the settings block unreadable there is nothing to learn from a
+    re-read, so only the first command may reopen the window."""
+    with patch.object(client.settings, "async_update", side_effect=OSError("down")):
+        await client.async_read_settings()  # fails; the attempt is stamped
+        await client.set_mode_charge("SN", 1000)  # first command: reopens it
+        await client.async_read_settings()  # fails again, restamps
+        await client.set_mode_discharge("SN", 900)  # dispatch now known on
+
+    assert client._settings_read_at is not None
+
+
+@pytest.mark.asyncio
 async def test_peak_shaving_closes_the_real_export_switch(client):
     """The cloud approximates this; locally there is an actual register."""
     await client.set_peak_shaving("SN", "on")
@@ -1684,6 +1735,37 @@ async def test_hybrid_has_no_work_mode_buttons(hass):
     sn = "10201234567810"
     for key in ("work_mode_self_use", "work_mode_grid_backup", "work_mode_tou"):
         assert _entity_id(hass, "button", sn, key) is None, key
+
+
+@pytest.mark.asyncio
+async def test_halo_vpp_mode_button_updates_the_dispatch_switch(hass):
+    """Pressing a VPP mode button turns dispatch on, and the switch follows
+    on the next poll rather than staying off until the hourly re-read."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    switch_id = _entity_id(hass, "switch", sn, "dispatch")
+    assert hass.states.get(switch_id).state == "off"  # seed 4146 = 0
+
+    await hass.services.async_call(
+        "button",
+        "press",
+        {"entity_id": _entity_id(hass, "button", sn, "mode_idle")},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    assert hass.states.get(switch_id).state == "on"
 
 
 @pytest.mark.asyncio
