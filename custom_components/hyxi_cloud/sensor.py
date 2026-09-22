@@ -1900,8 +1900,8 @@ class HyxiSensor(HyxiBaseSensor):
         self.entity_description = description
 
         sentinel = self._DEMOTE_WHEN_PRESENT.get(description.key)
-        if sentinel is not None and not is_null_value(
-            self._resolve_same_quantity_fallback(sentinel)
+        if sentinel is not None and self._sentinel_effectively_present(
+            description.key, sentinel
         ):
             self._attr_entity_registry_enabled_default = False
 
@@ -2034,29 +2034,69 @@ class HyxiSensor(HyxiBaseSensor):
         coordinator: HyxiDataUpdateCoordinator = self.coordinator
         return coordinator.hyxi_metadata
 
-    def _resolve_same_quantity_fallback(self, key):
+    @staticmethod
+    def _is_value_missing_for_fallback(
+        value: Any, fallback: _SameQuantityFallback
+    ) -> bool:
+        """True if `value` counts as absent for `fallback` -- None/null,
+        or zero when the entry has treat_zero_as_null set."""
+        is_missing = value is None or is_null_value(value)
+        if not is_missing and fallback.treat_zero_as_null:
+            is_missing = is_zero_value(value)
+        return is_missing
+
+    def _resolve_same_quantity_fallback(self, key: str) -> Any:
         """Return key's effective metric value, applying its
         _SAME_QUANTITY_FALLBACKS entry (if any).
 
         Substitutes the fallback_key's metric when the primary is missing
         (or, for entries with treat_zero_as_null, zero) on a device type
         where it's known not to be populated. Returns the primary value
-        unchanged otherwise. Shared by _update_native_value and the
-        _DEMOTE_WHEN_PRESENT check in __init__, so both agree on what
-        counts as "this key will actually show a reading".
+        unchanged otherwise -- including when the primary has its own
+        genuine reading that happens to differ from fallback_key's (e.g.
+        Modbus's batTmp/batTch, two distinct real registers).
         """
         value = self._metrics.get(key)
         device_type = getattr(self, "_device_type", None)
         fallback = self._SAME_QUANTITY_FALLBACKS.get(key)
         if fallback and device_type in fallback.device_types:
-            is_missing = value is None or is_null_value(value)
-            if not is_missing and fallback.treat_zero_as_null:
-                is_missing = is_zero_value(value)
-            if is_missing:
+            if self._is_value_missing_for_fallback(value, fallback):
                 value = self._metrics.get(fallback.fallback_key)
         return value
 
-    def _update_native_value(self):
+    def _sentinel_effectively_present(self, key: str, sentinel: str) -> bool:
+        """True if `sentinel` will show a reading that makes `key` redundant.
+
+        Used by _DEMOTE_WHEN_PRESENT: if `sentinel` has its own
+        _SAME_QUANTITY_FALLBACKS entry pointing back at `key` (e.g. gridF
+        falls back to f, batTmp falls back to batTch), `key` is only
+        redundant when that fallback actually fires -- sentinel's own raw
+        reading is missing on a matching device type, so key's reading is
+        filling in for it and the two are showing an identical number.
+        If sentinel has its own genuine reading instead, key is left
+        alone, since they may be two distinct measurements rather than a
+        duplicate (Modbus's batTmp/batTch, for instance) -- and if a
+        transport that currently omits sentinel ever starts sending it
+        for real, this naturally stops treating key as redundant with no
+        code change needed. If sentinel has no fallback entry at all,
+        this is plain non-null presence -- sentinel is just a
+        differently sourced metric for the same quantity (eTodayIn's
+        Modbus-side grid_import_today, for example).
+        """
+        fallback = self._SAME_QUANTITY_FALLBACKS.get(sentinel)
+        if fallback and fallback.fallback_key == key:
+            device_type = getattr(self, "_device_type", None)
+            sentinel_value = self._metrics.get(sentinel)
+            if device_type not in fallback.device_types or not (
+                self._is_value_missing_for_fallback(sentinel_value, fallback)
+            ):
+                return False
+            value = self._metrics.get(key)
+        else:
+            value = self._metrics.get(sentinel)
+        return not is_null_value(value)
+
+    def _update_native_value(self) -> None:
         """Update the cached native value."""
         dev_data = self._dev_data
         key = self.entity_description.key

@@ -1821,6 +1821,13 @@ def test_f_stays_default_when_gridf_has_no_effective_value():
     assert not hasattr(kept, "_attr_entity_registry_enabled_default")
 
 
+def test_f_stays_default_when_gridf_has_its_own_reading():
+    """If gridF ever carries its own genuine reading instead of relying on
+    the f fallback, f is left alone -- they may not be the same number."""
+    kept = _hyxi_sensor("f", {"f": "49.99", "gridF": "50.05"}, "HYBRID_INVERTER")
+    assert not hasattr(kept, "_attr_entity_registry_enabled_default")
+
+
 def test_battch_demoted_when_battmp_resolves_via_fallback():
     """A hybrid inverter omitting batTmp falls back to batTch (max cell
     temperature) for the same reading, so the raw batTch sensor is
@@ -1834,4 +1841,15 @@ def test_battch_stays_default_when_battmp_has_no_effective_value():
     inverter, which has no battery) never resolves batTmp from batTch, so
     batTch is not demoted."""
     kept = _hyxi_sensor("batTch", {"batTch": "28.5"}, "MICRO_INVERTER")
+    assert not hasattr(kept, "_attr_entity_registry_enabled_default")
+
+
+def test_battch_stays_default_when_battmp_has_its_own_reading():
+    """Modbus reports batTmp (overall battery temperature) and batTch (max
+    cell temperature) as two distinct real registers -- when batTmp has
+    its own genuine reading, batTch is not a duplicate and is not
+    demoted."""
+    kept = _hyxi_sensor(
+        "batTch", {"batTch": "28.5", "batTmp": "26.0"}, "HYBRID_INVERTER"
+    )
     assert not hasattr(kept, "_attr_entity_registry_enabled_default")
