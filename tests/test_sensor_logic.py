@@ -1546,9 +1546,14 @@ def test_same_quantity_fallback_table(base_sensor):
         return sensor.native_value
 
     # gridF missing -> falls back to "f", but only on the intended device
-    # types (grid_connected_inverter/micro_inverter).
+    # types (grid_connected_inverter/micro_inverter/hybrid_inverter/
+    # all_in_one).
     assert set_and_read("gridF", "micro_inverter", {"f": 50.02}) == 50.02
-    assert set_and_read("gridF", "hybrid_inverter", {"f": 50.02}) is None
+    # A real hybrid inverter's REST poll carries the grid frequency as "f"
+    # and never sends "gridF" at all.
+    assert set_and_read("gridF", "hybrid_inverter", {"f": 49.99}) == 49.99
+    assert set_and_read("gridF", "all_in_one", {"f": 50.02}) == 50.02
+    assert set_and_read("gridF", "collector", {"f": 50.02}) is None
 
     # gridF present as 0.0 -> NOT treated as missing (unlike acE).
     assert set_and_read("gridF", "micro_inverter", {"gridF": 0.0, "f": 50.02}) == 0.0
@@ -1762,9 +1767,12 @@ def test_period_sensor_enabled_by_default_only_for_today_and_month():
     assert enabled == {"today": True, "week": False, "month": True, "year": False}
 
 
-def _hyxi_sensor(key, metrics):
+def _hyxi_sensor(key, metrics, device_type_code=None):
     coordinator = MagicMock()
-    coordinator.data = {"INV1": {"metrics": dict(metrics)}}
+    dev_data = {"metrics": dict(metrics)}
+    if device_type_code is not None:
+        dev_data["device_type_code"] = device_type_code
+    coordinator.data = {"INV1": dev_data}
     description = MagicMock()
     description.key = key
     description.translation_key = None
@@ -1787,3 +1795,43 @@ def test_etodayin_stays_default_without_grid_import_today():
     # grid_import_today itself is not demoted by anything.
     grid = _hyxi_sensor("grid_import_today", {"grid_import_today": "3.0"})
     assert not hasattr(grid, "_attr_entity_registry_enabled_default")
+
+
+def test_etodayin_stays_default_when_sentinel_present_but_null():
+    """grid_import_today present as a null placeholder doesn't count as a
+    reading -- eTodayIn stays on rather than being demoted with nothing to
+    replace it."""
+    kept = _hyxi_sensor("eTodayIn", {"eTodayIn": "2.0", "grid_import_today": "--"})
+    assert not hasattr(kept, "_attr_entity_registry_enabled_default")
+
+
+def test_f_demoted_when_gridf_resolves_via_fallback():
+    """A hybrid inverter never sends "gridF" directly, only "f" -- but
+    gridF's own same-quantity fallback resolves to that same reading, so
+    the raw f sensor is demoted rather than showing an identical value
+    alongside gridF."""
+    demoted = _hyxi_sensor("f", {"f": "49.99"}, "HYBRID_INVERTER")
+    assert demoted._attr_entity_registry_enabled_default is False
+
+
+def test_f_stays_default_when_gridf_has_no_effective_value():
+    """A device type outside gridF's fallback list (e.g. a collector)
+    never resolves gridF from f, so f is not demoted."""
+    kept = _hyxi_sensor("f", {"f": "49.99"}, "COLLECTOR")
+    assert not hasattr(kept, "_attr_entity_registry_enabled_default")
+
+
+def test_battch_demoted_when_battmp_resolves_via_fallback():
+    """A hybrid inverter omitting batTmp falls back to batTch (max cell
+    temperature) for the same reading, so the raw batTch sensor is
+    demoted rather than showing an identical value alongside batTmp."""
+    demoted = _hyxi_sensor("batTch", {"batTch": "28.5"}, "HYBRID_INVERTER")
+    assert demoted._attr_entity_registry_enabled_default is False
+
+
+def test_battch_stays_default_when_battmp_has_no_effective_value():
+    """A device type outside batTmp's fallback list (e.g. a micro
+    inverter, which has no battery) never resolves batTmp from batTch, so
+    batTch is not demoted."""
+    kept = _hyxi_sensor("batTch", {"batTch": "28.5"}, "MICRO_INVERTER")
+    assert not hasattr(kept, "_attr_entity_registry_enabled_default")

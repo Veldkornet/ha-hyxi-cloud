@@ -1805,11 +1805,17 @@ class HyxiSensor(HyxiBaseSensor):
             ("grid_connected_inverter", "micro_inverter"),
             treat_zero_as_null=True,
         ),
-        # gridF -> f: PR #556. Some grid-connected/micro-inverter models
-        # send grid frequency under "f" rather than "gridF", leaving the
+        # Some grid-connected/micro-inverter and hybrid-inverter models send
+        # grid frequency under "f" rather than "gridF", leaving the
         # pre-registered gridF sensor stuck at "unknown".
         "gridF": _SameQuantityFallback(
-            "f", ("grid_connected_inverter", "micro_inverter")
+            "f",
+            (
+                "grid_connected_inverter",
+                "micro_inverter",
+                "hybrid_inverter",
+                "all_in_one",
+            ),
         ),
         # batTmp -> batTch: PR #556. When a hybrid/all-in-one device omits
         # batTmp, batTch (max cell temperature) is used as a safe,
@@ -1817,12 +1823,19 @@ class HyxiSensor(HyxiBaseSensor):
         "batTmp": _SameQuantityFallback("batTch", ("hybrid_inverter", "all_in_one")),
     }
     # {key: sentinel} -- key ships disabled by default when the sentinel
-    # metric is also present, because a better-named equivalent exists on
-    # that transport. eTodayIn ("Grid Import Energy Today") is the
-    # inverter's AC-input side; on the hybrid Modbus day block it is
+    # metric will show a reading (directly, or via its own
+    # _SAME_QUANTITY_FALLBACKS entry), because a better-named equivalent
+    # exists on that transport. eTodayIn ("Grid Import Energy Today") is
+    # the inverter's AC-input side; on the hybrid Modbus day block it is
     # shadowed by grid_import_today, the meter-side figure the app shows.
+    # f (raw grid frequency) is shadowed by gridF once gridF's fallback
+    # resolves to the same reading, so the two don't sit side by side
+    # showing an identical value under different names. batTch (max cell
+    # temperature) is shadowed by batTmp the same way.
     _DEMOTE_WHEN_PRESENT: ClassVar[dict[str, str]] = {
         "eTodayIn": "grid_import_today",
+        "f": "gridF",
+        "batTch": "batTmp",
     }
     # invSts is shared vocabulary with Cloud's own status field, but Modbus
     # reports each family's raw register value under that same name --
@@ -1887,7 +1900,9 @@ class HyxiSensor(HyxiBaseSensor):
         self.entity_description = description
 
         sentinel = self._DEMOTE_WHEN_PRESENT.get(description.key)
-        if sentinel is not None and sentinel in self._metrics:
+        if sentinel is not None and not is_null_value(
+            self._resolve_same_quantity_fallback(sentinel)
+        ):
             self._attr_entity_registry_enabled_default = False
 
         # Identity keys off the inverter SN -- the coordinator data key, so
@@ -2019,23 +2034,35 @@ class HyxiSensor(HyxiBaseSensor):
         coordinator: HyxiDataUpdateCoordinator = self.coordinator
         return coordinator.hyxi_metadata
 
-    def _update_native_value(self):
-        """Update the cached native value."""
-        dev_data = self._dev_data
-        metrics = self._metrics
-        key = self.entity_description.key
-        value = metrics.get(key)
+    def _resolve_same_quantity_fallback(self, key):
+        """Return key's effective metric value, applying its
+        _SAME_QUANTITY_FALLBACKS entry (if any).
 
+        Substitutes the fallback_key's metric when the primary is missing
+        (or, for entries with treat_zero_as_null, zero) on a device type
+        where it's known not to be populated. Returns the primary value
+        unchanged otherwise. Shared by _update_native_value and the
+        _DEMOTE_WHEN_PRESENT check in __init__, so both agree on what
+        counts as "this key will actually show a reading".
+        """
+        value = self._metrics.get(key)
         device_type = getattr(self, "_device_type", None)
-
-        # See _SAME_QUANTITY_FALLBACKS for what maps to what, and why.
         fallback = self._SAME_QUANTITY_FALLBACKS.get(key)
         if fallback and device_type in fallback.device_types:
             is_missing = value is None or is_null_value(value)
             if not is_missing and fallback.treat_zero_as_null:
                 is_missing = is_zero_value(value)
             if is_missing:
-                value = metrics.get(fallback.fallback_key)
+                value = self._metrics.get(fallback.fallback_key)
+        return value
+
+    def _update_native_value(self):
+        """Update the cached native value."""
+        dev_data = self._dev_data
+        key = self.entity_description.key
+
+        # See _SAME_QUANTITY_FALLBACKS for what maps to what, and why.
+        value = self._resolve_same_quantity_fallback(key)
 
         parsed_val = self._parser_func(dev_data, value)
         if (
