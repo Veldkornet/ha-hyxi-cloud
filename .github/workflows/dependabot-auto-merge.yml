@@ -32,33 +32,29 @@ jobs:
       - name: Verify allowed dependencies
         id: verify
         env:
-          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          UPDATED_DEPENDENCIES: ${{ steps.metadata.outputs.updated-dependencies-json }}
         run: |
           set -euo pipefail
 
           ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/stale" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action" "github/codeql-action/init" "github/codeql-action/analyze" "github/codeql-action/upload-sarif" "gitleaks/gitleaks-action" "google/osv-scanner-action" "hacs/action" "home-assistant/actions" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
 
-          # Dependabot outputs a comma-separated string for grouped updates
-          IFS=',' read -r -a DEPS <<< "$DEPENDENCY_NAMES" || true
-
-          if [ "${#DEPS[@]}" -eq 0 ] || [ -z "${DEPS[0]}" ]; then
-            echo "::notice title=Manual Review Required::No dependencies found in metadata. Skipping auto-merge."
-            echo "is_allowed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
+          DEPS_JSON=${UPDATED_DEPENDENCIES:-[]}
           ALLOWED=true
-          for DEP in "${DEPS[@]}"; do
-            DEP=$(echo "$DEP" | xargs) # trim whitespace
 
-            if ! printf '%s\n' "${ALLOWED_DEPS[@]}" | grep -Fxq "$DEP"; then
-              echo "::notice title=Manual Review Required::Dependency '$DEP' is not in the strict allowlist. Skipping auto-merge."
+          # We avoid exiting with a non-zero status below so we don't put a confusing
+          # red 'X' (failed CI check) on PRs that simply require a manual review.
+          if [ "$(jq 'length' <<< "$DEPS_JSON")" -eq 0 ]; then
+            echo "::notice title=Manual Review Required::No dependencies found in metadata. Skipping auto-merge."
+            ALLOWED=false
+          else
+            # Transitive packages only land in uv.lock (dev/CI); manifest.json
+            # requirements come from direct dependencies alone.
+            DISALLOWED=$(jq -r '[.[] | select(.dependencyType != "indirect") | .dependencyName] - $ARGS.positional | first // empty' --args "${ALLOWED_DEPS[@]}" <<< "$DEPS_JSON")
+            if [ -n "$DISALLOWED" ]; then
+              echo "::notice title=Manual Review Required::Dependency '$DISALLOWED' is not in the strict allowlist. Skipping auto-merge."
               ALLOWED=false
-              # We avoid exiting with a non-zero status here so we don't put a confusing
-              # red 'X' (failed CI check) on PRs that simply require a manual review.
-              break
             fi
-          done
+          fi
 
           echo "is_allowed=$ALLOWED" >> "$GITHUB_OUTPUT"
 
