@@ -947,7 +947,6 @@ name = "ha-hyxi-cloud"
 version = "1.7.0"
 source = { editable = "." }
 dependencies = [
-    { name = "aiohttp" },
     { name = "hyxi-cloud-api" },
     { name = "modbus-connection", extra = ["tmodbus"] },
     { name = "tmodbus", extra = ["async-serial"] },
@@ -971,7 +970,6 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", specifier = ">=3.13.5" },
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.165.5" },
     { name = "hyxi-cloud-api", specifier = ">=1.4.9" },
     { name = "modbus-connection", extras = ["tmodbus"], specifier = ">=4.10.0" },

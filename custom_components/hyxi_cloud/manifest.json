@@ -14,7 +14,6 @@
     "hyxi_cloud_api"
   ],
   "requirements": [
-    "aiohttp>=3.13.5",
     "voluptuous",
     "hyxi-cloud-api>=1.4.9",
     "modbus-connection[tmodbus]>=4.10.0",
