@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/setup-python" "actions/stale" "actions/upload-artifact" "dependabot/fetch-metadata" "github/codeql-action" "github/codeql-action/init" "github/codeql-action/analyze" "github/codeql-action/upload-sarif" "gitleaks/gitleaks-action" "google/osv-scanner-action" "hacs/action" "home-assistant/actions" "ossf/scorecard-action" "pre-commit/action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "ruff" "pytest-asyncio" "hypothesis" "pytest-homeassistant-custom-component")
+          ALLOWED_DEPS=("actions/checkout" "actions/dependency-review-action" "actions/download-artifact" "actions/github-script" "actions/labeler" "actions/stale" "actions/upload-artifact" "amannn/action-semantic-pull-request" "astral-sh/setup-uv" "dependabot/fetch-metadata" "github/codeql-action" "github/codeql-action/init" "github/codeql-action/analyze" "github/codeql-action/upload-sarif" "gitleaks/gitleaks-action" "google/osv-scanner-action/osv-scanner-action" "hacs/action" "home-assistant/actions/hassfest" "ossf/scorecard-action" "release-drafter/release-drafter" "softprops/action-gh-release" "step-security/harden-runner" "pytest" "pytest-asyncio" "pytest-cov" "hypothesis" "mypy" "pymodbus" "pytest-homeassistant-custom-component")
 
           DEPS_JSON=${UPDATED_DEPENDENCIES:-[]}
           ALLOWED=true
