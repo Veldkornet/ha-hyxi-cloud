@@ -2186,7 +2186,7 @@ def setup_services(hass: HomeAssistant) -> None:
     if hass.services.has_service(DOMAIN, "cancel_subscription"):
         return
 
-    import voluptuous as vol
+    import probatio as vol
     from homeassistant.helpers import config_validation as cv
 
     async def async_handle_cancel_subscription(call) -> None:
@@ -2248,7 +2248,7 @@ _BATTERY_MODES = ("idle", "charge", "discharge", "self_consume")
 
 def _register_set_battery_mode_service(hass: HomeAssistant) -> None:
     """Register hyxi_cloud.set_battery_mode."""
-    import voluptuous as vol
+    import probatio as vol
     from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
     from homeassistant.helpers import config_validation as cv
 

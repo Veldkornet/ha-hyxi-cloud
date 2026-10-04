@@ -5,7 +5,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-import voluptuous as vol
+import probatio as vol
 from aiohttp import ClientError
 from homeassistant import config_entries
 from homeassistant.core import callback
