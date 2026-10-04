@@ -945,8 +945,7 @@ async def test_the_shared_connection_closes_only_when_the_last_entry_unloads(has
         await _build_modbus_coordinator(hass, first)
         await _build_modbus_coordinator(hass, second)
 
-    endpoint = ("tcp", "192.168.1.50", 502)
-    shared = hass.data[DATA_MODBUS_CONNECTIONS][endpoint]
+    (shared,) = hass.data[DATA_MODBUS_CONNECTIONS].values()
     assert shared.connection is conn
     assert shared.consumers == 2
 
@@ -1034,8 +1033,8 @@ async def test_reconfigure_that_keeps_the_bus_probes_on_the_shared_connection(ha
     ):
         flow = await _setup_and_start_reconfigure_tcp(hass, entry)
 
-        endpoint = ("tcp", "192.168.1.50", 502)
-        assert hass.data[DATA_MODBUS_CONNECTIONS][endpoint].consumers == 1
+        (shared,) = hass.data[DATA_MODBUS_CONNECTIONS].values()
+        assert shared.consumers == 1
 
         with (
             patch(

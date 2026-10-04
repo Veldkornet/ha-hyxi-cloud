@@ -448,7 +448,7 @@ def test_invsts_translation_key_resolves_correctly_against_real_ha():
 async def test_config_flow_modbus_tcp_through_real_schemas(hass: HomeAssistant):
     """Walk the local Modbus branch through Home Assistant's real flow engine.
 
-    The mocked config-flow tests stub voluptuous out entirely, so they cannot
+    The mocked config-flow tests stub probatio out entirely, so they cannot
     tell whether the selectors actually validate the values the form submits.
     This goes through the real schemas end to end.
     """

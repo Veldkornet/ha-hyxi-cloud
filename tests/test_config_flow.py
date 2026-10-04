@@ -68,7 +68,7 @@ def mock_ha_environment():
     mock_api.__version__ = "1.0.4"
     mock_api.VPP_ACTIVE_MODES = frozenset({"13", "14", "16"})
     sys.modules["hyxi_cloud_api"] = mock_api
-    sys.modules["voluptuous"] = mock_ha
+    sys.modules["probatio"] = mock_ha
 
     mock_aiohttp = MagicMock()
 
@@ -292,7 +292,7 @@ async def test_step_cloud_show_form_suggests_region_from_country(
 ):
     """The form's default region should follow Home Assistant's configured
     country so most users never have to touch the dropdown, while still
-    letting them override it. voluptuous itself is mocked out in this test
+    letting them override it. probatio itself is mocked out in this test
     module, so we verify the resolved default is passed to the schema
     builder rather than inspecting a (mocked) vol.Schema object."""
     config_flow.hass.config.country = "US"
@@ -697,7 +697,7 @@ async def test_options_flow_show_form_default_fallback(mock_ha_environment):
     call_kwargs = options_flow.async_show_form.call_args.kwargs
     assert "data_schema" in call_kwargs
 
-    # To avoid relying on inner mock calls of voluptuous which could break tests
+    # To avoid relying on inner mock calls of probatio which could break tests
     # depending on how exactly it's mocked or used, we just verify `async_show_form`
     # was called with a form and the right step_id.
 
@@ -882,7 +882,7 @@ async def test_step_cloud_already_configured(mock_validate_input, config_flow):
 
 def test_build_em_schema_defaults(mock_ha_environment):
     """Test _build_em_schema wires option defaults and the current_sn param into
-    the right fields. voluptuous itself is mocked, so we inspect the recorded
+    the right fields. probatio itself is mocked, so we inspect the recorded
     vol.Required/vol.Optional call args rather than the returned Schema object
     (see other schema tests in this file for the same rationale)."""
     config_flow_mod = mock_ha_environment
@@ -1800,7 +1800,7 @@ async def test_tcp_reachable_false_on_timeout(mock_open, config_flow):
 def test_transport_schema_defaults_to_cloud(mock_ha_environment):
     """The chooser must preselect cloud -- it is what almost every existing
     user wants, and it is the only reason this is a select and not a menu.
-    voluptuous is mocked here, so the recorded vol.Required call args are
+    probatio is mocked here, so the recorded vol.Required call args are
     inspected rather than the returned Schema (same rationale as the other
     schema tests in this file)."""
     config_flow_mod = mock_ha_environment
