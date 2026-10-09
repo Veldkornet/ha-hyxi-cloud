@@ -79,37 +79,6 @@ async def test_config_flow_success(hass: HomeAssistant):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_invalid_auth(hass: HomeAssistant):
-    """Test config flow failure due to invalid authentication."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    # The first step chooses a transport; cloud leads to the credentials form.
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_TRANSPORT: TRANSPORT_CLOUD}
-    )
-
-    with patch(
-        "custom_components.hyxi_cloud.config_flow.HyxiApiClient"
-    ) as mock_client_class:
-        mock_client = AsyncMock()
-        mock_client._refresh_token.return_value = False
-        mock_client_class.return_value = mock_client
-
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {
-                CONF_ACCESS_KEY: "test_access_key",
-                CONF_SECRET_KEY: "test_secret_key",
-            },
-        )
-        await hass.async_block_till_done()
-
-        assert result2["type"] == data_entry_flow.FlowResultType.FORM
-        assert result2["errors"] == {"base": "invalid_auth"}
-
-
-@pytest.mark.asyncio
 async def test_setup_entry_and_sensors(hass: HomeAssistant):
     """Test full setup of config entry and verified entity registration."""
     # 1. Create mock config entry

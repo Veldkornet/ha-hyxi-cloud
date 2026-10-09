@@ -67,6 +67,7 @@ def mock_ha_environment():
     mock_api.__name__ = "hyxi_cloud_api"
     mock_api.__version__ = "1.0.4"
     mock_api.VPP_ACTIVE_MODES = frozenset({"13", "14", "16"})
+    mock_api.HyxiAuthError = type("HyxiAuthError", (Exception,), {})
     sys.modules["hyxi_cloud_api"] = mock_api
     sys.modules["probatio"] = mock_ha
 
@@ -96,10 +97,15 @@ def mock_ha_environment():
     sys.modules.update(original_modules)
 
 
+def _auth_error(flow):
+    """A HyxiAuthError of the class the reloaded config_flow module imported."""
+    return sys.modules[type(flow).__module__].HyxiAuthError("rejected")
+
+
 @pytest.fixture
 def mock_hyxi_client():
     client_mock = AsyncMock()
-    client_mock._refresh_token = AsyncMock()
+    client_mock.ensure_token = AsyncMock()
     client_mock.get_all_device_data = AsyncMock(
         return_value={"data": {"SOME_SN": {}}, "attempts": 1}
     )
@@ -121,7 +127,6 @@ async def test_validate_input_success(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.return_value = True
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result is None
@@ -134,7 +139,21 @@ async def test_validate_input_invalid_auth(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.return_value = False
+    mock_hyxi_client.ensure_token.side_effect = _auth_error(config_flow)
+
+    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
+    assert result == "invalid_auth"
+
+
+@pytest.mark.asyncio
+@patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
+@patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
+async def test_validate_input_invalid_auth_during_device_fetch(
+    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
+):
+    """Keys rejected while fetching devices are reported as invalid_auth too."""
+    mock_api_client_class.return_value = mock_hyxi_client
+    mock_hyxi_client.get_all_device_data.side_effect = _auth_error(config_flow)
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result == "invalid_auth"
@@ -149,24 +168,7 @@ async def test_validate_input_cannot_connect(
     from aiohttp import ClientError
 
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.side_effect = ClientError("Connection Failed")
-
-    result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
-    assert result == "cannot_connect"
-
-
-@pytest.mark.asyncio
-@patch("custom_components.hyxi_cloud.config_flow.HyxiApiClient")
-@patch("custom_components.hyxi_cloud.config_flow.async_get_clientsession")
-async def test_validate_input_network_error_is_not_invalid_auth(
-    mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
-):
-    """A network/connection failure during token refresh (client returns
-    None) must be reported as cannot_connect, not invalid_auth -- otherwise
-    a user with valid keys and a flaky connection is told their keys are
-    wrong."""
-    mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.return_value = None
+    mock_hyxi_client.ensure_token.side_effect = ClientError("Connection Failed")
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result == "cannot_connect"
@@ -179,7 +181,7 @@ async def test_validate_input_timeout(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.side_effect = TimeoutError()
+    mock_hyxi_client.ensure_token.side_effect = TimeoutError()
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result == "cannot_connect"
@@ -194,7 +196,7 @@ async def test_validate_input_unknown_error(
     """An unexpected exception is caught, logged, and reported as the
     'unknown' error rather than propagating unhandled/unlogged."""
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.side_effect = Exception("Unknown Error")
+    mock_hyxi_client.ensure_token.side_effect = Exception("Unknown Error")
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
     assert result == "unknown"
@@ -207,7 +209,6 @@ async def test_validate_input_no_devices(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.return_value = True
     mock_hyxi_client.get_all_device_data.return_value = {"data": {}, "attempts": 1}
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})
@@ -221,7 +222,6 @@ async def test_validate_input_get_all_device_data_none(
     mock_get_session, mock_api_client_class, config_flow, mock_hyxi_client
 ):
     mock_api_client_class.return_value = mock_hyxi_client
-    mock_hyxi_client._refresh_token.return_value = True
     mock_hyxi_client.get_all_device_data.return_value = None
 
     result = await config_flow._validate_input({"access_key": "x", "secret_key": "y"})

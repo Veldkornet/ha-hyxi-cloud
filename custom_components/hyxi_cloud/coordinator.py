@@ -1,5 +1,6 @@
 """DataUpdateCoordinator for HYXI Cloud."""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Any, TypedDict
@@ -12,7 +13,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from hyxi_cloud_api import HyxiApiClient
+from hyxi_cloud_api import HyxiApiClient, HyxiAuthError
 
 from .const import (
     CONF_BACK_DISCOVERY,
@@ -40,6 +41,11 @@ class HyxiMetadata(TypedDict):
 
 
 CACHE_MAX_AGE = timedelta(days=7)
+
+# Seconds to wait before re-checking API keys that HYXI rejected, so a single
+# transient rejection does not start a reauth flow (which stops polling until
+# the user re-enters the keys).
+AUTH_RECHECK_DELAY = 5
 
 
 def _extract_cached_devices(raw: dict | None) -> dict | None:
@@ -195,12 +201,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
         try:
-            result = await self.client.get_all_device_data(
-                allow_back_discovery=allow_discovery
-            )
-
-            if result == "auth_failed":
-                raise ConfigEntryAuthFailed("Invalid API keys or expired token")
+            result = await self._fetch_all_device_data(allow_discovery)
 
             if result is None:
                 self.hyxi_metadata["last_attempts"] = 3  # Hard fail after retries
@@ -274,6 +275,27 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self.hyxi_metadata["cache_active"] = False
             self._handle_update_error(err)
             raise
+
+    async def _fetch_all_device_data(self, allow_discovery: bool):
+        """Fetch device data, raising ConfigEntryAuthFailed only if HYXI
+        rejects the API keys on two attempts in a row."""
+        try:
+            return await self.client.get_all_device_data(
+                allow_back_discovery=allow_discovery
+            )
+        except HyxiAuthError:
+            _LOGGER.warning(
+                "HYXI Cloud rejected the API keys; retrying in %ss", AUTH_RECHECK_DELAY
+            )
+        await asyncio.sleep(AUTH_RECHECK_DELAY)
+        try:
+            return await self.client.get_all_device_data(
+                allow_back_discovery=allow_discovery
+            )
+        except HyxiAuthError as err:
+            raise ConfigEntryAuthFailed(
+                "HYXI Cloud rejected the access/secret key"
+            ) from err
 
     async def _try_stale_cache_fallback(self, err: Exception) -> dict | None:
         """On a fetch failure, try to fall back to cached devices from storage.

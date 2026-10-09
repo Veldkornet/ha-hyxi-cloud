@@ -96,4 +96,5 @@ if os.environ.get("HYXI_INTEGRATION_TEST") != "1" and not any(
     if "hyxi_cloud_api" not in sys.modules:
         mock_api = MagicMock()
         mock_api.__version__ = "1.0.4"
+        mock_api.HyxiAuthError = type("HyxiAuthError", (Exception,), {})
         sys.modules["hyxi_cloud_api"] = mock_api
