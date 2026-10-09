@@ -1219,8 +1219,6 @@ async def test_remove_alarm_entities_for_modbus(mock_hass, mock_entry):
                 return "binary_sensor.hyx_123_device_alarm"
             if (domain, unique_id) == ("button", "hyxi_123_clear_alarms"):
                 return "button.hyxi_123_clear_alarms"
-            if (domain, unique_id) == ("sensor", "hyxi_123_batAlarm2"):
-                return "sensor.hyxi_123_batalarm2"
             return None
 
         mock_registry.async_get_entity_id.side_effect = mock_get_entity_id
@@ -1232,7 +1230,6 @@ async def test_remove_alarm_entities_for_modbus(mock_hass, mock_entry):
         assert mock_registry.async_remove.call_args_list == [
             call("binary_sensor.hyx_123_device_alarm"),
             call("button.hyxi_123_clear_alarms"),
-            call("sensor.hyxi_123_batalarm2"),
         ]
 
 
@@ -1989,6 +1986,9 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                         ),
                         patch(
                             "custom_components.hyxi_cloud.__init__._migrate_microinverter_sum_identifiers"
+                        ),
+                        patch(
+                            "custom_components.hyxi_cloud.__init__._remove_bms_alarm_sensors"
                         ),
                     ):
                         with patch(

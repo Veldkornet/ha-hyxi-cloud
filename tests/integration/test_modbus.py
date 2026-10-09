@@ -964,14 +964,16 @@ def _seeded_connection() -> MockModbusConnection:
 @pytest.mark.asyncio
 async def test_setup_removes_stale_bms_alarm_sensors(hass):
     """batAlarm1-3 left in the registry by an older version are removed
-    during a real HALO setup; the rest of the battery sensors stay."""
+    during a real HALO setup -- including rows keyed by a battery serial
+    rather than the inverter's -- and the rest of the battery sensors stay."""
     entry = _modbus_entry(hass, modbus_family="halo")
     registry = er.async_get(hass)
     sn = "10201234567810"
     stale = [
         registry.async_get_or_create(
-            "sensor", DOMAIN, f"hyxi_{sn}_batAlarm{n}", config_entry=entry
+            "sensor", DOMAIN, f"hyxi_{serial}_batAlarm{n}", config_entry=entry
         ).entity_id
+        for serial in (sn, "BAT0001")
         for n in (1, 2, 3)
     ]
 
