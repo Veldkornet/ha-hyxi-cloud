@@ -276,7 +276,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self._handle_update_error(err)
             raise
 
-    async def _fetch_all_device_data(self, allow_discovery: bool):
+    async def _fetch_all_device_data(self, allow_discovery: bool) -> dict | None:
         """Fetch device data, raising ConfigEntryAuthFailed only if HYXI
         rejects the API keys on two attempts in a row."""
         try:
