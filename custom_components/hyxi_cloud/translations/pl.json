@@ -462,7 +462,14 @@
           "4": "Oddawanie do sieci",
           "5": "Tryb pracy wyspowej",
           "6": "Tryb kalibracji SOC baterii",
-          "7": "Tryb wymuszonego ładowania baterii"
+          "7": "Tryb wymuszonego ładowania baterii",
+          "11": "VPP",
+          "12": "VPP (praca wyspowa)",
+          "13": "VPP (bezczynność)",
+          "14": "VPP (ładowanie)",
+          "15": "VPP (rozładowanie)",
+          "16": "VPP (autokonsumpcja)",
+          "17": "VPP (wymuszone ładowanie awaryjne)"
         }
       },
       "insulationresistance": {

@@ -462,7 +462,14 @@
           "4": "Nettinnmating",
           "5": "Off-grid-modus",
           "6": "Batteri SOC-kalibreringsmodus",
-          "7": "Batteri tvungen ladning-modus"
+          "7": "Batteri tvungen ladning-modus",
+          "11": "VPP",
+          "12": "VPP (off-grid)",
+          "13": "VPP (inaktiv)",
+          "14": "VPP (lading)",
+          "15": "VPP (utlading)",
+          "16": "VPP (eget forbruk)",
+          "17": "VPP (backup tvungen lading)"
         }
       },
       "insulationresistance": {

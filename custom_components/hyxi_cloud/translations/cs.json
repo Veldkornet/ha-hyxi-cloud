@@ -462,7 +462,14 @@
           "4": "Dodávka do sítě",
           "5": "Režim mimo síť",
           "6": "Kalibrace SOC baterie",
-          "7": "Nucené nabíjení baterie"
+          "7": "Nucené nabíjení baterie",
+          "11": "VPP",
+          "12": "VPP (mimo síť)",
+          "13": "VPP (nečinnost)",
+          "14": "VPP (nabíjení)",
+          "15": "VPP (vybíjení)",
+          "16": "VPP (vlastní spotřeba)",
+          "17": "VPP (záložní nucené nabíjení)"
         }
       },
       "insulationresistance": {

@@ -462,7 +462,14 @@
           "4": "Şebekeye Aktarım",
           "5": "Şebeke Dışı Modu",
           "6": "Batarya SOC Kalibrasyon Modu",
-          "7": "Batarya Zorunlu Şarj Modu"
+          "7": "Batarya Zorunlu Şarj Modu",
+          "11": "VPP",
+          "12": "VPP (Şebeke Dışı)",
+          "13": "VPP (Bekleme)",
+          "14": "VPP (Şarj)",
+          "15": "VPP (Deşarj)",
+          "16": "VPP (Öz Tüketim)",
+          "17": "VPP (Yedek Zorunlu Şarj)"
         }
       },
       "insulationresistance": {

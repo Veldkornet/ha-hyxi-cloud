@@ -462,7 +462,14 @@
           "4": "Nätinmatning",
           "5": "Frånkopplat-nät-läge",
           "6": "Batteri SOC-kalibreringsläge",
-          "7": "Batteri tvångsladdningsläge"
+          "7": "Batteri tvångsladdningsläge",
+          "11": "VPP",
+          "12": "VPP (frånkopplat nät)",
+          "13": "VPP (inaktivt)",
+          "14": "VPP (laddning)",
+          "15": "VPP (urladdning)",
+          "16": "VPP (egenanvändning)",
+          "17": "VPP (backup-tvångsladdning)"
         }
       },
       "insulationresistance": {

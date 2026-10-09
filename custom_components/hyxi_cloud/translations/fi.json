@@ -462,7 +462,14 @@
           "4": "Verkkoon syöttö",
           "5": "Verkosta irrallaan -tila",
           "6": "Akun SOC-kalibrointitila",
-          "7": "Akun pakotettu lataustila"
+          "7": "Akun pakotettu lataustila",
+          "11": "VPP",
+          "12": "VPP (verkosta irrallaan)",
+          "13": "VPP (valmiustila)",
+          "14": "VPP (lataus)",
+          "15": "VPP (purku)",
+          "16": "VPP (omakäyttö)",
+          "17": "VPP (varavirran pakotettu lataus)"
         }
       },
       "insulationresistance": {

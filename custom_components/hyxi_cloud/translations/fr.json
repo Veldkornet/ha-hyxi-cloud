@@ -462,7 +462,14 @@
           "4": "Injection réseau",
           "5": "Mode hors réseau",
           "6": "Mode d'étalonnage du SOC batterie",
-          "7": "Mode de charge forcée de la batterie"
+          "7": "Mode de charge forcée de la batterie",
+          "11": "VPP",
+          "12": "VPP (hors réseau)",
+          "13": "VPP (inactif)",
+          "14": "VPP (charge)",
+          "15": "VPP (décharge)",
+          "16": "VPP (autoconsommation)",
+          "17": "VPP (charge forcée de secours)"
         }
       },
       "insulationresistance": {

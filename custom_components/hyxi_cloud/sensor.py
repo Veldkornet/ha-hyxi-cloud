@@ -843,20 +843,10 @@ SENSOR_TYPES = [
         key="currentOperatingMode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # 1-7 have confirmed labels below. 11, 13, 14, 15 and 16 are
-        # undocumented but observed on real hardware under different
-        # conditions -- see invSts above for why they're listed with no
-        # translation rather than guessed or hidden. 12 and 17 have not
-        # actually been observed yet -- declared ahead of time on the
-        # hypothesis that 11/13-16 are 1-7's VPP-controlled counterparts
-        # (value+10: 1->11, 3->13, ... 6->16), which would make 2->12 and
-        # 7->17 the two gaps in that pattern. Unconfirmed; remove if that
-        # turns out to be wrong rather than leaving a guessed label here.
-        # pylint: disable-next=fixme
-        # TODO: the vendor's 1-7 table looks more incomplete than a single
-        # stray value would suggest. Keep adding newly observed values
-        # here as they show up, and add a translated label once any of
-        # them gets a confirmed meaning.
+        # 1-7 come from the hybrid protocol document. 11-17 are VPP modes
+        # confirmed by HYXI in a private reply, not yet in any document:
+        # 11 is older firmware's undivided VPP mode, 12-17 newer
+        # firmware's VPP2 sub-modes. See docs/modbus-provenance.md.
         options=[
             "1",
             "2",
