@@ -72,6 +72,11 @@ if "hyxi_cloud_api" not in sys.modules:
     mock_api = MagicMock()
     mock_api.__version__ = "1.0.4"
     sys.modules["hyxi_cloud_api"] = mock_api
+# The coordinator catches HyxiAuthError, which must be a real exception class
+# whichever stub (or the real package) is installed.
+_hyxi_api: Any = sys.modules["hyxi_cloud_api"]
+if not isinstance(getattr(_hyxi_api, "HyxiAuthError", None), type):
+    _hyxi_api.HyxiAuthError = type("HyxiAuthError", (Exception,), {})
 
 
 import custom_components.hyxi_cloud.coordinator as hc_coord  # pylint: disable=wrong-import-position
@@ -116,20 +121,56 @@ async def test_async_update_data_unexpected_error():
     assert coordinator.hyxi_metadata["api_status"] == "Error"
 
 
-@pytest.mark.asyncio
-async def test_async_update_data_auth_failed():
-    """Test auth_failed response is handled."""
+def _auth_coordinator(fetch_effects):
+    """A coordinator whose client answers successive fetches with
+    fetch_effects."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(return_value="auth_failed")
-
+    mock_client.get_all_device_data = AsyncMock(side_effect=fetch_effects)
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
     )
+    return coordinator, mock_client
+
+
+@pytest.mark.asyncio
+@patch.object(hc_coord, "AUTH_RECHECK_DELAY", 0)
+async def test_key_rejection_repeated_on_retry_raises_auth_failed():
+    """Keys rejected on two fetches in a row raise ConfigEntryAuthFailed."""
+    rejected = hc_coord.HyxiAuthError("rejected")
+    coordinator, _ = _auth_coordinator([rejected, rejected])
 
     with pytest.raises(hc_coord.ConfigEntryAuthFailed):
         await coordinator._async_update_data()
+
+
+@pytest.mark.asyncio
+@patch.object(hc_coord, "AUTH_RECHECK_DELAY", 0)
+async def test_key_rejection_followed_by_network_failure_is_not_auth_failed():
+    """If the retry cannot reach HYXI, the poll fails as a connection error
+    rather than asking the user to re-enter keys that may be fine."""
+    coordinator, _ = _auth_coordinator(
+        [hc_coord.HyxiAuthError("rejected"), TimeoutError()]
+    )
+
+    with pytest.raises(hc_coord.UpdateFailed):
+        await coordinator._async_update_data()
+
+
+@pytest.mark.asyncio
+@patch.object(hc_coord, "AUTH_RECHECK_DELAY", 0)
+async def test_one_off_key_rejection_returns_the_retried_fetch():
+    """A rejection the retry does not repeat returns the retried data."""
+    devices = {"SN1": {"metrics": {"last_seen": "now", "gridP": 1}}}
+    coordinator, mock_client = _auth_coordinator(
+        [hc_coord.HyxiAuthError("rejected"), {"data": devices, "attempts": 1}]
+    )
+    coordinator._async_sync_device_metadata = AsyncMock()
+    coordinator.device_store = MagicMock(async_save=AsyncMock())
+
+    assert await coordinator._async_update_data() == devices
+    assert mock_client.get_all_device_data.await_count == 2
 
 
 @pytest.mark.asyncio

@@ -11,7 +11,7 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from hyxi_cloud_api import HyxiApiClient
+from hyxi_cloud_api import HyxiApiClient, HyxiAuthError
 
 from .const import (
     BASE_URL_DEFAULT,
@@ -320,15 +320,8 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
         _LOGGER.debug("Validating HYXI credentials against %s", base_url)
         try:
-            # Attempt a token refresh to verify AK/SK. The client returns
-            # None for network/connection failures and False for an explicit
-            # credential rejection -- report them differently so a user with
-            # valid keys and a flaky connection isn't told their keys are bad.
-            success = await client._refresh_token()
-            if success is None:
-                return "cannot_connect"
-            if not success:
-                return "invalid_auth"
+            # Verify AK/SK before fetching devices.
+            await client.ensure_token()
 
             # Check if there are any devices/plants
             device_data = await client.get_all_device_data()
@@ -337,6 +330,8 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
 
             if not device_data.get("data"):
                 return "no_devices"
+        except HyxiAuthError:
+            return "invalid_auth"
         except (TimeoutError, ClientError) as e:
             _LOGGER.exception("Connection error during validation: %s", e)
             return "cannot_connect"

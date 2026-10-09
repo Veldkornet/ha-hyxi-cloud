@@ -23,17 +23,7 @@ from custom_components.hyxi_cloud.const import (
     DOMAIN,
     entry_stable_key,
 )
-
-
-def _cloud_entry(hass: HomeAssistant) -> MockConfigEntry:
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={CONF_ACCESS_KEY: "ak", CONF_SECRET_KEY: "sk"},
-        options={},
-        unique_id="ak",
-    )
-    entry.add_to_hass(hass)
-    return entry
+from tests.integration.entries import cloud_entry
 
 
 async def _setup_with_devices(hass: HomeAssistant, entry: MockConfigEntry, data: dict):
@@ -53,7 +43,7 @@ async def test_battery_sensor_rekeyed_from_batsn_to_inverter_serial(
     """A batSn-keyed battery sensor is moved onto the inverter serial, keeping
     its entity_id (so the recorder statistics stay attached)."""
     inv_sn, bat_sn = "INV_1000", "BAT_2000"
-    entry = _cloud_entry(hass)
+    entry = cloud_entry(hass)
 
     device_registry = dr.async_get(hass)
     inverter = device_registry.async_get_or_create(
@@ -108,7 +98,7 @@ async def test_battery_sensor_rekeyed_when_current_poll_has_no_batsn(
     """The migration still fires when telemetry carries no batSn this run --
     it resolves the inverter via the battery device's via_device link."""
     inv_sn, bat_sn = "INV_1100", "BAT_2100"
-    entry = _cloud_entry(hass)
+    entry = cloud_entry(hass)
 
     device_registry = dr.async_get(hass)
     inverter = device_registry.async_get_or_create(
@@ -158,7 +148,7 @@ async def test_first_class_battery_device_and_inverter_batsoc_do_not_collide(
     sensor keys off the inverter serial -- two distinct entities, no
     unique_id collision."""
     inv_sn, bat_sn = "INV_1200", "BAT_2200"
-    entry = _cloud_entry(hass)
+    entry = cloud_entry(hass)
 
     entity_registry = er.async_get(hass)
     own = entity_registry.async_get_or_create(
@@ -202,7 +192,7 @@ async def test_first_class_battery_device_and_inverter_batsoc_do_not_collide(
 async def test_microinverter_sum_rekeyed_off_entry_id(hass: HomeAssistant):
     """The microinverter aggregate entity and its device move from an
     entry_id-derived key to entry_stable_key()."""
-    entry = _cloud_entry(hass)
+    entry = cloud_entry(hass)
     micro_sn = "MICRO_1"
 
     device_registry = dr.async_get(hass)
@@ -258,7 +248,7 @@ async def test_microinverter_sum_rekeyed_when_stable_device_already_exists(
     stable device and keep their entity_ids -- the legacy device is removed
     without taking the just-re-keyed entities (and their statistics) down
     with it."""
-    entry = _cloud_entry(hass)
+    entry = cloud_entry(hass)
     micro_sn = "MICRO_2"
     sk = entry_stable_key(entry)
 
@@ -364,7 +354,7 @@ async def test_duplicate_energy_sensor_removed_when_canonical_exists(
     """totalEchg/batCharge are dropped when bat_charge_total already exists,
     the row wired into the Energy dashboard."""
     inv_sn = "INV_DUP_1"
-    entry = _cloud_entry(hass)
+    entry = cloud_entry(hass)
 
     registry = er.async_get(hass)
     canonical = registry.async_get_or_create(
@@ -401,7 +391,7 @@ async def test_duplicate_energy_sensor_promoted_when_canonical_missing(
     """A lone batDisCharge row (e.g. bat_discharge_total was disabled and
     never built) is re-keyed, keeping its entity_id and history."""
     inv_sn = "INV_DUP_2"
-    entry = _cloud_entry(hass)
+    entry = cloud_entry(hass)
 
     registry = er.async_get(hass)
     dupe = registry.async_get_or_create(
