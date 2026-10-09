@@ -462,7 +462,14 @@
           "4": "Teruglevering",
           "5": "Off-grid-modus",
           "6": "Accu SOC-kalibratiemodus",
-          "7": "Accu geforceerd laadmodus"
+          "7": "Accu geforceerd laadmodus",
+          "11": "VPP",
+          "12": "VPP (off-grid)",
+          "13": "VPP (inactief)",
+          "14": "VPP (laden)",
+          "15": "VPP (ontladen)",
+          "16": "VPP (zelfverbruik)",
+          "17": "VPP (back-up geforceerd laden)"
         }
       },
       "insulationresistance": {

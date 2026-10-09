@@ -462,7 +462,14 @@
           "4": "Inyección a red",
           "5": "Modo sin red",
           "6": "Modo de calibración de SOC de batería",
-          "7": "Modo de carga forzada de batería"
+          "7": "Modo de carga forzada de batería",
+          "11": "VPP",
+          "12": "VPP (sin red)",
+          "13": "VPP (inactivo)",
+          "14": "VPP (carga)",
+          "15": "VPP (descarga)",
+          "16": "VPP (autoconsumo)",
+          "17": "VPP (carga forzada de respaldo)"
         }
       },
       "insulationresistance": {

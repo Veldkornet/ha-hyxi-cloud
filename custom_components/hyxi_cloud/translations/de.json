@@ -462,7 +462,14 @@
           "4": "Einspeisung",
           "5": "Inselbetrieb-Modus",
           "6": "Batterie-SOC-Kalibriermodus",
-          "7": "Batterie-Zwangsladung"
+          "7": "Batterie-Zwangsladung",
+          "11": "VPP",
+          "12": "VPP (Inselbetrieb)",
+          "13": "VPP (Leerlauf)",
+          "14": "VPP (Laden)",
+          "15": "VPP (Entladen)",
+          "16": "VPP (Eigenverbrauch)",
+          "17": "VPP (Backup-Zwangsladung)"
         }
       },
       "insulationresistance": {

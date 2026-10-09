@@ -462,7 +462,14 @@
           "4": "Immissione in rete",
           "5": "Modalità fuori rete",
           "6": "Modalità calibrazione SOC batteria",
-          "7": "Modalità carica forzata batteria"
+          "7": "Modalità carica forzata batteria",
+          "11": "VPP",
+          "12": "VPP (fuori rete)",
+          "13": "VPP (inattivo)",
+          "14": "VPP (carica)",
+          "15": "VPP (scarica)",
+          "16": "VPP (autoconsumo)",
+          "17": "VPP (carica forzata di backup)"
         }
       },
       "insulationresistance": {

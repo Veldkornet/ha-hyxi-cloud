@@ -462,7 +462,14 @@
           "4": "Terugvoer",
           "5": "Af-die-net-modus",
           "6": "Battery SOC-kalibreringsmodus",
-          "7": "Battery se geforseerde laaimodus"
+          "7": "Battery se geforseerde laaimodus",
+          "11": "VPP",
+          "12": "VPP (af-die-net)",
+          "13": "VPP (rustend)",
+          "14": "VPP (laai)",
+          "15": "VPP (ontlaai)",
+          "16": "VPP (selfgebruik)",
+          "17": "VPP (rugsteun geforseerde laai)"
         }
       },
       "insulationresistance": {

@@ -503,7 +503,14 @@
           "4": "Feed-in",
           "5": "Off-grid mode",
           "6": "Battery SOC calibration mode",
-          "7": "Battery forced charging mode"
+          "7": "Battery forced charging mode",
+          "11": "VPP",
+          "12": "VPP (off-grid)",
+          "13": "VPP (idle)",
+          "14": "VPP (charging)",
+          "15": "VPP (discharging)",
+          "16": "VPP (self-use)",
+          "17": "VPP (backup forced charging)"
         }
       },
       "insulationresistance": {

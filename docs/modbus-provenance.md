@@ -21,6 +21,7 @@ decode against it.
 | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. A real HALO has since answered real writes (see "Confirmed against hardware" below), but most of the register map beyond that is still unconfirmed against a device. Gives serial parameters only; no pinout — see "HALO's RS485 wiring" below. |
 | HYXIPower *HYX-H(5\~12)K-HT User Manual*, V1.2, 2024-07 | Alarm code table; lists port 14 as "Reserved Communication" with no pinout | **Vendor, published.** Superseded on the pinout question by the protocol document above — see below. |
 | [Issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662) and a [matching HA community post](https://community.home-assistant.io/t/hyxipower-integration/926093/28), both user Ton123 — the same contributor who supplied the *Micro Storage RS485 MODBUS* document two rows above | HALO / HYX-MS3000AC RS485 pinout: PIN7 = A, PIN8 = B (T568B white-brown / brown), RJ45 in a circular weatherproof housing, all other pins unused | **First-party to this project, relayed claim, corroborated twice, unconfirmed on hardware.** Stated on this repo's own issue tracker by the person who obtained and supplied the HALO protocol document itself. HYXI has now given the assignment twice — the original ("PIN7 = A, PIN8 = B … white-brown and brown") and a later re-confirmation Ton123 requested ("from right to left: first pin 485B, then 485A, others idle"), which agrees once counted from the other end. Still a relayed account of private messages, not text in the document (serial parameters only, no pinout); this exact pin assignment has not been independently confirmed by someone wiring it and reporting back. See "HALO's RS485 wiring" below. |
+| HYXI developers' written reply to this project's maintainer, 2026-10-09 | Hybrid register 1265 values 11–17 | **Vendor claim, private communication, first-hand.** Received directly by the maintainer, not relayed by a third party, but not (yet) in any published document — HYXI said the documents will be updated in a future revision. Ranks below the documents above where they overlap. 11 and 13–16 had already been observed on real hybrid hardware before the reply; the meanings it gives them are not yet checked against a device. |
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | Cloud `workMode` values 13 and 14 | **Inference, unconfirmed.** Derived by reverse-engineering the HYXI phone app's APK. Never observed on a device. See rule 1. |
 
 ## HALO register map (from registers.py)
@@ -417,11 +418,19 @@ mode is the device in":
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | charge | discharge | — | enrolled / standby |
 
 ...and separately, the hybrid document's register 1265 ("current operating
-mode") uses a **third, unrelated enumeration** — `1 self-use, 2 backup(green),
-3 backup(grid), 4 feed-in, 5 off-grid, 6 battery SOC calibration, 7 battery
-forced charging` — which doesn't resolve the HALO/cloud conflict (it's a
-different register on a different device family) but is worth keeping
-straight: three devices, three numbering schemes, none of them interchangeable.
+mode") uses its own enumeration — `1 self-use, 2 backup(green), 3
+backup(grid), 4 feed-in, 5 off-grid, 6 battery SOC calibration, 7 battery
+forced charging` — extended by HYXI's 2026-10-09 reply (see Sources) with
+VPP modes the document leaves out: `11 VPP` (older ARM firmware, no
+subdivision) and, on newer ARM firmware, `12 VPP2 off-grid, 13 VPP2 idle,
+14 VPP2 charging, 15 VPP2 discharging, 16 VPP2 self-consumption, 17 VPP2
+backup forced charging`. Its 13–16 happen to line up with the HALO
+document's 4102 row above. That lends the HALO side some weight against the
+cloud inference, but 1265 is a different register on a different device
+family, so it doesn't settle the HALO/cloud conflict on its own. 11 and
+13–16 had been observed on a real hybrid before the reply; 12 and 17 have
+not. A guess that 11–17 were 1–7's VPP counterparts at value+10 turned out
+to be wrong.
 
 The cloud set came from reading the phone app, not from watching a device.
 The HALO document is a vendor statement about the same field on a *different*

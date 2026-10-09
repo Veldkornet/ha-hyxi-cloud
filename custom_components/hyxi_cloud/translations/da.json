@@ -462,7 +462,14 @@
           "4": "Nettilførsel",
           "5": "Off-grid-tilstand",
           "6": "Batteri SOC-kalibreringstilstand",
-          "7": "Batteri tvungen opladningstilstand"
+          "7": "Batteri tvungen opladningstilstand",
+          "11": "VPP",
+          "12": "VPP (off-grid)",
+          "13": "VPP (inaktiv)",
+          "14": "VPP (opladning)",
+          "15": "VPP (afladning)",
+          "16": "VPP (eget forbrug)",
+          "17": "VPP (backup tvungen opladning)"
         }
       },
       "insulationresistance": {

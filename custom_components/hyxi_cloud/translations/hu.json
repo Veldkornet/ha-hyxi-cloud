@@ -462,7 +462,14 @@
           "4": "Hálózatba táplálás",
           "5": "Sziget üzemmód",
           "6": "Akkumulátor SOC kalibrálási mód",
-          "7": "Akkumulátor kényszerített töltési mód"
+          "7": "Akkumulátor kényszerített töltési mód",
+          "11": "VPP",
+          "12": "VPP (sziget)",
+          "13": "VPP (készenlét)",
+          "14": "VPP (töltés)",
+          "15": "VPP (kisütés)",
+          "16": "VPP (saját fogyasztás)",
+          "17": "VPP (tartalék kényszerített töltés)"
         }
       },
       "insulationresistance": {
