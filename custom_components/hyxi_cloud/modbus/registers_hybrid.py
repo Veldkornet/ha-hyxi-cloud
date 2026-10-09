@@ -104,10 +104,12 @@ class HybridStatus(Component):
     """System grid connection success flag. 1 successful, 0 failed."""
     current_operating_mode = integer(1265, signed=False)
     """1 self-use, 2 backup(green), 3 backup(grid), 4 feed-in, 5 off-grid,
-    6 battery SOC calibration, 7 battery forced charging. A third, distinct
-    enumeration from both the HALO document's work_mode and the cloud
-    client's workMode -- see docs/modbus-provenance.md, rule 1. This one is
-    at least the vendor's current document for this exact hardware."""
+    6 battery SOC calibration, 7 battery forced charging (vendor document).
+    11 VPP (older ARM firmware), and on newer ARM firmware 12 VPP2 off-grid,
+    13 idle, 14 charging, 15 discharging, 16 self-consumption, 17 backup
+    forced charging (HYXI's private reply, not yet in the document). Distinct
+    from both the HALO document's work_mode and the cloud client's workMode
+    -- see docs/modbus-provenance.md, rule 1."""
 
 
 class HybridFaults(Component):
