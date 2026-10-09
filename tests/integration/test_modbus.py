@@ -96,9 +96,6 @@ INPUT_REGISTERS: dict[int, int] = {
     4990: 3298,
     4995: 240,
     4996: 228,
-    5000: 17,  # BMS alarm word 1, raw
-    5001: 34,  # BMS alarm word 2, raw
-    5002: 68,  # BMS alarm word 3, raw
     5020: 100,  # battery capacity, Ah -- not the cloud's kWh
     **_spread(5021, 3000),
     **_spread(5023, 3000),
@@ -215,14 +212,12 @@ async def test_previously_unexposed_registers_now_decode_into_metrics(client):
 
 @pytest.mark.asyncio
 async def test_battery_detail_registers_decode_into_metrics(client):
-    """BMS state, raw alarm words and the Ah-scaled capacity figure."""
+    """BMS state and the Ah-scaled capacity figure."""
     devices = await client.async_read_all()
     metrics = devices["10201234567810"]["metrics"]
 
     assert metrics["bmsState"] == 5
-    assert metrics["batAlarm1"] == 17
-    assert metrics["batAlarm2"] == 34
-    assert metrics["batAlarm3"] == 68
+    assert not {"batAlarm1", "batAlarm2", "batAlarm3"} & metrics.keys()
     # Ah, not the cloud's kWh -- see HaloBattery.capacity_ah's docstring.
     assert metrics["batCapacityAh"] == 100
     assert "batCap" not in metrics
@@ -964,6 +959,33 @@ def _seeded_connection() -> MockModbusConnection:
         {"input": _fill(INPUT_REGISTERS), "holding": _fill(HOLDING_REGISTERS)}
     )
     return connection
+
+
+@pytest.mark.asyncio
+async def test_setup_removes_stale_bms_alarm_sensors(hass):
+    """batAlarm1-3 left in the registry by an older version are removed
+    during a real HALO setup -- including rows keyed by a battery serial
+    rather than the inverter's -- and the rest of the battery sensors stay."""
+    entry = _modbus_entry(hass, modbus_family="halo")
+    registry = er.async_get(hass)
+    sn = "10201234567810"
+    stale = [
+        registry.async_get_or_create(
+            "sensor", DOMAIN, f"hyxi_{serial}_batAlarm{n}", config_entry=entry
+        ).entity_id
+        for serial in (sn, "BAT0001")
+        for n in (1, 2, 3)
+    ]
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert all(registry.async_get(entity_id) is None for entity_id in stale)
+    assert registry.async_get_entity_id("sensor", DOMAIN, f"hyxi_{sn}_batCapacityAh")
 
 
 def _seeded_hybrid_connection() -> MockModbusConnection:

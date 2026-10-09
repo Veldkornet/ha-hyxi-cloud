@@ -568,15 +568,6 @@
           "3": "Bezczynność"
         }
       },
-      "batalarm1": {
-        "name": "Alarm baterii 1"
-      },
-      "batalarm2": {
-        "name": "Alarm baterii 2"
-      },
-      "batalarm3": {
-        "name": "Alarm baterii 3"
-      },
       "batcapacityah": {
         "name": "Pojemność akumulatora (Ah)"
       },

@@ -568,15 +568,6 @@
           "3": "アイドル"
         }
       },
-      "batalarm1": {
-        "name": "バッテリーアラーム1"
-      },
-      "batalarm2": {
-        "name": "バッテリーアラーム2"
-      },
-      "batalarm3": {
-        "name": "バッテリーアラーム3"
-      },
       "batcapacityah": {
         "name": "バッテリー容量 (Ah)"
       },

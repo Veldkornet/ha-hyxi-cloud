@@ -93,9 +93,6 @@ CLOUD_NEVER_PRODUCES = {
     "batIdm",
     "bmsState",
     "batCapacityAh",
-    "batAlarm1",
-    "batAlarm2",
-    "batAlarm3",
     "batChargeV",
     "batChargeI",
     "batChargeP",
@@ -131,7 +128,6 @@ _ICON_COUNTER = "mdi:counter"
 _ICON_SOLAR_POWER_VARIANT = "mdi:solar-power-variant"
 _ICON_TRANSMISSION_TOWER = "mdi:transmission-tower"
 _ICON_POWER_PLUG_OFF = "mdi:power-plug-off"
-_ICON_ALERT_CIRCLE_OUTLINE = "mdi:alert-circle-outline"
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -1107,25 +1103,6 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         options=["0", "1", "2", "3"],
         icon="mdi:battery-sync",
-    ),
-    # Raw BMS alarm words, undecoded -- see HaloFaults for why.
-    SensorEntityDescription(
-        key="batAlarm1",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon=_ICON_ALERT_CIRCLE_OUTLINE,
-    ),
-    SensorEntityDescription(
-        key="batAlarm2",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon=_ICON_ALERT_CIRCLE_OUTLINE,
-    ),
-    SensorEntityDescription(
-        key="batAlarm3",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        icon=_ICON_ALERT_CIRCLE_OUTLINE,
     ),
     SensorEntityDescription(
         key="batCapacityAh",

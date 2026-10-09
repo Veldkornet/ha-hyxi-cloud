@@ -568,15 +568,6 @@
           "3": "Készenléti"
         }
       },
-      "batalarm1": {
-        "name": "Akkumulátor riasztás 1"
-      },
-      "batalarm2": {
-        "name": "Akkumulátor riasztás 2"
-      },
-      "batalarm3": {
-        "name": "Akkumulátor riasztás 3"
-      },
       "batcapacityah": {
         "name": "Akkumulátor kapacitás (Ah)"
       },

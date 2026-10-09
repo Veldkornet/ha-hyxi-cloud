@@ -568,15 +568,6 @@
           "3": "Bekleme"
         }
       },
-      "batalarm1": {
-        "name": "Batarya Alarmı 1"
-      },
-      "batalarm2": {
-        "name": "Batarya Alarmı 2"
-      },
-      "batalarm3": {
-        "name": "Batarya Alarmı 3"
-      },
       "batcapacityah": {
         "name": "Batarya Kapasitesi (Ah)"
       },

@@ -1987,6 +1987,9 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                         patch(
                             "custom_components.hyxi_cloud.__init__._migrate_microinverter_sum_identifiers"
                         ),
+                        patch(
+                            "custom_components.hyxi_cloud.__init__._remove_bms_alarm_sensors"
+                        ),
                     ):
                         with patch(
                             "custom_components.hyxi_cloud.__init__._cleanup_control_entities"

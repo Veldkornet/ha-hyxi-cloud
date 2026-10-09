@@ -233,6 +233,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _migrate_microinverter_sum_identifiers(hass, entry)
     _remove_work_mode_sensor_for_modbus(hass, entry, coordinator.data)
     _remove_alarm_entities_for_modbus(hass, entry, coordinator.data)
+    _remove_bms_alarm_sensors(hass, entry)
     _cleanup_control_entities(hass, entry, coordinator)
     await _async_setup_battery_protection(hass, coordinator)
     _async_setup_energy_manager(hass, entry, coordinator)
@@ -1155,6 +1156,27 @@ def _remove_alarm_entities_for_modbus(
             if entity_id is not None:
                 _LOGGER.debug("Removing alarm entity %s for Modbus entry", entity_id)
                 registry.async_remove(entity_id)
+
+
+_BMS_ALARM_SUFFIXES = ("_batAlarm1", "_batAlarm2", "_batAlarm3")
+
+
+def _remove_bms_alarm_sensors(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the batAlarm1-3 sensors, which no transport creates any more.
+
+    They read HALO's BMS alarm words, which are unsupported
+    (docs/modbus-provenance.md, rule 3). Matched by unique_id suffix across
+    the whole entry rather than per current serial, so rows keyed by a
+    battery serial (from before the 1.7.0 re-keying) go too. Cheap and safe
+    to run on every setup: a no-op once none exist.
+    """
+    registry = er.async_get(hass)
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if reg_entry.domain == "sensor" and reg_entry.unique_id.endswith(
+            _BMS_ALARM_SUFFIXES
+        ):
+            _LOGGER.debug("Removing BMS alarm sensor %s", reg_entry.entity_id)
+            registry.async_remove(reg_entry.entity_id)
 
 
 def _cleanup_control_entities(

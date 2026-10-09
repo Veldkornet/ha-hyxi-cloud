@@ -196,10 +196,8 @@ class HaloEnergy(Component):
 class HaloFaults(Component):
     """Fault and alarm bitfields.
 
-    Read as raw words rather than IntFlag: the document's own alarm tables
-    disagree with its register table about where the BMS words sit (5000-5002
-    against 5001-5003), and one address cell is visibly corrupt. Decoding bits
-    into names is deferred until hardware settles that.
+    Read as raw words rather than IntFlag: no bit has been checked against
+    hardware yet.
     """
 
     register_space = "input"
@@ -218,7 +216,11 @@ class HaloFaults(Component):
 
 
 class HaloBattery(Component):
-    """BMS state, cell extremes and power limits."""
+    """BMS state, cell extremes and power limits.
+
+    The BMS alarm words the document lists at 5000-5002 are unsupported and
+    not read -- see docs/modbus-provenance.md, rule 3.
+    """
 
     register_space = "input"
     max_span = MAX_SPAN
@@ -243,12 +245,6 @@ class HaloBattery(Component):
     """Highest cell temperature."""
     cell_temperature_min = gauge(4996, 0.1, unit="°C")
     """Lowest cell temperature."""
-    alarm_1 = raw_register(5000)
-    """BMS alarm word 1."""
-    alarm_2 = raw_register(5001)
-    """BMS alarm word 2."""
-    alarm_3 = raw_register(5002)
-    """BMS alarm word 3."""
     capacity_ah = integer(5020, signed=False, unit="Ah")
     """Battery capacity. Amp-hours here, unlike the cloud's kWh."""
     max_discharge_power = uint32(

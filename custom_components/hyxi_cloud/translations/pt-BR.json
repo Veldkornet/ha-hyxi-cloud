@@ -568,15 +568,6 @@
           "3": "Inativo"
         }
       },
-      "batalarm1": {
-        "name": "Alarme da Bateria 1"
-      },
-      "batalarm2": {
-        "name": "Alarme da Bateria 2"
-      },
-      "batalarm3": {
-        "name": "Alarme da Bateria 3"
-      },
       "batcapacityah": {
         "name": "Capacidade da Bateria (Ah)"
       },

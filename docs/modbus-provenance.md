@@ -21,7 +21,7 @@ decode against it.
 | HYXIPower *Micro Storage RS485 MODBUS* protocol, V1.0, 2026-02-10 | HALO / HYX-MS3000AC, registers 4002–5023 | **Vendor claim.** Obtained directly from HYXI with confirmation that it may be published. A real HALO has since answered real writes (see "Confirmed against hardware" below), but most of the register map beyond that is still unconfirmed against a device. Gives serial parameters only; no pinout — see "HALO's RS485 wiring" below. |
 | HYXIPower *HYX-H(5\~12)K-HT User Manual*, V1.2, 2024-07 | Alarm code table; lists port 14 as "Reserved Communication" with no pinout | **Vendor, published.** Superseded on the pinout question by the protocol document above — see below. |
 | [Issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662) and a [matching HA community post](https://community.home-assistant.io/t/hyxipower-integration/926093/28), both user Ton123 — the same contributor who supplied the *Micro Storage RS485 MODBUS* document two rows above | HALO / HYX-MS3000AC RS485 pinout: PIN7 = A, PIN8 = B (T568B white-brown / brown), RJ45 in a circular weatherproof housing, all other pins unused | **First-party to this project, relayed claim, corroborated twice, unconfirmed on hardware.** Stated on this repo's own issue tracker by the person who obtained and supplied the HALO protocol document itself. HYXI has now given the assignment twice — the original ("PIN7 = A, PIN8 = B … white-brown and brown") and a later re-confirmation Ton123 requested ("from right to left: first pin 485B, then 485A, others idle"), which agrees once counted from the other end. Still a relayed account of private messages, not text in the document (serial parameters only, no pinout); this exact pin assignment has not been independently confirmed by someone wiring it and reporting back. See "HALO's RS485 wiring" below. |
-| HYXI developers' written reply to this project's maintainer, 2026-10-09 | Hybrid register 1265 values 11–17 | **Vendor claim, private communication, first-hand.** Received directly by the maintainer, not relayed by a third party, but not (yet) in any published document — HYXI said the documents will be updated in a future revision. Ranks below the documents above where they overlap. 11 and 13–16 had already been observed on real hybrid hardware before the reply; the meanings it gives them are not yet checked against a device. |
+| HYXI developers' written reply to this project's maintainer, 2026-10-09 | Hybrid register 1265 values 11–17; HALO 4048/4049 vs the 4146–4152 VPP block; HALO BMS alarm words 5000–5002; HALO 4024 writes while 4146 is enabled | **Vendor claim, private communication, first-hand.** Received directly by the maintainer, not relayed by a third party, but not (yet) in any published document — HYXI said the documents will be updated in a future revision. Ranks below the documents above where they overlap. 11 and 13–16 had already been observed on real hybrid hardware before the reply; the meanings it gives them, and its HALO answers, are not yet checked against a device. |
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | Cloud `workMode` values 13 and 14 | **Inference, unconfirmed.** Derived by reverse-engineering the HYXI phone app's APK. Never observed on a device. See rule 1. |
 
 ## HALO register map (from registers.py)
@@ -117,9 +117,6 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4990 | `cell_voltage_min` | Number (unsigned) | RO | ×0.001 | V | sensor: `batVcl` |
 | 4995 | `cell_temperature_max` | Number (signed) | RO | ×0.1 | °C | sensor: `batTch` |
 | 4996 | `cell_temperature_min` | Number (signed) | RO | ×0.1 | °C | sensor: `batTcl` |
-| 5000 | `alarm_1` | Raw | RO |  |  | sensor: `batAlarm1` |
-| 5001 | `alarm_2` | Raw | RO |  |  | sensor: `batAlarm2` |
-| 5002 | `alarm_3` | Raw | RO |  |  | sensor: `batAlarm3` |
 | 5020 | `capacity_ah` | Number (unsigned) | RO |  | Ah | sensor: `batCapacityAh` |
 | 5021 | `max_discharge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxDischargePower` |
 | 5023 | `max_charge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxChargePower` |
@@ -464,12 +461,15 @@ raising on an unexpected value would break polling instead of just looking odd.
 
 The HALO document contradicts itself about where the BMS fault words sit: the
 register table says 5000–5002, the alarm table in §6 says 5001–5003, and one
-address cell in §6 is visibly corrupt (it prints `42`). `HaloFaults` and the
-BMS alarm fields therefore expose raw words. The hybrid document's fault
-words (`HybridFaults`, registers 38–45 and 1041–1043) are internally
-consistent with no such contradiction, but are still raw for the same reason
-everything else on this list is: unconfirmed against hardware. Induce a known
-fault and read the block wide before naming any bit, on either device family.
+address cell in §6 is visibly corrupt (it prints `42`). HYXI's 2026-10-09
+reply (see Sources) settles it: the three BMS fault/alarm words are not valid
+or supported at all, and the document will be corrected. They are therefore
+not read. `HaloFaults` still exposes its system/DSP words raw. The hybrid
+document's fault words (`HybridFaults`, registers 38–45 and 1041–1043) are
+internally consistent with no such contradiction, but are still raw for the
+same reason everything else on this list is: unconfirmed against hardware.
+Induce a known fault and read the block wide before naming any bit, on either
+device family.
 
 ### 4. Never write the clock, address or baud-rate registers
 
@@ -594,12 +594,11 @@ and update this file with the result.
 | Work mode enumeration at 4102 | HALO | See rule 1. Also fixes a live cloud bug. |
 | Sign convention of `gridP` (4152) and battery power (4985) | HALO | Decides whether import reads as export and charge as discharge. The cloud path already carries a note that `batP` has an inverted sign on all-in-one units. |
 | Battery capacity unit at 5020 | HALO | Documented in **Ah**; the cloud's `batCap` is kWh. Needs nominal pack voltage to convert — currently not mapped at all rather than mapped wrongly. |
-| BMS fault word addresses | HALO | See rule 3. |
 | Whether 4146 must enable dispatch before 4147 takes effect | HALO | `_write_vpp` writes the enable every time on the assumption it does. Harmless if unnecessary. |
-| Whether writing the work mode setting (4024: 1 self-use, 3 grid backup, 22 TOU) takes effect, and whether it needs 4146 cleared first | HALO | `set_work_mode` (the "Work Mode: …" buttons) writes 4146=0 and then 4024. The document lists 4024 as a writable holding register and 4102 reads the same numbering back, but no HALO has confirmed either that the write is accepted or that the device leaves VPP mode for it. 4024 is deliberately never read back, so the write can only be checked against the app or 4102. 21 (custom discharge) is not offered: the document only shows it taking its power from a TOU slot (4184). Selecting TOU relies on a schedule already stored on the device (4178+, set up in the HYXI app) -- nothing here writes one. |
+| Whether writing the work mode setting (4024: 1 self-use, 3 grid backup, 22 TOU) takes effect on hardware | HALO | `set_work_mode` (the "Work Mode: …" buttons) writes 4146=0 and then 4024. HYXI's 2026-10-09 reply (see Sources) confirms that order is needed: while 4146 is enabled a 4024 write does not take effect, and it only applies once 4146 is 0. No HALO has yet confirmed the write is accepted and the device leaves VPP mode for it. 4024 is deliberately never read back, so the write can only be checked against the app or 4102. 21 (custom discharge) is not offered: the document only shows it taking its power from a TOU slot (4184). Selecting TOU relies on a schedule already stored on the device (4178+, set up in the HYXI app) -- nothing here writes one. |
 | Whether clearing 4146 cleanly resumes the configured work mode (4024) | HALO | The dispatch switch writes `vpp_enable=0` to release control. Expected to drop dispatch and let the inverter resume self-use / TOU, but not yet confirmed the device doesn't instead sit idle until a mode is re-selected in the app. |
 | Whether a VPP dispatch survives a power cycle, or a watchdog reverts it | HALO | Decides whether the integration needs a heartbeat write to hold a mode. |
-| **How `dispatch_mode`/`active_power_setpoint` (4048/4049, "dispatch mode 1") relate to the VPP block (4146–4152, "dispatch mode 2")** | HALO | The document names both as separate dispatch modes but never states whether they're independent, mutually exclusive, or one overrides the other. `set_mode_*` only ever writes the VPP block; 4048/4049 are deliberately left unexposed rather than guessed. A public search for the vendor's Micro Storage RS485 protocol document (2026-08-23) turned up nothing beyond what's already transcribed here — no public copy of the register-level document was found, only marketing-level descriptions of "dispatch"/"VPP" as product concepts, which don't answer this question either. Resolve by testing against hardware: write 4048/4049 while the VPP block is enabled and observe whether it fights the VPP writes. |
+| Whether clearing 4146 hands control to dispatch mode 1 (4048/4049) instead of the work mode (4024) when 4048/4049 hold a setpoint | HALO | HYXI's 2026-10-09 reply (see Sources) says the two dispatch mechanisms are independent and the VPP block (4146–4152) takes priority when both are set. So `set_mode_*`, which only writes the VPP block, wins over any setpoint at 4048/4049. 4048/4049 stay unexposed. Still open: whether a setpoint left there by the app or an installer takes over once the dispatch switch clears 4146. |
 | **Unit of the grid/inverter power registers** (316–318, 333, 370–372, 507, 520–522, PV powers) | Hybrid | The document gives 0 decimal places and no unit label. Treated as Watts by convention (0dp is too coarse for kW at this precision), then `gridP` alone is converted to kW to satisfy `compute_derived_metrics`'s general contract. If the true native unit is something else, every power metric on the hybrid client is wrong by a constant factor. |
 | **Sign convention of battery real-time power** (register 1065) | Hybrid | Unlike register 3015 (explicitly "positive discharge, negative charge"), 1065's sign is not stated. `batP`/`pbat` currently pass it through unconverted; if the read-side convention differs from the write-side one, the sensor and the control write would disagree about which sign means what. |
 | Whether control_mode (3004) must be written before scheduling_enabled (3000), or vice versa, or either order works | Hybrid | `_prepare_scheduling` writes enable then control_mode every call. Untested ordering. |

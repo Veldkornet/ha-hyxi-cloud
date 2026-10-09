@@ -568,15 +568,6 @@
           "3": "Inactief"
         }
       },
-      "batalarm1": {
-        "name": "Batterijalarm 1"
-      },
-      "batalarm2": {
-        "name": "Batterijalarm 2"
-      },
-      "batalarm3": {
-        "name": "Batterijalarm 3"
-      },
       "batcapacityah": {
         "name": "Batterijcapaciteit (Ah)"
       },

@@ -568,15 +568,6 @@
           "3": "Rustend"
         }
       },
-      "batalarm1": {
-        "name": "Battery-alarm 1"
-      },
-      "batalarm2": {
-        "name": "Battery-alarm 2"
-      },
-      "batalarm3": {
-        "name": "Battery-alarm 3"
-      },
       "batcapacityah": {
         "name": "Battery-kapasiteit (Ah)"
       },

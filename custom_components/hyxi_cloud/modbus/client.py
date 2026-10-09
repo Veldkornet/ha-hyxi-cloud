@@ -497,11 +497,6 @@ class HyxiModbusClient:
             "batVcl": self.battery.cell_voltage_min,
             "batTch": self.battery.cell_temperature_max,
             "batTcl": self.battery.cell_temperature_min,
-            # Raw BMS alarm words, undecoded -- see HaloFaults' docstring for
-            # why bits are not named yet.
-            "batAlarm1": self.battery.alarm_1,
-            "batAlarm2": self.battery.alarm_2,
-            "batAlarm3": self.battery.alarm_3,
             "batCapacityAh": self.battery.capacity_ah,
             "maxChargePower": _to_watts(self.battery.max_charge_power),
             "maxDischargePower": _to_watts(self.battery.max_discharge_power),
