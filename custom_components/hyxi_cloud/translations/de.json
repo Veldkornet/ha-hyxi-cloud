@@ -568,15 +568,6 @@
           "3": "Leerlauf"
         }
       },
-      "batalarm1": {
-        "name": "Batteriealarm 1"
-      },
-      "batalarm2": {
-        "name": "Batteriealarm 2"
-      },
-      "batalarm3": {
-        "name": "Batteriealarm 3"
-      },
       "batcapacityah": {
         "name": "Batteriekapazität (Ah)"
       },

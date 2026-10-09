@@ -1132,16 +1132,17 @@ def _remove_work_mode_sensor_for_modbus(
 def _remove_alarm_entities_for_modbus(
     hass: HomeAssistant, entry: ConfigEntry, devices: dict
 ) -> None:
-    """Remove HyxiDeviceAlarmSensor's and HyxiClearAlarmsButton's registry
-    entries for Modbus entries.
+    """Remove alarm entities a Modbus entry no longer creates.
 
-    Both read/act on dev_data["alarms"], which neither Modbus client
-    populates -- see binary_sensor.py's and button.py's async_setup_entry
-    for why neither is created for Modbus. Without this, anyone who
-    already had them (from before that change, or from switching a device
-    from cloud to Modbus) keeps dangling, permanently-unavailable entities
-    in the registry instead of them actually going away. Cheap and safe to
-    run on every setup: a no-op once neither entity exists.
+    HyxiDeviceAlarmSensor and HyxiClearAlarmsButton read/act on
+    dev_data["alarms"], which neither Modbus client populates -- see
+    binary_sensor.py's and button.py's async_setup_entry for why neither
+    is created for Modbus. No transport creates the batAlarm1-3 sensors:
+    HALO's BMS alarm words are unsupported (docs/modbus-provenance.md,
+    rule 3). Without this, anyone who already had these entities keeps
+    dangling, permanently-unavailable entries in the registry instead of
+    them actually going away. Cheap and safe to run on every setup: a
+    no-op once none of them exist.
     """
     if not is_modbus_entry(entry):
         return
@@ -1150,6 +1151,7 @@ def _remove_alarm_entities_for_modbus(
         for domain, unique_id in (
             ("binary_sensor", f"{entry.entry_id}_{sn}_device_alarm"),
             ("button", f"hyxi_{sn}_clear_alarms"),
+            *(("sensor", f"hyxi_{sn}_batAlarm{n}") for n in (1, 2, 3)),
         ):
             entity_id = registry.async_get_entity_id(domain, DOMAIN, unique_id)
             if entity_id is not None:

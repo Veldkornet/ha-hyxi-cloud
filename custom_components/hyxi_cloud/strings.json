@@ -613,15 +613,6 @@
           "3": "Idle"
         }
       },
-      "batalarm1": {
-        "name": "Battery Alarm 1"
-      },
-      "batalarm2": {
-        "name": "Battery Alarm 2"
-      },
-      "batalarm3": {
-        "name": "Battery Alarm 3"
-      },
       "batcapacityah": {
         "name": "Battery Capacity (Ah)"
       },

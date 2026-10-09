@@ -568,15 +568,6 @@
           "3": "Valmiustila"
         }
       },
-      "batalarm1": {
-        "name": "Akun hälytys 1"
-      },
-      "batalarm2": {
-        "name": "Akun hälytys 2"
-      },
-      "batalarm3": {
-        "name": "Akun hälytys 3"
-      },
       "batcapacityah": {
         "name": "Akun kapasiteetti (Ah)"
       },

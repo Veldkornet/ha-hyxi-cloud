@@ -130,9 +130,6 @@ HALO_INPUT: tuple[Reg, ...] = (
     Reg(4990, "u16", 3298),  # min cell voltage, 3dp -> 3.298 V
     Reg(4995, "i16", 240),  # max cell temperature, 1dp -> 24.0 C
     Reg(4996, "i16", 228),  # min cell temperature, 1dp -> 22.8 C
-    Reg(5000, "u16", 0),  # BMS alarm word 1
-    Reg(5001, "u16", 0),  # BMS alarm word 2
-    Reg(5002, "u16", 0),  # BMS alarm word 3
     Reg(5020, "u16", 100),  # battery capacity, Ah
     Reg(5021, "u32", 3000),  # max discharge capability, 3dp kW -> 3000 W
     Reg(5023, "u32", 3000),  # max charge capability, 3dp kW -> 3000 W

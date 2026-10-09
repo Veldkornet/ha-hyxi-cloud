@@ -568,15 +568,6 @@
           "3": "Nečinnost"
         }
       },
-      "batalarm1": {
-        "name": "Alarm baterie 1"
-      },
-      "batalarm2": {
-        "name": "Alarm baterie 2"
-      },
-      "batalarm3": {
-        "name": "Alarm baterie 3"
-      },
       "batcapacityah": {
         "name": "Kapacita baterie (Ah)"
       },

@@ -568,15 +568,6 @@
           "3": "待机"
         }
       },
-      "batalarm1": {
-        "name": "电池报警1"
-      },
-      "batalarm2": {
-        "name": "电池报警2"
-      },
-      "batalarm3": {
-        "name": "电池报警3"
-      },
       "batcapacityah": {
         "name": "电池容量 (Ah)"
       },

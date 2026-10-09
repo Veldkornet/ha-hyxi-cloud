@@ -568,15 +568,6 @@
           "3": "Inactif"
         }
       },
-      "batalarm1": {
-        "name": "Alarme batterie 1"
-      },
-      "batalarm2": {
-        "name": "Alarme batterie 2"
-      },
-      "batalarm3": {
-        "name": "Alarme batterie 3"
-      },
       "batcapacityah": {
         "name": "Capacité de la batterie (Ah)"
       },
