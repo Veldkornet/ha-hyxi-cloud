@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Clé d'accès (AK)",
           "secret_key": "Clé secrète (SK)",
-          "region": "Région du serveur"
+          "region": "Région du serveur",
+          "enable_realtime_push": "Activer le push webhook en temps réel"
+        },
+        "data_description": {
+          "enable_realtime_push": "Lorsqu'il est activé, HYXI envoie les données en temps réel et les alarmes à Home Assistant dès qu'elles surviennent. Cela nécessite une URL HTTPS publique accessible par le cloud HYXI ; la page suivante demande laquelle. Désactivé par défaut ; la fréquence d'envoi peut être définie plus tard dans les options."
+        }
+      },
+      "cloud_push": {
+        "title": "URL de rappel du push",
+        "description": "Le cloud HYXI envoie les données push à une adresse HTTPS publique de Home Assistant. Laissez le champ vide pour utiliser Home Assistant Cloud ou l'URL externe de Home Assistant (Paramètres → Système → Réseau), ou saisissez la vôtre.",
+        "data": {
+          "realtime_push_url": "URL de rappel personnalisée (optionnel, valeur par défaut dynamique)"
+        },
+        "data_description": {
+          "realtime_push_url": "Facultatif. Une adresse HTTPS publique vers laquelle le cloud HYXI enverra les données push, si ce n'est ni Home Assistant Cloud ni l'URL externe de Home Assistant. Saisissez uniquement l'URL de base ; le chemin du webhook est ajouté automatiquement."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Rien n'a répondu sur le bus. Vérifiez le câblage, l'adresse esclave et le débit en bauds.",
       "gateway_unreachable": "Échec de la connexion à la passerelle. Vérifiez l'hôte et le port, ainsi que son alimentation et son accessibilité sur votre réseau.",
       "modbus_unavailable": "La prise en charge de Modbus n'est pas installée. Redémarrez Home Assistant et réessayez.",
-      "unidentified_family": "Un appareil a répondu, mais il n'a pas pu être confirmé comme un onduleur HALO ou hybride pris en charge. Vérifiez l'adresse esclave, ou qu'il s'agit bien d'un modèle pris en charge."
+      "unidentified_family": "Un appareil a répondu, mais il n'a pas pu être confirmé comme un onduleur HALO ou hybride pris en charge. Vérifiez l'adresse esclave, ou qu'il s'agit bien d'un modèle pris en charge.",
+      "no_public_url": "Le push nécessite une URL HTTPS publique accessible par le cloud HYXI. Configurez Home Assistant Cloud ou une URL HTTPS externe (Paramètres → Système → Réseau), ou saisissez une URL personnalisée commençant par https://."
     },
     "abort": {
       "already_configured": "Ce compte HYXI est déjà configuré.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Mode simulation (aucun appel API)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Le push nécessite une URL HTTPS publique accessible par le cloud HYXI. Configurez Home Assistant Cloud ou une URL HTTPS externe (Paramètres → Système → Réseau), ou saisissez une URL personnalisée commençant par https://."
     }
   },
   "entity": {

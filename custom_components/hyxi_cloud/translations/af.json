@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Toegangsleutel (AK)",
           "secret_key": "Geheime Sleutel (SK)",
-          "region": "Bedienerstreek"
+          "region": "Bedienerstreek",
+          "enable_realtime_push": "Aktiveer Realtydse Webhook-stoot"
+        },
+        "data_description": {
+          "enable_realtime_push": "Wanneer aan, stuur HYXI lewendige data en alarms na Home Assistant soos dit gebeur. Dit vereis 'n openbare HTTPS-URL wat HYXI se wolk kan bereik; die volgende bladsy vra watter een. By verstek af; die stootkoers kan later in die opsies gestel word."
+        }
+      },
+      "cloud_push": {
+        "title": "Terugroep-URL vir stoot",
+        "description": "HYXI se wolk stuur stootdata na 'n openbare HTTPS-adres van Home Assistant. Laat die veld leeg om Home Assistant Cloud of Home Assistant se eksterne URL te gebruik (Instellings → Stelsel → Netwerk), of voer jou eie in.",
+        "data": {
+          "realtime_push_url": "Pasgemaakte Terugroep-URL (opsioneel, dinamiese verstek)"
+        },
+        "data_description": {
+          "realtime_push_url": "Opsioneel. 'n Openbare HTTPS-adres waarheen HYXI se wolk stootdata moet stuur, as dit nie Home Assistant Cloud of Home Assistant se eksterne URL is nie. Voer slegs die basis-URL in; die webhook-pad word outomaties bygevoeg."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Niks het op die bus geantwoord nie. Kontroleer die bedrading, die slaaf-adres en die baudtempo.",
       "gateway_unreachable": "Kon nie met die gateway verbind nie. Kontroleer die gasheer en poort, en dat dit aan is en op jou netwerk bereikbaar is.",
       "modbus_unavailable": "Modbus-ondersteuning is nie geïnstalleer nie. Herbegin Home Assistant en probeer weer.",
-      "unidentified_family": "'n Toestel het geantwoord, maar kon nie bevestig word as 'n ondersteunde HALO- of hibriede omsetter nie. Kontroleer die slaaf-adres, of dat dit 'n ondersteunde model is."
+      "unidentified_family": "'n Toestel het geantwoord, maar kon nie bevestig word as 'n ondersteunde HALO- of hibriede omsetter nie. Kontroleer die slaaf-adres, of dat dit 'n ondersteunde model is.",
+      "no_public_url": "Stoot vereis 'n openbare HTTPS-URL wat HYXI se wolk kan bereik. Stel Home Assistant Cloud of 'n eksterne HTTPS-URL op (Instellings → Stelsel → Netwerk), of voer 'n pasgemaakte URL in wat met https:// begin."
     },
     "abort": {
       "already_configured": "Hierdie HYXI-rekening is reeds opgestel.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Toetsmodus (geen API-oproepe)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Stoot vereis 'n openbare HTTPS-URL wat HYXI se wolk kan bereik. Stel Home Assistant Cloud of 'n eksterne HTTPS-URL op (Instellings → Stelsel → Netwerk), of voer 'n pasgemaakte URL in wat met https:// begin."
     }
   },
   "entity": {

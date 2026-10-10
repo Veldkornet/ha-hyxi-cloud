@@ -302,7 +302,7 @@ async def test_step_cloud_show_form_suggests_region_from_country(
 
     await config_flow.async_step_cloud(user_input=None)
 
-    mock_build_schema.assert_called_once_with("na")
+    mock_build_schema.assert_called_once_with("na", include_push=True)
 
 
 @pytest.mark.asyncio
@@ -516,6 +516,7 @@ async def test_options_flow_updates_push_settings(mock_ha_environment):
     config_entry = MagicMock()
     config_entry.options = {config_flow_mod.CONF_ENABLE_PUSH: True}  # already on
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
+    options_flow.hass = MagicMock()
     options_flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
 
     user_input = {

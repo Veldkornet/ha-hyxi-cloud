@@ -15,7 +15,21 @@
         "data": {
           "access_key": "Access Key (AK)",
           "secret_key": "Secret Key (SK)",
-          "region": "Server Region"
+          "region": "Server Region",
+          "enable_realtime_push": "Enable Real-Time Webhook Push"
+        },
+        "data_description": {
+          "enable_realtime_push": "When on, HYXI sends live data and alarms to Home Assistant as they happen. This needs a public HTTPS URL that HYXI's cloud can reach; the next page asks which one. Off by default; the push rate can be set later in the options."
+        }
+      },
+      "cloud_push": {
+        "title": "Push callback URL",
+        "description": "HYXI's cloud sends push data to a public HTTPS address of Home Assistant. Leave the field empty to use Home Assistant Cloud or Home Assistant's external URL (Settings → System → Network), or enter your own.",
+        "data": {
+          "realtime_push_url": "Custom Callback URL (optional, dynamic default — base URL, path appended automatically)"
+        },
+        "data_description": {
+          "realtime_push_url": "Optional. A public HTTPS address for HYXI's cloud to send push data to, if it isn't Home Assistant Cloud or Home Assistant's external URL. Enter the base URL only; the webhook path is added automatically."
         }
       },
       "modbus": {
@@ -86,7 +100,8 @@
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",
       "gateway_unreachable": "Failed to connect to the gateway. Check the host and port, and that it's powered on and reachable on your network.",
       "modbus_unavailable": "Modbus support is not installed. Restart Home Assistant and try again.",
-      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model."
+      "unidentified_family": "A device answered, but it couldn't be confirmed as a supported HALO or hybrid inverter. Check the slave address, or that this is a supported model.",
+      "no_public_url": "Push needs a public HTTPS URL that HYXI's cloud can reach. Set up Home Assistant Cloud or an external HTTPS URL (Settings → System → Network), or enter a custom URL that starts with https://."
     },
     "abort": {
       "already_configured": "This HYXI account is already configured.",
@@ -124,6 +139,9 @@
           "em_dry_run": "Dry-Run Mode (no API calls)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push needs a public HTTPS URL that HYXI's cloud can reach. Set up Home Assistant Cloud or an external HTTPS URL (Settings → System → Network), or enter a custom URL that starts with https://."
     }
   },
   "entity": {

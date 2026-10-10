@@ -23,7 +23,21 @@
         "data": {
           "access_key": "访问密钥 (AK)",
           "secret_key": "加密密钥 (SK)",
-          "region": "服务器区域"
+          "region": "服务器区域",
+          "enable_realtime_push": "启用实时 Webhook 推送"
+        },
+        "data_description": {
+          "enable_realtime_push": "开启后，HYXI 会在实时数据和告警产生时立即发送到 Home Assistant。这需要一个 HYXI 云可以访问的公网 HTTPS 地址；下一页会询问使用哪个地址。默认关闭；推送频率可稍后在选项中设置。"
+        }
+      },
+      "cloud_push": {
+        "title": "推送回调 URL",
+        "description": "HYXI 云会将推送数据发送到 Home Assistant 的公网 HTTPS 地址。留空则使用 Home Assistant Cloud 或 Home Assistant 的外部 URL（设置 → 系统 → 网络），也可以填写你自己的地址。",
+        "data": {
+          "realtime_push_url": "自定义回调 URL（可选，动态默认值）"
+        },
+        "data_description": {
+          "realtime_push_url": "可选。如果不使用 Home Assistant Cloud 或 Home Assistant 的外部 URL，请填写 HYXI 云发送推送数据的公网 HTTPS 地址。只需填写基础 URL，Webhook 路径会自动添加。"
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "总线上没有任何响应。请检查布线、从站地址和波特率。",
       "gateway_unreachable": "无法连接到网关。请检查主机和端口，确认设备已开启且可在您的网络中访问。",
       "modbus_unavailable": "未安装 Modbus 支持。请重启 Home Assistant 后重试。",
-      "unidentified_family": "设备已响应，但无法确认其为受支持的 HALO 或混合逆变器。请检查从站地址，或确认这是否为受支持的型号。"
+      "unidentified_family": "设备已响应，但无法确认其为受支持的 HALO 或混合逆变器。请检查从站地址，或确认这是否为受支持的型号。",
+      "no_public_url": "推送需要一个 HYXI 云可以访问的公网 HTTPS 地址。请设置 Home Assistant Cloud 或外部 HTTPS 地址（设置 → 系统 → 网络），或填写以 https:// 开头的自定义 URL。"
     },
     "abort": {
       "already_configured": "该 HYXI 账号已配置。",
@@ -123,6 +138,9 @@
           "em_dry_run": "演练模式（不调用 API）"
         }
       }
+    },
+    "error": {
+      "no_public_url": "推送需要一个 HYXI 云可以访问的公网 HTTPS 地址。请设置 Home Assistant Cloud 或外部 HTTPS 地址（设置 → 系统 → 网络），或填写以 https:// 开头的自定义 URL。"
     }
   },
   "entity": {

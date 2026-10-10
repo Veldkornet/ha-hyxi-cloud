@@ -137,7 +137,7 @@ async def test_setup_push_subscription_success(mock_coordinator, mock_entry):
     with (
         patch("custom_components.hyxi_cloud.__init__.webhook") as mock_webhook,
         patch(
-            "custom_components.hyxi_cloud.__init__.network.get_url",
+            "custom_components.hyxi_cloud.push_url.network.get_url",
             return_value="https://my-ha.local",
         ),
         patch(
@@ -530,6 +530,7 @@ async def test_button_press_renew(mock_coordinator, mock_entry):
 async def test_setup_push_subscription_via_nabu_casa(mock_coordinator, mock_entry):
     """Test push subscription setup using Nabu Casa cloudhook URL resolution."""
     hass = MagicMock()
+    hass.config.components = {"cloud"}
 
     import homeassistant.components.cloud as cloud_mock
 

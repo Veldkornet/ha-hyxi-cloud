@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Käyttöavain (AK)",
           "secret_key": "Salainen avain (SK)",
-          "region": "Palvelinalue"
+          "region": "Palvelinalue",
+          "enable_realtime_push": "Ota käyttöön reaaliaikainen Webhook-työntö"
+        },
+        "data_description": {
+          "enable_realtime_push": "Kun päällä, HYXI lähettää reaaliaikaiset tiedot ja hälytykset Home Assistantiin heti niiden syntyessä. Tämä edellyttää julkista HTTPS-osoitetta, johon HYXI:n pilvi pääsee; seuraava sivu kysyy, mitä käytetään. Oletuksena pois päältä; lähetystiheyden voi asettaa myöhemmin asetuksista."
+        }
+      },
+      "cloud_push": {
+        "title": "Pushin takaisinkutsuosoite",
+        "description": "HYXI:n pilvi lähettää push-tiedot Home Assistantin julkiseen HTTPS-osoitteeseen. Jätä kenttä tyhjäksi käyttääksesi Home Assistant Cloudia tai Home Assistantin ulkoista URL-osoitetta (Asetukset → Järjestelmä → Verkko), tai anna oma osoite.",
+        "data": {
+          "realtime_push_url": "Mukautettu Callback-URL (valinnainen, dynaaminen oletus)"
+        },
+        "data_description": {
+          "realtime_push_url": "Valinnainen. Julkinen HTTPS-osoite, johon HYXI:n pilvi lähettää push-tiedot, jos se ei ole Home Assistant Cloud tai Home Assistantin ulkoinen URL-osoite. Anna vain perusosoite; webhook-polku lisätään automaattisesti."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Väylässä ei vastannut mikään. Tarkista johdotus, orjaosoite ja baudinopeus.",
       "gateway_unreachable": "Yhteys yhdyskäytävään epäonnistui. Tarkista isäntä ja portti sekä se, että se on päällä ja tavoitettavissa verkossasi.",
       "modbus_unavailable": "Modbus-tukea ei ole asennettu. Käynnistä Home Assistant uudelleen ja yritä uudestaan.",
-      "unidentified_family": "Laite vastasi, mutta sitä ei voitu vahvistaa tuetuksi HALO- tai hybridi-invertteriksi. Tarkista orjaosoite, tai onko tämä tuettu malli."
+      "unidentified_family": "Laite vastasi, mutta sitä ei voitu vahvistaa tuetuksi HALO- tai hybridi-invertteriksi. Tarkista orjaosoite, tai onko tämä tuettu malli.",
+      "no_public_url": "Push vaatii julkisen HTTPS-osoitteen, johon HYXI:n pilvi pääsee. Ota käyttöön Home Assistant Cloud tai ulkoinen HTTPS-osoite (Asetukset → Järjestelmä → Verkko), tai anna mukautettu osoite, joka alkaa https://."
     },
     "abort": {
       "already_configured": "Tämä HYXI-tili on jo määritetty.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Testitila (ei API-kutsuja)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push vaatii julkisen HTTPS-osoitteen, johon HYXI:n pilvi pääsee. Ota käyttöön Home Assistant Cloud tai ulkoinen HTTPS-osoite (Asetukset → Järjestelmä → Verkko), tai anna mukautettu osoite, joka alkaa https://."
     }
   },
   "entity": {

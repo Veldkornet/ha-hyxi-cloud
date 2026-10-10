@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Chave de Acesso (AK)",
           "secret_key": "Chave Secreta (SK)",
-          "region": "Região do servidor"
+          "region": "Região do servidor",
+          "enable_realtime_push": "Ativar Push Webhook em Tempo Real"
+        },
+        "data_description": {
+          "enable_realtime_push": "Quando ligado, a HYXI envia dados em tempo real e alarmes para o Home Assistant assim que acontecem. Isso exige uma URL HTTPS pública que a nuvem da HYXI consiga acessar; a próxima página pergunta qual. Desligado por padrão; a frequência de envio pode ser definida depois nas opções."
+        }
+      },
+      "cloud_push": {
+        "title": "URL de retorno do push",
+        "description": "A nuvem da HYXI envia os dados push para um endereço HTTPS público do Home Assistant. Deixe o campo vazio para usar o Home Assistant Cloud ou a URL externa do Home Assistant (Configurações → Sistema → Rede), ou informe a sua.",
+        "data": {
+          "realtime_push_url": "URL de Callback Personalizada (opcional, padrão dinâmico)"
+        },
+        "data_description": {
+          "realtime_push_url": "Opcional. Um endereço HTTPS público para onde a nuvem da HYXI deve enviar os dados push, se não for o Home Assistant Cloud nem a URL externa do Home Assistant. Informe apenas a URL base; o caminho do webhook é adicionado automaticamente."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Nada respondeu no barramento. Verifique o cabeamento, o endereço escravo e a taxa de baud.",
       "gateway_unreachable": "Falha ao conectar ao gateway. Verifique o host e a porta, e se ele está ligado e acessível na sua rede.",
       "modbus_unavailable": "O suporte a Modbus não está instalado. Reinicie o Home Assistant e tente novamente.",
-      "unidentified_family": "Um dispositivo respondeu, mas não foi possível confirmá-lo como um inversor HALO ou híbrido compatível. Verifique o endereço escravo, ou se este é um modelo compatível."
+      "unidentified_family": "Um dispositivo respondeu, mas não foi possível confirmá-lo como um inversor HALO ou híbrido compatível. Verifique o endereço escravo, ou se este é um modelo compatível.",
+      "no_public_url": "O push precisa de uma URL HTTPS pública que a nuvem da HYXI consiga acessar. Configure o Home Assistant Cloud ou uma URL HTTPS externa (Configurações → Sistema → Rede), ou informe uma URL personalizada que comece com https://."
     },
     "abort": {
       "already_configured": "Esta conta HYXI já está configurada.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Modo de Simulação (sem chamadas de API)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "O push precisa de uma URL HTTPS pública que a nuvem da HYXI consiga acessar. Configure o Home Assistant Cloud ou uma URL HTTPS externa (Configurações → Sistema → Rede), ou informe uma URL personalizada que comece com https://."
     }
   },
   "entity": {

@@ -23,7 +23,21 @@
         "data": {
           "access_key": "アクセスキー (AK)",
           "secret_key": "シークレットキー (SK)",
-          "region": "サーバーリージョン"
+          "region": "サーバーリージョン",
+          "enable_realtime_push": "リアルタイムWebhookプッシュを有効にする"
+        },
+        "data_description": {
+          "enable_realtime_push": "オンにすると、HYXI がリアルタイムデータとアラームを発生時に Home Assistant へ送信します。そのためには HYXI のクラウドから到達できる公開 HTTPS URL が必要です。次のページでどれを使うかを指定します。既定ではオフです。送信間隔は後からオプションで設定できます。"
+        }
+      },
+      "cloud_push": {
+        "title": "プッシュのコールバック URL",
+        "description": "HYXI のクラウドは Home Assistant の公開 HTTPS アドレスへプッシュデータを送信します。空欄のままにすると Home Assistant Cloud または Home Assistant の外部 URL（設定 → システム → ネットワーク）を使います。独自の URL を入力することもできます。",
+        "data": {
+          "realtime_push_url": "カスタムコールバックURL (オプション, 動的デフォルト)"
+        },
+        "data_description": {
+          "realtime_push_url": "任意。Home Assistant Cloud や Home Assistant の外部 URL 以外を使う場合に、HYXI のクラウドがプッシュデータを送る公開 HTTPS アドレスです。ベース URL のみを入力してください。Webhook のパスは自動で追加されます。"
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "バス上で応答がありませんでした。配線、スレーブアドレス、ボーレートを確認してください。",
       "gateway_unreachable": "ゲートウェイへの接続に失敗しました。ホストとポート、電源が入っていること、ネットワーク上で到達可能であることを確認してください。",
       "modbus_unavailable": "Modbusサポートがインストールされていません。Home Assistantを再起動してもう一度お試しください。",
-      "unidentified_family": "デバイスから応答がありましたが、対応するHALOまたはハイブリッドインバーターであることを確認できませんでした。スレーブアドレス、または対応モデルかどうかを確認してください。"
+      "unidentified_family": "デバイスから応答がありましたが、対応するHALOまたはハイブリッドインバーターであることを確認できませんでした。スレーブアドレス、または対応モデルかどうかを確認してください。",
+      "no_public_url": "プッシュには、HYXI のクラウドから到達できる公開 HTTPS URL が必要です。Home Assistant Cloud または外部 HTTPS URL を設定するか（設定 → システム → ネットワーク）、https:// で始まるカスタム URL を入力してください。"
     },
     "abort": {
       "already_configured": "このHYXIアカウントは既に設定されています。",
@@ -123,6 +138,9 @@
           "em_dry_run": "ドライラン モード (API呼び出しなし)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "プッシュには、HYXI のクラウドから到達できる公開 HTTPS URL が必要です。Home Assistant Cloud または外部 HTTPS URL を設定するか（設定 → システム → ネットワーク）、https:// で始まるカスタム URL を入力してください。"
     }
   },
   "entity": {

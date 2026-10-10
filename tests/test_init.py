@@ -1314,6 +1314,7 @@ async def test_async_resolve_webhook_url(mock_hass):
     """Verify webhook URL resolution paths including cloud hooks and fallbacks."""
     # Ensure hass.config.external_url doesn't raise error on yarl.URL parsing
     mock_hass.config = MagicMock()
+    mock_hass.config.components = {"cloud"}
     mock_hass.config.external_url = "https://default.url"
 
     # 1. Custom URL is configured
@@ -1672,6 +1673,7 @@ async def test_alarm_subscription_failures_and_webhooks():
 @pytest.mark.asyncio
 async def test_additional_init_coverage(mock_hass, mock_entry):
     """Test additional branches and fallback paths in __init__.py for 100% coverage."""
+    mock_hass.config.components = {"cloud"}
 
     # 1. Test ValueError raised by Nabu Casa resolved URL (line 345)
     class CustomCloudNotAvailable(BaseException):

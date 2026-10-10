@@ -19,7 +19,6 @@ from homeassistant.exceptions import (
 )
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers import network
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from hyxi_cloud_api import HyxiApiClient, SubscriptionType
@@ -63,6 +62,7 @@ from .const import (
 )
 from .coordinator import HyxiDataUpdateCoordinator, HyxiDiscoveryCoordinator
 from .protection import HyxiBatteryProtectionController
+from .push_url import cloud_subscription_active, external_https_url, is_https_url
 
 if TYPE_CHECKING:
     from .modbus_coordinator import HyxiModbusCoordinator
@@ -1445,7 +1445,7 @@ async def _async_resolve_webhook_url(
     if custom_url and custom_url.strip():
         # Treat custom_url as the base URL — always append the HA webhook path.
         base = custom_url.strip().rstrip("/")
-        if not base.lower().startswith("https://"):
+        if not is_https_url(base):
             _LOGGER.error(
                 "HYXI Push: Custom webhook URL must use HTTPS. Ignoring unencrypted URL."
             )
@@ -1469,11 +1469,10 @@ async def _async_resolve_webhook_url(
 
 async def _try_nabu_casa_cloudhook(hass: HomeAssistant, webhook_id: str) -> str | None:
     """Try to resolve the callback URL via an active Nabu Casa cloud hook."""
+    if not cloud_subscription_active(hass):
+        return None
     # pylint: disable-next=consider-using-from-import
     import homeassistant.components.cloud as cloud
-
-    if not cloud.async_active_subscription(hass):
-        return None
 
     _LOGGER.debug("HYXI Push: Nabu Casa subscription detected, trying cloud URL")
     try:
@@ -1492,22 +1491,19 @@ async def _try_nabu_casa_cloudhook(hass: HomeAssistant, webhook_id: str) -> str 
 
 
 def _resolve_via_network_helper(hass: HomeAssistant, webhook_id: str) -> str | None:
-    """Try to resolve the callback URL via HA's network helper."""
-    try:
-        resolved = network.get_url(
-            hass, allow_external=True
-        ) + webhook.async_generate_path(webhook_id)
-        _LOGGER.debug(
-            "HYXI Push: Resolved callback URL via network helper: %s",
-            mask_url(resolved),
-        )
-        return resolved
-    except network.NoURLAvailableError:
-        _LOGGER.debug(
-            "HYXI Push: network.get_url raised NoURLAvailableError"
-            " (no external URL configured)"
-        )
+    """Try to resolve the callback URL via HA's network helper, as an
+    external HTTPS URL: HYXI's cloud can't reach an internal or plain-HTTP
+    one."""
+    base = external_https_url(hass)
+    if base is None:
+        _LOGGER.debug("HYXI Push: no external HTTPS URL configured")
         return None
+    resolved = base + webhook.async_generate_path(webhook_id)
+    _LOGGER.debug(
+        "HYXI Push: Resolved callback URL via network helper: %s",
+        mask_url(resolved),
+    )
+    return resolved
 
 
 def _compute_subscription_fingerprint(

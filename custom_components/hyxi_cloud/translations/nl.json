@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Toegangssleutel (AK)",
           "secret_key": "Geheime Sleutel (SK)",
-          "region": "Serverregio"
+          "region": "Serverregio",
+          "enable_realtime_push": "Realtime webhook-push inschakelen"
+        },
+        "data_description": {
+          "enable_realtime_push": "Als dit aan staat, stuurt HYXI live gegevens en alarmen naar Home Assistant zodra ze optreden. Daarvoor is een openbare HTTPS-URL nodig die de HYXI-cloud kan bereiken; de volgende pagina vraagt welke. Standaard uit; de push-frequentie kun je later in de opties instellen."
+        }
+      },
+      "cloud_push": {
+        "title": "Callback-URL voor push",
+        "description": "De HYXI-cloud stuurt pushgegevens naar een openbaar HTTPS-adres van Home Assistant. Laat het veld leeg om Home Assistant Cloud of de externe URL van Home Assistant te gebruiken (Instellingen → Systeem → Netwerk), of vul je eigen URL in.",
+        "data": {
+          "realtime_push_url": "Aangepaste Callback-URL (optioneel, dynamische standaardwaarde)"
+        },
+        "data_description": {
+          "realtime_push_url": "Optioneel. Een openbaar HTTPS-adres waar de HYXI-cloud pushgegevens naartoe stuurt, als dat niet Home Assistant Cloud of de externe URL van Home Assistant is. Vul alleen de basis-URL in; het webhook-pad wordt automatisch toegevoegd."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Niets antwoordde op de bus. Controleer de bekabeling, het slave-adres en de baudrate.",
       "gateway_unreachable": "Kan geen verbinding maken met de gateway. Controleer het host-adres en de poort, en of deze is ingeschakeld en bereikbaar op uw netwerk.",
       "modbus_unavailable": "Modbus-ondersteuning is niet geïnstalleerd. Start Home Assistant opnieuw en probeer het opnieuw.",
-      "unidentified_family": "Een apparaat heeft geantwoord, maar kon niet worden bevestigd als een ondersteunde HALO- of hybride omvormer. Controleer het slave-adres, of dat dit een ondersteund model is."
+      "unidentified_family": "Een apparaat heeft geantwoord, maar kon niet worden bevestigd als een ondersteunde HALO- of hybride omvormer. Controleer het slave-adres, of dat dit een ondersteund model is.",
+      "no_public_url": "Push heeft een openbare HTTPS-URL nodig die de HYXI-cloud kan bereiken. Stel Home Assistant Cloud of een externe HTTPS-URL in (Instellingen → Systeem → Netwerk), of vul een eigen URL in die met https:// begint."
     },
     "abort": {
       "already_configured": "Dit HYXI account is al geconfigureerd.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Testmodus (geen API-aanroepen)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push heeft een openbare HTTPS-URL nodig die de HYXI-cloud kan bereiken. Stel Home Assistant Cloud of een externe HTTPS-URL in (Instellingen → Systeem → Netwerk), of vul een eigen URL in die met https:// begint."
     }
   },
   "entity": {

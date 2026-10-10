@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Åtkomstnyckel (AK)",
           "secret_key": "Hemlig nyckel (SK)",
-          "region": "Serverregion"
+          "region": "Serverregion",
+          "enable_realtime_push": "Aktivera Realtids Webhook Push"
+        },
+        "data_description": {
+          "enable_realtime_push": "När det är på skickar HYXI realtidsdata och larm till Home Assistant när de inträffar. Det kräver en offentlig HTTPS-URL som HYXIs moln kan nå; nästa sida frågar vilken. Av som standard; push-frekvensen kan anges senare i alternativen."
+        }
+      },
+      "cloud_push": {
+        "title": "Callback-URL för push",
+        "description": "HYXIs moln skickar push-data till en offentlig HTTPS-adress för Home Assistant. Lämna fältet tomt för att använda Home Assistant Cloud eller Home Assistants externa URL (Inställningar → System → Nätverk), eller ange din egen.",
+        "data": {
+          "realtime_push_url": "Anpassad Callback-URL (valfritt, dynamiskt standardvärde)"
+        },
+        "data_description": {
+          "realtime_push_url": "Valfritt. En offentlig HTTPS-adress som HYXIs moln ska skicka push-data till, om det inte är Home Assistant Cloud eller Home Assistants externa URL. Ange bara bas-URL:en; webhook-sökvägen läggs till automatiskt."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Inget svarade på bussen. Kontrollera kablaget, slavadressen och baudhastigheten.",
       "gateway_unreachable": "Det gick inte att ansluta till gatewayen. Kontrollera värden och porten, samt att den är påslagen och nåbar på ditt nätverk.",
       "modbus_unavailable": "Modbus-stöd är inte installerat. Starta om Home Assistant och försök igen.",
-      "unidentified_family": "En enhet svarade, men kunde inte bekräftas som en HALO- eller hybridväxelriktare som stöds. Kontrollera slavadressen, eller att detta är en modell som stöds."
+      "unidentified_family": "En enhet svarade, men kunde inte bekräftas som en HALO- eller hybridväxelriktare som stöds. Kontrollera slavadressen, eller att detta är en modell som stöds.",
+      "no_public_url": "Push kräver en offentlig HTTPS-URL som HYXIs moln kan nå. Konfigurera Home Assistant Cloud eller en extern HTTPS-URL (Inställningar → System → Nätverk), eller ange en egen URL som börjar med https://."
     },
     "abort": {
       "already_configured": "Detta HYXI-konto är redan konfigurerat.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Testläge (inga API-anrop)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push kräver en offentlig HTTPS-URL som HYXIs moln kan nå. Konfigurera Home Assistant Cloud eller en extern HTTPS-URL (Inställningar → System → Nätverk), eller ange en egen URL som börjar med https://."
     }
   },
   "entity": {
