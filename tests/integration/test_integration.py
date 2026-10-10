@@ -27,6 +27,7 @@ from custom_components.hyxi_cloud.const import (
     TRANSPORT_CLOUD,
     TRANSPORT_MODBUS,
 )
+from tests.integration.entries import serve_devices
 
 
 @pytest.mark.asyncio
@@ -113,10 +114,7 @@ async def test_setup_entry_and_sensors(hass: HomeAssistant):
     with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client._refresh_token.return_value = True
-        mock_client.get_all_device_data.return_value = {
-            "data": mock_data,
-            "attempts": 1,
-        }
+        serve_devices(mock_client, mock_data)
         mock_client_class.return_value = mock_client
 
         # 3. Setup config entry
@@ -191,10 +189,7 @@ async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
     with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client._refresh_token.return_value = True
-        mock_client.get_all_device_data.return_value = {
-            "data": mock_data,
-            "attempts": 1,
-        }
+        serve_devices(mock_client, mock_data)
         mock_client_class.return_value = mock_client
 
         assert await hass.config_entries.async_setup(entry.entry_id)
@@ -299,10 +294,7 @@ async def test_enum_sensor_survives_out_of_range_api_value(hass: HomeAssistant):
     with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client._refresh_token.return_value = True
-        mock_client.get_all_device_data.return_value = {
-            "data": make_data("2"),
-            "attempts": 1,
-        }
+        serve_devices(mock_client, make_data("2"))
         # compute_derived_metrics is synchronous on the real client (only
         # invoked by the coordinator's merge path from the second refresh
         # onward); a bare AsyncMock() mocks it as async too, which returns
@@ -325,10 +317,7 @@ async def test_enum_sensor_survives_out_of_range_api_value(hass: HomeAssistant):
         # (HA's coordinator catches it per-listener) but the sensor freezes
         # at its last valid state and HA logs a full traceback every single
         # refresh; the sibling sensor on the same device must keep working.
-        mock_client.get_all_device_data.return_value = {
-            "data": make_data("9"),
-            "attempts": 1,
-        }
+        serve_devices(mock_client, make_data("9"))
         await hass.data[DOMAIN][entry.entry_id].async_refresh()
         await hass.async_block_till_done()
 

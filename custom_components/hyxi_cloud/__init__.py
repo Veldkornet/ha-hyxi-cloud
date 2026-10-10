@@ -5,12 +5,13 @@ import asyncio
 import hashlib
 import hmac
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from aiohttp import ClientError, web
 from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     ConfigEntryError,
@@ -61,7 +62,7 @@ from .const import (
     modbus_params,
     normalize_device_type,
 )
-from .coordinator import HyxiDataUpdateCoordinator
+from .coordinator import HyxiDataUpdateCoordinator, HyxiDiscoveryCoordinator
 from .protection import HyxiBatteryProtectionController
 
 if TYPE_CHECKING:
@@ -172,6 +173,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # other as incompatible. HyxiModbusCoordinator is itself a
     # HyxiDataUpdateCoordinator subclass, so the base type covers both.
     coordinator: HyxiDataUpdateCoordinator
+    discovery: HyxiDiscoveryCoordinator | None = None
     if modbus:
         coordinator = await _build_modbus_coordinator(hass, entry)
     else:
@@ -189,6 +191,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         client = HyxiApiClient(access_key, secret_key, base_url, session)
 
         coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
+        discovery = HyxiDiscoveryCoordinator(hass, client, entry)
+        coordinator.discovery = discovery
         coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
 
     # Pre-seed coordinator.data from persistent cache so that if the API is slow
@@ -197,6 +201,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_preload_cache()
 
     try:
+        if discovery is not None:
+            await _async_first_discovery(discovery, coordinator)
         await coordinator.async_config_entry_first_refresh()
     except ConfigEntryAuthFailed:
         _LOGGER.error("Authentication failed during setup")
@@ -245,6 +251,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator.engine.start()
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    if discovery is not None:
+        entry.async_on_unload(
+            discovery.async_add_listener(
+                _reload_on_device_changes(
+                    hass,
+                    entry,
+                    coordinator,
+                    discovery,
+                    frozenset(coordinator.data or {}),
+                )
+            )
+        )
 
     setup_services(hass)
 
@@ -257,6 +275,59 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     return True
+
+
+async def _async_first_discovery(
+    discovery: HyxiDiscoveryCoordinator, coordinator: HyxiDataUpdateCoordinator
+) -> None:
+    """Discover the devices before the first poll. A failed discovery is
+    tolerated while cached devices can stand in for them; it is retried on
+    the discovery coordinator's schedule."""
+    try:
+        await discovery.async_config_entry_first_refresh()
+    except ConfigEntryNotReady as err:
+        reason = discovery.last_exception
+        if not coordinator.data:
+            raise ConfigEntryNotReady(str(reason)) from err
+        _LOGGER.warning(
+            "%s at startup; using %d cached devices until it succeeds",
+            reason,
+            len(coordinator.data),
+        )
+
+
+def _reload_on_device_changes(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+    discovery: HyxiDiscoveryCoordinator,
+    entry_devices: frozenset[str],
+) -> Callable[[], None]:
+    """A discovery listener that reloads the entry when discovery finds
+    devices it has no entities for. A device that disappears needs no
+    reload: it drops out of the polled data and its entities go
+    unavailable."""
+
+    discovered_once = discovery.data is not None
+
+    @callback
+    def _check() -> None:
+        nonlocal discovered_once
+        if not discovery.last_update_success or discovery.data is None:
+            return
+        added = frozenset(discovery.data.devices) - entry_devices
+        if added:
+            _LOGGER.info(
+                "HYXI discovered %d new device(s); reloading to add their entities",
+                len(added),
+            )
+            hass.config_entries.async_schedule_reload(entry.entry_id)
+        elif not discovered_once:
+            # Polling had nothing to poll until this first discovery.
+            entry.async_create_task(hass, coordinator.async_request_refresh())
+        discovered_once = True
+
+    return _check
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

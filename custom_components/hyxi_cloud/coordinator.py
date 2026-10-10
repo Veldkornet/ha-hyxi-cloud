@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from typing import Any, TypedDict
 
@@ -13,7 +14,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from hyxi_cloud_api import HyxiApiClient, HyxiAuthError
+from hyxi_cloud_api import DiscoveryResult, HyxiApiClient, HyxiAuthError
 
 from .const import (
     CONF_BACK_DISCOVERY,
@@ -46,6 +47,39 @@ CACHE_MAX_AGE = timedelta(days=7)
 # transient rejection does not start a reauth flow (which stops polling until
 # the user re-enters the keys).
 AUTH_RECHECK_DELAY = 5
+
+# A poll is attempted this many times before the cycle counts as failed, the
+# n-th retry waiting n * POLL_RETRY_DELAY seconds.
+POLL_ATTEMPTS = 3
+POLL_RETRY_DELAY = 2
+
+# Devices are rediscovered this often; an incomplete or failed discovery is
+# retried after DISCOVERY_RETRY, doubling up to DISCOVERY_INTERVAL.
+DISCOVERY_INTERVAL = timedelta(hours=1)
+DISCOVERY_RETRY = timedelta(minutes=5)
+
+
+async def _with_auth_recheck[T](fetch: Callable[[], Awaitable[T]]) -> T:
+    """Run fetch, raising ConfigEntryAuthFailed only if HYXI rejects the API
+    keys on two attempts in a row."""
+    try:
+        return await fetch()
+    except HyxiAuthError:
+        _LOGGER.warning(
+            "HYXI Cloud rejected the API keys; retrying in %ss", AUTH_RECHECK_DELAY
+        )
+    await asyncio.sleep(AUTH_RECHECK_DELAY)
+    try:
+        return await fetch()
+    except HyxiAuthError as err:
+        raise ConfigEntryAuthFailed(
+            "HYXI Cloud rejected the access/secret key"
+        ) from err
+
+
+def device_store_key(entry_id: str) -> str:
+    """The storage key of an entry's cached devices."""
+    return f"hyxi_cloud_devices_{entry_id}"
 
 
 def _extract_cached_devices(raw: dict | None) -> dict | None:
@@ -123,6 +157,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.client = client
         self.entry = entry
         self.options = dict(entry.options)
+        # The cloud entry's device discovery; polling has nothing to poll
+        # until it has succeeded once.
+        self.discovery: HyxiDiscoveryCoordinator | None = None
         self.protection_controllers: dict[str, Any] = {}
         self.engine: Any = None
 
@@ -153,7 +190,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.alarm_last_push_received: datetime | None = None
 
         self.device_store: Store[dict[str, Any]] = Store(
-            hass, 1, f"hyxi_cloud_devices_{entry.entry_id}"
+            hass, 1, device_store_key(entry.entry_id)
         )
         self.known_subscription_codes: list[str] = []
 
@@ -193,24 +230,10 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data and manage metadata attributes."""
-        # Read Discovery Toggle
-        allow_discovery = self.entry.options.get(CONF_BACK_DISCOVERY, False)
-        _LOGGER.debug(
-            "HYXI Recursive device discovery via alarms is %s",
-            "ENABLED" if allow_discovery else "DISABLED",
-        )
-
         try:
-            result = await self._fetch_all_device_data(allow_discovery)
-
-            if result is None:
-                self.hyxi_metadata["last_attempts"] = 3  # Hard fail after retries
-                raise UpdateFailed(
-                    "HYXI Cloud unreachable. Check internet or API status."
-                )
-
-            # ✅ Success! Update metadata attributes.
-            devices = result["data"]
+            if self.discovery is not None and self.discovery.data is None:
+                raise UpdateFailed("HYXI devices have not been discovered yet")
+            devices, attempts = await self._fetch_all_device_data()
 
             if not devices:
                 _LOGGER.warning(
@@ -250,7 +273,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                     "Sensors may show stale values until next successful poll."
                 )
 
-            self.hyxi_metadata["last_attempts"] = result.get("attempts", 1)
+            self.hyxi_metadata["last_attempts"] = attempts
             self.hyxi_metadata["last_success"] = dt_util.utcnow()
             self.hyxi_metadata["api_status"] = "Online"
             self.hyxi_metadata["cache_active"] = False
@@ -263,7 +286,7 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             await self._async_sync_device_metadata(devices)
             return devices
 
-        except (ClientError, TimeoutError, UpdateFailed) as err:
+        except UpdateFailed as err:
             cached_devices = await self._try_stale_cache_fallback(err)
             if cached_devices is not None:
                 return cached_devices
@@ -276,26 +299,23 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             self._handle_update_error(err)
             raise
 
-    async def _fetch_all_device_data(self, allow_discovery: bool) -> dict | None:
-        """Fetch device data, raising ConfigEntryAuthFailed only if HYXI
-        rejects the API keys on two attempts in a row."""
-        try:
-            return await self.client.get_all_device_data(
-                allow_back_discovery=allow_discovery
-            )
-        except HyxiAuthError:
-            _LOGGER.warning(
-                "HYXI Cloud rejected the API keys; retrying in %ss", AUTH_RECHECK_DELAY
-            )
-        await asyncio.sleep(AUTH_RECHECK_DELAY)
-        try:
-            return await self.client.get_all_device_data(
-                allow_back_discovery=allow_discovery
-            )
-        except HyxiAuthError as err:
-            raise ConfigEntryAuthFailed(
-                "HYXI Cloud rejected the access/secret key"
-            ) from err
+    async def _fetch_all_device_data(self) -> tuple[dict, int]:
+        """Poll the discovered devices, retrying a transient failure, and
+        return them with the number of attempts it took. Raises UpdateFailed
+        once every attempt has failed."""
+        for attempt in range(1, POLL_ATTEMPTS + 1):
+            if attempt > 1:
+                await asyncio.sleep((attempt - 1) * POLL_RETRY_DELAY)
+            try:
+                devices = await _with_auth_recheck(self.client.poll_devices)
+            except (ClientError, TimeoutError) as err:
+                _LOGGER.debug(
+                    "HYXI poll attempt %d/%d failed: %s", attempt, POLL_ATTEMPTS, err
+                )
+            else:
+                return devices, attempt
+        self.hyxi_metadata["last_attempts"] = POLL_ATTEMPTS
+        raise UpdateFailed("HYXI Cloud unreachable. Check internet or API status.")
 
     async def _try_stale_cache_fallback(self, err: Exception) -> dict | None:
         """On a fetch failure, try to fall back to cached devices from storage.
@@ -367,20 +387,11 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _handle_update_error(self, err: Exception) -> None:
         """Handle exceptions during update and map to HA exceptions."""
-        if isinstance(err, (ConfigEntryAuthFailed, UpdateFailed)):
-            self.hyxi_metadata["last_error"] = str(err)
-            self.hyxi_metadata["api_status"] = "Error"
-        elif isinstance(err, (ClientError, TimeoutError)):
-            _LOGGER.error("Unexpected error in HYXI update: %s", err)
-            self.hyxi_metadata["last_attempts"] += 1
-            self.hyxi_metadata["last_error"] = str(err)
-            self.hyxi_metadata["api_status"] = "Error"
-            raise UpdateFailed(f"Unexpected error: {err}") from err
-        else:
+        self.hyxi_metadata["last_error"] = str(err)
+        self.hyxi_metadata["api_status"] = "Error"
+        if not isinstance(err, (ConfigEntryAuthFailed, UpdateFailed)):
             _LOGGER.error("Unhandled exception in HYXI update: %s", err)
             self.hyxi_metadata["last_attempts"] += 1
-            self.hyxi_metadata["last_error"] = str(err)
-            self.hyxi_metadata["api_status"] = "Error"
             raise UpdateFailed(f"Unhandled exception: {err}") from err
 
     async def _async_sync_device_metadata(self, devices):
@@ -416,3 +427,59 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
                     sw_version=sw_version,
                     hw_version=hw_version,
                 )
+
+
+class HyxiDiscoveryCoordinator(DataUpdateCoordinator[DiscoveryResult]):
+    """Discovers a cloud entry's devices at startup and then hourly, so the
+    telemetry coordinator only polls them."""
+
+    def __init__(
+        self, hass: HomeAssistant, client: HyxiApiClient, entry: ConfigEntry
+    ) -> None:
+        """Initialize with the hourly discovery interval."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN} discovery",
+            update_interval=DISCOVERY_INTERVAL,
+            config_entry=entry,
+        )
+        self.client = client
+        self.entry = entry
+        self._retry_in = DISCOVERY_RETRY
+
+    async def _async_update_data(self) -> DiscoveryResult:
+        """Discover the devices, retrying sooner unless discovery completes."""
+        complete = False
+        try:
+            result = await self._discover()
+            complete = result.complete
+            return result
+        finally:
+            self._schedule_next_discovery(complete)
+
+    async def _discover(self) -> DiscoveryResult:
+        """Discover the devices; a discovery that could not list any device
+        fails rather than reporting none."""
+        allow_back_discovery = self.entry.options.get(CONF_BACK_DISCOVERY, False)
+        try:
+            result = await _with_auth_recheck(
+                lambda: self.client.discover_devices(
+                    allow_back_discovery=allow_back_discovery
+                )
+            )
+        except (ClientError, TimeoutError) as err:
+            raise UpdateFailed(f"HYXI device discovery failed: {err}") from err
+        if not result.complete and not result.devices:
+            raise UpdateFailed("HYXI device discovery could not list any devices")
+        return result
+
+    def _schedule_next_discovery(self, complete: bool) -> None:
+        """Rediscover hourly after a complete discovery, otherwise after the
+        retry delay, which doubles until a discovery completes."""
+        if complete:
+            self.update_interval = DISCOVERY_INTERVAL  # pylint: disable=attribute-defined-outside-init
+            self._retry_in = DISCOVERY_RETRY
+            return
+        self.update_interval = self._retry_in  # pylint: disable=attribute-defined-outside-init
+        self._retry_in = min(self._retry_in * 2, DISCOVERY_INTERVAL)

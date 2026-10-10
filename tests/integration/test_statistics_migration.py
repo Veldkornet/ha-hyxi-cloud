@@ -23,14 +23,14 @@ from custom_components.hyxi_cloud.const import (
     DOMAIN,
     entry_stable_key,
 )
-from tests.integration.entries import cloud_entry
+from tests.integration.entries import cloud_entry, serve_devices
 
 
 async def _setup_with_devices(hass: HomeAssistant, entry: MockConfigEntry, data: dict):
     with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_class:
         mock_client = AsyncMock()
         mock_client._refresh_token.return_value = True
-        mock_client.get_all_device_data.return_value = {"data": data, "attempts": 1}
+        serve_devices(mock_client, data)
         mock_client_class.return_value = mock_client
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
