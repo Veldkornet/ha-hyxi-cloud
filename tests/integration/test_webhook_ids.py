@@ -176,7 +176,7 @@ async def test_an_upgraded_entry_moves_to_random_webhook_ids(
     await _setup(hass, entry)
 
     cancelled = {c.args[0] for c in client.cancel_subscription.await_args_list}
-    assert {"old-push", "old-alarm"} <= cancelled
+    assert cancelled >= {"old-push", "old-alarm"}
     assert entry.data["push_subscribe_code"] == "code-push"
     assert entry.data["alarm_subscribe_code"] == "code-alarm"
     assert entry.entry_id not in _subscribed_url(client.subscribe_real_time_data)

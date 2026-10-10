@@ -1494,8 +1494,13 @@ def _ensure_webhook_ids(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, st
     legacy webhook, with the subscription code made with it, until
     _async_retire_legacy_webhooks retires it.
     """
-    ids = {key: entry.data.get(key) for key in _WEBHOOKS}
-    missing = [key for key, webhook_id in ids.items() if not webhook_id]
+    ids: dict[str, str] = {}
+    missing: list[str] = []
+    for key in _WEBHOOKS:
+        if webhook_id := entry.data.get(key):
+            ids[key] = webhook_id
+        else:
+            missing.append(key)
     if not missing:
         return ids
     legacy = dict(entry.data.get(_LEGACY_WEBHOOKS, {}))

@@ -2,11 +2,11 @@
   "domain": "hyxi_cloud",
   "name": "HYXI",
   "after_dependencies": ["cloud", "modbus"],
-  "dependencies": ["webhook"],
   "codeowners": [
     "@Veldkornet"
   ],
   "config_flow": true,
+  "dependencies": ["webhook"],
   "documentation": "https://github.com/Veldkornet/ha-hyxi-cloud",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Veldkornet/ha-hyxi-cloud/issues",
