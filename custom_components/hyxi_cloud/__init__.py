@@ -2025,16 +2025,13 @@ async def _async_handle_webhook(
         _LOGGER.exception("Error parsing push payload: %s", err)
         return web.Response(status=500, text="Internal Processing Error")
 
-    if not push_results:
-        return web.json_response({"code": "0", "msg": "Success", "success": True})
+    # A push counts as received even when none of its readings is newer.
+    coordinator.last_push_received = dt_util.utcnow()
 
     # 4. Apply updates to coordinator
     if coordinator.data is None:
         coordinator.data = {}
-    any_updated = _apply_push_updates(coordinator, push_results)
-
-    if any_updated:
-        coordinator.last_push_received = dt_util.utcnow()
+    if _apply_push_updates(coordinator, push_results):
         coordinator.async_update_listeners()
 
     return web.json_response({"code": "0", "msg": "Success", "success": True})
@@ -2408,10 +2405,14 @@ def setup_services(hass: HomeAssistant) -> None:
         try:
             await async_cancel_subscription(coordinator.client, subscribe_code)
         except Exception as err:
-            _LOGGER.exception(
+            # HYXI's rejection needs no traceback; anything else does.
+            _LOGGER.error(
                 "Error manual cancelling HYXI subscription %s: %s",
                 mask_subscription_code(subscribe_code),
                 err,
+                exc_info=not isinstance(
+                    err, _subscription_error_class(coordinator.client)
+                ),
             )
             raise HomeAssistantError(f"Failed to cancel subscription: {err}") from err
         await _async_refresh_subscriptions_for(hass, coordinator)
@@ -2608,6 +2609,14 @@ async def _async_refresh_subscriptions_for(
             other.async_update_listeners()
 
 
+def _subscription_error_class(client: HyxiApiClient) -> type[BaseException]:
+    """The error the client raises when HYXI rejects a subscription call."""
+    sub_err_cls = getattr(client, "SubscriptionError", RuntimeError)
+    if isinstance(sub_err_cls, type) and issubclass(sub_err_cls, BaseException):
+        return sub_err_cls
+    return RuntimeError
+
+
 async def async_cancel_subscription(client: HyxiApiClient, code: str) -> None:
     """Cancel a subscription via the API.
 
@@ -2623,13 +2632,7 @@ async def async_cancel_subscription(client: HyxiApiClient, code: str) -> None:
     _LOGGER.info("Cancelling HYXI subscription: %s", mask_subscription_code(code))
     res = await client.cancel_subscription(code)
     if isinstance(res, dict) and not res.get("success"):
-        msg = res.get("msg", _UNKNOWN_ERROR)
-        sub_err_cls = getattr(client, "SubscriptionError", RuntimeError)
-        if not isinstance(sub_err_cls, type) or not issubclass(
-            sub_err_cls, BaseException
-        ):
-            sub_err_cls = RuntimeError
-        raise sub_err_cls(msg)
+        raise _subscription_error_class(client)(res.get("msg", _UNKNOWN_ERROR))
 
     _LOGGER.info(
         "Successfully cancelled HYXI subscription: %s", mask_subscription_code(code)

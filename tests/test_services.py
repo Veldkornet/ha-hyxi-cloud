@@ -125,9 +125,16 @@ async def test_service_call_no_coordinators(hass):
         )
 
 
+def _cancel_log_record(caplog):
+    """The one log record of a failed manual cancel."""
+    [record] = [r for r in caplog.records if "Error manual cancelling" in r.message]
+    return record
+
+
 @pytest.mark.asyncio
-async def test_service_call_api_failure(hass, mock_coordinator):
-    """Test service raises error if client cancel API returns success=False."""
+async def test_service_call_api_failure(hass, mock_coordinator, caplog):
+    """Test service raises error if client cancel API returns success=False,
+    and logs HYXI's rejection without a traceback."""
     mock_coordinator.client.cancel_subscription.return_value = {
         "success": False,
         "msg": "Invalid subscribe code",
@@ -145,6 +152,31 @@ async def test_service_call_api_failure(hass, mock_coordinator):
             {"subscribe_code": "bad-code"},
             blocking=True,
         )
+
+    record = _cancel_log_record(caplog)
+    assert "Invalid subscribe code" in record.message
+    assert not record.exc_info
+
+
+@pytest.mark.asyncio
+async def test_service_call_unexpected_error_keeps_traceback(
+    hass, mock_coordinator, caplog
+):
+    """An error other than HYXI's rejection is logged with its traceback."""
+    mock_coordinator.client.cancel_subscription.side_effect = AttributeError("bug")
+    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    setup_services(hass)
+
+    with pytest.raises(HomeAssistantError, match="Failed to cancel subscription: bug"):
+        await hass.services.async_call(
+            DOMAIN,
+            "cancel_subscription",
+            {"subscribe_code": "bad-code"},
+            blocking=True,
+        )
+
+    record = _cancel_log_record(caplog)
+    assert record.exc_info is not None
 
 
 @pytest.mark.asyncio
