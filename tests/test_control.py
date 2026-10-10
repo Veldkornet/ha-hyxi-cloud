@@ -343,20 +343,19 @@ async def test_send_battery_mode_skips_verification_for_modbus(coord):
 
 
 @pytest.mark.asyncio
-async def test_send_battery_mode_skips_verification_for_a_skipped_traceid(coord):
-    """Regression test: observed live against a device under active
-    third-party (energy-provider) VPP dispatch, HYXI returned traceId:
-    "SKIPPED" rather than a real, pollable one -- must not schedule a
-    verification task for it (control_verify.extract_trace_id already
-    rejects it; this proves the rejection reaches all the way through
-    the real async_send_battery_mode call path)."""
-    coord.client.set_mode_idle.return_value = {
-        "success": True,
-        "data": [{"traceId": "SKIPPED", "deviceSn": "SN123"}],
-    }
+async def test_send_battery_mode_reports_a_command_hyxi_did_not_forward(coord):
+    """A mode command HYXI accepted but did not forward to the device (its
+    traceId was "SKIPPED") fails with HYXI's explanation and schedules no
+    verification."""
+    not_forwarded = control_mod.HyxiApiClient.ControlNotForwardedError(
+        "HYXI accepted control 1062 but did not forward it to the device",
+        {"success": True, "data": [{"traceId": "SKIPPED", "deviceSn": "SN123"}]},
+    )
+    coord.client.set_mode_idle.side_effect = not_forwarded
     hass = MagicMock()
 
-    await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
+    with pytest.raises(HomeAssistantError, match="VPP authorization"):
+        await control_mod.async_send_battery_mode(hass, coord, "SN123", "idle")
 
     coord.entry.async_create_background_task.assert_not_called()
 

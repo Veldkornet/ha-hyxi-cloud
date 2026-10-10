@@ -10,6 +10,16 @@ from custom_components.hyxi_cloud import control_verify
 from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 
 
+def _patch_control_errors(protection_mod, control_error):
+    """Patch the client's ControlError, and ControlNotForwardedError as a
+    subclass of it, as the real client defines them."""
+    return patch.multiple(
+        protection_mod.HyxiApiClient,
+        ControlError=control_error,
+        ControlNotForwardedError=type("_NotForwarded", (control_error,), {}),
+    )
+
+
 class FakeCoordinator:
     """Minimal coordinator stub for protection tests."""
 
@@ -549,7 +559,7 @@ async def test_ensure_mode_swallows_a_rejected_control_write(caplog):
     )
     controller._send_control = AsyncMock(side_effect=_ControlError("write rejected"))
 
-    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+    with _patch_control_errors(protection_mod, _ControlError):
         caplog.set_level(
             logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
         )
@@ -597,7 +607,7 @@ async def test_ensure_mode_permission_denied_gets_distinct_guidance(caplog):
     )
     external_control = _ControlError("request failed (code=B003099): busy")
 
-    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+    with _patch_control_errors(protection_mod, _ControlError):
         caplog.set_level(
             logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
         )
@@ -634,6 +644,44 @@ async def test_ensure_mode_permission_denied_gets_distinct_guidance(caplog):
 
 
 @pytest.mark.asyncio
+async def test_ensure_mode_not_forwarded_gets_its_own_guidance(caplog):
+    """A command HYXI accepted but did not forward (credentials without VPP
+    authorization) explains that the cloud cannot control this battery,
+    rather than suggesting external control, and is not resent every
+    cooldown."""
+    import logging
+
+    from custom_components.hyxi_cloud import protection as protection_mod
+
+    class _ControlError(Exception):
+        pass
+
+    controller = _build_controller(50, "H5K-HT")
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    with _patch_control_errors(protection_mod, _ControlError):
+        not_forwarded = protection_mod.HyxiApiClient.ControlNotForwardedError(
+            "HYXI accepted control 1062 but did not forward it to the device"
+        )
+        controller._send_control = AsyncMock(side_effect=not_forwarded)
+        caplog.set_level(
+            logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
+        )
+
+        await controller._ensure_mode("idle")  # must not raise
+
+        # Not resent while paused, however the cooldown stands.
+        controller._last_mode_switch = -999999.0
+        await controller._ensure_mode("idle")
+
+    assert "VPP authorization" in caplog.text
+    assert "under external control" not in caplog.text
+    assert controller._last_control_error_kind == "not_forwarded"
+    assert controller._send_control.await_count == 1
+
+
+@pytest.mark.asyncio
 async def test_ensure_mode_permission_denied_requires_exact_code_boundary(caplog):
     """A code that merely starts with the same digits as B003026 (e.g. a
     hypothetical B0030261), or any other text that quotes the digits
@@ -656,7 +704,7 @@ async def test_ensure_mode_permission_denied_requires_exact_code_boundary(caplog
         "request failed (code=B0030261): unrelated business rule"
     )
 
-    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+    with _patch_control_errors(protection_mod, _ControlError):
         caplog.set_level(
             logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
         )
@@ -690,7 +738,7 @@ async def test_ensure_mode_control_error_on_modbus_never_gets_cloud_guidance(cap
         side_effect=_ControlError("Modbus write failed: code=B003026 coincidence")
     )
 
-    with patch.object(protection_mod.HyxiApiClient, "ControlError", _ControlError):
+    with _patch_control_errors(protection_mod, _ControlError):
         caplog.set_level(
             logging.DEBUG, logger="custom_components.hyxi_cloud.protection"
         )

@@ -50,6 +50,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+from .control import NOT_FORWARDED_PAUSE, NOT_FORWARDED_REASON, NotForwardedPause
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -122,6 +123,7 @@ class EnergyManagerEngine:
         self._last_mode_switch: float = -999999.0
         self._last_decision: str = ""
         self._last_action: str = ""
+        self._not_forwarded = NotForwardedPause()
         self._in_decision: bool = False
         self._last_fast_path_trigger: float = 0
         self._last_power_adjust: float = -999999.0
@@ -613,6 +615,8 @@ class EnergyManagerEngine:
         if (time.monotonic() - self._last_mode_switch) < cooldown:
             _LOGGER.debug("EM: Mode switch to %s blocked by cooldown", mode)
             return False
+        if self._not_forwarded_paused("mode"):
+            return False
 
         if mode in ("charge", "discharge"):
             power_w = int(max(1, min(power_w or 100, 10000)))
@@ -655,6 +659,7 @@ class EnergyManagerEngine:
                 return False
 
             self._last_mode_switch = time.monotonic()
+            self._not_forwarded.forwarded("mode")
             prev_mode = self._current_mode
             self._current_mode = mode
             self._current_mode_trace_id = control_verify.extract_trace_id(
@@ -684,14 +689,45 @@ class EnergyManagerEngine:
 
             return True
 
+        except HyxiApiClient.ControlNotForwardedError as err:
+            self._control_not_forwarded("mode", mode, err)
+            return False
         except HyxiApiClient.ControlError as err:
             _LOGGER.exception("EM: Failed to set mode %s: %s", mode, err)
             return False
+
+    def _not_forwarded_paused(self, kind: str) -> bool:
+        """Whether commands of this kind are paused after HYXI did not
+        forward the last one."""
+        if self._not_forwarded.paused(kind):
+            _LOGGER.debug("EM: %s commands paused, HYXI does not forward them", kind)
+            return True
+        return False
+
+    def _control_not_forwarded(self, kind: str, action: str, err: Exception) -> None:
+        """Record a command HYXI accepted but did not forward to the device.
+
+        Commands of this kind then pause; the first refusal of a kind is
+        logged as a WARNING and repeats at DEBUG, until one gets through.
+        """
+        _LOGGER.log(
+            logging.WARNING if self._not_forwarded.refused(kind) else logging.DEBUG,
+            "EM: %s for %s was not sent to the device: %s. %s; retrying in %d minutes",
+            action,
+            mask_sn(self._sn),
+            err,
+            NOT_FORWARDED_REASON,
+            NOT_FORWARDED_PAUSE // 60,
+        )
+        self._last_action = f"{action} not forwarded by HYXI"
+        self._notify_sensors()
 
     async def _adjust_power(self, direction: str, target_w: int) -> bool:
         """Adjust charge/discharge power and resend command to inverter."""
         adjust_cooldown = self._get_param("power_adjust_cooldown")
         if (time.monotonic() - self._last_power_adjust) < adjust_cooldown:
+            return False
+        if self._not_forwarded_paused("mode"):
             return False
 
         target_w = int(max(1, min(target_w, 10000)))
@@ -729,6 +765,7 @@ class EnergyManagerEngine:
                 response = await client.set_mode_discharge(self._sn, target_w)
 
             self._last_power_adjust = time.monotonic()
+            self._not_forwarded.forwarded("mode")
             self._current_mode = direction
             self._current_mode_trace_id = control_verify.extract_trace_id(
                 response, self._sn, "EM"
@@ -744,6 +781,9 @@ class EnergyManagerEngine:
 
             return True
 
+        except HyxiApiClient.ControlNotForwardedError as err:
+            self._control_not_forwarded("mode", f"{direction} @ {target_w}W", err)
+            return False
         except HyxiApiClient.ControlError as err:
             _LOGGER.exception("EM: Failed to adjust %s power: %s", direction, err)
             return False
@@ -758,6 +798,8 @@ class EnergyManagerEngine:
         pv_curtail_cooldown = 30
         if (time.monotonic() - self._last_pv_curtail_toggle) < pv_curtail_cooldown:
             _LOGGER.debug("EM: Peak shaving '%s' blocked by curtail cooldown", option)
+            return False
+        if self._not_forwarded_paused("peak_shaving"):
             return False
 
         if self._dry_run:
@@ -779,6 +821,7 @@ class EnergyManagerEngine:
         try:
             response = await client.set_peak_shaving(self._sn, option)
             self._last_pv_curtail_toggle = time.monotonic()
+            self._not_forwarded.forwarded("peak_shaving")
             self._pv_curtailed = option == "stop"
             self._pv_curtail_trace_id = control_verify.extract_trace_id(
                 response, self._sn, "EM"
@@ -788,6 +831,9 @@ class EnergyManagerEngine:
             _LOGGER.info("EM: Peak shaving -> %s for %s", option, mask_sn(self._sn))
             self._notify_sensors()
             return True
+        except HyxiApiClient.ControlNotForwardedError as err:
+            self._control_not_forwarded("peak_shaving", f"peak_shaving_{option}", err)
+            return False
         except HyxiApiClient.ControlError as err:
             _LOGGER.exception("EM: Failed to set peak shaving '%s': %s", option, err)
             return False

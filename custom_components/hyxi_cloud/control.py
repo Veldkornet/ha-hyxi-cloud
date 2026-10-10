@@ -10,6 +10,7 @@ hyxi_cloud.set_battery_mode service can use them without a platform module
 from __future__ import annotations
 
 import logging
+import time
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -18,6 +19,41 @@ from hyxi_cloud_api import HyxiApiClient
 
 from . import control_verify
 from .const import DOMAIN, is_modbus_entry, mask_sn
+
+# Why HYXI does not forward a battery mode command (ControlNotForwardedError).
+NOT_FORWARDED_REASON = (
+    "HYXI's cloud only forwards battery mode commands for API credentials "
+    "with HYXI VPP authorization, so it cannot control this battery; a local "
+    "Modbus connection can"
+)
+# How long automatic control pauses a kind of command after HYXI did not
+# forward one.
+NOT_FORWARDED_PAUSE = 3600
+
+
+class NotForwardedPause:
+    """Pauses automatic commands of a kind (such as "mode") after HYXI did
+    not forward one, since it won't with the same credentials."""
+
+    def __init__(self) -> None:
+        """Start with nothing paused."""
+        self._until: dict[str, float] = {}
+
+    def paused(self, kind: str) -> bool:
+        """Whether commands of this kind are paused."""
+        return time.monotonic() < self._until.get(kind, 0)
+
+    def refused(self, kind: str) -> bool:
+        """Pause commands of this kind, returning whether this is the first
+        refusal since one was forwarded."""
+        first = kind not in self._until
+        self._until[kind] = time.monotonic() + NOT_FORWARDED_PAUSE
+        return first
+
+    def forwarded(self, kind: str) -> None:
+        """Note that a command of this kind got through."""
+        self._until.pop(kind, None)
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -234,6 +270,17 @@ async def async_send_battery_mode(
         _maybe_verify_control_result(hass, coordinator, sn, mode, trace_id)
         _LOGGER.info("Mode '%s' command sent to %s", mode, mask_sn(sn))
         await coordinator.async_request_refresh()
+    except HyxiApiClient.ControlNotForwardedError as err:
+        _LOGGER.warning(
+            "Mode '%s' for %s was not sent to the device: %s. %s.",
+            mode,
+            mask_sn(sn),
+            err,
+            NOT_FORWARDED_REASON,
+        )
+        raise HomeAssistantError(
+            f"Failed to set mode '{mode}': {NOT_FORWARDED_REASON}."
+        ) from err
     except HyxiApiClient.ControlError as err:
         _LOGGER.exception("Failed to set mode '%s' for %s: %s", mode, mask_sn(sn), err)
         raise HomeAssistantError(f"Failed to set mode '{mode}': {err}") from err

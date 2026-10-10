@@ -48,18 +48,12 @@ def test_extract_trace_id_malformed_shapes():
     assert _extract({"data": [{"traceId": "   "}]}) is None  # whitespace-only
 
 
-def test_extract_trace_id_rejects_the_skipped_sentinel(caplog):
-    """Regression test: observed live against a device under active
-    third-party (energy-provider) VPP dispatch, HYXI returned the literal
-    string "SKIPPED" as traceId instead of a real one or an absent field.
-    query_control_result("SKIPPED") returns data: None forever (there's
-    nothing by that identifier to look up), so this must be treated the
-    same as no traceId at all rather than scheduled for a poll that can
-    only ever time out. Every genuine traceId (docs and confirmed real
-    traffic) is purely numeric, so anything else is rejected the same way.
-
-    Unlike a plain absent traceId, this is logged -- it's a distinct,
-    informative signal, not just "nothing to report".
+def test_extract_trace_id_rejects_a_non_numeric_trace_id(caplog):
+    """Every genuine traceId (docs and confirmed real traffic) is purely
+    numeric, so any other value -- such as HYXI's "SKIPPED" -- is treated
+    as no traceId rather than scheduled for a poll that can only ever time
+    out. Unlike a plain absent traceId, it is logged, since it's a distinct
+    signal rather than just "nothing to report".
     """
     import logging
 
