@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Vernuwe Stoot-intekeninge"
       },
-      "purge_old_subscriptions": {
-        "name": "Verwyder Ou Intekeninge"
-      },
       "refresh_settings": {
         "name": "Verfris Instellings"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Intekeningkode",
-          "description": "Die 32-karakter intekeningkode. U kan aktiewe/wees kodes vind in Home Assistant se interne stoorlêers (\".storage/core.config_entries\" of \".storage/hyxi_cloud_subscriptions\" - slegs gevorderde gebruikers)."
+          "description": "Die subskripsiekode van 32 karakters. Die \"subscriptions\"-eienskap van die Subscription Status-sensor lys elke subskripsie wat HYXI vir jou API-sleutels hou, met sy kode en terugroep-URL."
         }
       }
     },

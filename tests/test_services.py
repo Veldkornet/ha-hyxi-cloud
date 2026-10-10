@@ -9,10 +9,7 @@ from custom_components.hyxi_cloud import (
     DOMAIN,
     _energy_manager_manages,
     _resolve_battery_mode_targets,
-    async_get_subscription_codes,
-    async_register_subscription_code,
     async_unload_entry,
-    async_unregister_subscription_code,
     setup_services,
 )
 
@@ -159,31 +156,8 @@ async def test_service_call_api_exception(hass, mock_coordinator):
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
     setup_services(hass)
 
-    with pytest.raises(HomeAssistantError, match="API error: network timeout"):
-        await hass.services.async_call(
-            DOMAIN,
-            "cancel_subscription",
-            {"subscribe_code": "bad-code"},
-            blocking=True,
-        )
-
-
-@pytest.mark.asyncio
-async def test_service_call_api_exception_with_parenthesized_code(
-    hass, mock_coordinator
-):
-    """Test the parenthesized-code branch of the 'subscription request
-    failed' error path is exercised (real SDK errors sometimes prefix the
-    message with an API error code in parentheses)."""
-    mock_coordinator.client.cancel_subscription.side_effect = RuntimeError(
-        "subscription request failed: (C000001) Invalid subscribe code"
-    )
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
-    setup_services(hass)
-
     with pytest.raises(
-        HomeAssistantError,
-        match=r"Failed to cancel subscription: \(C000001\) Invalid subscribe code",
+        HomeAssistantError, match="Failed to cancel subscription: network timeout"
     ):
         await hass.services.async_call(
             DOMAIN,
@@ -194,34 +168,45 @@ async def test_service_call_api_exception_with_parenthesized_code(
 
 
 @pytest.mark.asyncio
-async def test_subscription_code_persistence(hass, mock_coordinator):
-    """Test that subscription codes are successfully written to, loaded from, and removed from the Store."""
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
-    mock_coordinator.known_subscription_codes = []
-    mock_coordinator.async_update_listeners = MagicMock()
+async def test_cancel_uses_the_entry_whose_credentials_hold_the_code(hass, mock_entry):
+    """The service cancels through the cloud entry whose HYXI list holds
+    the code, skipping Modbus entries and other credentials, then refreshes
+    the list for the entries on those credentials."""
+    from types import SimpleNamespace
 
-    # Verify initially empty
-    codes = await async_get_subscription_codes(hass)
-    assert codes == []
+    def coordinator(transport, codes):
+        coord = MagicMock()
+        coord.entry = MagicMock(data={"transport": transport})
+        coord.subscriptions = [SimpleNamespace(subscribe_code=c) for c in codes]
+        coord.client.cancel_subscription = AsyncMock(return_value={"success": True})
+        coord.client.list_subscriptions = AsyncMock(return_value=[])
+        return coord
 
-    # Register subscription code
-    await async_register_subscription_code(hass, "test-sub-code-123")
+    modbus = coordinator("modbus", [])
+    other = coordinator("cloud", ["other-code"])
+    holder = coordinator("cloud", ["the-code"])
+    twin = coordinator("cloud", ["the-code"])
+    holder.client.access_key = twin.client.access_key = "same-key"
+    hass.data[DOMAIN] = {
+        "modbus": modbus,
+        "other": other,
+        "holder": holder,
+        "twin": twin,
+    }
+    setup_services(hass)
 
-    # Verify stored in Store and set on coordinator
-    codes = await async_get_subscription_codes(hass)
-    assert codes == ["test-sub-code-123"]
-    assert mock_coordinator.known_subscription_codes == ["test-sub-code-123"]
-    mock_coordinator.async_update_listeners.assert_called_once()
+    await hass.services.async_call(
+        DOMAIN, "cancel_subscription", {"subscribe_code": "the-code"}, blocking=True
+    )
 
-    # Unregister code
-    mock_coordinator.async_update_listeners.reset_mock()
-    await async_unregister_subscription_code(hass, "test-sub-code-123")
-
-    # Verify removed
-    codes = await async_get_subscription_codes(hass)
-    assert codes == []
-    assert mock_coordinator.known_subscription_codes == []
-    mock_coordinator.async_update_listeners.assert_called_once()
+    holder.client.cancel_subscription.assert_awaited_once_with("the-code")
+    other.client.cancel_subscription.assert_not_called()
+    modbus.client.cancel_subscription.assert_not_called()
+    # The list is fetched once and shared with the entry on the same keys.
+    holder.client.list_subscriptions.assert_awaited_once()
+    twin.client.list_subscriptions.assert_not_called()
+    assert twin.subscriptions == []
+    assert other.subscriptions != []
 
 
 # ── set_battery_mode ───────────────────────────────────────────────────

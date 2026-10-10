@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Push Aboneliklerini Yenile"
       },
-      "purge_old_subscriptions": {
-        "name": "Eski Abonelikleri Temizle"
-      },
       "refresh_settings": {
         "name": "Ayarları Yenile"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Abonelik Kodu",
-          "description": "32 karakterlik abonelik kodu. Aktif/yetim kalmış kodları Home Assistant'ın dahili depolama dosyalarında bulabilirsiniz (\".storage/core.config_entries\" veya \".storage/hyxi_cloud_subscriptions\" - sadece gelişmiş kullanıcılar için)."
+          "description": "32 karakterlik abonelik kodu. Subscription Status sensörünün \"subscriptions\" özniteliği, HYXI'nin API anahtarlarınız için tuttuğu tüm abonelikleri kodları ve geri çağırma URL'leriyle listeler."
         }
       }
     },

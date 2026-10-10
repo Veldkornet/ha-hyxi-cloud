@@ -9,7 +9,6 @@ persistent state to become stale or misleading.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -32,7 +31,6 @@ from .const import (
     is_control_capable_device_type,
     is_modbus_entry,
     mask_sn,
-    mask_subscription_code,
     modbus_service_device_info,
     normalize_device_type,
 )
@@ -129,10 +127,9 @@ async def async_setup_entry(
     for sn, dev_data in coordinator.data.items():
         entities.extend(_build_device_buttons(entry, coordinator, sn, dev_data))
 
-    # Expose the Renew Push Subscription and Purge Buttons if push is enabled
+    # Expose the Renew Push Subscription button if push is enabled
     if entry.options.get(CONF_ENABLE_PUSH, False) is True:
         entities.append(HyxiRenewSubscriptionButton(coordinator, entry))
-        entities.append(HyxiPurgeSubscriptionsButton(coordinator, entry))
 
     # Modbus always reads the settings block on a timer regardless of this
     # option (see client.py's async_read_settings), but only the setting
@@ -550,13 +547,14 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
     async def async_press(self) -> None:
         """Force renew both push subscriptions (data + alarm); clears the
         local code even if the remote cancel fails, since this is an
-        explicit user action and the code stays in known_subscription_codes
-        as a fallback either way."""
+        explicit user action -- an old subscription HYXI still holds stays
+        listed on the Subscription Status sensor for manual cancelling."""
         from . import (
             _async_setup_alarm_subscription,
             _async_setup_push_subscription,
             _async_teardown_alarm_subscription,
             _async_teardown_push_subscription,
+            async_refresh_subscriptions,
         )
 
         _LOGGER.info("Manually triggered HYXI push subscription renewal (data + alarm)")
@@ -576,142 +574,13 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
             await _async_setup_alarm_subscription(
                 self.hass, self._entry, self.coordinator
             )
+            await async_refresh_subscriptions(self.coordinator)
 
             # Notify coordinator entities of change
             self.coordinator.async_update_listeners()
         except Exception as err:
             _LOGGER.exception("Failed to renew HYXI push subscriptions: %s", err)
             raise HomeAssistantError(f"Subscription renewal failed: {err}") from err
-
-
-def _active_subscription_codes(hass) -> set[str]:
-    """Collect active subscription codes across all loaded coordinators."""
-    active_codes = set()
-    for coord in hass.data.get(DOMAIN, {}).values():
-        if getattr(coord, "subscribe_code", None):
-            active_codes.add(coord.subscribe_code)
-        if getattr(coord, "alarm_subscribe_code", None):
-            active_codes.add(coord.alarm_subscribe_code)
-    return active_codes
-
-
-async def _purge_subscription_codes(
-    hass, coordinator, to_purge: list[str]
-) -> tuple[int, int, int]:
-    """Cancel each inactive subscription code concurrently, falling back to a
-    local-only removal when the remote cancel fails.
-
-    Returns (success_count, remote_failed, failure_count).
-    """
-    from . import (
-        async_cancel_and_unregister_subscription,
-        async_get_subscription_codes,
-        async_unregister_subscription_code,
-    )
-
-    tasks = [
-        async_cancel_and_unregister_subscription(hass, coordinator.client, code)
-        for code in to_purge
-    ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    success_count = 0
-    failed_codes = []
-    for code, result in zip(to_purge, results, strict=True):
-        if isinstance(result, asyncio.CancelledError):
-            raise result
-        if isinstance(result, Exception):
-            failed_codes.append((code, result))
-        else:
-            success_count += 1
-
-    remote_failed = 0
-    failure_count = 0
-    if failed_codes:
-        all_known_after = await async_get_subscription_codes(hass)
-        for code, err in failed_codes:
-            if code not in all_known_after:
-                # Already gone from the registry (e.g. removed by a concurrent path)
-                success_count += 1
-                continue
-            # Purge is an explicit user action, so remove the code from
-            # the local registry even though the remote cancel failed --
-            # HYXI has no "not found" response, so a dead code would
-            # otherwise fail here forever and never be purgeable.
-            _LOGGER.warning(
-                "Could not cancel subscription %s remotely (%s); "
-                "removing it from the local registry anyway as requested",
-                mask_subscription_code(code),
-                err,
-            )
-            try:
-                await async_unregister_subscription_code(hass, code)
-                success_count += 1
-                remote_failed += 1
-            except Exception as storage_err:  # pylint: disable=broad-exception-caught
-                _LOGGER.exception(
-                    "Failed to remove subscription code %s from local registry: %s",
-                    mask_subscription_code(code),
-                    storage_err,
-                )
-                failure_count += 1
-
-    return success_count, remote_failed, failure_count
-
-
-class HyxiPurgeSubscriptionsButton(ButtonEntity):
-    """Button to purge old (inactive) HYXI subscriptions."""
-
-    _attr_has_entity_name = True
-    _attr_translation_key = "purge_old_subscriptions"
-    _attr_icon = "mdi:webhook"
-
-    def __init__(self, coordinator, entry: ConfigEntry) -> None:
-        """Initialize the purge subscriptions button."""
-        self.coordinator = coordinator
-        self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_purge_old_subscriptions"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
-            "manufacturer": MANUFACTURER,
-            "model": "Cloud API Bridge",
-        }
-
-    async def async_press(self) -> None:
-        """Purge old inactive subscriptions."""
-        from . import async_get_subscription_codes
-
-        _LOGGER.info("Manually triggered HYXI purge of old subscriptions")
-
-        active_codes = _active_subscription_codes(self.hass)
-        all_known = await async_get_subscription_codes(self.hass)
-        # Identify codes to purge (must NOT be in use)
-        to_purge = [code for code in all_known if code not in active_codes]
-
-        if not to_purge:
-            _LOGGER.info("No old subscription codes to purge")
-            return
-
-        _LOGGER.info("Found %d old subscription codes to purge", len(to_purge))
-
-        success_count, remote_failed, failure_count = await _purge_subscription_codes(
-            self.hass, self.coordinator, to_purge
-        )
-
-        _LOGGER.info(
-            "Purged old subscriptions complete: %d purged/removed "
-            "(%d of those only locally, remote cancel failed), %d failed",
-            success_count,
-            remote_failed,
-            failure_count,
-        )
-
-        if failure_count > 0:
-            raise HomeAssistantError(
-                f"Purged {success_count} old subscriptions, but {failure_count} failed. "
-                "Check logs for details."
-            )
 
 
 class HyxiRefreshSettingsButton(ButtonEntity):

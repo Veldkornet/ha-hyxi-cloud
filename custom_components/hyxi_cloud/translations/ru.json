@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Обновить push-подписки"
       },
-      "purge_old_subscriptions": {
-        "name": "Очистить старые подписки"
-      },
       "refresh_settings": {
         "name": "Обновить настройки"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Код подписки",
-          "description": "32-значный код подписки. Активные/потерянные коды можно найти во внутренних файлах Home Assistant (\".storage/core.config_entries\" или \".storage/hyxi_cloud_subscriptions\" - только для опытных пользователей)."
+          "description": "32-символьный код подписки. Атрибут «subscriptions» датчика Subscription Status перечисляет все подписки, которые HYXI хранит для ваших API-ключей, с их кодом и URL обратного вызова."
         }
       }
     },

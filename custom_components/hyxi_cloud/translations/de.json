@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Push-Abonnements erneuern"
       },
-      "purge_old_subscriptions": {
-        "name": "Alte Abonnements bereinigen"
-      },
       "refresh_settings": {
         "name": "Einstellungen aktualisieren"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Abonnementcode",
-          "description": "Der 32-stellige Abonnementcode. Sie finden aktive/verwaiste Codes in den internen Speicherdateien von Home Assistant (\".storage/core.config_entries\" oder \".storage/hyxi_cloud_subscriptions\" - nur für fortgeschrittene Benutzer)."
+          "description": "Der 32-stellige Abonnementcode. Das Attribut „subscriptions“ des Sensors Subscription Status listet alle Abonnements auf, die HYXI für deine API-Schlüssel führt, mit Code und Callback-URL."
         }
       }
     },

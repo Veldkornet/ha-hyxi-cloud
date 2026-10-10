@@ -1,6 +1,5 @@
 """Integration tests for HYXI webhook push subscription and callback processing."""
 
-import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -57,6 +56,7 @@ def mock_coordinator(mock_entry):
     coordinator.client.cancel_subscription = AsyncMock()
 
     # Initialize push status fields as in coordinator.py
+    coordinator.subscriptions = None
     coordinator.push_enabled = False
     coordinator.subscribe_code = None
     coordinator.webhook_id = None
@@ -200,6 +200,72 @@ async def test_setup_push_subscription_reuses_unchanged_subscription(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("held_codes", "reused"),
+    [(["old-sub-code", "other"], True), (["other"], False)],
+    ids=["held-by-hyxi", "no-longer-held"],
+)
+async def test_setup_push_subscription_reuses_only_codes_hyxi_holds(
+    mock_coordinator, mock_entry, held_codes, reused
+):
+    """A persisted code is reused only while HYXI's subscription list still
+    holds it; otherwise a fresh subscription is made."""
+    from types import SimpleNamespace
+
+    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+
+    hass = MagicMock()
+    webhook_url = "https://my-ha.local/api/webhook/hyxi_cloud_entry_123"
+    fingerprint = _compute_subscription_fingerprint(webhook_url, ["INV123"], 10000)
+    mock_entry.data = {
+        "push_subscribe_code": "old-sub-code",
+        "push_subscribe_fingerprint": fingerprint,
+    }
+    mock_coordinator.subscriptions = [
+        SimpleNamespace(subscribe_code=code) for code in held_codes
+    ]
+    mock_coordinator.client.list_subscriptions = AsyncMock(return_value=[])
+
+    with (
+        patch("custom_components.hyxi_cloud.__init__.webhook"),
+        patch(
+            "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+            new=AsyncMock(return_value=webhook_url),
+        ),
+    ):
+        await _async_setup_push_subscription(hass, mock_entry, mock_coordinator)
+
+    if reused:
+        mock_coordinator.client.subscribe_real_time_data.assert_not_called()
+        assert mock_coordinator.subscribe_code == "old-sub-code"
+    else:
+        mock_coordinator.client.subscribe_real_time_data.assert_awaited_once()
+        assert mock_coordinator.subscribe_code == "test-sub-code"
+
+
+@pytest.mark.asyncio
+async def test_a_stored_code_hyxi_no_longer_holds_is_forgotten_not_cancelled(
+    mock_coordinator, mock_entry
+):
+    """With push turned off, a stored code HYXI's list no longer holds is
+    just forgotten: there is nothing to cancel."""
+    hass = MagicMock()
+    mock_entry.options = {}
+    mock_entry.data = {
+        "push_subscribe_code": "gone-code",
+        "push_subscribe_fingerprint": "fp",
+    }
+    mock_coordinator.subscriptions = []
+
+    await _async_setup_push_subscription(hass, mock_entry, mock_coordinator)
+
+    mock_coordinator.client.cancel_subscription.assert_not_called()
+    new_data = hass.config_entries.async_update_entry.call_args.kwargs["data"]
+    assert new_data["push_subscribe_code"] is None
+    assert new_data["push_subscribe_fingerprint"] is None
+
+
+@pytest.mark.asyncio
 async def test_setup_push_subscription_recreates_when_rate_changed(
     mock_coordinator, mock_entry
 ):
@@ -308,8 +374,8 @@ async def test_teardown_push_subscription_force_clears_on_cancel_failure(
     mock_coordinator, mock_entry
 ):
     """With force=True (the Renew Subscription button), the code is cleared
-    locally even when the remote cancel fails -- it remains recoverable via
-    known_subscription_codes either way."""
+    locally even when the remote cancel fails -- a subscription HYXI still
+    holds stays listed on the Subscription Status sensor either way."""
     hass = MagicMock()
     mock_coordinator.webhook_id = "hyxi_cloud_entry_123"
     mock_coordinator.subscribe_code = "test-sub-code"
@@ -540,39 +606,36 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
 
 
 @pytest.mark.asyncio
-async def test_async_cancel_and_unregister_subscription_empty_code(hass):
+async def test_async_cancel_subscription_empty_code(hass):
     """Test a blank/whitespace-only code is a no-op -- nothing to cancel."""
-    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+    from custom_components.hyxi_cloud import async_cancel_subscription
 
     client = MagicMock()
     client.cancel_subscription = AsyncMock()
 
-    await async_cancel_and_unregister_subscription(hass, client, "   ")
+    await async_cancel_subscription(hass, client, "   ")
 
     client.cancel_subscription.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_async_cancel_and_unregister_subscription_success(hass):
-    """Test successful unregistration."""
-    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+async def test_async_cancel_subscription_success(hass):
+    """A confirmed cancel completes without raising."""
+    from custom_components.hyxi_cloud import async_cancel_subscription
 
     client = MagicMock()
     client.cancel_subscription = AsyncMock(return_value={"success": True})
 
-    with patch(
-        "custom_components.hyxi_cloud.async_unregister_subscription_code",
-        new_callable=AsyncMock,
-    ) as mock_unregister:
-        await async_cancel_and_unregister_subscription(hass, client, "test-code")
-        mock_unregister.assert_called_once_with(hass, "test-code")
+    await async_cancel_subscription(hass, client, "test-code")
+
+    client.cancel_subscription.assert_awaited_once_with("test-code")
 
 
 @pytest.mark.asyncio
-async def test_async_cancel_and_unregister_subscription_api_failure_response(hass):
-    """A non-success API response is not unregistered: HYXI has no "not found"
-    error code, so a failure response is never proof the subscription is gone."""
-    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+async def test_async_cancel_subscription_api_failure_response(hass):
+    """A non-success API response raises: HYXI has no "not found" error
+    code, so a failure response is never proof the subscription is gone."""
+    from custom_components.hyxi_cloud import async_cancel_subscription
 
     class DummySubscriptionError(Exception):
         pass
@@ -584,18 +647,18 @@ async def test_async_cancel_and_unregister_subscription_api_failure_response(has
     )
 
     with patch(
-        "custom_components.hyxi_cloud.async_unregister_subscription_code",
+        "custom_components.hyxi_cloud._async_refresh_subscriptions_for",
         new_callable=AsyncMock,
     ) as mock_unregister:
         with pytest.raises(DummySubscriptionError):
-            await async_cancel_and_unregister_subscription(hass, client, "test-code")
+            await async_cancel_subscription(hass, client, "test-code")
         mock_unregister.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_async_cancel_and_unregister_subscription_transient_error(hass):
-    """Transient errors (auth/connection/rate-limit) are NOT unregistered and raise the error."""
-    from custom_components.hyxi_cloud import async_cancel_and_unregister_subscription
+async def test_async_cancel_subscription_transient_error(hass):
+    """Transient errors (auth/connection/rate-limit) raise the error."""
+    from custom_components.hyxi_cloud import async_cancel_subscription
 
     class DummySubscriptionError(Exception):
         pass
@@ -607,11 +670,11 @@ async def test_async_cancel_and_unregister_subscription_transient_error(hass):
     )
 
     with patch(
-        "custom_components.hyxi_cloud.async_unregister_subscription_code",
+        "custom_components.hyxi_cloud._async_refresh_subscriptions_for",
         new_callable=AsyncMock,
     ) as mock_unregister:
         with pytest.raises(DummySubscriptionError, match="Authentication failed"):
-            await async_cancel_and_unregister_subscription(hass, client, "test-code")
+            await async_cancel_subscription(hass, client, "test-code")
         mock_unregister.assert_not_called()
 
 
@@ -631,222 +694,3 @@ async def test_button_press_renew_error(mock_coordinator, mock_entry):
                 button_mod.HomeAssistantError, match="Subscription renewal failed"
             ):
                 await button.async_press()
-
-
-@pytest.mark.asyncio
-async def test_button_press_purge_no_codes_to_purge(mock_coordinator, mock_entry):
-    """Test the purge button is a no-op when every stored code is still active."""
-    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
-
-    hass = MagicMock()
-    mock_coordinator.subscribe_code = "active-1"
-    mock_coordinator.alarm_subscribe_code = None
-    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
-
-    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
-    button.hass = hass
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.async_get_subscription_codes",
-            new_callable=AsyncMock,
-            return_value=["active-1"],
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
-            new_callable=AsyncMock,
-        ) as mock_cancel_helper,
-    ):
-        await button.async_press()
-
-        mock_cancel_helper.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_button_press_purge_reraises_cancelled_error(
-    mock_coordinator, mock_entry
-):
-    """Test a CancelledError from a purge task is re-raised, not swallowed as
-    a regular failure -- task cancellation must propagate."""
-    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
-
-    hass = MagicMock()
-    mock_coordinator.subscribe_code = None
-    mock_coordinator.alarm_subscribe_code = None
-    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
-
-    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
-    button.hass = hass
-
-    async def _cancelled(*_args, **_kwargs):
-        raise asyncio.CancelledError
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.async_get_subscription_codes",
-            new_callable=AsyncMock,
-            return_value=["dead-code"],
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
-            new=_cancelled,
-        ),
-        pytest.raises(asyncio.CancelledError),
-    ):
-        await button.async_press()
-
-
-@pytest.mark.asyncio
-async def test_button_press_purge_code_already_removed_concurrently(
-    mock_coordinator, mock_entry
-):
-    """Test a code whose remote cancel failed but that's already gone from
-    the registry by the time we check (e.g. removed by a concurrent purge)
-    still counts as purged, without a redundant local unregister call."""
-    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
-
-    hass = MagicMock()
-    mock_coordinator.subscribe_code = None
-    mock_coordinator.alarm_subscribe_code = None
-    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
-
-    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
-    button.hass = hass
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.async_get_subscription_codes",
-            new_callable=AsyncMock,
-            # First call (initial list) has the code; second call (recheck
-            # after the failed remote cancel) shows it's already gone.
-            side_effect=[["dead-code"], []],
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
-            new=AsyncMock(side_effect=RuntimeError("subscription request failed")),
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_unregister_subscription_code",
-            new_callable=AsyncMock,
-        ) as mock_unregister,
-    ):
-        await button.async_press()
-
-        mock_unregister.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_button_press_purge_raises_when_local_removal_also_fails(
-    mock_coordinator, mock_entry
-):
-    """Test that if BOTH the remote cancel and the local registry removal
-    fail, the button surfaces a HomeAssistantError to the user."""
-    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
-
-    hass = MagicMock()
-    mock_coordinator.subscribe_code = None
-    mock_coordinator.alarm_subscribe_code = None
-    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
-
-    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
-    button.hass = hass
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.async_get_subscription_codes",
-            new_callable=AsyncMock,
-            side_effect=[["dead-code"], ["dead-code"]],
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
-            new=AsyncMock(side_effect=RuntimeError("subscription request failed")),
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_unregister_subscription_code",
-            new=AsyncMock(side_effect=OSError("storage unavailable")),
-        ),
-    ):
-        with pytest.raises(button_mod.HomeAssistantError, match="1 failed"):
-            await button.async_press()
-
-
-@pytest.mark.asyncio
-async def test_button_press_purge(mock_coordinator, mock_entry):
-    """Test purge button filters active codes and calls cancel helper."""
-    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
-
-    hass = MagicMock()
-    coordinator2 = MagicMock()
-    coordinator2.subscribe_code = "active-1"
-    coordinator2.alarm_subscribe_code = "active-2"
-
-    mock_coordinator.subscribe_code = "active-3"
-    mock_coordinator.alarm_subscribe_code = None
-
-    hass.data = {
-        DOMAIN: {
-            "entry_1": coordinator2,
-            "entry_2": mock_coordinator,
-        }
-    }
-
-    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
-    button.hass = hass
-
-    stored_codes = ["active-1", "active-2", "active-3", "inactive-1", "inactive-2"]
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.async_get_subscription_codes",
-            new_callable=AsyncMock,
-            return_value=stored_codes,
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
-            new_callable=AsyncMock,
-        ) as mock_cancel_helper,
-    ):
-        await button.async_press()
-
-        assert mock_cancel_helper.call_count == 2
-        mock_cancel_helper.assert_any_call(hass, mock_coordinator.client, "inactive-1")
-        mock_cancel_helper.assert_any_call(hass, mock_coordinator.client, "inactive-2")
-
-
-@pytest.mark.asyncio
-async def test_button_press_purge_removes_locally_on_remote_cancel_failure(
-    mock_coordinator, mock_entry
-):
-    """Purge is explicit user intent, so a code whose remote cancel fails
-    (HYXI has no "not found" response, so a dead code fails the same as a
-    live one) must still be removed from the local registry."""
-    from custom_components.hyxi_cloud.button import HyxiPurgeSubscriptionsButton
-
-    hass = MagicMock()
-    mock_coordinator.subscribe_code = None
-    mock_coordinator.alarm_subscribe_code = None
-    hass.data = {DOMAIN: {"entry_2": mock_coordinator}}
-
-    button = HyxiPurgeSubscriptionsButton(mock_coordinator, mock_entry)
-    button.hass = hass
-
-    stored_codes = ["dead-code"]
-
-    with (
-        patch(
-            "custom_components.hyxi_cloud.async_get_subscription_codes",
-            new_callable=AsyncMock,
-            side_effect=[stored_codes, stored_codes],
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_cancel_and_unregister_subscription",
-            new=AsyncMock(side_effect=RuntimeError("subscription request failed")),
-        ),
-        patch(
-            "custom_components.hyxi_cloud.async_unregister_subscription_code",
-            new_callable=AsyncMock,
-        ) as mock_unregister,
-    ):
-        await button.async_press()
-
-        mock_unregister.assert_called_once_with(hass, "dead-code")

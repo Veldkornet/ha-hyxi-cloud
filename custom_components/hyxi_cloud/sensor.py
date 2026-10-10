@@ -7,6 +7,7 @@ import logging
 import math
 from dataclasses import dataclass, is_dataclass, replace
 from datetime import UTC, datetime, timedelta
+from enum import IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 
 from homeassistant.components.sensor import (
@@ -2257,7 +2258,18 @@ class HyxiSubscriptionStatusSensor(
                 "last_push_received": alarm_last.isoformat() if alarm_last else None,
                 "error": getattr(coord, "alarm_push_error", None),
             },
-            "known_subscription_codes": getattr(coord, "known_subscription_codes", []),
+            # Everything HYXI holds for these credentials, including any
+            # left behind, for cancelling with hyxi_cloud.cancel_subscription.
+            "subscriptions": [
+                {
+                    "subscribe_code": sub.subscribe_code,
+                    "type": _subscription_type_name(sub.subscribe_type),
+                    "callback_url": sub.callback_url,
+                    "created": sub.create_time,
+                    "devices": list(sub.devices),
+                }
+                for sub in getattr(coord, "subscriptions", None) or []
+            ],
         }
 
     @callback
@@ -2265,6 +2277,14 @@ class HyxiSubscriptionStatusSensor(
         """Handle updated data from the coordinator."""
         self._update_value()
         super()._handle_coordinator_update()
+
+
+def _subscription_type_name(subscribe_type: int | None) -> str | int | None:
+    """A subscription type as its name ("alarm"), or as HYXI's number for a
+    type this version does not know."""
+    if isinstance(subscribe_type, IntEnum):
+        return subscribe_type.name.lower()
+    return subscribe_type
 
 
 class HyxiMicroinverterSumSensor(
