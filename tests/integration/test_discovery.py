@@ -20,6 +20,9 @@ from custom_components.hyxi_cloud.coordinator import (
 )
 from tests.integration.entries import cloud_entry, serve_devices
 
+# Past the coordinator's request-refresh debounce, so a requested poll runs.
+PAST_REFRESH_DEBOUNCE = timedelta(seconds=11)
+
 
 def _inverter(sn: str) -> dict:
     return {
@@ -31,6 +34,17 @@ def _inverter(sn: str) -> dict:
 
 def _devices(*sns: str) -> dict:
     return {sn: _inverter(sn) for sn in sns}
+
+
+def _seed_cache(hass_storage: dict, entry, *sns: str) -> None:
+    """Store a fresh device cache for the entry, as a previous run left it."""
+    key = device_store_key(entry.entry_id)
+    hass_storage[key] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": key,
+        "data": {"cached_at": dt_util.utcnow().isoformat(), "devices": _devices(*sns)},
+    }
 
 
 @pytest.fixture
@@ -140,16 +154,7 @@ async def test_failed_startup_discovery_uses_cached_devices(
     """If discovery fails at startup, cached devices stand in for them and
     the entry still loads; nothing is polled until discovery succeeds."""
     entry = cloud_entry(hass)
-    key = device_store_key(entry.entry_id)
-    hass_storage[key] = {
-        "version": 1,
-        "minor_version": 1,
-        "key": key,
-        "data": {
-            "cached_at": dt_util.utcnow().isoformat(),
-            "devices": _devices("SN_A"),
-        },
-    }
+    _seed_cache(hass_storage, entry, "SN_A")
     client.discover_devices.side_effect = TimeoutError("unreachable")
 
     await _setup(hass, entry)
@@ -164,7 +169,7 @@ async def test_failed_startup_discovery_uses_cached_devices(
     client.discover_devices.side_effect = None
     serve_devices(client, _devices("SN_A"))
     await coordinator.discovery.async_refresh()
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=11))
+    async_fire_time_changed(hass, dt_util.utcnow() + PAST_REFRESH_DEBOUNCE)
     await hass.async_block_till_done()
 
     assert hass.data[DOMAIN][entry.entry_id] is coordinator
@@ -231,3 +236,45 @@ async def test_a_failed_rediscovery_keeps_the_entry(hass: HomeAssistant, client)
     await hass.async_block_till_done()
 
     assert hass.data[DOMAIN][entry.entry_id] is coordinator
+
+
+@pytest.mark.asyncio
+async def test_a_device_whose_first_poll_failed_is_added_once_polled(
+    hass: HomeAssistant, hass_storage, client
+):
+    """A device discovered at startup whose first poll failed (so the entry
+    loaded from a cache without it) gets its entities once a poll returns
+    it. Rediscovering it asks for that poll; while polling keeps failing,
+    the entry is not reloaded."""
+    entry = cloud_entry(hass)
+    _seed_cache(hass_storage, entry, "SN_A")
+    serve_devices(client, _devices("SN_A", "SN_B"))
+    client.poll_devices.side_effect = TimeoutError("unreachable")
+    with (
+        patch("custom_components.hyxi_cloud.coordinator.POLL_RETRY_DELAY", 0),
+        patch.object(hass.config_entries, "async_schedule_reload") as schedule_reload,
+    ):
+        await _setup(hass, entry)
+        coordinator = hass.data[DOMAIN][entry.entry_id]
+        assert not _registered(hass, entry, "SN_B")
+
+        polls = client.poll_devices.await_count
+        await coordinator.discovery.async_refresh()
+        await hass.async_block_till_done()
+        assert client.poll_devices.await_count > polls
+        schedule_reload.assert_not_called()
+
+        client.poll_devices.side_effect = None
+        await coordinator.discovery.async_refresh()
+        async_fire_time_changed(hass, dt_util.utcnow() + PAST_REFRESH_DEBOUNCE)
+        await hass.async_block_till_done()
+        schedule_reload.assert_called_once_with(entry.entry_id)
+
+        # A push update before the reload runs does not schedule another.
+        coordinator.async_update_listeners()
+        schedule_reload.assert_called_once()
+
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert _registered(hass, entry, "SN_B")

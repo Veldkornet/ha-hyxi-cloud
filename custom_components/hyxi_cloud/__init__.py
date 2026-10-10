@@ -5,7 +5,6 @@ import asyncio
 import hashlib
 import hmac
 import logging
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from aiohttp import ClientError, web
@@ -244,6 +243,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _async_setup_battery_protection(hass, coordinator)
     _async_setup_energy_manager(hass, entry, coordinator)
 
+    # The devices the platforms create entities for.
+    entry_devices = frozenset(coordinator.data or {})
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Start EM engine after platforms are loaded (entities need to exist first)
@@ -252,17 +253,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     if discovery is not None:
-        entry.async_on_unload(
-            discovery.async_add_listener(
-                _reload_on_device_changes(
-                    hass,
-                    entry,
-                    coordinator,
-                    discovery,
-                    frozenset(coordinator.data or {}),
-                )
-            )
-        )
+        _track_new_devices(hass, entry, coordinator, discovery, entry_devices)
 
     setup_services(hass)
 
@@ -296,38 +287,53 @@ async def _async_first_discovery(
         )
 
 
-def _reload_on_device_changes(
+def _track_new_devices(
     hass: HomeAssistant,
     entry: ConfigEntry,
     coordinator: HyxiDataUpdateCoordinator,
     discovery: HyxiDiscoveryCoordinator,
     entry_devices: frozenset[str],
-) -> Callable[[], None]:
-    """A discovery listener that reloads the entry when discovery finds
-    devices it has no entities for. A device that disappears needs no
-    reload: it drops out of the polled data and its entities go
-    unavailable."""
+) -> None:
+    """Reload the entry when polling returns devices it has no entities for.
 
-    discovered_once = discovery.data is not None
+    Platforms create entities from the devices polled at setup, so a device
+    discovered later needs a reload. Waiting for a live poll that includes
+    it, rather than reacting to discovery alone, keeps a failing poll (which
+    falls back to cached devices) from reloading the entry over and over.
+    Discovery requests that poll as soon as it finds unpolled devices. A
+    device that disappears needs no reload: it drops out of the polled data
+    and its entities go unavailable.
+    """
+    reload_scheduled = False
 
     @callback
-    def _check() -> None:
-        nonlocal discovered_once
+    def _on_discovery() -> None:
         if not discovery.last_update_success or discovery.data is None:
             return
-        added = frozenset(discovery.data.devices) - entry_devices
+        unpolled = frozenset(discovery.data.devices) - frozenset(coordinator.data or {})
+        # Cached data also means nothing has been polled since discovery
+        # last failed.
+        if unpolled or coordinator.hyxi_metadata["cache_active"]:
+            entry.async_create_task(hass, coordinator.async_request_refresh())
+
+    @callback
+    def _on_poll() -> None:
+        nonlocal reload_scheduled
+        if reload_scheduled or coordinator.hyxi_metadata["cache_active"]:
+            return
+        added = frozenset(coordinator.data or {}) - entry_devices
         if added:
             _LOGGER.info(
-                "HYXI discovered %d new device(s); reloading to add their entities",
+                "HYXI found %d new device(s); reloading to add their entities",
                 len(added),
             )
+            reload_scheduled = True
             hass.config_entries.async_schedule_reload(entry.entry_id)
-        elif not discovered_once:
-            # Polling had nothing to poll until this first discovery.
-            entry.async_create_task(hass, coordinator.async_request_refresh())
-        discovered_once = True
 
-    return _check
+    # The discovery coordinator has no entities; this listener is also what
+    # keeps it on its schedule.
+    entry.async_on_unload(discovery.async_add_listener(_on_discovery))
+    entry.async_on_unload(coordinator.async_add_listener(_on_poll))
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
