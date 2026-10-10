@@ -1129,13 +1129,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 "enable_battery_control"
             ]
 
-        if CONF_ENABLE_PUSH in user_input:
-            self._options[CONF_ENABLE_PUSH] = user_input[CONF_ENABLE_PUSH]
-        if CONF_PUSH_RATE in user_input:
-            # SelectSelector always returns strings; coerce back to int for SDK
-            self._options[CONF_PUSH_RATE] = int(user_input[CONF_PUSH_RATE])
-        if CONF_PUSH_URL in user_input:
-            self._options[CONF_PUSH_URL] = (user_input[CONF_PUSH_URL] or "").strip()
+        self._apply_push_input(user_input)
 
         enable_em = self._options.get(CONF_EM_ENABLED, False)
         if "enable_energy_manager" in user_input:
@@ -1178,6 +1172,16 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         self._drop_stale_em_and_push_keys()
         return self.async_create_entry(title="", data=self._options)
+
+    def _apply_push_input(self, user_input: dict) -> None:
+        """Copy the submitted push settings into self._options."""
+        if CONF_ENABLE_PUSH in user_input:
+            self._options[CONF_ENABLE_PUSH] = user_input[CONF_ENABLE_PUSH]
+        if CONF_PUSH_RATE in user_input:
+            # SelectSelector always returns strings; coerce back to int for SDK
+            self._options[CONF_PUSH_RATE] = int(user_input[CONF_PUSH_RATE])
+        if CONF_PUSH_URL in user_input:
+            self._options[CONF_PUSH_URL] = (user_input[CONF_PUSH_URL] or "").strip()
 
     def _drop_stale_em_and_push_keys(self) -> None:
         """Remove EM keys (EM is disabled), and push keys too if push ended
