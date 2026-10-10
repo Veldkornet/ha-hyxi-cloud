@@ -22,7 +22,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import network
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import UpdateFailed
-from hyxi_cloud_api import HyxiApiClient
+from hyxi_cloud_api import HyxiApiClient, SubscriptionType
 from hyxi_cloud_api import __version__ as API_VERSION
 
 from .const import (
@@ -192,7 +192,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
         discovery = HyxiDiscoveryCoordinator(hass, client, entry)
         coordinator.discovery = discovery
-        coordinator.known_subscription_codes = await async_get_subscription_codes(hass)
 
     # Pre-seed coordinator.data from persistent cache so that if the API is slow
     # or unreachable at startup, data is immediately available and the fallback
@@ -224,14 +223,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # entry skips both entirely rather than subscribing on a device it does
     # not reach through the cloud at all.
     if not modbus:
+        await _async_remove_subscription_store(hass)
+        # Fetched first, so a stored code HYXI no longer holds isn't reused.
+        await async_refresh_subscriptions(coordinator)
         # Both handle enablement checks and cleanup of orphaned codes.
         await _async_setup_push_subscription(hass, entry, coordinator)
         await _async_setup_alarm_subscription(hass, entry, coordinator)
+        await async_refresh_subscriptions(coordinator)
 
     _migrate_hybrid_serial_decoding(hass, entry, coordinator.data)
     _async_register_devices(hass, entry, coordinator)
 
     _remove_legacy_select_entities(hass, coordinator.data)
+    _remove_purge_subscriptions_button(hass, entry)
     _migrate_vpp_dispatch_to_work_mode(hass, entry, coordinator.data)
     _migrate_battery_sensor_unique_ids(hass, entry, coordinator.data)
     _merge_duplicate_battery_energy_sensors(hass, entry)
@@ -310,6 +314,7 @@ def _track_new_devices(
     def _on_discovery() -> None:
         if not discovery.last_update_success or discovery.data is None:
             return
+        entry.async_create_task(hass, async_refresh_subscriptions(coordinator))
         unpolled = frozenset(discovery.data.devices) - frozenset(coordinator.data or {})
         # Cached data also means nothing has been polled since discovery
         # last failed.
@@ -420,12 +425,13 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     )
     for code in codes:
         try:
-            await async_cancel_and_unregister_subscription(hass, client, code)
+            await async_cancel_subscription(client, code)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning(
                 "Could not cancel subscription %s during entry removal: %s "
-                "(it remains in known_subscription_codes for manual cleanup via "
-                "the hyxi_cloud.cancel_subscription service)",
+                "(once the integration is set up again, it is listed on the "
+                "Subscription Status sensor for the "
+                "hyxi_cloud.cancel_subscription service)",
                 mask_subscription_code(code),
                 err,
             )
@@ -852,6 +858,18 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         return
     _LOGGER.debug("HYXI: Options updated, reloading integration to apply new settings")
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _remove_purge_subscriptions_button(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the "Purge Old Subscriptions" button: the Subscription Status
+    sensor now lists what HYXI holds, to cancel through the service."""
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id(
+        "button", DOMAIN, f"{entry.entry_id}_purge_old_subscriptions"
+    )
+    if entity_id is not None:
+        _LOGGER.debug("Removing obsolete HYXI button %s", entity_id)
+        registry.async_remove(entity_id)
 
 
 def _remove_legacy_select_entities(hass: HomeAssistant, devices: dict) -> None:
@@ -1506,7 +1524,17 @@ def _compute_subscription_fingerprint(
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+def _hyxi_holds(coordinator: HyxiDataUpdateCoordinator, code: str) -> bool | None:
+    """Whether HYXI's subscription list for the entry holds code, or None
+    while the list has not been fetched."""
+    held = coordinator.subscriptions
+    if held is None:
+        return None
+    return any(sub.subscribe_code == code for sub in held)
+
+
 def _should_reuse_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
+    coordinator: HyxiDataUpdateCoordinator,
     entry: ConfigEntry,
     config_key: str,
     fingerprint_key: str,
@@ -1518,8 +1546,9 @@ def _should_reuse_subscription(  # pylint: disable=too-many-arguments, too-many-
 
     A code is reusable when nothing that would invalidate it (callback URL,
     device list, or push rate) has changed since it was created, per the
-    stored fingerprint. Returns None if there's no persisted code, or the
-    fingerprint no longer matches and a fresh subscribe is needed. Shared by
+    stored fingerprint, and HYXI still holds it (assumed when its
+    subscription list could not be fetched). Returns None if there's no
+    persisted code, or it can't be reused and a fresh subscribe is needed. Shared by
     the push and alarm setup flows so this decision only needs to be
     changed in one place.
     """
@@ -1529,9 +1558,15 @@ def _should_reuse_subscription(  # pylint: disable=too-many-arguments, too-many-
     fingerprint = _compute_subscription_fingerprint(
         webhook_url, device_sns, push_rate_ms
     )
-    if entry.data.get(fingerprint_key) == fingerprint:
-        return prior_code
-    return None
+    if entry.data.get(fingerprint_key) != fingerprint:
+        return None
+    if _hyxi_holds(coordinator, prior_code) is False:
+        _LOGGER.info(
+            "HYXI no longer holds subscription %s; subscribing again",
+            mask_subscription_code(prior_code),
+        )
+        return None
+    return prior_code
 
 
 def _clear_subscription_entry_data(
@@ -1543,9 +1578,8 @@ def _clear_subscription_entry_data(
     )
 
 
-async def _async_maybe_cancel_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
-    hass: HomeAssistant,
-    client,
+async def _async_maybe_cancel_subscription(
+    coordinator: HyxiDataUpdateCoordinator,
     subscribe_code: str,
     log_prefix: str,
     force: bool,
@@ -1568,8 +1602,7 @@ async def _async_maybe_cancel_subscription(  # pylint: disable=too-many-argument
         return False
 
     try:
-        await async_cancel_and_unregister_subscription(hass, client, subscribe_code)
-        return True
+        await _async_cancel_and_forget(coordinator, subscribe_code)
     except Exception as err:  # pylint: disable=broad-exception-caught
         _LOGGER.warning(
             "Error cancelling %s subscription%s: %s",
@@ -1578,6 +1611,7 @@ async def _async_maybe_cancel_subscription(  # pylint: disable=too-many-argument
             err,
         )
         return force
+    return True
 
 
 def _log_push_subscription_failure(push_type: str, err_msg: str) -> None:
@@ -1585,14 +1619,70 @@ def _log_push_subscription_failure(push_type: str, err_msg: str) -> None:
     if "B004002" in err_msg or "repeatedly" in err_msg:
         _LOGGER.warning(
             "Failed to register %s subscription: %s. "
-            "If you have an active/orphaned subscription on another instance, retrieve the code from the "
-            "Subscription Status sensor's attributes (known_subscription_codes) and cancel it using the "
+            "If you have an active/orphaned subscription on another instance, find its code in the "
+            "Subscription Status sensor's 'subscriptions' attribute and cancel it using the "
             "'hyxi_cloud.cancel_subscription' service.",
             push_type,
             err_msg,
         )
     else:
         _LOGGER.warning("Failed to register %s subscription: %s", push_type, err_msg)
+
+
+async def _async_cancel_and_forget(
+    coordinator: HyxiDataUpdateCoordinator, code: str
+) -> None:
+    """Cancel a subscription and drop it from the entry's copy of HYXI's
+    list, so it isn't taken for one still in place. Raises like
+    async_cancel_subscription when the cancel fails."""
+    await async_cancel_subscription(coordinator.client, code)
+    if coordinator.subscriptions is not None:
+        coordinator.subscriptions = [
+            sub for sub in coordinator.subscriptions if sub.subscribe_code != code
+        ]
+
+
+async def _async_cancel_conflicting_subscriptions(
+    coordinator: HyxiDataUpdateCoordinator,
+    subscribe_type: SubscriptionType,
+    device_sns: list[str],
+    log_prefix: str,
+) -> None:
+    """Cancel the subscriptions of this type HYXI holds for any of these
+    devices, whoever made them: HYXI rejects a new subscription for a device
+    that already has one. One without devices (as alarm subscriptions can
+    be) is taken to cover them all."""
+    if coordinator.subscriptions is None:
+        _LOGGER.debug(
+            "%s: HYXI's subscription list is unknown, so existing "
+            "subscriptions that could block a new one are not cancelled",
+            log_prefix,
+        )
+        return
+    devices = set(device_sns)
+    conflicting = [
+        sub
+        for sub in coordinator.subscriptions
+        if sub.subscribe_type == subscribe_type
+        and (not sub.devices or devices.intersection(sub.devices))
+    ]
+    for sub in conflicting:
+        _LOGGER.warning(
+            "%s: cancelling existing subscription %s (callback %s) for this "
+            "entry's devices, which would block a new one",
+            log_prefix,
+            mask_subscription_code(sub.subscribe_code),
+            mask_url(sub.callback_url),
+        )
+        try:
+            await _async_cancel_and_forget(coordinator, sub.subscribe_code)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.warning(
+                "%s: could not cancel subscription %s: %s",
+                log_prefix,
+                mask_subscription_code(sub.subscribe_code),
+                err,
+            )
 
 
 async def _async_cancel_entry_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
@@ -1607,6 +1697,13 @@ async def _async_cancel_entry_subscription(  # pylint: disable=too-many-argument
     prior_code = entry.data.get(config_key)
     if not prior_code:
         return
+    new_data = {**entry.data, config_key: None}
+    if fingerprint_key:
+        new_data[fingerprint_key] = None
+    if _hyxi_holds(coordinator, prior_code) is False:
+        # Nothing to cancel: HYXI no longer holds it.
+        hass.config_entries.async_update_entry(entry, data=new_data)
+        return
 
     _LOGGER.debug(
         "%s: Cancelling prior/orphaned subscription (code: %s)",
@@ -1614,9 +1711,7 @@ async def _async_cancel_entry_subscription(  # pylint: disable=too-many-argument
         mask_subscription_code(prior_code),
     )
     try:
-        await async_cancel_and_unregister_subscription(
-            hass, coordinator.client, prior_code
-        )
+        await _async_cancel_and_forget(coordinator, prior_code)
     except Exception as err:  # pylint: disable=broad-exception-caught
         _LOGGER.debug(
             "%s: Could not cancel prior subscription, preserving code for retry: %s",
@@ -1625,9 +1720,6 @@ async def _async_cancel_entry_subscription(  # pylint: disable=too-many-argument
         )
         return
 
-    new_data = {**entry.data, config_key: None}
-    if fingerprint_key:
-        new_data[fingerprint_key] = None
     hass.config_entries.async_update_entry(entry, data=new_data)
 
 
@@ -1661,8 +1753,6 @@ async def _async_execute_real_time_subscription(  # pylint: disable=too-many-arg
                     "push_subscribe_fingerprint": fingerprint,
                 },
             )
-            if coordinator.subscribe_code:
-                await async_register_subscription_code(hass, coordinator.subscribe_code)
             _LOGGER.info(
                 "Successfully subscribed to HYXI Real-Time Push (code: %s)",
                 mask_subscription_code(coordinator.subscribe_code),
@@ -1709,10 +1799,6 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
                     "alarm_subscribe_fingerprint": fingerprint,
                 },
             )
-            if coordinator.alarm_subscribe_code:
-                await async_register_subscription_code(
-                    hass, coordinator.alarm_subscribe_code
-                )
             _LOGGER.info(
                 "Successfully subscribed to HYXI Alarm Push (code: %s)",
                 mask_subscription_code(coordinator.alarm_subscribe_code),
@@ -1799,10 +1885,8 @@ async def _async_setup_push_subscription(
         coordinator.push_status = "inactive"
         return
 
-    # There is no HYXI endpoint to verify a code is still valid server-side;
-    # if it has gone stale, the "Renew Subscription" button forces a fresh
-    # cancel + subscribe.
     reused_code = _should_reuse_subscription(
+        coordinator,
         entry,
         "push_subscribe_code",
         "push_subscribe_fingerprint",
@@ -1830,6 +1914,12 @@ async def _async_setup_push_subscription(
         "push_subscribe_code",
         _PUSH_SUBSCRIPTION_LABEL,
         fingerprint_key="push_subscribe_fingerprint",
+    )
+    await _async_cancel_conflicting_subscriptions(
+        coordinator,
+        SubscriptionType.REAL_TIME_DATA,
+        device_sns,
+        _PUSH_SUBSCRIPTION_LABEL,
     )
 
     _LOGGER.debug(
@@ -1862,9 +1952,9 @@ async def _async_teardown_push_subscription(
     (e.g. the Renew Subscription button) -- the automatic teardown paths
     must never do this, since the code is otherwise the only way to recover
     the account's one push subscription slot without contacting the
-    supplier. It stays safe even when forced because the code remains in
-    the account-wide `known_subscription_codes` store (only removed on a
-    confirmed API cancel) for manual recovery.
+    supplier. It stays safe even when forced because a subscription HYXI
+    still holds stays listed in the Subscription Status sensor's
+    `subscriptions` attribute for manual cancelling.
     """
     webhook_id = coordinator.webhook_id
     if webhook_id:
@@ -1878,8 +1968,7 @@ async def _async_teardown_push_subscription(
     subscribe_code = coordinator.subscribe_code
     if subscribe_code:
         should_clear = await _async_maybe_cancel_subscription(
-            hass,
-            coordinator.client,
+            coordinator,
             subscribe_code,
             _PUSH_SUBSCRIPTION_LABEL,
             force,
@@ -2094,6 +2183,7 @@ async def _async_setup_alarm_subscription(
         return
 
     reused_code = _should_reuse_subscription(
+        coordinator,
         entry,
         "alarm_subscribe_code",
         "alarm_subscribe_fingerprint",
@@ -2121,6 +2211,12 @@ async def _async_setup_alarm_subscription(
         "alarm_subscribe_code",
         _ALARM_PUSH_SUBSCRIPTION_LABEL,
         fingerprint_key="alarm_subscribe_fingerprint",
+    )
+    await _async_cancel_conflicting_subscriptions(
+        coordinator,
+        SubscriptionType.ALARM,
+        device_sns,
+        _ALARM_PUSH_SUBSCRIPTION_LABEL,
     )
 
     _LOGGER.debug(
@@ -2160,8 +2256,7 @@ async def _async_teardown_alarm_subscription(
     subscribe_code = getattr(coordinator, "alarm_subscribe_code", None)
     if subscribe_code:
         should_clear = await _async_maybe_cancel_subscription(
-            hass,
-            coordinator.client,
+            coordinator,
             subscribe_code,
             _ALARM_PUSH_SUBSCRIPTION_LABEL,
             force,
@@ -2294,39 +2389,36 @@ def setup_services(hass: HomeAssistant) -> None:
         if not subscribe_code:
             raise HomeAssistantError("Subscription code cannot be empty")
 
-        coordinators_values = hass.data.get(DOMAIN, {}).values()
-        if not coordinators_values:
+        cloud = [
+            coord
+            for coord in hass.data.get(DOMAIN, {}).values()
+            if not is_modbus_entry(coord.entry)
+        ]
+        if not cloud:
             raise HomeAssistantError(
                 "No active HYXI Cloud integration entries found to call the API"
             )
 
-        # Use the client from the first active integration entry
-        coordinator = next(iter(coordinators_values))
+        # The entry whose credentials HYXI lists the code under, else the
+        # first cloud entry.
+        coordinator = next(
+            (coord for coord in cloud if _hyxi_holds(coord, subscribe_code)),
+            cloud[0],
+        )
         _LOGGER.info(
             "Manually cancelling HYXI subscription: %s",
             mask_subscription_code(subscribe_code),
         )
         try:
-            await async_cancel_and_unregister_subscription(
-                hass, coordinator.client, subscribe_code
-            )
+            await async_cancel_subscription(coordinator.client, subscribe_code)
         except Exception as err:
             _LOGGER.exception(
                 "Error manual cancelling HYXI subscription %s: %s",
                 mask_subscription_code(subscribe_code),
                 err,
             )
-            err_msg = str(err)
-            if "subscription request failed" in err_msg:
-                # Extract the API error message
-                api_msg = err_msg.split("subscription request failed:", 1)[-1].strip()
-                if api_msg.startswith("(") and ")" in api_msg:
-                    # Strip any parenthesized code if present (e.g. from real SDK)
-                    pass
-                raise HomeAssistantError(
-                    f"Failed to cancel subscription: {api_msg}"
-                ) from err
-            raise HomeAssistantError(f"API error: {err}") from err
+            raise HomeAssistantError(f"Failed to cancel subscription: {err}") from err
+        await _async_refresh_subscriptions_for(hass, coordinator)
 
     hass.services.async_register(
         DOMAIN,
@@ -2477,83 +2569,56 @@ def _energy_manager_manages(
     )
 
 
-STORAGE_KEY = "hyxi_cloud_subscriptions"
-STORAGE_VERSION = 1
-_SUBSCRIPTION_STORE_LOCK = asyncio.Lock()
+# The list of subscription codes earlier versions kept; HYXI's own
+# subscription list replaces it.
+_LEGACY_SUBSCRIPTION_STORE = "hyxi_cloud_subscriptions"
 
 
-async def async_register_subscription_code(hass: HomeAssistant, code: str) -> None:
-    """Save a subscription code to persistent storage and update coordinators."""
-    from unittest.mock import Mock
+async def _async_remove_subscription_store(hass: HomeAssistant) -> None:
+    """Delete the subscription code list earlier versions kept, if any."""
+    from homeassistant.helpers.storage import Store
 
-    if isinstance(hass, Mock):
+    await Store(hass, 1, _LEGACY_SUBSCRIPTION_STORE).async_remove()
+
+
+async def async_refresh_subscriptions(coordinator: HyxiDataUpdateCoordinator) -> None:
+    """Fetch the subscriptions HYXI holds for the entry's credentials, keeping
+    the last list if HYXI can't be reached."""
+    try:
+        coordinator.subscriptions = await coordinator.client.list_subscriptions()
+    except (ClientError, TimeoutError) as err:
+        _LOGGER.debug("Could not reach HYXI to list subscriptions: %s", err)
         return
-
-    from homeassistant.helpers.storage import Store
-
-    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    async with _SUBSCRIPTION_STORE_LOCK:
-        data = await store.async_load() or {}
-        codes = data.setdefault("codes", [])
-        if code not in codes:
-            codes.append(code)
-            await store.async_save(data)
-
-        # Update active coordinators
-        for coordinator in hass.data.get(DOMAIN, {}).values():
-            coordinator.known_subscription_codes = list(codes)
-            coordinator.async_update_listeners()
-
-
-async def async_unregister_subscription_code(hass: HomeAssistant, code: str) -> None:
-    """Remove a subscription code from persistent storage."""
-    from unittest.mock import Mock
-
-    if isinstance(hass, Mock):
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        _LOGGER.warning("HYXI did not list the push subscriptions: %s", err)
         return
-
-    from homeassistant.helpers.storage import Store
-
-    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    async with _SUBSCRIPTION_STORE_LOCK:
-        data = await store.async_load() or {}
-        codes = data.get("codes", [])
-        if code in codes:
-            codes.remove(code)
-            await store.async_save(data)
-
-        # Update active coordinators
-        for coordinator in hass.data.get(DOMAIN, {}).values():
-            coordinator.known_subscription_codes = list(codes)
-            coordinator.async_update_listeners()
+    coordinator.async_update_listeners()
 
 
-async def async_get_subscription_codes(hass: HomeAssistant) -> list[str]:
-    """Retrieve all saved subscription codes."""
-    from unittest.mock import Mock
-
-    if isinstance(hass, Mock):
-        return []
-
-    from homeassistant.helpers.storage import Store
-
-    store: Store[dict[str, list[str]]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    data = await store.async_load() or {}
-    return data.get("codes", [])
-
-
-async def async_cancel_and_unregister_subscription(
-    hass: HomeAssistant, client, code: str
+async def _async_refresh_subscriptions_for(
+    hass: HomeAssistant, coordinator: HyxiDataUpdateCoordinator
 ) -> None:
-    """Cancel a subscription via the API and unregister it from storage.
+    """Refresh HYXI's subscription list once, for every loaded cloud entry
+    with the same credentials as coordinator."""
+    await async_refresh_subscriptions(coordinator)
+    access_key = getattr(coordinator.client, "access_key", None)
+    for other in hass.data.get(DOMAIN, {}).values():
+        if (
+            other is not coordinator
+            and not is_modbus_entry(other.entry)
+            and getattr(other.client, "access_key", None) == access_key
+        ):
+            other.subscriptions = coordinator.subscriptions
+            other.async_update_listeners()
 
-    The code is only removed from local storage when the API confirms the
-    cancellation succeeded. HYXI has no "subscription not found" error code,
-    so a failure response (including transient/rate-limit errors) is not a
-    reliable signal that the subscription is actually gone -- losing track
-    of it locally means contacting the supplier to reset the account's one
-    push subscription slot. Any failure is preserved and re-raised so
-    callers know not to discard their own record of the code either.
+
+async def async_cancel_subscription(client: HyxiApiClient, code: str) -> None:
+    """Cancel a subscription via the API.
+
+    HYXI has no "subscription not found" error code, so a failure response
+    (including transient/rate-limit errors) is not a reliable signal that
+    the subscription is actually gone. Any failure is re-raised so callers
+    know not to discard their own record of the code.
     """
     code = code.strip()
     if not code:
@@ -2568,9 +2633,8 @@ async def async_cancel_and_unregister_subscription(
             sub_err_cls, BaseException
         ):
             sub_err_cls = RuntimeError
-        raise sub_err_cls(f"subscription request failed: {msg}")
+        raise sub_err_cls(msg)
 
-    await async_unregister_subscription_code(hass, code)
     _LOGGER.info(
         "Successfully cancelled HYXI subscription: %s", mask_subscription_code(code)
     )

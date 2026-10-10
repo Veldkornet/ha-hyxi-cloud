@@ -55,6 +55,7 @@ def mock_coordinator():
     coord.alarm_webhook_id = None
     coord.alarm_push_status = "inactive"
     coord.alarm_last_push_received = None
+    coord.subscriptions = None
     coord.client = MagicMock()
     coord.client.access_key = "test_ak"
     coord.client.cancel_subscription = AsyncMock()

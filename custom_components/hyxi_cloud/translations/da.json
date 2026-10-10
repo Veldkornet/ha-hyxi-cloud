@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Forny Push-abonnementer"
       },
-      "purge_old_subscriptions": {
-        "name": "Ryd Gamle Abonnementer"
-      },
       "refresh_settings": {
         "name": "Opdater Indstillinger"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Abonnementskode",
-          "description": "Den 32-tegns abonnementskode. Du kan finde aktive/forældreløse koder i Home Assistants interne lagringsfiler (\".storage/core.config_entries\" eller \".storage/hyxi_cloud_subscriptions\" - kun for avancerede brugere)."
+          "description": "Den 32 tegn lange abonnementskode. Attributten \"subscriptions\" på sensoren Subscription Status viser alle abonnementer, som HYXI har for dine API-nøgler, med kode og callback-URL."
         }
       }
     },

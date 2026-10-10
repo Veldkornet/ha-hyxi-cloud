@@ -104,6 +104,22 @@ from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import
 
 
 @pytest.fixture(autouse=True)
+def mock_subscription_listing():
+    """Setup's subscription listing and old-store cleanup, stubbed."""
+    with (
+        patch(
+            "custom_components.hyxi_cloud.__init__.async_refresh_subscriptions",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "custom_components.hyxi_cloud.__init__._async_remove_subscription_store",
+            new_callable=AsyncMock,
+        ),
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def mock_discovery_coordinator():
     """A discovery coordinator whose startup discovery succeeds."""
     with patch(
@@ -588,14 +604,14 @@ async def test_async_remove_entry_cancels_subscriptions(mock_hass, mock_entry):
         patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient") as mock_client_cls,
         patch(
-            "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+            "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
             new_callable=AsyncMock,
         ) as mock_cancel,
     ):
         await async_remove_entry(mock_hass, mock_entry)
 
         assert mock_cancel.call_count == 2
-        cancelled = {call.args[2] for call in mock_cancel.call_args_list}
+        cancelled = {call.args[1] for call in mock_cancel.call_args_list}
         assert cancelled == {"sub_code_123", "alarm_code_123"}
         mock_client_cls.assert_called_once()
 
@@ -615,7 +631,7 @@ async def test_async_remove_entry_survives_cancel_failure(mock_hass, mock_entry)
         patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
         patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
         patch(
-            "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+            "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
             new=AsyncMock(side_effect=RuntimeError("network error")),
         ),
     ):
@@ -1986,6 +2002,9 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                 ):
                     with (
                         patch(
+                            "custom_components.hyxi_cloud.__init__._remove_purge_subscriptions_button"
+                        ),
+                        patch(
                             "custom_components.hyxi_cloud.__init__._migrate_vpp_dispatch_to_work_mode"
                         ),
                         patch(
@@ -2102,11 +2121,12 @@ async def test_async_setup_push_deactivation_cleanup(mock_hass, mock_entry):
     }
 
     coordinator = MagicMock()
+    coordinator.subscriptions = None
     coordinator.client = MagicMock()
     coordinator.client.cancel_subscription = AsyncMock(return_value={"success": True})
 
     with patch(
-        "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+        "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
         new=AsyncMock(),
     ) as mock_cancel:
         await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
@@ -2114,8 +2134,8 @@ async def test_async_setup_push_deactivation_cleanup(mock_hass, mock_entry):
 
         # Verify cancel and unregister was called for both
         assert mock_cancel.call_count == 2
-        mock_cancel.assert_any_call(mock_hass, coordinator.client, "sub_code_123")
-        mock_cancel.assert_any_call(mock_hass, coordinator.client, "alarm_code_123")
+        mock_cancel.assert_any_call(coordinator.client, "sub_code_123")
+        mock_cancel.assert_any_call(coordinator.client, "alarm_code_123")
 
         # Verify config entry data was updated to clear the codes
         mock_hass.config_entries.async_update_entry.assert_any_call(
@@ -2152,10 +2172,11 @@ async def test_async_setup_push_deactivation_preserves_code_on_cancel_failure(
     }
 
     coordinator = MagicMock()
+    coordinator.subscriptions = None
     coordinator.client = MagicMock()
 
     with patch(
-        "custom_components.hyxi_cloud.__init__.async_cancel_and_unregister_subscription",
+        "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
         new=AsyncMock(side_effect=RuntimeError("temporary network error")),
     ):
         await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)

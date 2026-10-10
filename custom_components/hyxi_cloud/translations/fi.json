@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Uusi push-tilaukset"
       },
-      "purge_old_subscriptions": {
-        "name": "Poista vanhat tilaukset"
-      },
       "refresh_settings": {
         "name": "Päivitä asetukset"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Tilauskoodi",
-          "description": "32-merkkinen tilauskoodi. Löydät aktiiviset/orvoksi jääneet koodit Home Assistantin sisäisistä tallennustiedostoista (\".storage/core.config_entries\" tai \".storage/hyxi_cloud_subscriptions\" - vain edistyneille käyttäjille)."
+          "description": "32-merkkinen tilauskoodi. Subscription Status -anturin \"subscriptions\"-attribuutti luettelee kaikki HYXI:n API-avaimillesi pitämät tilaukset koodeineen ja takaisinkutsun URL-osoitteineen."
         }
       }
     },

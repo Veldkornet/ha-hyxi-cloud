@@ -14,7 +14,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from hyxi_cloud_api import DiscoveryResult, HyxiApiClient, HyxiAuthError
+from hyxi_cloud_api import DiscoveryResult, HyxiApiClient, HyxiAuthError, Subscription
 
 from .const import (
     CONF_BACK_DISCOVERY,
@@ -192,7 +192,8 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
         self.device_store: Store[dict[str, Any]] = Store(
             hass, 1, device_store_key(entry.entry_id)
         )
-        self.known_subscription_codes: list[str] = []
+        # What HYXI holds for the credentials; None until it has been listed.
+        self.subscriptions: list[Subscription] | None = None
 
     async def async_preload_cache(self) -> None:
         """Pre-seed coordinator.data from persistent cache before the first API call.

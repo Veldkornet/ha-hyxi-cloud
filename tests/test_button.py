@@ -121,7 +121,7 @@ async def test_async_setup_entry_no_coordinator_data(
 async def test_async_setup_entry_adds_push_buttons(
     mock_coordinator_fixture, mock_entry_fixture
 ):
-    """Test the renew/purge subscription buttons are added when push is enabled."""
+    """Test the renew subscription button is added when push is enabled."""
     hass = MagicMock()
     hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
     mock_coordinator_fixture.data = {"SN1": {"device_type_code": "UNKNOWN"}}
@@ -133,7 +133,6 @@ async def test_async_setup_entry_adds_push_buttons(
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
     assert any(isinstance(e, button_mod.HyxiRenewSubscriptionButton) for e in entities)
-    assert any(isinstance(e, button_mod.HyxiPurgeSubscriptionsButton) for e in entities)
 
 
 @pytest.mark.asyncio

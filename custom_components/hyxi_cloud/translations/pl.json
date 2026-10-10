@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Odnów subskrypcje push"
       },
-      "purge_old_subscriptions": {
-        "name": "Wyczyść stare subskrypcje"
-      },
       "refresh_settings": {
         "name": "Odśwież ustawienia"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Kod subskrypcji",
-          "description": "32-znakowy kod subskrypcji. Aktywne/osierocone kody można znaleźć w wewnętrznych plikach Home Assistant (\".storage/core.config_entries\" lub \".storage/hyxi_cloud_subscriptions\" - tylko dla zaawansowanych użytkowników)."
+          "description": "Kod subskrypcji o długości 32 znaków. Atrybut „subscriptions” czujnika Subscription Status zawiera wszystkie subskrypcje, które HYXI przechowuje dla Twoich kluczy API, wraz z kodem i adresem URL wywołania zwrotnego."
         }
       }
     },

@@ -903,9 +903,6 @@
       "renew_realtime_subscription": {
         "name": "Push-előfizetések megújítása"
       },
-      "purge_old_subscriptions": {
-        "name": "Régi előfizetések törlése"
-      },
       "refresh_settings": {
         "name": "Beállítások frissítése"
       }
@@ -928,7 +925,7 @@
       "fields": {
         "subscribe_code": {
           "name": "Előfizetés kódja",
-          "description": "A 32 karakteres előfizetés kódja. Az aktív/elárvult kódokat a Home Assistant belső tárolófájljaiban találja (\".storage/core.config_entries\" vagy \".storage/hyxi_cloud_subscriptions\" - csak haladó felhasználóknak)."
+          "description": "A 32 karakteres előfizetési kód. A Subscription Status érzékelő „subscriptions” attribútuma felsorolja az összes előfizetést, amelyet a HYXI az API-kulcsaidhoz nyilvántart, a kódjukkal és a visszahívási URL-jükkel együtt."
         }
       }
     },
