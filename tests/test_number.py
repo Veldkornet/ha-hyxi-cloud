@@ -610,17 +610,13 @@ async def test_hyxi_protection_number_set_value():
 
     # Set up mock controller
     mock_controller = MagicMock()
-    mock_controller.async_evaluate = AsyncMock()
     coordinator.protection_controllers = {"SN1": mock_controller}
-
-    entity.hass = MagicMock()
-    entity.hass.async_create_task = MagicMock()
 
     await entity.async_set_native_value(25.0)
 
     assert entity._attr_native_value == 25
     entity.async_write_ha_state.assert_called_once()
-    entity.hass.async_create_task.assert_called_once()
+    mock_controller.request_evaluation.assert_called_once_with()
 
 
 @pytest.mark.asyncio
