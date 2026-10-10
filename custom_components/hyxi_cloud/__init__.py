@@ -2,6 +2,7 @@
 # pylint: disable=wrong-import-position
 
 import asyncio
+import functools
 import hashlib
 import hmac
 import logging
@@ -224,12 +225,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # not reach through the cloud at all.
     if not modbus:
         await _async_remove_subscription_store(hass)
+        _ensure_webhook_ids(hass, entry)
+        _register_legacy_webhooks(hass, entry, coordinator)
         # Fetched first, so a stored code HYXI no longer holds isn't reused.
         await async_refresh_subscriptions(coordinator)
-        # Both handle enablement checks and cleanup of orphaned codes.
-        await _async_setup_push_subscription(hass, entry, coordinator)
-        await _async_setup_alarm_subscription(hass, entry, coordinator)
-        await async_refresh_subscriptions(coordinator)
+        await _async_sync_subscriptions(hass, entry, coordinator)
 
     _migrate_hybrid_serial_decoding(hass, entry, coordinator.data)
     _async_register_devices(hass, entry, coordinator)
@@ -406,6 +406,16 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     Regular unload keeps subscriptions alive for reuse on the next load, so
     actual deletion of the integration must do the remote cleanup here.
     """
+    for webhook_id in [
+        *(entry.data.get(key) for key in _WEBHOOKS),
+        *(
+            _legacy_webhook_id(entry, key)
+            for key in entry.data.get(_LEGACY_WEBHOOKS, {})
+        ),
+    ]:
+        if webhook_id:
+            await _async_delete_cloudhook(hass, webhook_id)
+
     raw_codes = [
         entry.data.get("push_subscribe_code"),
         entry.data.get("alarm_subscribe_code"),
@@ -1436,6 +1446,122 @@ async def _async_setup_battery_protection(
                 )
 
 
+# Entry data keys of the push and alarm webhook IDs, each with the entry
+# data key of its subscription code and the suffix of its legacy ID.
+_WEBHOOKS = {
+    "webhook_id": ("push_subscribe_code", ""),
+    "alarm_webhook_id": ("alarm_subscribe_code", "_alarm"),
+}
+# Entry data key of the legacy webhooks still in use: webhook ID key ->
+# the subscription code made with the legacy ID (None if there was none).
+_LEGACY_WEBHOOKS = "legacy_webhooks"
+
+
+def _legacy_webhook_id(entry: ConfigEntry, key: str) -> str:
+    """The webhook ID an entry without random IDs used for key."""
+    return f"hyxi_cloud_{entry.entry_id}{_WEBHOOKS[key][1]}"
+
+
+def _register_webhook(
+    hass: HomeAssistant,
+    coordinator: HyxiDataUpdateCoordinator,
+    key: str,
+    webhook_id: str,
+) -> None:
+    """Handle HYXI's pushes to webhook_id with the push or alarm handler,
+    per key."""
+    name, handler = {
+        "webhook_id": ("HYXI Cloud Push", _async_handle_webhook),
+        "alarm_webhook_id": ("HYXI Cloud Alarm Push", _async_handle_alarm_webhook),
+    }[key]
+    try:
+        webhook.async_register(
+            hass,
+            DOMAIN,
+            name,
+            webhook_id,
+            lambda _h, w_id, req: handler(w_id, req, coordinator),
+        )
+    except ValueError:
+        pass  # Already registered (e.g. after a failed reload)
+
+
+def _ensure_webhook_ids(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, str]:
+    """Return the entry's random push and alarm webhook IDs, creating any
+    it lacks.
+
+    An entry without them used _legacy_webhook_id; that ID is kept as a
+    legacy webhook, with the subscription code made with it, until
+    _async_retire_legacy_webhooks retires it.
+    """
+    ids = {key: entry.data.get(key) for key in _WEBHOOKS}
+    missing = [key for key, webhook_id in ids.items() if not webhook_id]
+    if not missing:
+        return ids
+    legacy = dict(entry.data.get(_LEGACY_WEBHOOKS, {}))
+    for key in missing:
+        ids[key] = webhook.async_generate_id()
+        legacy[key] = entry.data.get(_WEBHOOKS[key][0])
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, **ids, _LEGACY_WEBHOOKS: legacy}
+    )
+    return ids
+
+
+def _register_legacy_webhooks(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: HyxiDataUpdateCoordinator
+) -> None:
+    """Handle pushes to the entry's legacy webhook IDs until they are
+    retired."""
+    for key in entry.data.get(_LEGACY_WEBHOOKS, {}):
+        legacy_id = _legacy_webhook_id(entry, key)
+        _register_webhook(hass, coordinator, key, legacy_id)
+        entry.async_on_unload(
+            functools.partial(webhook.async_unregister, hass, legacy_id)
+        )
+
+
+async def _async_retire_legacy_webhooks(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Retire each legacy webhook whose subscription code the entry no
+    longer holds: stop handling it and delete its cloudhook. One whose
+    cloudhook could not be deleted is kept and retried at the next setup."""
+    held = entry.data.get(_LEGACY_WEBHOOKS, {})
+    legacy = dict(held)
+    for key, code in held.items():
+        if code and entry.data.get(_WEBHOOKS[key][0]) == code:
+            continue
+        legacy_id = _legacy_webhook_id(entry, key)
+        if await _async_delete_cloudhook(hass, legacy_id):
+            webhook.async_unregister(hass, legacy_id)
+            del legacy[key]
+    if legacy == held:
+        return
+    data = {k: v for k, v in entry.data.items() if k != _LEGACY_WEBHOOKS}
+    if legacy:
+        data[_LEGACY_WEBHOOKS] = legacy
+    hass.config_entries.async_update_entry(entry, data=data)
+
+
+async def _async_delete_cloudhook(hass: HomeAssistant, webhook_id: str) -> bool:
+    """Delete the Home Assistant Cloud cloudhook of a webhook. Returns False
+    if it may still exist (Home Assistant Cloud could not be reached)."""
+    if "cloud" not in hass.config.components:
+        return True
+    # pylint: disable-next=consider-using-from-import
+    import homeassistant.components.cloud as cloud
+
+    try:
+        await cloud.async_delete_cloudhook(hass, webhook_id)
+    except ValueError:
+        pass  # No cloudhook for this webhook
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        _LOGGER.debug("Could not delete a HYXI cloudhook: %s", err)
+        return False
+    return True
+
+
 async def _async_resolve_webhook_url(
     hass: HomeAssistant,
     webhook_id: str,
@@ -1811,6 +1937,21 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
         _log_push_subscription_failure(_ALARM_PUSH_SUBSCRIPTION_LABEL, err_msg)
 
 
+async def _async_sync_subscriptions(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> None:
+    """Set up the push and alarm subscriptions per the entry's options,
+    retire legacy webhooks no subscription uses any more, and list HYXI's
+    subscriptions again."""
+    # Both handle enablement checks and cleanup of orphaned codes.
+    await _async_setup_push_subscription(hass, entry, coordinator)
+    await _async_setup_alarm_subscription(hass, entry, coordinator)
+    await _async_retire_legacy_webhooks(hass, entry)
+    await async_refresh_subscriptions(coordinator)
+
+
 async def _async_setup_push_subscription(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -1834,24 +1975,14 @@ async def _async_setup_push_subscription(
     push_rate_ms = push_rate_s * 1000
     custom_url = entry.options.get(CONF_PUSH_URL)
 
-    webhook_id = f"hyxi_cloud_{entry.entry_id}"
+    webhook_id = _ensure_webhook_ids(hass, entry)["webhook_id"]
     coordinator.webhook_id = webhook_id
     coordinator.push_enabled = True
 
     # Register webhook handler. HA's webhook registry is in-memory, so this
     # must run on every load regardless of whether the subscription itself
     # is reused below.
-    try:
-        webhook.async_register(
-            hass,
-            DOMAIN,
-            "HYXI Cloud Push",
-            webhook_id,
-            lambda _h, w_id, req: _async_handle_webhook(w_id, req, coordinator),
-        )
-    except ValueError:
-        # Already registered (e.g. on reload config entry error)
-        pass
+    _register_webhook(hass, coordinator, "webhook_id", webhook_id)
 
     webhook_url = await _async_resolve_webhook_url(hass, webhook_id, custom_url)
 
@@ -1992,10 +2123,7 @@ async def _async_handle_webhook(
 
     if not _is_authorized_webhook_request(request, coordinator):
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
-        _LOGGER.warning(
-            "Unauthorized push attempt received on webhook %s",
-            webhook_id,
-        )
+        _LOGGER.warning("Unauthorized push attempt received on the HYXI push webhook")
         return web.Response(status=401, text="Unauthorized")
 
     payload = await _parse_webhook_payload(request, "push")
@@ -2003,8 +2131,7 @@ async def _async_handle_webhook(
         return web.Response(status=400, text="Invalid JSON")
 
     _LOGGER.debug(
-        "HYXI Cloud Data Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
-        "hyxi_cloud_***" if webhook_id.startswith("hyxi_cloud_") else "***",
+        "HYXI Cloud Data Push webhook callback received. Active Subscribe Code: %s",
         mask_subscription_code(coordinator.subscribe_code),
     )
 
@@ -2073,10 +2200,10 @@ async def _parse_webhook_payload(request: web.Request, context: str) -> dict | N
             raise ValueError("Not JSON and not URL-encoded payload") from None
     except Exception as e:  # pylint: disable=broad-exception-caught
         _LOGGER.warning(
-            "Received invalid JSON payload on HYXI %s webhook. Error: %s. Raw text: %s",
+            "Received invalid JSON payload on HYXI %s webhook (%d characters): %s",
             context,
+            len(text),
             e,
-            repr(text[:500]),
         )
         return None
 
@@ -2137,22 +2264,13 @@ async def _async_setup_alarm_subscription(
     push_rate_ms = push_rate_s * 1000
     custom_url = entry.options.get(CONF_PUSH_URL)
 
-    webhook_id = f"hyxi_cloud_{entry.entry_id}_alarm"
+    webhook_id = _ensure_webhook_ids(hass, entry)["alarm_webhook_id"]
     coordinator.alarm_webhook_id = webhook_id
 
     # Register webhook handler. HA's webhook registry is in-memory, so this
     # must run on every load regardless of whether the subscription itself
     # is reused below.
-    try:
-        webhook.async_register(
-            hass,
-            DOMAIN,
-            "HYXI Cloud Alarm Push",
-            webhook_id,
-            lambda _h, w_id, req: _async_handle_alarm_webhook(w_id, req, coordinator),
-        )
-    except ValueError:
-        pass  # Already registered
+    _register_webhook(hass, coordinator, "alarm_webhook_id", webhook_id)
 
     webhook_url = await _async_resolve_webhook_url(hass, webhook_id, custom_url)
     if not webhook_url:
@@ -2279,8 +2397,7 @@ async def _async_handle_alarm_webhook(
     if not _is_authorized_webhook_request(request, coordinator):
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning(
-            "Unauthorized alarm push attempt received on webhook %s",
-            webhook_id,
+            "Unauthorized alarm push attempt received on the HYXI alarm webhook"
         )
         return web.Response(status=401, text="Unauthorized")
 
@@ -2291,8 +2408,7 @@ async def _async_handle_alarm_webhook(
         return web.Response(status=400, text="Invalid JSON")
 
     _LOGGER.debug(
-        "HYXI Cloud Alarm Push webhook callback received. Webhook ID: %s, Active Subscribe Code: %s",
-        "hyxi_cloud_***" if webhook_id.startswith("hyxi_cloud_") else "***",
+        "HYXI Cloud Alarm Push webhook callback received. Active Subscribe Code: %s",
         mask_subscription_code(coordinator.alarm_subscribe_code),
     )
 

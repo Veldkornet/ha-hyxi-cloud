@@ -550,11 +550,9 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
         explicit user action -- an old subscription HYXI still holds stays
         listed on the Subscription Status sensor for manual cancelling."""
         from . import (
-            _async_setup_alarm_subscription,
-            _async_setup_push_subscription,
+            _async_sync_subscriptions,
             _async_teardown_alarm_subscription,
             _async_teardown_push_subscription,
-            async_refresh_subscriptions,
         )
 
         _LOGGER.info("Manually triggered HYXI push subscription renewal (data + alarm)")
@@ -567,14 +565,7 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
             await _async_teardown_alarm_subscription(
                 self.hass, self.coordinator, self._entry, force=True
             )
-            # Re-setup both
-            await _async_setup_push_subscription(
-                self.hass, self._entry, self.coordinator
-            )
-            await _async_setup_alarm_subscription(
-                self.hass, self._entry, self.coordinator
-            )
-            await async_refresh_subscriptions(self.coordinator)
+            await _async_sync_subscriptions(self.hass, self._entry, self.coordinator)
 
             # Notify coordinator entities of change
             self.coordinator.async_update_listeners()

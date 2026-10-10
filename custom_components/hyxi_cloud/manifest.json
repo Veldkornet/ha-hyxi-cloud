@@ -2,6 +2,7 @@
   "domain": "hyxi_cloud",
   "name": "HYXI",
   "after_dependencies": ["cloud", "modbus"],
+  "dependencies": ["webhook"],
   "codeowners": [
     "@Veldkornet"
   ],

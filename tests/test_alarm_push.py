@@ -469,9 +469,9 @@ async def test_handle_alarm_webhook_logging_details(
         assert len(debug_log) == 1
         log_msg = debug_log[0]
 
-        # Verify webhook ID is masked and the subscribe code is never logged
+        # Verify the webhook ID is not logged and the subscribe code is never logged
         # in cleartext -- only its masked (hash + "(masked)") form.
-        assert "Webhook ID: hyxi_cloud_***" in log_msg
+        assert "hyxi_cloud_entry_test_alarm" not in log_msg
         assert "coord-alarm-sub-code" not in log_msg
         assert "Active Subscribe Code:" in log_msg
         assert "(masked)" in log_msg
