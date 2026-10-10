@@ -22,7 +22,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import network
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import UpdateFailed
-from hyxi_cloud_api import HyxiApiClient
+from hyxi_cloud_api import HyxiApiClient, SubscriptionType
 from hyxi_cloud_api import __version__ as API_VERSION
 
 from .const import (
@@ -1579,7 +1579,7 @@ def _clear_subscription_entry_data(
 
 
 async def _async_maybe_cancel_subscription(
-    client: HyxiApiClient,
+    coordinator: HyxiDataUpdateCoordinator,
     subscribe_code: str,
     log_prefix: str,
     force: bool,
@@ -1602,8 +1602,7 @@ async def _async_maybe_cancel_subscription(
         return False
 
     try:
-        await async_cancel_subscription(client, subscribe_code)
-        return True
+        await _async_cancel_and_forget(coordinator, subscribe_code)
     except Exception as err:  # pylint: disable=broad-exception-caught
         _LOGGER.warning(
             "Error cancelling %s subscription%s: %s",
@@ -1612,6 +1611,7 @@ async def _async_maybe_cancel_subscription(
             err,
         )
         return force
+    return True
 
 
 def _log_push_subscription_failure(push_type: str, err_msg: str) -> None:
@@ -1627,6 +1627,62 @@ def _log_push_subscription_failure(push_type: str, err_msg: str) -> None:
         )
     else:
         _LOGGER.warning("Failed to register %s subscription: %s", push_type, err_msg)
+
+
+async def _async_cancel_and_forget(
+    coordinator: HyxiDataUpdateCoordinator, code: str
+) -> None:
+    """Cancel a subscription and drop it from the entry's copy of HYXI's
+    list, so it isn't taken for one still in place. Raises like
+    async_cancel_subscription when the cancel fails."""
+    await async_cancel_subscription(coordinator.client, code)
+    if coordinator.subscriptions is not None:
+        coordinator.subscriptions = [
+            sub for sub in coordinator.subscriptions if sub.subscribe_code != code
+        ]
+
+
+async def _async_cancel_conflicting_subscriptions(
+    coordinator: HyxiDataUpdateCoordinator,
+    subscribe_type: SubscriptionType,
+    device_sns: list[str],
+    log_prefix: str,
+) -> None:
+    """Cancel the subscriptions of this type HYXI holds for any of these
+    devices, whoever made them: HYXI rejects a new subscription for a device
+    that already has one. One without devices (as alarm subscriptions can
+    be) is taken to cover them all."""
+    if coordinator.subscriptions is None:
+        _LOGGER.debug(
+            "%s: HYXI's subscription list is unknown, so existing "
+            "subscriptions that could block a new one are not cancelled",
+            log_prefix,
+        )
+        return
+    devices = set(device_sns)
+    conflicting = [
+        sub
+        for sub in coordinator.subscriptions
+        if sub.subscribe_type == subscribe_type
+        and (not sub.devices or devices.intersection(sub.devices))
+    ]
+    for sub in conflicting:
+        _LOGGER.warning(
+            "%s: cancelling existing subscription %s (callback %s) for this "
+            "entry's devices, which would block a new one",
+            log_prefix,
+            mask_subscription_code(sub.subscribe_code),
+            mask_url(sub.callback_url),
+        )
+        try:
+            await _async_cancel_and_forget(coordinator, sub.subscribe_code)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.warning(
+                "%s: could not cancel subscription %s: %s",
+                log_prefix,
+                mask_subscription_code(sub.subscribe_code),
+                err,
+            )
 
 
 async def _async_cancel_entry_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
@@ -1655,7 +1711,7 @@ async def _async_cancel_entry_subscription(  # pylint: disable=too-many-argument
         mask_subscription_code(prior_code),
     )
     try:
-        await async_cancel_subscription(coordinator.client, prior_code)
+        await _async_cancel_and_forget(coordinator, prior_code)
     except Exception as err:  # pylint: disable=broad-exception-caught
         _LOGGER.debug(
             "%s: Could not cancel prior subscription, preserving code for retry: %s",
@@ -1859,6 +1915,12 @@ async def _async_setup_push_subscription(
         _PUSH_SUBSCRIPTION_LABEL,
         fingerprint_key="push_subscribe_fingerprint",
     )
+    await _async_cancel_conflicting_subscriptions(
+        coordinator,
+        SubscriptionType.REAL_TIME_DATA,
+        device_sns,
+        _PUSH_SUBSCRIPTION_LABEL,
+    )
 
     _LOGGER.debug(
         "Subscribing callback URL %s for devices: %s",
@@ -1906,7 +1968,7 @@ async def _async_teardown_push_subscription(
     subscribe_code = coordinator.subscribe_code
     if subscribe_code:
         should_clear = await _async_maybe_cancel_subscription(
-            coordinator.client,
+            coordinator,
             subscribe_code,
             _PUSH_SUBSCRIPTION_LABEL,
             force,
@@ -2150,6 +2212,12 @@ async def _async_setup_alarm_subscription(
         _ALARM_PUSH_SUBSCRIPTION_LABEL,
         fingerprint_key="alarm_subscribe_fingerprint",
     )
+    await _async_cancel_conflicting_subscriptions(
+        coordinator,
+        SubscriptionType.ALARM,
+        device_sns,
+        _ALARM_PUSH_SUBSCRIPTION_LABEL,
+    )
 
     _LOGGER.debug(
         "HYXI Alarm Push: Subscribing %s devices at %s",
@@ -2188,7 +2256,7 @@ async def _async_teardown_alarm_subscription(
     subscribe_code = getattr(coordinator, "alarm_subscribe_code", None)
     if subscribe_code:
         should_clear = await _async_maybe_cancel_subscription(
-            coordinator.client,
+            coordinator,
             subscribe_code,
             _ALARM_PUSH_SUBSCRIPTION_LABEL,
             force,

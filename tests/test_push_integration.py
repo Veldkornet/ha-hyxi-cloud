@@ -222,7 +222,8 @@ async def test_setup_push_subscription_reuses_only_codes_hyxi_holds(
         "push_subscribe_fingerprint": fingerprint,
     }
     mock_coordinator.subscriptions = [
-        SimpleNamespace(subscribe_code=code) for code in held_codes
+        SimpleNamespace(subscribe_code=code, subscribe_type=None, devices=())
+        for code in held_codes
     ]
     mock_coordinator.client.list_subscriptions = AsyncMock(return_value=[])
 
