@@ -611,7 +611,7 @@ async def test_async_remove_entry_cancels_subscriptions(mock_hass, mock_entry):
         await async_remove_entry(mock_hass, mock_entry)
 
         assert mock_cancel.call_count == 2
-        cancelled = {call.args[2] for call in mock_cancel.call_args_list}
+        cancelled = {call.args[1] for call in mock_cancel.call_args_list}
         assert cancelled == {"sub_code_123", "alarm_code_123"}
         mock_client_cls.assert_called_once()
 
@@ -2134,8 +2134,8 @@ async def test_async_setup_push_deactivation_cleanup(mock_hass, mock_entry):
 
         # Verify cancel and unregister was called for both
         assert mock_cancel.call_count == 2
-        mock_cancel.assert_any_call(mock_hass, coordinator.client, "sub_code_123")
-        mock_cancel.assert_any_call(mock_hass, coordinator.client, "alarm_code_123")
+        mock_cancel.assert_any_call(coordinator.client, "sub_code_123")
+        mock_cancel.assert_any_call(coordinator.client, "alarm_code_123")
 
         # Verify config entry data was updated to clear the codes
         mock_hass.config_entries.async_update_entry.assert_any_call(

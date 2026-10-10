@@ -613,7 +613,7 @@ async def test_async_cancel_subscription_empty_code(hass):
     client = MagicMock()
     client.cancel_subscription = AsyncMock()
 
-    await async_cancel_subscription(hass, client, "   ")
+    await async_cancel_subscription(client, "   ")
 
     client.cancel_subscription.assert_not_called()
 
@@ -626,7 +626,7 @@ async def test_async_cancel_subscription_success(hass):
     client = MagicMock()
     client.cancel_subscription = AsyncMock(return_value={"success": True})
 
-    await async_cancel_subscription(hass, client, "test-code")
+    await async_cancel_subscription(client, "test-code")
 
     client.cancel_subscription.assert_awaited_once_with("test-code")
 
@@ -651,7 +651,7 @@ async def test_async_cancel_subscription_api_failure_response(hass):
         new_callable=AsyncMock,
     ) as mock_unregister:
         with pytest.raises(DummySubscriptionError):
-            await async_cancel_subscription(hass, client, "test-code")
+            await async_cancel_subscription(client, "test-code")
         mock_unregister.assert_not_called()
 
 
@@ -674,7 +674,7 @@ async def test_async_cancel_subscription_transient_error(hass):
         new_callable=AsyncMock,
     ) as mock_unregister:
         with pytest.raises(DummySubscriptionError, match="Authentication failed"):
-            await async_cancel_subscription(hass, client, "test-code")
+            await async_cancel_subscription(client, "test-code")
         mock_unregister.assert_not_called()
 
 

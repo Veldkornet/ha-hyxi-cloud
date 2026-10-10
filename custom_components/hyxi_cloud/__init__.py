@@ -425,7 +425,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     )
     for code in codes:
         try:
-            await async_cancel_subscription(hass, client, code)
+            await async_cancel_subscription(client, code)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning(
                 "Could not cancel subscription %s during entry removal: %s "
@@ -1578,9 +1578,8 @@ def _clear_subscription_entry_data(
     )
 
 
-async def _async_maybe_cancel_subscription(  # pylint: disable=too-many-arguments, too-many-positional-arguments
-    hass: HomeAssistant,
-    client,
+async def _async_maybe_cancel_subscription(
+    client: HyxiApiClient,
     subscribe_code: str,
     log_prefix: str,
     force: bool,
@@ -1603,7 +1602,7 @@ async def _async_maybe_cancel_subscription(  # pylint: disable=too-many-argument
         return False
 
     try:
-        await async_cancel_subscription(hass, client, subscribe_code)
+        await async_cancel_subscription(client, subscribe_code)
         return True
     except Exception as err:  # pylint: disable=broad-exception-caught
         _LOGGER.warning(
@@ -1656,7 +1655,7 @@ async def _async_cancel_entry_subscription(  # pylint: disable=too-many-argument
         mask_subscription_code(prior_code),
     )
     try:
-        await async_cancel_subscription(hass, coordinator.client, prior_code)
+        await async_cancel_subscription(coordinator.client, prior_code)
     except Exception as err:  # pylint: disable=broad-exception-caught
         _LOGGER.debug(
             "%s: Could not cancel prior subscription, preserving code for retry: %s",
@@ -1907,7 +1906,6 @@ async def _async_teardown_push_subscription(
     subscribe_code = coordinator.subscribe_code
     if subscribe_code:
         should_clear = await _async_maybe_cancel_subscription(
-            hass,
             coordinator.client,
             subscribe_code,
             _PUSH_SUBSCRIPTION_LABEL,
@@ -2190,7 +2188,6 @@ async def _async_teardown_alarm_subscription(
     subscribe_code = getattr(coordinator, "alarm_subscribe_code", None)
     if subscribe_code:
         should_clear = await _async_maybe_cancel_subscription(
-            hass,
             coordinator.client,
             subscribe_code,
             _ALARM_PUSH_SUBSCRIPTION_LABEL,
@@ -2345,7 +2342,7 @@ def setup_services(hass: HomeAssistant) -> None:
             mask_subscription_code(subscribe_code),
         )
         try:
-            await async_cancel_subscription(hass, coordinator.client, subscribe_code)
+            await async_cancel_subscription(coordinator.client, subscribe_code)
         except Exception as err:
             _LOGGER.exception(
                 "Error manual cancelling HYXI subscription %s: %s",
@@ -2537,7 +2534,7 @@ async def _async_refresh_subscriptions_for(
     with the same credentials as coordinator."""
     await async_refresh_subscriptions(coordinator)
     access_key = getattr(coordinator.client, "access_key", None)
-    for other in list(hass.data.get(DOMAIN, {}).values()):
+    for other in hass.data.get(DOMAIN, {}).values():
         if (
             other is not coordinator
             and not is_modbus_entry(other.entry)
@@ -2547,7 +2544,7 @@ async def _async_refresh_subscriptions_for(
             other.async_update_listeners()
 
 
-async def async_cancel_subscription(hass: HomeAssistant, client, code: str) -> None:
+async def async_cancel_subscription(client: HyxiApiClient, code: str) -> None:
     """Cancel a subscription via the API.
 
     HYXI has no "subscription not found" error code, so a failure response
