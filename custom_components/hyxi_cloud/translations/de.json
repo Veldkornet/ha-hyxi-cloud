@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Zugriffsschlüssel (AK)",
           "secret_key": "Geheimer Schlüssel (SK)",
-          "region": "Serverregion"
+          "region": "Serverregion",
+          "enable_realtime_push": "Echtzeit-Webhook-Push aktivieren"
+        },
+        "data_description": {
+          "enable_realtime_push": "Wenn aktiviert, sendet HYXI Live-Daten und Alarme sofort an Home Assistant. Dafür braucht es eine öffentliche HTTPS-URL, die die HYXI-Cloud erreichen kann; die nächste Seite fragt, welche. Standardmäßig aus; das Push-Intervall lässt sich später in den Optionen einstellen."
+        }
+      },
+      "cloud_push": {
+        "title": "Callback-URL für Push",
+        "description": "Die HYXI-Cloud sendet Push-Daten an eine öffentliche HTTPS-Adresse von Home Assistant. Lass das Feld leer, um Home Assistant Cloud oder die externe URL von Home Assistant zu verwenden (Einstellungen → System → Netzwerk), oder gib eine eigene ein.",
+        "data": {
+          "realtime_push_url": "Benutzerdefinierte Callback-URL (optional, dynamischer Standard)"
+        },
+        "data_description": {
+          "realtime_push_url": "Optional. Eine öffentliche HTTPS-Adresse, an die die HYXI-Cloud Push-Daten senden soll, falls nicht Home Assistant Cloud oder die externe URL von Home Assistant. Nur die Basis-URL eingeben; der Webhook-Pfad wird automatisch ergänzt."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Auf dem Bus hat nichts geantwortet. Prüfen Sie die Verkabelung, die Slave-Adresse und die Baudrate.",
       "gateway_unreachable": "Verbindung zum Gateway fehlgeschlagen. Prüfen Sie Host und Port sowie, dass es eingeschaltet und in Ihrem Netzwerk erreichbar ist.",
       "modbus_unavailable": "Die Modbus-Unterstützung ist nicht installiert. Starten Sie Home Assistant neu und versuchen Sie es erneut.",
-      "unidentified_family": "Ein Gerät hat geantwortet, konnte aber nicht als unterstützter HALO- oder Hybrid-Wechselrichter bestätigt werden. Prüfen Sie die Slave-Adresse, oder ob es sich um ein unterstütztes Modell handelt."
+      "unidentified_family": "Ein Gerät hat geantwortet, konnte aber nicht als unterstützter HALO- oder Hybrid-Wechselrichter bestätigt werden. Prüfen Sie die Slave-Adresse, oder ob es sich um ein unterstütztes Modell handelt.",
+      "no_public_url": "Push benötigt eine öffentliche HTTPS-URL, die die HYXI-Cloud erreichen kann. Richte Home Assistant Cloud oder eine externe HTTPS-URL ein (Einstellungen → System → Netzwerk) oder gib eine eigene URL ein, die mit https:// beginnt."
     },
     "abort": {
       "already_configured": "Dieses HYXI-Konto ist bereits konfiguriert.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Testmodus (keine API-Aufrufe)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push benötigt eine öffentliche HTTPS-URL, die die HYXI-Cloud erreichen kann. Richte Home Assistant Cloud oder eine externe HTTPS-URL ein (Einstellungen → System → Netzwerk) oder gib eine eigene URL ein, die mit https:// beginnt."
     }
   },
   "entity": {

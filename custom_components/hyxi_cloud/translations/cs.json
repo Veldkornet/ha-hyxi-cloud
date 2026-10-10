@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Přístupový klíč (AK)",
           "secret_key": "Tajný klíč (SK)",
-          "region": "Oblast serveru"
+          "region": "Oblast serveru",
+          "enable_realtime_push": "Povolit push v reálném čase (webhook)"
+        },
+        "data_description": {
+          "enable_realtime_push": "Když je zapnuto, HYXI posílá živá data a alarmy do Home Assistantu hned, jak nastanou. K tomu je potřeba veřejná HTTPS adresa dostupná pro cloud HYXI; na další stránce se zeptáme jaká. Ve výchozím stavu vypnuto; frekvenci push lze nastavit později v možnostech."
+        }
+      },
+      "cloud_push": {
+        "title": "URL pro zpětné volání push",
+        "description": "Cloud HYXI posílá data push na veřejnou HTTPS adresu Home Assistantu. Ponechte pole prázdné pro použití Home Assistant Cloud nebo externí URL Home Assistantu (Nastavení → Systém → Síť), nebo zadejte vlastní.",
+        "data": {
+          "realtime_push_url": "Vlastní Callback URL (volitelné, dynamická výchozí hodnota)"
+        },
+        "data_description": {
+          "realtime_push_url": "Volitelné. Veřejná HTTPS adresa, na kterou má cloud HYXI posílat data push, pokud to není Home Assistant Cloud ani externí URL Home Assistantu. Zadejte jen základní URL; cesta webhooku se doplní automaticky."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Na sběrnici nikdo neodpověděl. Zkontrolujte kabeláž, adresu slave a přenosovou rychlost.",
       "gateway_unreachable": "Nepodařilo se připojit k bráně. Zkontrolujte hostitele a port a to, že je zapnutá a dostupná ve vaší síti.",
       "modbus_unavailable": "Podpora Modbus není nainstalována. Restartujte Home Assistant a zkuste to znovu.",
-      "unidentified_family": "Zařízení odpovědělo, ale nepodařilo se potvrdit, že jde o podporovaný měnič HALO nebo hybridní měnič. Zkontrolujte adresu slave, nebo zda jde o podporovaný model."
+      "unidentified_family": "Zařízení odpovědělo, ale nepodařilo se potvrdit, že jde o podporovaný měnič HALO nebo hybridní měnič. Zkontrolujte adresu slave, nebo zda jde o podporovaný model.",
+      "no_public_url": "Push vyžaduje veřejnou HTTPS adresu dostupnou pro cloud HYXI. Nastavte Home Assistant Cloud nebo externí HTTPS URL (Nastavení → Systém → Síť), nebo zadejte vlastní URL začínající https://."
     },
     "abort": {
       "already_configured": "Tento HYXI účet je již nakonfigurován.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Zkušební režim (bez volání API)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push vyžaduje veřejnou HTTPS adresu dostupnou pro cloud HYXI. Nastavte Home Assistant Cloud nebo externí HTTPS URL (Nastavení → Systém → Síť), nebo zadejte vlastní URL začínající https://."
     }
   },
   "entity": {

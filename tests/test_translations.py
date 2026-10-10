@@ -373,3 +373,21 @@ def test_translation_structure_and_keys():
         assert not extra_keys, (
             f"{lang_file} has extra translation keys not found in en.json: {sorted(extra_keys)}"
         )
+
+
+def test_strings_explain_push_at_setup():
+    """The shipped strings label and describe the push toggle on the cloud
+    setup step and the callback URL page that follows it, and explain the
+    error shown when push can't work; the structure test above carries
+    them to every translation."""
+    path = Path(__file__).parent / "../custom_components/hyxi_cloud/strings.json"
+    config = json.loads(path.read_text(encoding="utf-8"))["config"]
+    cloud = config["step"]["cloud"]
+    assert cloud["data"]["enable_realtime_push"]
+    assert cloud["data_description"]["enable_realtime_push"]
+    push = config["step"]["cloud_push"]
+    assert push["title"]
+    assert push["description"]
+    assert push["data"]["realtime_push_url"]
+    assert push["data_description"]["realtime_push_url"]
+    assert config["error"]["no_public_url"]

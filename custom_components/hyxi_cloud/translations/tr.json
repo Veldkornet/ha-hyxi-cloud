@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Erişim Anahtarı (AK)",
           "secret_key": "Gizli Anahtar (SK)",
-          "region": "Sunucu Bölgesi"
+          "region": "Sunucu Bölgesi",
+          "enable_realtime_push": "Gerçek Zamanlı Webhook Push'u Etkinleştir"
+        },
+        "data_description": {
+          "enable_realtime_push": "Açıkken HYXI canlı verileri ve alarmları oluştukları anda Home Assistant'a gönderir. Bunun için HYXI bulutunun erişebileceği herkese açık bir HTTPS URL'si gerekir; sonraki sayfa hangisi olduğunu sorar. Varsayılan olarak kapalıdır; gönderim sıklığı daha sonra seçeneklerden ayarlanabilir."
+        }
+      },
+      "cloud_push": {
+        "title": "Push geri çağırma URL'si",
+        "description": "HYXI bulutu push verilerini Home Assistant'ın herkese açık bir HTTPS adresine gönderir. Home Assistant Cloud'u veya Home Assistant'ın harici URL'sini (Ayarlar → Sistem → Ağ) kullanmak için alanı boş bırakın ya da kendi URL'nizi girin.",
+        "data": {
+          "realtime_push_url": "Özel Callback URL'si (isteğe bağlı, dinamik varsayılan)"
+        },
+        "data_description": {
+          "realtime_push_url": "İsteğe bağlı. Home Assistant Cloud veya Home Assistant'ın harici URL'si değilse, HYXI bulutunun push verilerini göndereceği herkese açık HTTPS adresi. Yalnızca temel URL'yi girin; webhook yolu otomatik olarak eklenir."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Hatta hiçbir şey yanıt vermedi. Kablolamayı, slave adresini ve baud hızını kontrol edin.",
       "gateway_unreachable": "Ağ geçidine bağlanılamadı. Ana bilgisayarı ve bağlantı noktasını, cihazın açık ve ağınızda erişilebilir olduğunu kontrol edin.",
       "modbus_unavailable": "Modbus desteği yüklü değil. Home Assistant'ı yeniden başlatıp tekrar deneyin.",
-      "unidentified_family": "Bir cihaz yanıt verdi, ancak desteklenen bir HALO veya hibrit invertör olduğu doğrulanamadı. Slave adresini veya desteklenen bir model olup olmadığını kontrol edin."
+      "unidentified_family": "Bir cihaz yanıt verdi, ancak desteklenen bir HALO veya hibrit invertör olduğu doğrulanamadı. Slave adresini veya desteklenen bir model olup olmadığını kontrol edin.",
+      "no_public_url": "Push için HYXI bulutunun erişebileceği herkese açık bir HTTPS URL'si gerekir. Home Assistant Cloud'u veya harici bir HTTPS URL'sini ayarlayın (Ayarlar → Sistem → Ağ) ya da https:// ile başlayan özel bir URL girin."
     },
     "abort": {
       "already_configured": "Bu HYXI hesabı zaten yapılandırılmış.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Deneme Modu (API çağrısı yok)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push için HYXI bulutunun erişebileceği herkese açık bir HTTPS URL'si gerekir. Home Assistant Cloud'u veya harici bir HTTPS URL'sini ayarlayın (Ayarlar → Sistem → Ağ) ya da https:// ile başlayan özel bir URL girin."
     }
   },
   "entity": {

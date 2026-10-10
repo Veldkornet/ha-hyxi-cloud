@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Adgangsnøgle (AK)",
           "secret_key": "Hemmelig nøgle (SK)",
-          "region": "Serverregion"
+          "region": "Serverregion",
+          "enable_realtime_push": "Aktivér Realtids Webhook Push"
+        },
+        "data_description": {
+          "enable_realtime_push": "Når det er slået til, sender HYXI live-data og alarmer til Home Assistant, efterhånden som de opstår. Det kræver en offentlig HTTPS-URL, som HYXI's cloud kan nå; den næste side spørger hvilken. Slået fra som standard; push-frekvensen kan angives senere i indstillingerne."
+        }
+      },
+      "cloud_push": {
+        "title": "Callback-URL til push",
+        "description": "HYXI's cloud sender push-data til en offentlig HTTPS-adresse for Home Assistant. Lad feltet være tomt for at bruge Home Assistant Cloud eller Home Assistants eksterne URL (Indstillinger → System → Netværk), eller angiv din egen.",
+        "data": {
+          "realtime_push_url": "Brugerdefineret Callback-URL (valgfri, dynamisk standard)"
+        },
+        "data_description": {
+          "realtime_push_url": "Valgfrit. En offentlig HTTPS-adresse, som HYXI's cloud skal sende push-data til, hvis det ikke er Home Assistant Cloud eller Home Assistants eksterne URL. Angiv kun basis-URL'en; webhook-stien tilføjes automatisk."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Intet svarede på bussen. Tjek kablingen, slaveadressen og baudraten.",
       "gateway_unreachable": "Kunne ikke oprette forbindelse til gatewayen. Tjek værten og porten, og at den er tændt og tilgængelig på dit netværk.",
       "modbus_unavailable": "Modbus-understøttelse er ikke installeret. Genstart Home Assistant, og prøv igen.",
-      "unidentified_family": "En enhed svarede, men kunne ikke bekræftes som en understøttet HALO- eller hybrid-vekselretter. Tjek slaveadressen, eller om dette er en understøttet model."
+      "unidentified_family": "En enhed svarede, men kunne ikke bekræftes som en understøttet HALO- eller hybrid-vekselretter. Tjek slaveadressen, eller om dette er en understøttet model.",
+      "no_public_url": "Push kræver en offentlig HTTPS-URL, som HYXI's cloud kan nå. Opsæt Home Assistant Cloud eller en ekstern HTTPS-URL (Indstillinger → System → Netværk), eller angiv en brugerdefineret URL, der starter med https://."
     },
     "abort": {
       "already_configured": "Denne HYXI-konto er allerede konfigureret.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Testtilstand (ingen API-kald)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push kræver en offentlig HTTPS-URL, som HYXI's cloud kan nå. Opsæt Home Assistant Cloud eller en ekstern HTTPS-URL (Indstillinger → System → Netværk), eller angiv en brugerdefineret URL, der starter med https://."
     }
   },
   "entity": {

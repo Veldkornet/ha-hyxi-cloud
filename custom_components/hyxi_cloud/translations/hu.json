@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Hozzáférési kulcs (AK)",
           "secret_key": "Titkos kulcs (SK)",
-          "region": "Szerver régiója"
+          "region": "Szerver régiója",
+          "enable_realtime_push": "Valós idejű Webhook Push engedélyezése"
+        },
+        "data_description": {
+          "enable_realtime_push": "Bekapcsolva a HYXI azonnal elküldi az élő adatokat és riasztásokat a Home Assistantnek. Ehhez a HYXI felhője által elérhető nyilvános HTTPS URL szükséges; a következő oldal megkérdezi, melyik. Alapértelmezés szerint kikapcsolva; a küldési gyakoriság később a beállításokban adható meg."
+        }
+      },
+      "cloud_push": {
+        "title": "Push visszahívási URL",
+        "description": "A HYXI felhője a Home Assistant egy nyilvános HTTPS-címére küldi a push-adatokat. Hagyd üresen a mezőt a Home Assistant Cloud vagy a Home Assistant külső URL-jének használatához (Beállítások → Rendszer → Hálózat), vagy add meg a sajátodat.",
+        "data": {
+          "realtime_push_url": "Egyéni Callback URL (opcionális, dinamikus alapértelmezett)"
+        },
+        "data_description": {
+          "realtime_push_url": "Nem kötelező. Nyilvános HTTPS-cím, ahová a HYXI felhője a push-adatokat küldi, ha az nem a Home Assistant Cloud vagy a Home Assistant külső URL-je. Csak az alap URL-t add meg; a webhook útvonala automatikusan hozzáadódik."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Semmi sem válaszolt a buszon. Ellenőrizd a vezetékezést, a slave címet és az átviteli sebességet.",
       "gateway_unreachable": "Nem sikerült csatlakozni az átjáróhoz. Ellenőrizd a gazdagépet és a portot, valamint hogy be van-e kapcsolva és elérhető-e a hálózatodon.",
       "modbus_unavailable": "A Modbus támogatás nincs telepítve. Indítsd újra a Home Assistantot, és próbáld újra.",
-      "unidentified_family": "Egy eszköz válaszolt, de nem sikerült megerősíteni, hogy támogatott HALO vagy hibrid inverter. Ellenőrizd a slave címet, vagy hogy ez egy támogatott modell-e."
+      "unidentified_family": "Egy eszköz válaszolt, de nem sikerült megerősíteni, hogy támogatott HALO vagy hibrid inverter. Ellenőrizd a slave címet, vagy hogy ez egy támogatott modell-e.",
+      "no_public_url": "A pushhoz a HYXI felhője által elérhető nyilvános HTTPS URL szükséges. Állítsd be a Home Assistant Cloudot vagy egy külső HTTPS URL-t (Beállítások → Rendszer → Hálózat), vagy adj meg https:// kezdetű egyéni URL-t."
     },
     "abort": {
       "already_configured": "Ez a HYXI fiók már be van konfigurálva.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Próbafuttatás mód (API-hívások nélkül)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "A pushhoz a HYXI felhője által elérhető nyilvános HTTPS URL szükséges. Állítsd be a Home Assistant Cloudot vagy egy külső HTTPS URL-t (Beállítások → Rendszer → Hálózat), vagy adj meg https:// kezdetű egyéni URL-t."
     }
   },
   "entity": {

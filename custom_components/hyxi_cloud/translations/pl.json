@@ -23,7 +23,21 @@
         "data": {
           "access_key": "Klucz dostępu (AK)",
           "secret_key": "Tajny klucz (SK)",
-          "region": "Region serwera"
+          "region": "Region serwera",
+          "enable_realtime_push": "Włącz push w czasie rzeczywistym (webhook)"
+        },
+        "data_description": {
+          "enable_realtime_push": "Po włączeniu HYXI wysyła dane na żywo i alarmy do Home Assistant na bieżąco. Wymaga to publicznego adresu HTTPS, do którego dociera chmura HYXI; następna strona zapyta, którego. Domyślnie wyłączone; częstotliwość wysyłania można ustawić później w opcjach."
+        }
+      },
+      "cloud_push": {
+        "title": "Adres URL wywołania zwrotnego push",
+        "description": "Chmura HYXI wysyła dane push na publiczny adres HTTPS Home Assistant. Pozostaw pole puste, aby użyć Home Assistant Cloud lub zewnętrznego adresu URL Home Assistant (Ustawienia → System → Sieć), albo podaj własny.",
+        "data": {
+          "realtime_push_url": "Niestandardowy URL Callback (opcjonalnie, dynamiczna wartość domyślna)"
+        },
+        "data_description": {
+          "realtime_push_url": "Opcjonalne. Publiczny adres HTTPS, na który chmura HYXI ma wysyłać dane push, jeśli nie jest to Home Assistant Cloud ani zewnętrzny adres URL Home Assistant. Podaj tylko bazowy adres URL; ścieżka webhooka zostanie dodana automatycznie."
         }
       },
       "modbus": {
@@ -85,7 +99,8 @@
       "no_device": "Nic nie odpowiedziało na magistrali. Sprawdź okablowanie, adres podrzędny i prędkość transmisji.",
       "gateway_unreachable": "Nie udało się połączyć z bramą. Sprawdź hosta i port oraz czy urządzenie jest włączone i dostępne w Twojej sieci.",
       "modbus_unavailable": "Obsługa Modbus nie jest zainstalowana. Uruchom ponownie Home Assistant i spróbuj ponownie.",
-      "unidentified_family": "Urządzenie odpowiedziało, ale nie udało się potwierdzić, że jest to obsługiwany falownik HALO lub hybrydowy. Sprawdź adres podrzędny, lub czy jest to obsługiwany model."
+      "unidentified_family": "Urządzenie odpowiedziało, ale nie udało się potwierdzić, że jest to obsługiwany falownik HALO lub hybrydowy. Sprawdź adres podrzędny, lub czy jest to obsługiwany model.",
+      "no_public_url": "Push wymaga publicznego adresu HTTPS, do którego dociera chmura HYXI. Skonfiguruj Home Assistant Cloud lub zewnętrzny adres HTTPS (Ustawienia → System → Sieć) albo podaj własny adres URL zaczynający się od https://."
     },
     "abort": {
       "already_configured": "To konto HYXI jest już skonfigurowane.",
@@ -123,6 +138,9 @@
           "em_dry_run": "Tryb próbny (bez wywołań API)"
         }
       }
+    },
+    "error": {
+      "no_public_url": "Push wymaga publicznego adresu HTTPS, do którego dociera chmura HYXI. Skonfiguruj Home Assistant Cloud lub zewnętrzny adres HTTPS (Ustawienia → System → Sieć) albo podaj własny adres URL zaczynający się od https://."
     }
   },
   "entity": {

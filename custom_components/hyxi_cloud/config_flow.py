@@ -72,6 +72,7 @@ from .const import (
     region_for_base_url,
     resolve_base_url,
 )
+from .push_url import is_https_url, public_url_available
 
 TRANSPORT_OPTIONS: list[selector.SelectOptionDict] = [
     {"value": TRANSPORT_CLOUD, "label": "HYXI Cloud (online account)"},
@@ -101,22 +102,36 @@ PUSH_RATE_OPTIONS: list[selector.SelectOptionDict] = [
 _LOGGER = logging.getLogger(__name__)
 
 
-def _build_user_schema(default_region: str = DEFAULT_REGION) -> vol.Schema:
-    """Build the initial setup schema, including the server region."""
-    return vol.Schema(
-        {
-            vol.Required(CONF_ACCESS_KEY): str,
-            vol.Required(CONF_SECRET_KEY): selector.TextSelector(
-                selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
-            ),
-            vol.Required(CONF_REGION, default=default_region): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=REGION_OPTIONS,
-                    mode=selector.SelectSelectorMode.DROPDOWN,
-                )
-            ),
-        }
-    )
+def _build_user_schema(
+    default_region: str = DEFAULT_REGION, include_push: bool = False
+) -> vol.Schema:
+    """Build the credentials schema, optionally with the push toggle."""
+    schema: dict[vol.Marker, object] = {
+        vol.Required(CONF_ACCESS_KEY): str,
+        vol.Required(CONF_SECRET_KEY): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
+        vol.Required(CONF_REGION, default=default_region): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=REGION_OPTIONS,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
+    }
+    if include_push:
+        schema[vol.Optional(CONF_ENABLE_PUSH, default=False)] = (
+            selector.BooleanSelector()
+        )
+    return vol.Schema(schema)
+
+
+def _push_callback_reachable(hass, push_url: str) -> bool:
+    """Whether HYXI's cloud could reach the push callback: the custom URL
+    when one is given (it must be HTTPS), otherwise Home Assistant Cloud or
+    Home Assistant's external HTTPS URL."""
+    if push_url:
+        return is_https_url(push_url)
+    return public_url_available(hass)
 
 
 def _build_transport_schema() -> vol.Schema:
@@ -306,6 +321,8 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         """Initialize the flow."""
         self.reauth_entry = None
         self._modbus_type = MODBUS_TYPE_TCP
+        # A new cloud entry's data, kept while the push step asks for its URL.
+        self._cloud_data: dict = {}
 
     async def _validate_input(self, data, base_url: str = BASE_URL_DEFAULT):
         """Validate the user input allows us to connect."""
@@ -965,25 +982,59 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
             await self.async_set_unique_id(user_input[CONF_ACCESS_KEY])
             self._abort_if_unique_id_configured()
 
-            base_url = resolve_base_url(user_input.get(CONF_REGION))
-            error = await self._validate_input(user_input, base_url)
+            credentials = dict(user_input)
+            enable_push = credentials.pop(CONF_ENABLE_PUSH, False)
+            base_url = resolve_base_url(credentials.get(CONF_REGION))
+            error = await self._validate_input(credentials, base_url)
             if not error:
+                data = {
+                    **credentials,
+                    "base_url": base_url,
+                    CONF_TRANSPORT: TRANSPORT_CLOUD,
+                }
+                if enable_push:
+                    self._cloud_data = data
+                    return await self.async_step_cloud_push()
                 return self.async_create_entry(
-                    title="HYXI Cloud",
-                    data={
-                        **user_input,
-                        "base_url": base_url,
-                        CONF_TRANSPORT: TRANSPORT_CLOUD,
-                    },
+                    title="HYXI Cloud", data=data, options={CONF_ENABLE_PUSH: False}
                 )
 
             errors["base"] = error
 
         return self.async_show_form(
             step_id="cloud",
-            data_schema=_build_user_schema(default_region),
+            data_schema=_build_user_schema(default_region, include_push=True),
             errors=errors,
             description_placeholders={"link": BASE_URL_DEFAULT},
+        )
+
+    async def async_step_cloud_push(self, user_input=None):
+        """Ask where HYXI's cloud should send push data, for a new entry
+        with push turned on: Home Assistant Cloud or Home Assistant's
+        external HTTPS URL when left empty, otherwise a custom HTTPS URL."""
+        errors = {}
+        if user_input is not None:
+            push_url = (user_input.get(CONF_PUSH_URL) or "").strip()
+            if _push_callback_reachable(self.hass, push_url):
+                # Another flow for these keys may have finished meanwhile.
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title="HYXI Cloud",
+                    data=self._cloud_data,
+                    options={
+                        CONF_ENABLE_PUSH: True,
+                        **({CONF_PUSH_URL: push_url} if push_url else {}),
+                    },
+                )
+            errors["base"] = "no_public_url"
+
+        return self.async_show_form(
+            step_id="cloud_push",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema({vol.Optional(CONF_PUSH_URL): selector.TextSelector()}),
+                user_input or {},
+            ),
+            errors=errors,
         )
 
     async def async_step_reauth(self, entry_data):
@@ -1084,7 +1135,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             # SelectSelector always returns strings; coerce back to int for SDK
             self._options[CONF_PUSH_RATE] = int(user_input[CONF_PUSH_RATE])
         if CONF_PUSH_URL in user_input:
-            self._options[CONF_PUSH_URL] = user_input[CONF_PUSH_URL]
+            self._options[CONF_PUSH_URL] = (user_input[CONF_PUSH_URL] or "").strip()
 
         enable_em = self._options.get(CONF_EM_ENABLED, False)
         if "enable_energy_manager" in user_input:
@@ -1111,6 +1162,15 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             and CONF_PUSH_RATE not in user_input
         ):
             return await self.async_step_init()
+
+        if (
+            self._options.get(CONF_ENABLE_PUSH, False)
+            and CONF_PUSH_RATE in user_input
+            and not _push_callback_reachable(
+                self.hass, self._options.get(CONF_PUSH_URL) or ""
+            )
+        ):
+            return self._show_options_form(errors={"base": "no_public_url"})
 
         if enable_em:
             self._options[CONF_EM_ENABLED] = True
@@ -1141,7 +1201,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             self._options.pop(CONF_PUSH_RATE, None)
             self._options.pop(CONF_PUSH_URL, None)
 
-    def _show_options_form(self):
+    def _show_options_form(self, errors: dict[str, str] | None = None):
         """Build and show the options form, pre-filled with current values."""
         # Pull current values or defaults
         options = self._options if self._options else self._config_entry.options
@@ -1225,7 +1285,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional("enable_energy_manager", default=em_enabled)
                 ] = selector.BooleanSelector()
 
-        return self.async_show_form(step_id="init", data_schema=vol.Schema(schema_dict))
+        return self.async_show_form(
+            step_id="init", data_schema=vol.Schema(schema_dict), errors=errors
+        )
 
     def _save_energy_manager_input(self, user_input: dict) -> None:
         """Save the energy manager user input."""
