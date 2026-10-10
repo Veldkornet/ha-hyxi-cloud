@@ -118,7 +118,8 @@ async def test_webhook_ids_are_kept_across_reloads(hass: HomeAssistant, client):
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
 
-    assert (entry.data["webhook_id"], entry.data["alarm_webhook_id"]) == ids
+    kept = (entry.data["webhook_id"], entry.data["alarm_webhook_id"])
+    assert kept == ids
     client.subscribe_real_time_data.assert_awaited_once()
     client.subscribe_alarm.assert_awaited_once()
 
