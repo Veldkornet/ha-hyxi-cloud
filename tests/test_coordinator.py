@@ -4,6 +4,7 @@
 import importlib
 import sys
 from datetime import timedelta
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -40,6 +41,10 @@ class DummyDataUpdateCoordinator:
     def __init__(self, hass, logger, name, update_interval, config_entry=None):  # pylint: disable=unused-argument,too-many-arguments,too-many-positional-arguments
         self.hass = hass
         self.data = {}
+        self.update_interval = update_interval
+
+    def __class_getitem__(cls, item):
+        return cls
 
 
 class DummyUpdateFailed(Exception):
@@ -85,6 +90,16 @@ importlib.reload(hc_coord)
 
 
 @pytest.fixture(autouse=True)
+def no_retry_delays():
+    """Retry polls and key re-checks without waiting."""
+    with (
+        patch.object(hc_coord, "POLL_RETRY_DELAY", 0),
+        patch.object(hc_coord, "AUTH_RECHECK_DELAY", 0),
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
 def mock_store():
     """Mock the Store class."""
     with patch("custom_components.hyxi_cloud.coordinator.Store") as mock_store:
@@ -95,30 +110,27 @@ def mock_store():
 
 
 @pytest.mark.asyncio
-async def test_async_update_data_unexpected_error():
-    """Test unexpected errors are caught and logged."""
+async def test_a_failed_poll_attempt_is_retried():
+    """A transient poll failure is retried within the same update, and the
+    attempt that succeeded is reported."""
     mock_entry = MagicMock()
     mock_entry.data = {"access_key": "ak", "secret_key": "sk", "base_url": "url"}
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(
-        side_effect=TimeoutError("Test unexpected error")
-    )
+    devices = {"SN123": {"metrics": {"tinv": "45.0"}}}
+    mock_client.poll_devices = AsyncMock(side_effect=[TimeoutError("boom"), devices])
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
     )
+    coordinator._async_sync_device_metadata = AsyncMock()
 
     assert coordinator.hyxi_metadata["last_attempts"] == 0
     assert coordinator.hyxi_metadata["api_status"] == "Starting"
 
-    with pytest.raises(hc_coord.UpdateFailed) as excinfo:
-        await coordinator._async_update_data()
-
-    assert "Unexpected error: Test unexpected error" in str(excinfo.value)
-    assert coordinator.hyxi_metadata["last_attempts"] == 1
-    assert coordinator.hyxi_metadata["last_error"] == "Test unexpected error"
-    assert coordinator.hyxi_metadata["api_status"] == "Error"
+    assert await coordinator._async_update_data() == devices
+    assert coordinator.hyxi_metadata["last_attempts"] == 2
+    assert coordinator.hyxi_metadata["api_status"] == "Online"
 
 
 def _auth_coordinator(fetch_effects):
@@ -127,7 +139,7 @@ def _auth_coordinator(fetch_effects):
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(side_effect=fetch_effects)
+    mock_client.poll_devices = AsyncMock(side_effect=fetch_effects)
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
     )
@@ -151,7 +163,12 @@ async def test_key_rejection_followed_by_network_failure_is_not_auth_failed():
     """If the retry cannot reach HYXI, the poll fails as a connection error
     rather than asking the user to re-enter keys that may be fine."""
     coordinator, _ = _auth_coordinator(
-        [hc_coord.HyxiAuthError("rejected"), TimeoutError()]
+        [
+            hc_coord.HyxiAuthError("rejected"),
+            TimeoutError(),
+            TimeoutError(),
+            TimeoutError(),
+        ]
     )
 
     with pytest.raises(hc_coord.UpdateFailed):
@@ -164,22 +181,22 @@ async def test_one_off_key_rejection_returns_the_retried_fetch():
     """A rejection the retry does not repeat returns the retried data."""
     devices = {"SN1": {"metrics": {"last_seen": "now", "gridP": 1}}}
     coordinator, mock_client = _auth_coordinator(
-        [hc_coord.HyxiAuthError("rejected"), {"data": devices, "attempts": 1}]
+        [hc_coord.HyxiAuthError("rejected"), devices]
     )
     coordinator._async_sync_device_metadata = AsyncMock()
     coordinator.device_store = MagicMock(async_save=AsyncMock())
 
     assert await coordinator._async_update_data() == devices
-    assert mock_client.get_all_device_data.await_count == 2
+    assert mock_client.poll_devices.await_count == 2
 
 
 @pytest.mark.asyncio
-async def test_async_update_data_none_result():
-    """Test None response is handled."""
+async def test_every_poll_attempt_failing_fails_the_update():
+    """When every poll attempt fails, the update fails as unreachable."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(return_value=None)
+    mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -190,6 +207,7 @@ async def test_async_update_data_none_result():
 
     assert "HYXI Cloud unreachable" in str(excinfo.value)
     assert coordinator.hyxi_metadata["last_attempts"] == 3
+    assert mock_client.poll_devices.await_count == hc_coord.POLL_ATTEMPTS
 
 
 @pytest.mark.asyncio
@@ -198,8 +216,8 @@ async def test_async_update_data_success():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(
-        return_value={"data": {"SN123": {"metrics": {"tinv": "45.0"}}}, "attempts": 1}
+    mock_client.poll_devices = AsyncMock(
+        return_value={"SN123": {"metrics": {"tinv": "45.0"}}}
     )
     mock_client._request = AsyncMock(  # pylint: disable=protected-access
         return_value=(200, {"success": False})
@@ -223,11 +241,8 @@ async def test_async_update_data_empty_telemetry():
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
     # Device with empty metrics (only last_seen) — should warn, not fail
-    mock_client.get_all_device_data = AsyncMock(
-        return_value={
-            "data": {"SN123": {"metrics": {"last_seen": "2026-05-22"}}},
-            "attempts": 1,
-        }
+    mock_client.poll_devices = AsyncMock(
+        return_value={"SN123": {"metrics": {"last_seen": "2026-05-22"}}}
     )
     mock_client._request = AsyncMock(  # pylint: disable=protected-access
         return_value=(200, {"success": False})
@@ -252,11 +267,8 @@ async def test_async_update_data_empty_telemetry_collector_only():
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
     # Device type "3" (collector) with empty metrics should NOT trigger UpdateFailed
-    mock_client.get_all_device_data = AsyncMock(
-        return_value={
-            "data": {"SN123": {"device_type_code": "3", "metrics": {}}},
-            "attempts": 1,
-        }
+    mock_client.poll_devices = AsyncMock(
+        return_value={"SN123": {"device_type_code": "3", "metrics": {}}}
     )
     mock_client._request = AsyncMock(  # pylint: disable=protected-access
         return_value=(200, {"success": False})
@@ -376,9 +388,7 @@ async def test_async_update_data_empty_devices_warning():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(
-        return_value={"data": {}, "attempts": 1}
-    )
+    mock_client.poll_devices = AsyncMock(return_value={})
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -400,15 +410,12 @@ async def test_async_update_data_merge_existing_metrics():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(
+    mock_client.poll_devices = AsyncMock(
         return_value={
-            "data": {
-                "SN123": {
-                    "device_type_code": "1",
-                    "metrics": {"new_metric": "value_new", "overlapping": "newer"},
-                }
-            },
-            "attempts": 1,
+            "SN123": {
+                "device_type_code": "1",
+                "metrics": {"new_metric": "value_new", "overlapping": "newer"},
+            }
         }
     )
     mock_client.compute_derived_metrics.return_value = {"derived_key": "derived_value"}
@@ -613,7 +620,7 @@ async def test_async_update_data_falls_back_to_fresh_cache_on_error():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(side_effect=TimeoutError("boom"))
+    mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -638,7 +645,7 @@ async def test_async_update_data_ignores_expired_cache_on_error():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(side_effect=TimeoutError("boom"))
+    mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -662,7 +669,7 @@ async def test_async_update_data_cache_fallback_read_itself_fails():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(side_effect=TimeoutError("boom"))
+    mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -681,7 +688,7 @@ async def test_async_update_data_unhandled_exception_type():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(side_effect=ValueError("weird failure"))
+    mock_client.poll_devices = AsyncMock(side_effect=ValueError("weird failure"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -701,8 +708,8 @@ async def test_async_update_data_save_failure_still_returns_devices():
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
     mock_client = MagicMock()
-    mock_client.get_all_device_data = AsyncMock(
-        return_value={"data": {"SN123": {"metrics": {"tinv": "45.0"}}}, "attempts": 1}
+    mock_client.poll_devices = AsyncMock(
+        return_value={"SN123": {"metrics": {"tinv": "45.0"}}}
     )
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -714,3 +721,126 @@ async def test_async_update_data_save_failure_still_returns_devices():
 
     assert result["SN123"]["metrics"] == {"tinv": "45.0"}
     assert coordinator.hyxi_metadata["api_status"] == "Online"
+
+
+def _discovery_coordinator(results):
+    """A discovery coordinator whose client answers successive discoveries
+    with results (a list of results or exceptions)."""
+    mock_entry = MagicMock()
+    mock_entry.options = {}
+    mock_client = MagicMock()
+    mock_client.discover_devices = AsyncMock(side_effect=results)
+    coordinator = hc_coord.HyxiDiscoveryCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+    return coordinator, mock_client
+
+
+def _discovered(complete=True):
+    return SimpleNamespace(devices={"SN1": {}}, complete=complete)
+
+
+@pytest.mark.asyncio
+async def test_discovery_runs_hourly_once_complete():
+    """A complete discovery keeps the hourly schedule and passes the
+    back-discovery option through."""
+    coordinator, mock_client = _discovery_coordinator([_discovered()])
+    coordinator.entry.options = {hc_coord.CONF_BACK_DISCOVERY: True}
+
+    result = await coordinator._async_update_data()
+
+    assert result.complete
+    assert coordinator.update_interval == hc_coord.DISCOVERY_INTERVAL
+    mock_client.discover_devices.assert_awaited_once_with(allow_back_discovery=True)
+
+
+@pytest.mark.asyncio
+async def test_incomplete_discovery_retries_sooner_with_backoff():
+    """An incomplete or failed discovery is retried after the retry delay,
+    doubling up to the hourly interval, and a complete one resets it."""
+    retry = hc_coord.DISCOVERY_RETRY
+    coordinator, _ = _discovery_coordinator(
+        [
+            _discovered(complete=False),
+            TimeoutError("boom"),
+            _discovered(complete=False),
+            _discovered(),
+            _discovered(complete=False),
+        ]
+    )
+
+    await coordinator._async_update_data()
+    assert coordinator.update_interval == retry
+    with pytest.raises(hc_coord.UpdateFailed):
+        await coordinator._async_update_data()
+    assert coordinator.update_interval == retry * 2
+    await coordinator._async_update_data()
+    assert coordinator.update_interval == retry * 4
+    await coordinator._async_update_data()
+    assert coordinator.update_interval == hc_coord.DISCOVERY_INTERVAL
+    await coordinator._async_update_data()
+    assert coordinator.update_interval == retry
+
+
+@pytest.mark.asyncio
+async def test_discovery_backoff_stops_at_the_hourly_interval():
+    """The retry delay never grows past the hourly interval."""
+    coordinator, _ = _discovery_coordinator([_discovered(complete=False)] * 6)
+
+    for _ in range(6):
+        await coordinator._async_update_data()
+
+    assert coordinator.update_interval == hc_coord.DISCOVERY_INTERVAL
+
+
+@pytest.mark.asyncio
+async def test_discovery_key_rejection_on_retry_raises_auth_failed():
+    """Keys rejected on two discoveries in a row start reauth."""
+    rejected = hc_coord.HyxiAuthError("rejected")
+    coordinator, _ = _discovery_coordinator([rejected, rejected])
+
+    with pytest.raises(hc_coord.ConfigEntryAuthFailed):
+        await coordinator._async_update_data()
+
+
+@pytest.mark.asyncio
+async def test_polling_before_a_discovery_falls_back_to_the_cache():
+    """Until a discovery has succeeded there is nothing to poll, so the
+    update fails over to the cached devices without polling."""
+    mock_entry = MagicMock()
+    mock_entry.options = {"update_interval": 5}
+    mock_client = MagicMock()
+    mock_client.poll_devices = AsyncMock()
+    coordinator = hc_coord.HyxiDataUpdateCoordinator(
+        MagicMock(), mock_client, mock_entry
+    )
+    coordinator.discovery = MagicMock(data=None)
+    cached_devices = {"SN123": {"metrics": {"tinv": "1.0"}}}
+    coordinator.device_store.async_load = AsyncMock(
+        return_value={
+            "cached_at": hc_coord.dt_util.utcnow().isoformat(),
+            "devices": cached_devices,
+        }
+    )
+    coordinator._async_sync_device_metadata = AsyncMock()
+
+    assert await coordinator._async_update_data() == cached_devices
+    assert coordinator.hyxi_metadata["api_status"] == "Offline"
+    mock_client.poll_devices.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "outcome",
+    [SimpleNamespace(devices={}, complete=False), KeyError("model")],
+    ids=["incomplete-and-empty", "unexpected-error"],
+)
+async def test_a_discovery_that_lists_nothing_fails_and_retries_sooner(outcome):
+    """A discovery that could not list any device, or that broke, fails
+    rather than reporting no devices, and is retried after the retry delay."""
+    coordinator, _ = _discovery_coordinator([outcome])
+
+    with pytest.raises((hc_coord.UpdateFailed, KeyError)):
+        await coordinator._async_update_data()
+
+    assert coordinator.update_interval == hc_coord.DISCOVERY_RETRY

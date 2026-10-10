@@ -103,6 +103,16 @@ from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import
 )
 
 
+@pytest.fixture(autouse=True)
+def mock_discovery_coordinator():
+    """A discovery coordinator whose startup discovery succeeds."""
+    with patch(
+        "custom_components.hyxi_cloud.__init__.HyxiDiscoveryCoordinator"
+    ) as discovery_class:
+        discovery_class.return_value.async_config_entry_first_refresh = AsyncMock()
+        yield discovery_class.return_value
+
+
 @pytest.fixture
 def mock_hass():
     hass = MagicMock()
@@ -223,7 +233,7 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
 
         # Check listener added
         mock_entry.add_update_listener.assert_called_once()
-        mock_entry.async_on_unload.assert_called_once_with(
+        mock_entry.async_on_unload.assert_any_call(
             mock_entry.add_update_listener.return_value
         )
 
@@ -329,7 +339,7 @@ async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
 
         # Check listener added
         mock_entry.add_update_listener.assert_called_once()
-        mock_entry.async_on_unload.assert_called_once_with(
+        mock_entry.async_on_unload.assert_any_call(
             mock_entry.add_update_listener.return_value
         )
 

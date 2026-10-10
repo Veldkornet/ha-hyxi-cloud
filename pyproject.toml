@@ -15,7 +15,7 @@ dependencies = [
     # Pinned exactly: the integration depends on this client's error
     # contract (HyxiAuthError for rejected keys), so a newer release must be
     # adopted deliberately rather than installed automatically.
-    "hyxi-cloud-api==1.5.0",
+    "hyxi-cloud-api==1.5.1",
     # Local RS485 transport (imported lazily; a cloud-only entry never loads it).
     "modbus-connection[tmodbus]>=4.10.0",
     # Listed explicitly too: HA's requirement installer checks package+version
