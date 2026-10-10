@@ -29,6 +29,7 @@ from custom_components.hyxi_cloud.sensor import HyxiSubscriptionStatusSensor
 def mock_entry():
     entry = MagicMock()
     entry.entry_id = "entry_123"
+    entry.data = {"webhook_id": "hyxi_cloud_entry_123"}
     entry.options = {
         CONF_ENABLE_PUSH: True,
         CONF_PUSH_RATE: 10,  # stored in seconds; SDK receives *1000 ms
@@ -599,9 +600,9 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
         assert len(debug_log) == 1
         log_msg = debug_log[0]
 
-        # Verify webhook ID is masked and the subscribe code is never logged
+        # Verify the webhook ID is not logged and the subscribe code is never logged
         # in cleartext -- only its masked (hash + "(masked)") form.
-        assert "Webhook ID: ***" in log_msg
+        assert "webhook_123" not in log_msg
         assert "coord-sub-code" not in log_msg
         assert "Active Subscribe Code:" in log_msg
         assert "(masked)" in log_msg

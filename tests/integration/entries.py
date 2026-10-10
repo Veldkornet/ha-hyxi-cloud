@@ -39,3 +39,18 @@ def lookup_entity_id(
     derived from the serial number, so guessing the string directly is
     fragile."""
     return er.async_get(hass).async_get_entity_id(platform, DOMAIN, f"hyxi_{sn}_{key}")
+
+
+def accept_subscriptions(
+    client: AsyncMock, push_code: str = "code-push", alarm_code: str = "code-alarm"
+) -> None:
+    """Make a mocked HyxiApiClient accept push and alarm subscriptions with
+    the given codes."""
+    client.subscribe_real_time_data.return_value = {
+        "success": True,
+        "data": {"subscribeCode": push_code},
+    }
+    client.subscribe_alarm.return_value = {
+        "success": True,
+        "data": {"subscribeCode": alarm_code},
+    }
