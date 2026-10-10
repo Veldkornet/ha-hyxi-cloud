@@ -1423,13 +1423,11 @@ async def _async_setup_battery_protection(
 
     if tasks:
         # return_exceptions=True rather than a bare gather(): a single
-        # device's initial control write failing (bus contention, a
-        # provider-controlled battery that will never accept local writes,
-        # a transient timeout) must not take the whole config entry down.
-        # HyxiBatteryProtectionController.async_start() registers its
-        # coordinator listener before attempting that write, so the
-        # controller stays "started" and retries naturally on the next
-        # coordinator refresh even when this first attempt fails --
+        # device's controller failing to start must not take the whole
+        # config entry down. A failure of its initial evaluation (and so
+        # of the control write it sends) is logged by the controller
+        # itself; async_start() registers its coordinator listener first,
+        # so the controller retries on the next coordinator refresh --
         # nothing further to clean up here. task_sns is tracked alongside
         # tasks explicitly, rather than zipping against
         # coordinator.protection_controllers, so pairing stays correct even

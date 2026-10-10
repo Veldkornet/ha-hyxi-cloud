@@ -64,6 +64,11 @@ def _fake_async_create_task(coro):
     return MagicMock()
 
 
+def _eager_task(coro):
+    """Start a task eagerly, as HomeAssistant.async_create_task does."""
+    return asyncio.get_running_loop().create_task(coro, eager_start=True)
+
+
 def _build_controller(
     soc: float, model: str = "H5K-HT", transport: str = "cloud"
 ) -> HyxiBatteryProtectionController:
@@ -296,6 +301,7 @@ async def test_proactive_state_restore_on_start():
 
     mock_state = SimpleNamespace(state="charge")
     controller._hass.states = SimpleNamespace(get=MagicMock(return_value=mock_state))
+    controller._hass.async_create_task = _eager_task
 
     await controller.async_start()
 
@@ -379,21 +385,98 @@ def test_should_block_discharge_charge_when_soc_is_none():
     assert controller.should_block_manual_charge() is False
 
 
+def _build_blocking_controller() -> tuple[
+    HyxiBatteryProtectionController, list[str], asyncio.Event
+]:
+    """A low-SOC controller on eager tasks whose control writes wait for
+    the returned event; the list records each write's start and end."""
+    controller = _build_controller(20)
+    controller._hass.async_create_task = _eager_task
+    writes: list[str] = []
+    release = asyncio.Event()
+
+    async def ensure_mode(mode: str) -> None:
+        writes.append(mode)
+        await release.wait()
+        writes.append(f"{mode} sent")
+
+    controller._ensure_mode = ensure_mode  # type: ignore[method-assign]
+    return controller, writes, release
+
+
 @pytest.mark.asyncio
-async def test_handle_coordinator_update_cancels_running_task():
-    """Verify _handle_coordinator_update cancels previous tasks before launching new ones."""
-    controller = _build_controller(50)
-    mock_task = MagicMock()
-    mock_task.done.return_value = False
-    controller._eval_task = mock_task
+async def test_an_evaluation_request_during_a_control_write_does_not_cancel_it():
+    """An evaluation requested while one is sending a control write lets
+    the write finish, then evaluates once more."""
+    controller, writes, release = _build_blocking_controller()
 
-    mock_hass = MagicMock()
-    controller._hass = mock_hass
+    controller.request_evaluation()
+    evaluation = controller._eval_task
+    controller.request_evaluation()
+    controller.request_evaluation()
 
-    controller._handle_coordinator_update()
+    assert controller._eval_task is evaluation
+    assert writes == ["idle"]
+    release.set()
+    await evaluation
+    assert writes == ["idle", "idle sent", "idle", "idle sent"]
 
-    mock_task.cancel.assert_called_once()
-    mock_hass.async_create_task.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_an_evaluation_request_during_startup_waits_for_it():
+    """The evaluation at startup is the running evaluation too, so a
+    request during it doesn't start a second one alongside."""
+    controller, writes, release = _build_blocking_controller()
+    controller._coordinator.async_add_listener = MagicMock()
+
+    start = _eager_task(controller.async_start())
+    controller.request_evaluation()
+
+    assert writes == ["idle"]
+    release.set()
+    await start
+    assert writes == ["idle", "idle sent", "idle", "idle sent"]
+
+
+@pytest.mark.asyncio
+async def test_a_failed_evaluation_still_evaluates_again(caplog):
+    """An evaluation that fails is logged, and one requested meanwhile
+    still runs."""
+    controller = _build_controller(20)
+    controller._hass.async_create_task = _eager_task
+    release = asyncio.Event()
+    calls = 0
+
+    async def evaluate() -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            await release.wait()
+            raise RuntimeError("broken")
+
+    controller.async_evaluate = evaluate  # type: ignore[method-assign]
+    controller.request_evaluation()
+    controller.request_evaluation()
+    release.set()
+    await controller._eval_task
+
+    assert calls == 2
+    assert "evaluation failed" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_hung_evaluation_gives_way(caplog):
+    """An evaluation stuck past the time limit is abandoned, so a requested
+    evaluation can run on newer data."""
+    controller, writes, _release = _build_blocking_controller()
+
+    with patch("custom_components.hyxi_cloud.protection.EVALUATION_TIMEOUT", 0.01):
+        controller.request_evaluation()
+        controller.request_evaluation()
+        await controller._eval_task
+
+    assert writes == ["idle", "idle"]
+    assert "abandoned it" in caplog.text
 
 
 @pytest.mark.asyncio

@@ -724,7 +724,7 @@ class HyxiProtectionNumber(
                 self._sn
             )
         ) is not None:
-            self.hass.async_create_task(controller.async_evaluate())
+            controller.request_evaluation()
 
 
 class EMParameterNumber(NumberEntity, RestoreEntity):

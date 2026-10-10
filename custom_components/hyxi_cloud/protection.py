@@ -25,6 +25,9 @@ DEFAULT_SOC_MAX = 90
 DEFAULT_SOC_MIN_HYSTERESIS = 2
 DEFAULT_SOC_MAX_HYSTERESIS = 2
 MODE_SWITCH_COOLDOWN = 60
+# Longest one evaluation may take before it gives way to newer data; a
+# control write still pending by then is abandoned.
+EVALUATION_TIMEOUT = 120
 
 # HYXI's "the current application does not have permission to call this
 # API" response code. Confirmed as a platform-wide block for Micro ESS
@@ -75,6 +78,9 @@ class HyxiBatteryProtectionController:
         self._last_device_rejected_logged = False
         self._unsub_listener: CALLBACK_TYPE | None = None
         self._eval_task: asyncio.Task | None = None
+        # Set when an evaluation is requested during one, so the running
+        # one evaluates again once it finishes.
+        self._reevaluate = False
         self._verify_tasks: set[asyncio.Task] = set()
 
     @property
@@ -138,7 +144,9 @@ class HyxiBatteryProtectionController:
         self._unsub_listener = self._coordinator.async_add_listener(
             self._handle_coordinator_update
         )
-        await self.async_evaluate()
+        # Waits without being cancelled with it: stop() cancels the
+        # evaluation itself.
+        await asyncio.wait({self.request_evaluation()})
 
     def stop(self) -> None:
         """Stop listening for coordinator updates."""
@@ -251,10 +259,39 @@ class HyxiBatteryProtectionController:
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Evaluate protection rules after new coordinator data arrives."""
+        """Evaluate the protection rules after new coordinator data arrives."""
+        self.request_evaluation()
+
+    @callback
+    def request_evaluation(self) -> asyncio.Task:
+        """Evaluate the protection rules, or evaluate again once the running
+        evaluation finishes: it is never cancelled, since it may be in the
+        middle of a control write. Returns the evaluation's task."""
         if self._eval_task is not None and not self._eval_task.done():
-            self._eval_task.cancel()
-        self._eval_task = self._hass.async_create_task(self.async_evaluate())
+            self._reevaluate = True
+            return self._eval_task
+        self._eval_task = self._hass.async_create_task(
+            self._async_evaluate_until_settled()
+        )
+        return self._eval_task
+
+    async def _async_evaluate_until_settled(self) -> None:
+        """Evaluate, and again while an evaluation was requested meanwhile."""
+        while True:
+            self._reevaluate = False
+            try:
+                async with asyncio.timeout(EVALUATION_TIMEOUT):
+                    await self.async_evaluate()
+            except TimeoutError:
+                _LOGGER.warning(
+                    "Protection %s: evaluation took over %ss; abandoned it",
+                    mask_sn(self._sn),
+                    EVALUATION_TIMEOUT,
+                )
+            except Exception:  # pylint: disable=broad-exception-caught
+                _LOGGER.exception("Protection %s: evaluation failed", mask_sn(self._sn))
+            if not self._reevaluate:
+                return
 
     async def async_evaluate(self) -> None:
         """Evaluate the current SOC and enforce protection limits."""
