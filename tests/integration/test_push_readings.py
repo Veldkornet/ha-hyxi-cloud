@@ -70,9 +70,9 @@ async def test_a_push_after_a_poll_keeps_time_and_phase_powers(
     hass: HomeAssistant, client, freezer
 ):
     """A pushed reading updates the device with its corrected time but
-    keeps the polled phase powers. The same reading sent again changes
-    nothing but still counts as a received push; a later reading is
-    applied."""
+    keeps the polled phase powers. The same reading sent again, or an older
+    one, changes nothing but still counts as a received push; a later
+    reading is applied."""
     freezer.move_to(ARRIVAL)
     entry = cloud_entry(hass)
     serve_devices(
@@ -100,6 +100,8 @@ async def test_a_push_after_a_poll_keeps_time_and_phase_powers(
     assert _state(hass, "last_seen") == "2026-10-10T16:31:30+00:00"
     assert _state(hass, "batSoc") == "89"
     assert float(_state(hass, "ph1p")) == 1201.0
+    assert float(_state(hass, "ph2p")) == 1189.0
+    assert float(_state(hass, "ph3p")) == 1195.0
 
     freezer.tick(60)
     await _push(hass, coordinator, {**CAPTURED_READING, "batSoc": 70})
@@ -107,7 +109,17 @@ async def test_a_push_after_a_poll_keeps_time_and_phase_powers(
     assert _state(hass, "batSoc") == "89"
     assert coordinator.last_push_received == ARRIVAL + timedelta(seconds=60)
 
-    later = CAPTURED_READING["collectTime"] + 60_000
-    await _push(hass, coordinator, {**CAPTURED_READING, "collectTime": later})
+    older = CAPTURED_READING["collectTime"] - 60_000
+    await _push(
+        hass, coordinator, {**CAPTURED_READING, "collectTime": older, "batSoc": 70}
+    )
 
+    assert _state(hass, "batSoc") == "89"
+
+    later = CAPTURED_READING["collectTime"] + 60_000
+    await _push(
+        hass, coordinator, {**CAPTURED_READING, "collectTime": later, "batSoc": 80}
+    )
+
+    assert _state(hass, "batSoc") == "80"
     assert _state(hass, "last_seen") == "2026-10-10T16:32:30+00:00"
