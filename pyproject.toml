@@ -13,9 +13,10 @@ authors = [
 requires-python = ">=3.14.2,<3.15"
 dependencies = [
     # Pinned exactly: the integration depends on this client's error
-    # contract (HyxiAuthError for rejected keys), so a newer release must be
-    # adopted deliberately rather than installed automatically.
-    "hyxi-cloud-api==1.5.1",
+    # contract (HyxiAuthError for rejected keys, ControlNotForwardedError as
+    # a ControlError subclass for commands HYXI does not forward), so a newer
+    # release must be adopted deliberately rather than installed automatically.
+    "hyxi-cloud-api==1.5.2",
     # Local RS485 transport (imported lazily; a cloud-only entry never loads it).
     "modbus-connection[tmodbus]>=4.10.0",
     # Listed explicitly too: HA's requirement installer checks package+version

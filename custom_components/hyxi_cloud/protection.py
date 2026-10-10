@@ -13,6 +13,7 @@ from hyxi_cloud_api import HyxiApiClient
 
 from . import control_verify
 from .const import DOMAIN, detect_phase_type, is_modbus_entry, mask_sn
+from .control import NOT_FORWARDED_REASON, NotForwardedPause
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -70,6 +71,7 @@ class HyxiBatteryProtectionController:
         self._high_soc_hold = False
         self._last_mode_switch = -999999.0
         self._last_control_error_kind: str | None = None
+        self._not_forwarded = NotForwardedPause()
         self._last_device_rejected_logged = False
         self._unsub_listener: CALLBACK_TYPE | None = None
         self._eval_task: asyncio.Task | None = None
@@ -410,6 +412,14 @@ class HyxiBatteryProtectionController:
             )
             return
 
+        if self._not_forwarded.paused("mode"):
+            _LOGGER.debug(
+                "Protection %s: mode switch to %s paused, HYXI does not forward it",
+                mask_sn(self._sn),
+                mode,
+            )
+            return
+
         seq = self.begin_send()
         try:
             response = await self._send_control(mode)
@@ -422,9 +432,16 @@ class HyxiBatteryProtectionController:
             # "under external control" to "permission denied", or back)
             # is WARNING again, since it's new, actionable information.
             self._last_mode_switch = time.monotonic()
+            if isinstance(err, HyxiApiClient.ControlNotForwardedError):
+                self._not_forwarded.refused("mode")
+                kind = "not_forwarded"
+                guidance = (
+                    f"{NOT_FORWARDED_REASON}. Turn off Device Control & "
+                    "Protection for it."
+                )
             # Cloud-only: HYXI's API code. Modbus write failures never
             # carry this HYXI response code.
-            if not is_modbus_entry(
+            elif not is_modbus_entry(
                 self._coordinator.entry
             ) and _PERMISSION_DENIED_MARKER in str(err):
                 # HYXI's own API is refusing the write as unauthorized.
@@ -469,6 +486,7 @@ class HyxiBatteryProtectionController:
             return
 
         self._last_control_error_kind = None
+        self._not_forwarded.forwarded("mode")
         trace_id = control_verify.extract_trace_id(response, self._sn, "Protection")
         self._record_send(seq, mode, trace_id)
         self._last_mode_switch = time.monotonic()

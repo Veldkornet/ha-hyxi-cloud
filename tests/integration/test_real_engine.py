@@ -1,5 +1,6 @@
 """Integration tests for the HYXI Energy Manager decision engine."""
 
+import logging
 import time
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
@@ -1266,6 +1267,90 @@ async def test_engine_control_methods_live_mode(hass: HomeAssistant):
     )
     hass.states.async_set(power_entry.entity_id, "321")
     assert engine._get_current_power_setting("discharge") == 321.0
+
+
+def _not_forwarded_engine(hass: HomeAssistant, caplog):
+    """A live-mode engine whose mode and peak-shaving commands HYXI accepts
+    but does not forward, with every cooldown expired."""
+    engine, coordinator, _entry = _make_engine(hass, options={"em_dry_run": False})
+    client = AsyncMock()
+    coordinator.client = client
+    not_forwarded = HyxiApiClient.ControlNotForwardedError("not forwarded", {})
+    client.set_mode_idle.side_effect = not_forwarded
+    client.set_mode_charge.side_effect = not_forwarded
+    client.set_peak_shaving.side_effect = not_forwarded
+    _expire_cooldowns(engine)
+    engine._last_sent_power["charge"] = 0
+    caplog.set_level(logging.DEBUG, logger="custom_components.hyxi_cloud.engine")
+    return engine, client, not_forwarded
+
+
+def _expire_cooldowns(engine) -> None:
+    engine._last_mode_switch = -999999.0
+    engine._last_power_adjust = -999999.0
+    engine._last_pv_curtail_toggle = -999999.0
+
+
+def _refusal_levels(caplog) -> list[int]:
+    return [
+        r.levelno for r in caplog.records if "was not sent to the device" in r.message
+    ]
+
+
+@pytest.mark.asyncio
+async def test_engine_pauses_mode_commands_hyxi_does_not_forward(
+    hass: HomeAssistant, caplog
+):
+    """A mode command HYXI accepted but did not forward (credentials without
+    VPP authorization) shows on the EM's last action and pauses mode
+    commands -- mode switches and power adjustments alike -- rather than
+    resending them every cooldown. Its first refusal is a WARNING without a
+    traceback."""
+    engine, client, _ = _not_forwarded_engine(hass, caplog)
+
+    assert await engine._set_mode("idle") is False
+    assert engine.last_action == "idle not forwarded by HYXI"
+    _expire_cooldowns(engine)
+    assert await engine._set_mode("idle") is False
+    assert await engine._adjust_power("charge", 700) is False
+
+    assert client.set_mode_idle.await_count == 1
+    client.set_mode_charge.assert_not_awaited()
+    assert _refusal_levels(caplog) == [logging.WARNING]
+    assert not any(r.exc_info for r in caplog.records)
+
+    # A refused power adjustment pauses mode commands the same way.
+    engine._not_forwarded._until["mode"] = 0
+    _expire_cooldowns(engine)
+    assert await engine._adjust_power("charge", 700) is False
+    assert engine.last_action == "charge @ 700W not forwarded by HYXI"
+    assert engine._not_forwarded_paused("mode")
+
+
+@pytest.mark.asyncio
+async def test_engine_pauses_peak_shaving_separately_and_resets_on_success(
+    hass: HomeAssistant, caplog
+):
+    """Peak shaving is paused and warned about on its own, and a command
+    that gets through again makes a later refusal a WARNING again."""
+    engine, client, not_forwarded = _not_forwarded_engine(hass, caplog)
+    assert await engine._set_mode("idle") is False
+
+    assert await engine._set_peak_shaving("stop") is False
+    assert engine.last_action == "peak_shaving_stop not forwarded by HYXI"
+    _expire_cooldowns(engine)
+    assert await engine._set_peak_shaving("stop") is False
+    assert client.set_peak_shaving.await_count == 1
+    assert _refusal_levels(caplog) == [logging.WARNING, logging.WARNING]
+
+    engine._not_forwarded._until["mode"] = 0
+    _expire_cooldowns(engine)
+    client.set_mode_idle.side_effect = None
+    assert await engine._set_mode("idle") is True
+    client.set_mode_idle.side_effect = not_forwarded
+    _expire_cooldowns(engine)
+    assert await engine._set_mode("idle") is False
+    assert _refusal_levels(caplog) == [logging.WARNING] * 3
 
 
 @pytest.mark.asyncio

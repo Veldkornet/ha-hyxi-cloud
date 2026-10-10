@@ -43,28 +43,16 @@ def extract_trace_id(response: dict, sn: str, log_tag: str) -> str | None:
     with a single device_sn. A Modbus response carries no `data`/traceId
     at all, so this returns None for those too.
 
-    HYXI's own docs mark traceId as not required in the response, and
-    real traffic confirms why: observed live against a device under
-    active third-party (energy-provider) VPP dispatch, `traceId` came
-    back as the literal string "SKIPPED" rather than an absent field or
-    a real one -- query_control_result("SKIPPED") returns data: None
-    forever, since there's nothing by that identifier to look up.
-    Every genuine traceId across HYXI's docs and confirmed real traffic
-    is purely numeric (e.g. "1858391884548935680"), so a value that
-    isn't gets treated the same as no traceId at all, rather than being
-    scheduled for a poll that can only ever time out -- but unlike a
-    plain absent traceId (unremarkable, not logged), a present-but-
-    non-numeric one is logged, since it's a distinct, informative signal
-    rather than just "nothing to report".
-
-    HYXI's Device Control Appendix independently supports the likely
-    cause: every controlId set_mode_*/set_peak_shaving/set_frequency_
-    control send (1011/1020/1021/1062-1066) is documented there as "VPP
-    business usage". A third-party VPP aggregator dispatching the same
-    device over that same control surface is a plausible reason our own
-    write gets silently declined rather than actually rejected -- though
-    HYXI hasn't documented "SKIPPED" itself or confirmed this mechanism,
-    so it remains a well-supported inference, not a confirmed one.
+    HYXI's own docs mark traceId as not required in the response. Every
+    genuine traceId across HYXI's docs and confirmed real traffic is purely
+    numeric (e.g. "1858391884548935680"), so a value that isn't gets
+    treated the same as no traceId at all, rather than being scheduled for
+    a poll that can only ever time out -- but unlike a plain absent traceId
+    (unremarkable, not logged), a present-but-non-numeric one is logged,
+    since it's a distinct signal. The one such value HYXI is known to send,
+    "SKIPPED" for a command it accepted but did not forward to the device
+    (VPP commands sent without VPP authorization), never reaches here:
+    hyxi_cloud_api raises ControlNotForwardedError for it instead.
     """
     if not isinstance(response, dict):
         return None
@@ -83,9 +71,7 @@ def extract_trace_id(response: dict, sn: str, log_tag: str) -> str | None:
     if trace_id:
         _LOGGER.debug(
             "%s %s: HYXI returned a non-trackable traceId (%r) instead of "
-            "a real one -- not polling it. Seen in practice when the "
-            "device is under active third-party (energy-provider) "
-            "control, though that correlation isn't confirmed.",
+            "a real one -- not polling it.",
             log_tag,
             mask_sn(sn),
             trace_id,
