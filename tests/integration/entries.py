@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from hyxi_cloud_api import DiscoveryResult
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -28,3 +29,13 @@ def serve_devices(client: AsyncMock, devices: dict) -> None:
         devices={sn: {} for sn in devices}, complete=True
     )
     client.poll_devices.return_value = devices
+
+
+def lookup_entity_id(
+    hass: HomeAssistant, platform: str, sn: str, key: str
+) -> str | None:
+    """Look up an entity by its unique_id, the same way _get_power_value
+    does in production -- entity_id is slugified from the device name, not
+    derived from the serial number, so guessing the string directly is
+    fragile."""
+    return er.async_get(hass).async_get_entity_id(platform, DOMAIN, f"hyxi_{sn}_{key}")
