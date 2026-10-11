@@ -43,7 +43,7 @@ jobs:
       # auto-incrementing the beta counter -- see release-drafter.yml's
       # own prerelease/prerelease-identifier/latest settings.
       - name: Update Beta Draft
-        uses: release-drafter/release-drafter@c345907820e0396f6f44bcfd9ac4763325f8feb0 # v7.8.0
+        uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
           committish: main
         env:
@@ -57,7 +57,7 @@ jobs:
       # single click with the version and changelog already correct, no
       # manual tag/prerelease-checkbox editing needed.
       - name: Update Stable Draft
-        uses: release-drafter/release-drafter@c345907820e0396f6f44bcfd9ac4763325f8feb0 # v7.8.0
+        uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
           committish: main
           # prerelease: false is the only override that matters here --
