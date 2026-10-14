@@ -112,14 +112,14 @@ async def test_a_discovered_device_reloads_the_entry(hass: HomeAssistant, client
     entry = cloud_entry(hass)
     serve_devices(client, _devices("SN_A"))
     await _setup(hass, entry)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     serve_devices(client, _devices("SN_A", "SN_B"))
     await coordinator.discovery.async_refresh()
     await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
-    assert hass.data[DOMAIN][entry.entry_id] is not coordinator
+    assert entry.runtime_data is not coordinator
     assert _registered(hass, entry, "SN_B")
 
 
@@ -138,13 +138,13 @@ async def test_a_discovery_without_new_devices_keeps_the_entry(
     entry = cloud_entry(hass)
     serve_devices(client, _devices("SN_A", "SN_B"))
     await _setup(hass, entry)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     serve_devices(client, rediscovered)
     await coordinator.discovery.async_refresh()
     await hass.async_block_till_done()
 
-    assert hass.data[DOMAIN][entry.entry_id] is coordinator
+    assert entry.runtime_data is coordinator
 
 
 @pytest.mark.asyncio
@@ -165,14 +165,14 @@ async def test_failed_startup_discovery_uses_cached_devices(
 
     # Once discovery succeeds, polling starts without waiting for its
     # interval, and the entry is not reloaded for the same devices.
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     client.discover_devices.side_effect = None
     serve_devices(client, _devices("SN_A"))
     await coordinator.discovery.async_refresh()
     async_fire_time_changed(hass, dt_util.utcnow() + PAST_REFRESH_DEBOUNCE)
     await hass.async_block_till_done()
 
-    assert hass.data[DOMAIN][entry.entry_id] is coordinator
+    assert entry.runtime_data is coordinator
     client.poll_devices.assert_awaited()
     assert not coordinator.hyxi_metadata["cache_active"]
 
@@ -229,13 +229,13 @@ async def test_a_failed_rediscovery_keeps_the_entry(hass: HomeAssistant, client)
     entry = cloud_entry(hass)
     serve_devices(client, _devices("SN_A"))
     await _setup(hass, entry)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     client.discover_devices.side_effect = TimeoutError("unreachable")
     await coordinator.discovery.async_refresh()
     await hass.async_block_till_done()
 
-    assert hass.data[DOMAIN][entry.entry_id] is coordinator
+    assert entry.runtime_data is coordinator
 
 
 @pytest.mark.asyncio
@@ -255,7 +255,7 @@ async def test_a_device_whose_first_poll_failed_is_added_once_polled(
         patch.object(hass.config_entries, "async_schedule_reload") as schedule_reload,
     ):
         await _setup(hass, entry)
-        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator = entry.runtime_data
         assert not _registered(hass, entry, "SN_B")
 
         polls = client.poll_devices.await_count

@@ -51,7 +51,7 @@ from .const import (
 from .entity import via_device_id
 
 if TYPE_CHECKING:
-    from .coordinator import HyxiDataUpdateCoordinator
+    from .coordinator import HyxiConfigEntry, HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1190,9 +1190,9 @@ SENSOR_TYPES = [
 SENSOR_TYPES_BY_KEY = {desc.key: desc for desc in SENSOR_TYPES}
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(hass, entry: HyxiConfigEntry, async_add_entities):
     """Set up HYXI sensors."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     if not coordinator.data:
         _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
         return

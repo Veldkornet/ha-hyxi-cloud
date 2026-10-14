@@ -72,7 +72,11 @@ from .const import (
     normalize_device_type,
     offers_device_control,
 )
-from .coordinator import HyxiDataUpdateCoordinator, HyxiDiscoveryCoordinator
+from .coordinator import (
+    HyxiConfigEntry,
+    HyxiDataUpdateCoordinator,
+    HyxiDiscoveryCoordinator,
+)
 from .protection import HyxiBatteryProtectionController
 from .push_url import cloud_subscription_active, external_https_url, is_https_url
 
@@ -177,7 +181,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # NOSON
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool:
     """Set up HYXI Cloud from a config entry."""
     _LOGGER.debug(
         "Starting HYXI Cloud Integration (Integration: %s, API: %s)",
@@ -241,7 +245,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # entry.async_on_unload (where async_get_unit put its close) on any
     # non-success path.
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    entry.runtime_data = coordinator
 
     # Push subscriptions register a webhook with HYXI's servers so the cloud
     # can call back. RS485 has no such channel -- it is polled -- so a Modbus
@@ -364,34 +368,29 @@ def _track_new_devices(
     entry.async_on_unload(coordinator.async_add_listener(_on_poll))
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool:
     """Unload a config entry."""
     _LOGGER.debug("Unloading HYXI Cloud entry %s", entry.entry_id)
-    coordinator = hass.data[DOMAIN].get(entry.entry_id)
-    if coordinator is not None:
-        if coordinator.engine is not None:
-            coordinator.engine.stop()
-        for controller in coordinator.protection_controllers.values():
-            controller.stop()
-        if is_modbus_entry(entry):
-            await _release_modbus_dispatch_on_teardown(hass, coordinator)
-        # A Modbus entry has no server-side subscriptions to tear down,
-        # and HA releases its shared bus via entry.async_on_unload.
-        if not is_modbus_entry(entry):
-            # Leave the subscriptions alive on the server (cancel_remote=False):
-            # the persisted code + fingerprint let the next setup reuse them,
-            # avoiding a cancel/resubscribe cycle on every restart and reload.
-            # Permanent cleanup happens in async_remove_entry when the entry is
-            # actually deleted.
-            await _async_teardown_push_subscription(
-                hass, coordinator, entry, cancel_remote=False
-            )
-            await _async_teardown_alarm_subscription(
-                hass, coordinator, entry, cancel_remote=False
-            )
+    coordinator = entry.runtime_data
+    if coordinator.engine is not None:
+        coordinator.engine.stop()
+    for controller in coordinator.protection_controllers.values():
+        controller.stop()
+    if is_modbus_entry(entry):
+        await _release_modbus_dispatch_on_teardown(hass, coordinator)
+    else:
+        # Leave the subscriptions alive on the server (cancel_remote=False):
+        # the persisted code + fingerprint let the next setup reuse them,
+        # avoiding a cancel/resubscribe cycle on every restart and reload.
+        # Permanent cleanup happens in async_remove_entry when the entry is
+        # actually deleted.
+        await _async_teardown_push_subscription(
+            hass, coordinator, entry, cancel_remote=False
+        )
+        await _async_teardown_alarm_subscription(
+            hass, coordinator, entry, cancel_remote=False
+        )
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
     _LOGGER.debug("HYXI Cloud entry %s unload result: %s", entry.entry_id, unload_ok)
     return unload_ok
 
@@ -886,10 +885,9 @@ def _async_setup_energy_manager(
     )
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> None:
     """Reload config entry when options change."""
-    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-    if coordinator is not None and coordinator.options == entry.options:
+    if entry.runtime_data.options == entry.options:
         _LOGGER.debug(
             "HYXI: Config entry data updated, skipping reload as options did not change"
         )
@@ -2627,7 +2625,7 @@ def _cancel_subscription_coordinator(
 ) -> HyxiDataUpdateCoordinator:
     """The cloud entry to cancel a subscription with: the one named, else
     the one whose HYXI subscription list holds the code, else the only one."""
-    loaded = hass.data.get(DOMAIN, {})
+    loaded = _loaded_coordinators(hass)
     cloud = {
         loaded_id: coord
         for loaded_id, coord in loaded.items()
@@ -2757,7 +2755,7 @@ def _resolve_battery_mode_targets(
         if (entity := ent_reg.async_get(entity_id)) is not None and entity.device_id:
             all_device_ids.add(entity.device_id)
 
-    coordinators = hass.data.get(DOMAIN, {})
+    coordinators = _loaded_coordinators(hass)
     return [
         row
         for device_id in all_device_ids
@@ -2840,6 +2838,16 @@ async def async_refresh_subscriptions(coordinator: HyxiDataUpdateCoordinator) ->
     coordinator.async_update_listeners()
 
 
+def _loaded_coordinators(
+    hass: HomeAssistant,
+) -> dict[str, HyxiDataUpdateCoordinator]:
+    """The coordinators of the loaded HYXI entries, by entry ID."""
+    return {
+        entry.entry_id: entry.runtime_data
+        for entry in hass.config_entries.async_loaded_entries(DOMAIN)
+    }
+
+
 async def _async_refresh_subscriptions_for(
     hass: HomeAssistant, coordinator: HyxiDataUpdateCoordinator
 ) -> None:
@@ -2847,7 +2855,7 @@ async def _async_refresh_subscriptions_for(
     with the same credentials as coordinator."""
     await async_refresh_subscriptions(coordinator)
     access_key = getattr(coordinator.client, "access_key", None)
-    for other in hass.data.get(DOMAIN, {}).values():
+    for other in _loaded_coordinators(hass).values():
         if (
             other is not coordinator
             and not is_modbus_entry(other.entry)

@@ -159,7 +159,7 @@ async def test_async_setup_entry():
         "SN3": dev_data_micro,
     }
 
-    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
     async_add_entities = MagicMock()
 
     # The setup function itself is a coroutine, so we run it using a mock coroutine trick
@@ -242,7 +242,7 @@ async def test_async_setup_entry_no_protection():
         "SN3": dev_data_micro,
     }
 
-    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
     async_add_entities = MagicMock()
 
     await number_mod.async_setup_entry(hass, entry, async_add_entities)
@@ -261,7 +261,7 @@ async def test_async_setup_entry_no_coordinator_data():
     coordinator = MagicMock()
     coordinator.data = {}
 
-    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
     async_add_entities = MagicMock()
 
     await number_mod.async_setup_entry(hass, entry, async_add_entities)
@@ -291,7 +291,7 @@ async def test_async_setup_entry_adds_em_numbers():
     coordinator = MagicMock()
     coordinator.data = {"SN1": dev_data_3phase}
 
-    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
     async_add_entities = MagicMock()
 
     await number_mod.async_setup_entry(hass, entry, async_add_entities)
@@ -328,7 +328,7 @@ async def test_async_setup_entry_adds_em_numbers_single_phase_includes_export():
     coordinator = MagicMock()
     coordinator.data = {"SN1": dev_data_1phase}
 
-    hass.data = {number_mod.DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
     async_add_entities = MagicMock()
 
     await number_mod.async_setup_entry(hass, entry, async_add_entities)

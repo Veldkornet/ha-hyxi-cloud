@@ -4,6 +4,7 @@ service and the entry it cancels with."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import (
     HomeAssistantError,
@@ -14,6 +15,7 @@ from homeassistant.setup import async_setup_component
 from hyxi_cloud_api import HyxiApiClient, Subscription, SubscriptionType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.hyxi_cloud import _loaded_coordinators
 from custom_components.hyxi_cloud.const import DOMAIN
 from tests.integration.entries import cloud_entry, serve_devices
 from tests.integration.test_modbus import _modbus_entry, _seeded_connection
@@ -113,6 +115,38 @@ async def test_an_entry_that_is_not_loaded_is_refused(hass: HomeAssistant, clien
     with pytest.raises(ServiceValidationError, match="not a loaded HYXI Cloud"):
         await _cancel(hass, config_entry_id="not-an-entry")
     clients[0].cancel_subscription.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_an_entry_retrying_setup_does_not_cancel(hass: HomeAssistant, clients):
+    """An entry still retrying setup isn't a loaded entry: it can't be named,
+    and without a name the loaded entry cancels."""
+    await _add_entry(hass, "ak1")
+    clients[1].discover_devices.side_effect = TimeoutError("unreachable")
+    retrying = cloud_entry(hass, "ak2")
+    await hass.config_entries.async_setup(retrying.entry_id)
+    await hass.async_block_till_done()
+    assert retrying.state is ConfigEntryState.SETUP_RETRY
+
+    with pytest.raises(ServiceValidationError, match="not a loaded HYXI Cloud"):
+        await _cancel(hass, config_entry_id=retrying.entry_id)
+
+    await _cancel(hass)
+    clients[0].cancel_subscription.assert_awaited_once_with("code-x")
+    clients[1].cancel_subscription.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_an_unloaded_entry_is_no_longer_loaded(hass: HomeAssistant, clients):
+    """Once unloaded, an entry's coordinator is no longer among the loaded
+    ones."""
+    entry = await _add_entry(hass, "ak1")
+    assert _loaded_coordinators(hass) == {entry.entry_id: entry.runtime_data}
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert _loaded_coordinators(hass) == {}
 
 
 @pytest.mark.asyncio

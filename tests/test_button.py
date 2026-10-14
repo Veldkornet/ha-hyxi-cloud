@@ -73,7 +73,6 @@ mock_api = sys.modules["hyxi_cloud_api"]
 
 # Now import the modules to test
 import custom_components.hyxi_cloud.button as button_mod
-from custom_components.hyxi_cloud.const import DOMAIN
 
 
 @pytest.fixture
@@ -108,7 +107,7 @@ async def test_async_setup_entry_no_coordinator_data(
 ):
     """Test setup adds nothing (and doesn't crash) with no coordinator data yet."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {}
 
     async_add_entities = MagicMock()
@@ -123,7 +122,7 @@ async def test_async_setup_entry_adds_push_buttons(
 ):
     """Test the renew subscription button is added when push is enabled."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {"SN1": {"device_type_code": "UNKNOWN"}}
     mock_entry_fixture.options = {button_mod.CONF_ENABLE_PUSH: True}
 
@@ -141,7 +140,7 @@ async def test_async_setup_entry_micro_inverter(
 ):
     """Test setup for microinverter restart button."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN_MICRO": {"device_type_code": "MICRO_INVERTER", "model": "M-1000"}
     }
@@ -183,7 +182,7 @@ async def test_async_setup_entry_skips_clear_alarms_button_for_modbus(
     hass = MagicMock()
     mock_entry_fixture.data = {"transport": "modbus"}
     mock_entry_fixture.options = {}
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN123": {"device_type_code": "1", "model": "H10K-HT", "alarms": []}
     }
@@ -209,7 +208,7 @@ async def test_async_setup_entry_adds_refresh_settings_button_for_modbus(
     hass = MagicMock()
     mock_entry_fixture.data = {"transport": "modbus"}
     mock_entry_fixture.options = {"enable_battery_control": True}
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN123": {"device_type_code": "1", "model": "H10K-HT"}
     }
@@ -234,7 +233,7 @@ async def test_async_setup_entry_skips_refresh_settings_button_for_cloud(
     hass = MagicMock()
     mock_entry_fixture.data = {"transport": "cloud"}
     mock_entry_fixture.options = {"enable_battery_control": True}
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN123": {"device_type_code": "1", "model": "H10K-HT", "alarms": []}
     }
@@ -258,7 +257,7 @@ async def test_async_setup_entry_skips_refresh_settings_button_without_control(
     hass = MagicMock()
     mock_entry_fixture.data = {"transport": "modbus"}
     mock_entry_fixture.options = {}
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN123": {"device_type_code": "1", "model": "H10K-HT"}
     }
@@ -298,7 +297,7 @@ async def test_async_setup_entry_three_phase(
 ):
     """Test setup for three-phase hybrid inverter mode buttons."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN_HYBRID_3": {"device_type_code": "HYBRID_INVERTER", "model": "H-10K-HT"}
     }
@@ -338,7 +337,7 @@ async def test_async_setup_entry_single_phase(
 ):
     """Test setup for single-phase hybrid inverter peak shaving buttons."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN_HYBRID_1": {"device_type_code": "HYBRID_INVERTER", "model": "H-5K-HS"}
     }
@@ -380,7 +379,7 @@ async def test_async_setup_entry_unknown_phase(
 ):
     """Test setup for unknown phase hybrid inverter (no buttons)."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN_HYBRID_UNK": {"device_type_code": "HYBRID_INVERTER", "model": "UNKNOWN"}
     }

@@ -10,7 +10,6 @@ from homeassistant.core import HomeAssistant
 from hyxi_cloud_api import HyxiApiClient
 
 from custom_components.hyxi_cloud import _async_handle_webhook
-from custom_components.hyxi_cloud.const import DOMAIN
 from tests.integration.entries import cloud_entry, lookup_entity_id, serve_devices
 
 SN = "INV123"
@@ -93,7 +92,7 @@ async def test_a_push_after_a_poll_keeps_time_and_phase_powers(
     )
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     await _push(hass, coordinator, CAPTURED_READING)
 

@@ -125,8 +125,6 @@ import custom_components.hyxi_cloud.sensor as sensor_mod
 
 importlib.reload(sensor_mod)
 
-from custom_components.hyxi_cloud.const import DOMAIN
-
 
 @pytest.fixture
 def mock_coordinator():
@@ -179,7 +177,7 @@ def mock_entry():
 async def test_async_setup_entry(mock_coordinator, mock_entry):
     """Test setting up sensors."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    mock_entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     # Mock battery control to False for simplicity
@@ -248,7 +246,7 @@ async def test_async_setup_entry_modbus_skips_unread_pre_registered_keys():
         }
     }
     coordinator.hyxi_metadata = {"last_success": "2026-03-11T12:00:00Z"}
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
     async_add_entities = MagicMock()
 
     with unittest.mock.patch(
@@ -295,7 +293,7 @@ async def test_async_setup_entry_adds_microinverter_summary(mock_entry):
     coord.entry.options = {"push_rate": 60}
 
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry.entry_id: coord}}
+    mock_entry.runtime_data = coord
     async_add_entities = MagicMock()
 
     with unittest.mock.patch(
@@ -367,7 +365,7 @@ async def test_async_setup_entry_skips_last_sent_mode_for_unknown_phase(
         }
     }
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    mock_entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     with unittest.mock.patch(
@@ -404,7 +402,7 @@ async def test_async_setup_entry_modbus_halo_gets_last_sent_mode_sensor(
         }
     }
     hass = MagicMock()
-    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     with unittest.mock.patch(
@@ -435,7 +433,7 @@ async def test_async_setup_entry_cloud_halo_skips_last_sent_mode_sensor(
         }
     }
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    mock_entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     with unittest.mock.patch(
@@ -686,7 +684,7 @@ async def test_async_setup_entry_modbus_adds_connection_type_sensor():
         }
     }
     coordinator.hyxi_metadata = {"last_success": "2026-03-11T12:00:00Z"}
-    hass.data = {DOMAIN: {entry.entry_id: coordinator}}
+    entry.runtime_data = coordinator
     async_add_entities = MagicMock()
 
     with unittest.mock.patch(

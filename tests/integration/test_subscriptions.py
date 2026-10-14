@@ -167,7 +167,7 @@ async def test_the_list_is_refreshed_with_each_discovery(hass: HomeAssistant, cl
     await hass.async_block_till_done()
 
     client.list_subscriptions.return_value = [_NEWER_TYPE]
-    await hass.data[DOMAIN][entry.entry_id].discovery.async_refresh()
+    await entry.runtime_data.discovery.async_refresh()
     await hass.async_block_till_done()
 
     codes = [
@@ -267,7 +267,7 @@ async def test_renewing_cancels_each_own_subscription_once(
         _subscription("new-alarm", SubscriptionType.ALARM, ()),
     ]
     client.list_subscriptions.return_value = held
-    await hass.data[DOMAIN][entry.entry_id].discovery.async_refresh()
+    await entry.runtime_data.discovery.async_refresh()
     await hass.async_block_till_done()
     client.cancel_subscription.reset_mock()
 

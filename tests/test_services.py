@@ -16,6 +16,18 @@ from custom_components.hyxi_cloud import (
 )
 
 
+@pytest.fixture(autouse=True)
+def loaded():
+    """The loaded entries' coordinators by entry ID, filled in by each test
+    without setting real entries up."""
+    coordinators: dict = {}
+    with patch(
+        "custom_components.hyxi_cloud._loaded_coordinators",
+        return_value=coordinators,
+    ):
+        yield coordinators
+
+
 @pytest.fixture
 def mock_entry():
     entry = MagicMock()
@@ -37,9 +49,9 @@ def mock_coordinator(mock_entry):
 
 
 @pytest.mark.asyncio
-async def test_service_call_success(hass, mock_coordinator):
+async def test_service_call_success(hass, mock_coordinator, loaded):
     """Test that the cancel_subscription service calls SDK method successfully."""
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    loaded |= {"entry_123": mock_coordinator}
     setup_services(hass)
 
     await hass.services.async_call(
@@ -55,9 +67,9 @@ async def test_service_call_success(hass, mock_coordinator):
 
 
 @pytest.mark.asyncio
-async def test_service_call_empty_code(hass, mock_coordinator):
+async def test_service_call_empty_code(hass, mock_coordinator, loaded):
     """A blank subscription code is rejected by the service schema."""
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    loaded |= {"entry_123": mock_coordinator}
     setup_services(hass)
 
     with pytest.raises(vol.Invalid):
@@ -72,9 +84,6 @@ async def test_service_call_empty_code(hass, mock_coordinator):
 @pytest.mark.asyncio
 async def test_service_call_no_coordinators(hass):
     """Test service raises error if no integration coordinators are loaded."""
-    if DOMAIN in hass.data:
-        del hass.data[DOMAIN]
-
     # Ensure service is registered
     setup_services(hass)
 
@@ -95,13 +104,13 @@ def _cancel_log_record(caplog):
 
 
 @pytest.mark.asyncio
-async def test_service_call_api_failure(hass, mock_coordinator, caplog):
+async def test_service_call_api_failure(hass, mock_coordinator, caplog, loaded):
     """Test service raises error if HYXI refuses the cancel, and logs the
     refusal without a traceback."""
     mock_coordinator.client.cancel_subscription.side_effect = SubscriptionError(
         "Invalid subscribe code"
     )
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    loaded |= {"entry_123": mock_coordinator}
     setup_services(hass)
 
     with pytest.raises(
@@ -122,11 +131,11 @@ async def test_service_call_api_failure(hass, mock_coordinator, caplog):
 
 @pytest.mark.asyncio
 async def test_service_call_unexpected_error_keeps_traceback(
-    hass, mock_coordinator, caplog
+    hass, mock_coordinator, caplog, loaded
 ):
     """An error other than HYXI's rejection is logged with its traceback."""
     mock_coordinator.client.cancel_subscription.side_effect = AttributeError("bug")
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    loaded |= {"entry_123": mock_coordinator}
     setup_services(hass)
 
     with pytest.raises(HomeAssistantError, match="Failed to cancel subscription: bug"):
@@ -142,12 +151,12 @@ async def test_service_call_unexpected_error_keeps_traceback(
 
 
 @pytest.mark.asyncio
-async def test_service_call_api_exception(hass, mock_coordinator):
+async def test_service_call_api_exception(hass, mock_coordinator, loaded):
     """Test service raises error if client cancel API raises exception."""
     mock_coordinator.client.cancel_subscription.side_effect = RuntimeError(
         "network timeout"
     )
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    loaded |= {"entry_123": mock_coordinator}
     setup_services(hass)
 
     with pytest.raises(
@@ -162,7 +171,9 @@ async def test_service_call_api_exception(hass, mock_coordinator):
 
 
 @pytest.mark.asyncio
-async def test_cancel_uses_the_entry_whose_credentials_hold_the_code(hass, mock_entry):
+async def test_cancel_uses_the_entry_whose_credentials_hold_the_code(
+    hass, mock_entry, loaded
+):
     """The service cancels through the cloud entry whose HYXI list holds
     the code, skipping Modbus entries and other credentials, then refreshes
     the list for the entries on those credentials."""
@@ -181,7 +192,7 @@ async def test_cancel_uses_the_entry_whose_credentials_hold_the_code(hass, mock_
     holder = coordinator("cloud", ["the-code"])
     twin = coordinator("cloud", ["the-code"])
     holder.client.access_key = twin.client.access_key = "same-key"
-    hass.data[DOMAIN] = {
+    loaded |= {
         "modbus": modbus,
         "other": other,
         "holder": holder,
@@ -211,7 +222,7 @@ def _fake_device(serial="SN1", entry_ids=("entry_123",)):
 
 
 @pytest.fixture
-def battery_mode_env(hass, mock_coordinator, mock_entry):
+def battery_mode_env(hass, mock_coordinator, mock_entry, loaded):
     """A registered set_battery_mode service, a control-capable coordinator
     holding one serial, and patched device/entity registries."""
     mock_entry.title = "HYXI"
@@ -220,7 +231,7 @@ def battery_mode_env(hass, mock_coordinator, mock_entry):
         "SN1": {"device_name": "Inverter", "device_type_code": "HYBRID_INVERTER"}
     }
     mock_coordinator.engine = None
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    loaded |= {"entry_123": mock_coordinator}
     setup_services(hass)
 
     dev_reg = MagicMock()
@@ -238,8 +249,8 @@ def battery_mode_env(hass, mock_coordinator, mock_entry):
 
 
 @pytest.mark.asyncio
-async def test_set_battery_mode_registered(hass, mock_coordinator):
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+async def test_set_battery_mode_registered(hass, mock_coordinator, loaded):
+    loaded |= {"entry_123": mock_coordinator}
     setup_services(hass)
     assert hass.services.has_service(DOMAIN, "set_battery_mode")
 
@@ -353,9 +364,9 @@ async def test_set_battery_mode_resolves_an_entity_target(battery_mode_env):
 
 
 def test_resolve_battery_mode_targets_skips_unknown_and_foreign_devices(
-    hass, mock_coordinator
+    hass, mock_coordinator, loaded
 ):
-    hass.data[DOMAIN] = {"entry_123": mock_coordinator}
+    loaded |= {"entry_123": mock_coordinator}
     mock_coordinator.data = {"SN1": {}}
 
     unknown = MagicMock(

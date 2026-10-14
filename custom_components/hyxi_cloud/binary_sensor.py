@@ -39,6 +39,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+from .coordinator import HyxiConfigEntry
 from .entity import via_device_id
 
 if TYPE_CHECKING:
@@ -51,11 +52,11 @@ ACTIVE_ALARM_STATES = {"0", "1", "2", 0, 1, 2}
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HyxiConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the binary sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[BinarySensorEntity] = [HyxiConnectivitySensor(coordinator, entry)]
 
     for device_sn, dev_data in coordinator.data.items():

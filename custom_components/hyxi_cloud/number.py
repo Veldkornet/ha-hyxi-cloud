@@ -32,6 +32,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
+from .coordinator import HyxiConfigEntry
 from .entity import SettingsSyncMixin
 
 if TYPE_CHECKING:
@@ -305,11 +306,11 @@ EM_NUMBER_DEFS: list[EMNumberDef] = [
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HyxiConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up HYXI number entities for charge/discharge power settings."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     if not coordinator.data:
         return
 

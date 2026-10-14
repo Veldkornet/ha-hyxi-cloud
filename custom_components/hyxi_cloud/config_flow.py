@@ -1336,10 +1336,10 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
     def _get_sns_where(self, matches: Callable[[str], bool]) -> list[str]:
         """Get serial numbers of coordinator devices whose normalized type
         `matches`."""
-        if not hasattr(self, "hass") or self.hass is None:
+        if self._config_entry.state is not config_entries.ConfigEntryState.LOADED:
             return []
-        coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
-        if not coordinator or not coordinator.data:
+        coordinator = self._config_entry.runtime_data
+        if not coordinator.data:
             return []
         return [
             sn

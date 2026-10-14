@@ -213,10 +213,8 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
 
         assert result is True
 
-        # Check coordinator is in hass.data
-        assert DOMAIN in mock_hass.data
-        assert mock_entry.entry_id in mock_hass.data[DOMAIN]
-        assert mock_hass.data[DOMAIN][mock_entry.entry_id] is mock_coordinator
+        # The coordinator is the entry's runtime data
+        assert mock_entry.runtime_data is mock_coordinator
 
         # Check parent devices and child device registration
         # Pass 1: SN_1, SN_2
@@ -494,7 +492,7 @@ async def test_async_unload_entry_success(mock_hass, mock_entry):
     mock_coordinator = MagicMock()
     mock_coordinator.protection_controllers = {}
     mock_coordinator.engine = None
-    mock_hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
+    mock_entry.runtime_data = mock_coordinator
     mock_hass.config_entries.async_unload_platforms.return_value = True
 
     assert await async_unload_entry(mock_hass, mock_entry) is True
@@ -502,7 +500,6 @@ async def test_async_unload_entry_success(mock_hass, mock_entry):
     mock_hass.config_entries.async_unload_platforms.assert_called_once_with(
         mock_entry, PLATFORMS
     )
-    assert mock_entry.entry_id not in mock_hass.data[DOMAIN]
 
 
 @pytest.mark.asyncio
@@ -515,7 +512,7 @@ async def test_async_unload_entry_keeps_subscriptions_alive(mock_hass, mock_entr
     mock_coordinator.subscribe_code = "sub_code_123"
     mock_coordinator.alarm_subscribe_code = "alarm_code_123"
     mock_coordinator.client.cancel_subscription = AsyncMock()
-    mock_hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
+    mock_entry.runtime_data = mock_coordinator
     mock_hass.config_entries.async_unload_platforms.return_value = True
 
     assert await async_unload_entry(mock_hass, mock_entry) is True
@@ -535,7 +532,7 @@ async def test_async_unload_entry_does_not_close_shared_session(mock_hass, mock_
     mock_coordinator = MagicMock()
     mock_coordinator.protection_controllers = {}
     mock_coordinator.engine = None
-    mock_hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
+    mock_entry.runtime_data = mock_coordinator
     mock_hass.config_entries.async_unload_platforms.return_value = True
 
     assert await async_unload_entry(mock_hass, mock_entry) is True
@@ -765,7 +762,7 @@ async def test_async_unload_entry_failure(mock_hass, mock_entry):
     mock_coordinator = MagicMock()
     mock_coordinator.protection_controllers = {}
     mock_coordinator.engine = None
-    mock_hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
+    mock_entry.runtime_data = mock_coordinator
     mock_hass.config_entries.async_unload_platforms.return_value = False
 
     assert await async_unload_entry(mock_hass, mock_entry) is False
@@ -773,12 +770,13 @@ async def test_async_unload_entry_failure(mock_hass, mock_entry):
     mock_hass.config_entries.async_unload_platforms.assert_called_once_with(
         mock_entry, PLATFORMS
     )
-    assert mock_entry.entry_id in mock_hass.data[DOMAIN]
 
 
 @pytest.mark.asyncio
 async def test_async_reload_entry(mock_hass, mock_entry):
-    """Test reload config entry."""
+    """Test reload config entry when its options changed."""
+    mock_entry.options = {"opt": "new"}
+    mock_entry.runtime_data.options = {"opt": "old"}
 
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_logger:
         await async_reload_entry(mock_hass, mock_entry)
@@ -1295,14 +1293,12 @@ from custom_components.hyxi_cloud.__init__ import (
 async def test_async_reload_entry_options_not_changed():
     """Verify async_reload_entry returns early when options haven't changed."""
     mock_hass = MagicMock()
-    mock_hass.data = {DOMAIN: {"entry_id": MagicMock()}}
     mock_entry = MagicMock()
     mock_entry.entry_id = "entry_id"
     mock_entry.options = {"opt": "val"}
 
     # We populate the coordinator options to match entry options
-    coordinator = mock_hass.data[DOMAIN]["entry_id"]
-    coordinator.options = {"opt": "val"}
+    mock_entry.runtime_data.options = {"opt": "val"}
 
     with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_log:
         await async_reload_entry(mock_hass, mock_entry)
@@ -1955,7 +1951,6 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
         CONF_EM_ENABLED,
         CONF_EM_INVERTER_SN,
         CONF_EM_P1_ENTITY,
-        DOMAIN,
     )
 
     # Reset mock_entry
@@ -2046,11 +2041,6 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
                                         assert coordinator.engine is mock_engine
                                         mock_engine.start.assert_called_once()
                                         mock_controller.async_start.assert_called_once()
-
-                                        # Set up data in mock_hass.data for unload
-                                        mock_hass.data[DOMAIN] = {
-                                            mock_entry.entry_id: coordinator
-                                        }
 
                                         # Run unload
                                         res_unload = await async_unload_entry(

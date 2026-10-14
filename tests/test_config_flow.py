@@ -2,11 +2,14 @@
 
 import builtins
 import contextlib
+import enum
 import sys
 import types
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+ConfigEntryState = enum.Enum("ConfigEntryState", "LOADED SETUP_RETRY NOT_LOADED")
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -49,6 +52,7 @@ def mock_ha_environment():
     mock_ce.ConfigEntry = MagicMock()  # type: ignore[attr-defined]
     mock_ce.exceptions = MagicMock()  # type: ignore[attr-defined]
     mock_ce.SOURCE_RECONFIGURE = "reconfigure"  # type: ignore[attr-defined]
+    mock_ce.ConfigEntryState = ConfigEntryState  # type: ignore[attr-defined]
 
     class IntentionalTermination(Exception):
         pass
@@ -570,7 +574,6 @@ async def test_options_flow_reloads_step_when_battery_control_just_enabled(
     config_entry.options = {}
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.hass = MagicMock()
-    options_flow.hass.data = {}
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "init"}
     )
@@ -593,7 +596,6 @@ async def test_options_flow_reloads_step_when_push_just_enabled(mock_ha_environm
     config_entry.options = {}
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.hass = MagicMock()
-    options_flow.hass.data = {}
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "init"}
     )
@@ -619,7 +621,6 @@ async def test_options_flow_show_form_includes_push_fields_when_enabled(
     }
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.hass = MagicMock()
-    options_flow.hass.data = {}
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "init"}
     )
@@ -637,7 +638,6 @@ async def test_options_flow_show_form_includes_em_toggle_when_eligible(
     """Test the EM toggle field is added when battery control is already on
     and a control-capable device is present."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry_id"
@@ -646,7 +646,8 @@ async def test_options_flow_show_form_includes_em_toggle_when_eligible(
     options_flow.hass = MagicMock()
     coordinator = MagicMock()
     coordinator.data = {"SN_INV_1": {"device_type_code": "HYBRID_INVERTER"}}
-    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    options_flow._config_entry.runtime_data = coordinator
+    options_flow._config_entry.state = ConfigEntryState.LOADED
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "init"}
     )
@@ -683,7 +684,6 @@ async def test_options_flow_show_form_default_fallback(mock_ha_environment):
 
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.hass = MagicMock()
-    options_flow.hass.data = {}  # No coordinator data — no controllable inverters
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "init"}
     )
@@ -712,7 +712,6 @@ async def test_options_flow_show_form(mock_ha_environment):
 
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
     options_flow.hass = MagicMock()
-    options_flow.hass.data = {}  # No coordinator data — no controllable inverters
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "init"}
     )
@@ -746,7 +745,6 @@ async def test_options_flow_success(mock_ha_environment):
 
 def _halo_options_flow(*, modbus=False):
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry_id"
@@ -756,7 +754,8 @@ def _halo_options_flow(*, modbus=False):
     options_flow.hass = MagicMock()
     coordinator = MagicMock()
     coordinator.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
-    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    options_flow._config_entry.runtime_data = coordinator
+    options_flow._config_entry.state = ConfigEntryState.LOADED
     return options_flow
 
 
@@ -797,7 +796,6 @@ def test_modbus_halo_is_control_capable(mock_ha_environment):
 def test_control_capable_includes_hybrid_inverter(mock_ha_environment):
     """A hybrid inverter is control-capable."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry_id"
@@ -806,7 +804,8 @@ def test_control_capable_includes_hybrid_inverter(mock_ha_environment):
     options_flow.hass = MagicMock()
     coordinator = MagicMock()
     coordinator.data = {"SN_INV_1": {"device_type_code": "HYBRID_INVERTER"}}
-    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    options_flow._config_entry.runtime_data = coordinator
+    options_flow._config_entry.state = ConfigEntryState.LOADED
 
     assert options_flow._get_control_capable_sns() == ["SN_INV_1"]
     assert options_flow._has_control_capable_device() is True
@@ -825,36 +824,22 @@ def test_get_sns_by_device_type_hass_not_set(mock_ha_environment):
     assert options_flow._has_control_capable_device() is False
 
 
-def test_get_sns_by_device_type_hass_none(mock_ha_environment):
-    """Guard returns [] when self.hass is explicitly None."""
+def test_get_sns_by_device_type_entry_not_loaded(mock_ha_environment):
+    """Guard returns [] when the entry isn't loaded."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry_id"
+    config_entry.state = ConfigEntryState.SETUP_RETRY
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
-    options_flow.hass = None
-
-    assert options_flow._get_control_capable_sns() == []
-    assert options_flow._has_control_capable_device() is False
-
-
-def test_get_sns_by_device_type_missing_coordinator(mock_ha_environment):
-    """Guard returns [] when hass.data has no entry for DOMAIN or entry_id."""
-    import custom_components.hyxi_cloud.config_flow as config_flow_mod
-    from custom_components.hyxi_cloud.const import DOMAIN
-
-    config_entry = MagicMock()
-    config_entry.entry_id = "test_entry_id"
-    options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
-
-    # No DOMAIN key at all
     options_flow.hass = MagicMock()
-    options_flow.hass.data = {}
+
     assert options_flow._get_control_capable_sns() == []
     assert options_flow._has_control_capable_device() is False
 
-    # DOMAIN present but no coordinator for this entry_id
-    options_flow.hass.data = {DOMAIN: {}}
+    # Loaded, but its coordinator holds no devices yet
+    config_entry.state = ConfigEntryState.LOADED
+    config_entry.runtime_data.data = {}
     assert options_flow._get_control_capable_sns() == []
     assert options_flow._has_control_capable_device() is False
 
@@ -1031,7 +1016,6 @@ async def test_async_step_energy_manager_autoselects_single_sn(
     """Test that with exactly one controllable inverter and no prior selection,
     it's preselected as the schema's current_sn default."""
     config_flow_mod = mock_ha_environment
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry_id"
@@ -1040,7 +1024,8 @@ async def test_async_step_energy_manager_autoselects_single_sn(
     options_flow.hass = MagicMock()
     coordinator = MagicMock()
     coordinator.data = {"SN_ONLY": {"device_type_code": "HYBRID_INVERTER"}}
-    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    options_flow._config_entry.runtime_data = coordinator
+    options_flow._config_entry.state = ConfigEntryState.LOADED
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "energy_manager"}
     )
@@ -1062,7 +1047,6 @@ async def test_async_step_energy_manager_keeps_existing_sn_selection(
     """Test that an already-configured inverter SN is preserved as the default
     even when multiple controllable inverters are available."""
     config_flow_mod = mock_ha_environment
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     config_entry = MagicMock()
     config_entry.entry_id = "test_entry_id"
@@ -1074,7 +1058,8 @@ async def test_async_step_energy_manager_keeps_existing_sn_selection(
         "SN_A": {"device_type_code": "HYBRID_INVERTER"},
         "SN_B": {"device_type_code": "HYBRID_INVERTER"},
     }
-    options_flow.hass.data = {DOMAIN: {"test_entry_id": coordinator}}
+    options_flow._config_entry.runtime_data = coordinator
+    options_flow._config_entry.state = ConfigEntryState.LOADED
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "energy_manager"}
     )

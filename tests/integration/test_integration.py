@@ -204,7 +204,7 @@ async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
 
         # Call the real engine._set_param(), exactly as
         # _update_night_estimate does for its adaptive EMA.
-        coordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator = entry.runtime_data
         engine = coordinator.engine
         assert engine is not None
         engine._set_param("avg_night_consumption", 999.0)  # pylint: disable=protected-access
@@ -320,7 +320,7 @@ async def test_enum_sensor_survives_out_of_range_api_value(hass: HomeAssistant):
         # at its last valid state and HA logs a full traceback every single
         # refresh; the sibling sensor on the same device must keep working.
         serve_devices(mock_client, make_data("9"))
-        await hass.data[DOMAIN][entry.entry_id].async_refresh()
+        await entry.runtime_data.async_refresh()
         await hass.async_block_till_done()
 
         state = hass.states.get(entity_id)

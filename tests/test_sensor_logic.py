@@ -341,7 +341,6 @@ def test_batsoc_batsoh_casting(base_sensor):
 @pytest.mark.asyncio
 async def test_new_api_metrics_registration():
     """Verify that all new PV, Phase, Battery, and Status sensors instantiate correctly."""
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     hass = MagicMock()
     entry = MagicMock()
@@ -393,7 +392,7 @@ async def test_new_api_metrics_registration():
             },
         },
     }
-    hass.data = {DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
 
     # We need to capture the sensors that async_setup_entry attempts to register
     registered_entities = []
@@ -450,14 +449,13 @@ async def test_new_api_metrics_registration():
 @pytest.mark.asyncio
 async def test_async_setup_entry_no_data():
     """Verify that async_setup_entry returns early when coordinator has no data."""
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "test_entry"
     coordinator = MagicMock()
     coordinator.data = {}
-    hass.data = {DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
 
     mock_async_add_entities = MagicMock()
     await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
@@ -716,7 +714,7 @@ async def test_sensor_batteries_and_collectors():
             },
         }
     }
-    hass.data = {"hyxi_cloud": {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
 
     registered_entities = []
 
@@ -1102,7 +1100,6 @@ def test_process_numeric_value_anti_spike(base_sensor):
 @pytest.mark.asyncio
 async def test_async_setup_entry_null_string_filtering():
     """Verify that metrics with 'null' or 'NA' strings are filtered out during registration."""
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     hass = MagicMock()
     entry = MagicMock()
@@ -1121,7 +1118,7 @@ async def test_async_setup_entry_null_string_filtering():
             },
         }
     }
-    hass.data = {DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
 
     registered_entities = []
 
@@ -1145,7 +1142,6 @@ async def test_async_setup_entry_null_string_filtering():
 @pytest.mark.asyncio
 async def test_new_telemetry_keys_registration_and_parsing():
     """Verify that all 29 new telemetry/Micro ESS sensors are registered and cast correctly."""
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     hass = MagicMock()
     entry = MagicMock()
@@ -1192,7 +1188,7 @@ async def test_new_telemetry_keys_registration_and_parsing():
             },
         }
     }
-    hass.data = {DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
 
     registered_entities = []
 
@@ -1567,7 +1563,6 @@ def test_same_quantity_fallback_table(base_sensor):
 @pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_em_and_battery_options(monkeypatch):
     """Verify async_setup_entry registers EM and last_sent_mode sensors when enabled."""
-    from custom_components.hyxi_cloud.const import DOMAIN
 
     # Stub dependencies directly on the module dictionary to bypass MagicMock discrepancies
     monkeypatch.setattr(sensor_mod, "is_battery_control_enabled", lambda entry: True)
@@ -1593,7 +1588,7 @@ async def test_async_setup_entry_em_and_battery_options(monkeypatch):
             "metrics": {"batSoc": 50},
         }
     }
-    hass.data = {DOMAIN: {"test_entry": coordinator}}
+    entry.runtime_data = coordinator
 
     registered_entities = []
 

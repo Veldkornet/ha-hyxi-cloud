@@ -111,7 +111,7 @@ async def test_period_sensors_track_the_lifetime_counter_delta(hass: HomeAssista
     entry = _entry(hass)
     await _setup(hass, entry, {"bat_charge_total": "100.0", "bat_discharge_total": "0"})
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     coordinator.data[INV_SN]["metrics"]["bat_charge_total"] = 105.5
     coordinator.async_update_listeners()
     await hass.async_block_till_done()
