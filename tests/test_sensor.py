@@ -351,6 +351,7 @@ def test_microinverter_sum_sensor_skips_unparseable_values():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_skips_last_sent_mode_for_unknown_phase(
     mock_coordinator, mock_entry
 ):

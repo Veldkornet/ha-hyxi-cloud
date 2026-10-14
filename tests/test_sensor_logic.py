@@ -1564,6 +1564,7 @@ def test_same_quantity_fallback_table(base_sensor):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_em_and_battery_options(monkeypatch):
     """Verify async_setup_entry registers EM and last_sent_mode sensors when enabled."""
     from custom_components.hyxi_cloud.const import DOMAIN

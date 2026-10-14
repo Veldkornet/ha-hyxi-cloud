@@ -85,9 +85,12 @@ Per-device entity lists and the full status matrix: [Supported Devices][wiki-dev
 
 Control entities (mode buttons, power targets, switches) are **hidden by default** so the integration never fights an external controller or grid schedule. Enable **Device Control & Protection** under **Configure** to reveal them.
 
-What appears depends on the device — three-phase mode buttons, single-phase peak shaving and frequency control, microinverter power limits, battery protection thresholds, and the automated **Energy Manager (Beta)**.
+What appears depends on the device — battery mode buttons and power targets, inverter settings, battery protection thresholds and the automated **Energy Manager (Beta)** on a Local Modbus entry, and microinverter power and limits over the cloud.
 
-For automations, the `hyxi_cloud.set_battery_mode` action sends idle / charge / discharge / self-consume (with an optional power in watts) to a targeted inverter in one call. It needs Device Control enabled and is refused while the Energy Manager is driving that inverter, unless you pass `force: true`.
+> [!IMPORTANT]
+> **Battery control needs a [Local Modbus][wiki-modbus] connection.** HYXI's cloud doesn't accept battery control commands sent with your own API keys (it only forwards them for authorized VPP providers), so a cloud entry offers no battery controls, battery protection or Energy Manager. Microinverter power control still works over the cloud.
+
+For automations, the `hyxi_cloud.set_battery_mode` action sends idle / charge / discharge / self-consume (with an optional power in watts) to a targeted inverter in one call. It needs Device Control enabled on a Local Modbus entry and is refused while the Energy Manager is driving that inverter, unless you pass `force: true`.
 
 The full reference — controlId maps, phase detection, the Energy Manager decision logic and every tunable — is in the wiki: **[Device Control][wiki-control]** and **[Energy Manager][wiki-em]**.
 

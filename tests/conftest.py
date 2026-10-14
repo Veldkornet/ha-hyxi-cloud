@@ -3,7 +3,9 @@
 import os
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # This adds the root directory to the path so 'custom_components' can be found
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
@@ -98,3 +100,13 @@ if os.environ.get("HYXI_INTEGRATION_TEST") != "1" and not any(
         mock_api.__version__ = "1.0.4"
         mock_api.HyxiAuthError = type("HyxiAuthError", (Exception,), {})
         sys.modules["hyxi_cloud_api"] = mock_api
+
+
+@pytest.fixture
+def cloud_battery_control():
+    """Battery control over the cloud turned on, as if HYXI granted it to
+    owners (CLOUD_BATTERY_CONTROL_SUPPORTED)."""
+    with patch(
+        "custom_components.hyxi_cloud.const.CLOUD_BATTERY_CONTROL_SUPPORTED", True
+    ):
+        yield

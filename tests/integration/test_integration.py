@@ -140,6 +140,7 @@ async def test_setup_entry_and_sensors(hass: HomeAssistant):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
     """Regression test: EMParameterNumber values written by the real
     engine._set_param() (e.g. the adaptive avg_night_consumption estimate)
@@ -182,6 +183,7 @@ async def test_em_parameter_number_survives_platform_poll(hass: HomeAssistant):
             "device_name": "Test Inverter",
             "model": "HYX-H10K-HT",
             "device_type": 1,
+            "device_type_code": "HYBRID_INVERTER",
             "metrics": {"batSoc": "50"},
         }
     }

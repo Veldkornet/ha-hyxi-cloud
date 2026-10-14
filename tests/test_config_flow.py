@@ -774,8 +774,11 @@ def test_control_capable_includes_micro_ess_when_supported(mock_ha_environment):
     access and MICRO_ESS_CONTROL_SUPPORTED is flipped."""
     options_flow = _halo_options_flow()
 
-    with patch(
-        "custom_components.hyxi_cloud.config_flow.MICRO_ESS_CONTROL_SUPPORTED", True
+    with (
+        patch(
+            "custom_components.hyxi_cloud.const.CLOUD_BATTERY_CONTROL_SUPPORTED", True
+        ),
+        patch("custom_components.hyxi_cloud.const.MICRO_ESS_CONTROL_SUPPORTED", True),
     ):
         assert options_flow._get_control_capable_sns() == ["SN_HALO_1"]
         assert options_flow._has_control_capable_device() is True
@@ -790,6 +793,7 @@ def test_modbus_halo_is_control_capable(mock_ha_environment):
     assert options_flow._has_control_capable_device() is True
 
 
+@pytest.mark.usefixtures("cloud_battery_control")
 def test_control_capable_includes_hybrid_inverter(mock_ha_environment):
     """A hybrid inverter is control-capable."""
     import custom_components.hyxi_cloud.config_flow as config_flow_mod
@@ -1020,6 +1024,7 @@ async def test_async_step_energy_manager_with_input_creates_entry(mock_ha_enviro
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow._build_em_schema")
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_step_energy_manager_autoselects_single_sn(
     mock_build_schema, mock_ha_environment
 ):
@@ -1050,6 +1055,7 @@ async def test_async_step_energy_manager_autoselects_single_sn(
 
 @pytest.mark.asyncio
 @patch("custom_components.hyxi_cloud.config_flow._build_em_schema")
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_step_energy_manager_keeps_existing_sn_selection(
     mock_build_schema, mock_ha_environment
 ):

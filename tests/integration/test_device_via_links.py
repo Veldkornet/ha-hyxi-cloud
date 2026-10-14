@@ -49,6 +49,7 @@ async def _setup(hass: HomeAssistant, entry: MockConfigEntry, data: dict) -> Non
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_energy_manager_device_links_to_its_inverter(hass: HomeAssistant):
     """The Energy Manager virtual device hangs off the inverter it manages,
     and its sensors are added (i.e. HA accepted the resolved via_device_id)."""

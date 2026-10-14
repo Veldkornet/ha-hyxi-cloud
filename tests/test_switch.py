@@ -110,6 +110,7 @@ async def test_async_setup_entry_empty_data(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_single_phase_hybrid(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -178,6 +179,7 @@ async def test_async_setup_entry_three_phase_hybrid(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_single_phase_all_in_one(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -321,7 +323,10 @@ async def test_async_setup_entry_micro_ess_when_supported(
     async_add_entities = MagicMock()
 
     with (
-        patch("custom_components.hyxi_cloud.switch.MICRO_ESS_CONTROL_SUPPORTED", True),
+        patch(
+            "custom_components.hyxi_cloud.const.CLOUD_BATTERY_CONTROL_SUPPORTED", True
+        ),
+        patch("custom_components.hyxi_cloud.const.MICRO_ESS_CONTROL_SUPPORTED", True),
         patch(
             "custom_components.hyxi_cloud.switch.normalize_device_type",
             return_value="micro_ess",

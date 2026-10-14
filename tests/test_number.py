@@ -116,6 +116,7 @@ def test_safe_int():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry():
     """Test setting up number entities with battery protection enabled."""
     hass = MagicMock()

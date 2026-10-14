@@ -983,5 +983,11 @@
     "no_cloud_entry": {
       "message": "Er is geen HYXI Cloud-item geladen om het abonnement mee te annuleren."
     }
+  },
+  "issues": {
+    "cloud_battery_control": {
+      "title": "Batterijbesturing is niet beschikbaar via de HYXI Cloud",
+      "description": "De cloud van HYXI accepteert geen batterijbesturing die met je eigen API-sleutels wordt verstuurd. Daarom worden de batterijbediening, de batterijbeveiliging en de Energy Manager niet meer aangeboden voor {entry}, en zijn de opties die ze aanzetten uitgeschakeld waar niets anders ze gebruikt.\n\nVoeg een lokaal Modbus-item (RS485) voor de omvormer toe om je batterij te besturen. Aan/uit-besturing van micro-omvormers blijft via de cloud beschikbaar."
+    }
   }
 }

@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import probatio as vol
@@ -53,9 +53,9 @@ from .const import (
     DETECTION_MESSAGE_SPACING,
     DETECTION_TIMEOUT,
     DOMAIN,
+    EM_OPTION_KEYS,
     HALO_SWITCH_SIGNATURE_MAX_RAW,
     HYBRID_PROTOCOL_SIGNATURE_MIN_RAW,
-    MICRO_ESS_CONTROL_SUPPORTED,
     MODBUS_FAMILY_HALO,
     MODBUS_FAMILY_HYBRID,
     MODBUS_FAMILY_SIGNATURES,
@@ -65,10 +65,11 @@ from .const import (
     TRANSPORT_CLOUD,
     TRANSPORT_MODBUS,
     default_region_for_country,
-    get_raw_device_code,
+    device_type_of,
+    is_control_capable_device_type,
     is_modbus_entry,
     modbus_params,
-    normalize_device_type,
+    offers_device_control,
     region_for_base_url,
     resolve_base_url,
 )
@@ -1187,17 +1188,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         """Remove EM keys (EM is disabled), and push keys too if push ended
         up disabled by this submission.
         """
-        self._options.pop(CONF_EM_ENABLED, None)
-        for key in (
-            CONF_EM_INVERTER_SN,
-            CONF_EM_P1_ENTITY,
-            CONF_EM_FORECAST_ENTITY,
-            CONF_EM_FORECAST_POWER_ENTITY,
-            CONF_EM_BATTERY_OVERRIDE,
-            CONF_EM_BATTERY_CAPACITY,
-            CONF_EM_LOOP_INTERVAL,
-            CONF_EM_DRY_RUN,
-        ):
+        for key in EM_OPTION_KEYS:
             self._options.pop(key, None)
 
         # Push disabled — remove push keys if they were previously set
@@ -1221,6 +1212,13 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         )
         em_enabled = options.get(CONF_EM_ENABLED, False)
         has_control_capable = self._has_control_capable_device()
+        device_control_offered = bool(
+            self._get_sns_where(
+                lambda device_type: offers_device_control(
+                    self._config_entry, device_type
+                )
+            )
+        )
 
         # Annotated explicitly -- without it, mypy narrows both the key and
         # value types to this first entry (Required, All) and rejects the
@@ -1271,10 +1269,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                 )
             ] = selector.TextSelector()
 
-        # Show the device control toggle for any control-capable device
-        # (hybrid inverter, all-in-one; also micro_ess/HALO once
-        # MICRO_ESS_CONTROL_SUPPORTED is enabled — see const.py)
-        if has_control_capable:
+        if device_control_offered:
             battery_control_on = options.get("enable_battery_control", False)
             schema_dict[
                 vol.Optional(
@@ -1282,8 +1277,8 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
                     default=battery_control_on,
                 )
             ] = selector.BooleanSelector()
-            # EM can drive anything device control can, so the EM toggle
-            # shows whenever battery control is enabled on a capable device.
+            # EM drives a controllable battery, so its toggle shows only
+            # with one.
             if battery_control_on and has_control_capable:
                 schema_dict[
                     vol.Optional("enable_energy_manager", default=em_enabled)
@@ -1338,9 +1333,9 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(step_id="energy_manager", data_schema=schema)
 
-    def _get_sns_by_device_type(self, allowed_types: tuple[str, ...]) -> list[str]:
+    def _get_sns_where(self, matches: Callable[[str], bool]) -> list[str]:
         """Get serial numbers of coordinator devices whose normalized type
-        is one of `allowed_types`."""
+        `matches`."""
         if not hasattr(self, "hass") or self.hass is None:
             return []
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
@@ -1349,27 +1344,21 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         return [
             sn
             for sn, dev_data in coordinator.data.items()
-            if normalize_device_type(get_raw_device_code(dev_data)) in allowed_types
+            if matches(device_type_of(dev_data))
         ]
 
     def _get_control_capable_sns(self) -> list[str]:
-        """Serial numbers of devices that support battery control.
+        """Serial numbers of devices whose battery this entry can control
+        (see is_control_capable_device_type in const.py).
 
         This is also the set the Energy Manager can drive -- EM writes go
         through the same ``set_mode_*`` surface as the manual mode buttons.
-
-        Always includes hybrid_inverter/all_in_one. Adds micro_ess/HALO when
-        either MICRO_ESS_CONTROL_SUPPORTED is enabled (cloud, currently
-        never) or this entry is Modbus (local, where the mode buttons and
-        protection numbers work today -- see is_control_capable_device_type
-        in const.py; the Power On/Off switch, controlId 1011, has no
-        confirmed local register and stays gated by MICRO_ESS_CONTROL_SUPPORTED
-        alone regardless of transport).
         """
-        allowed_types: tuple[str, ...] = ("hybrid_inverter", "all_in_one")
-        if MICRO_ESS_CONTROL_SUPPORTED or is_modbus_entry(self._config_entry):
-            allowed_types += ("micro_ess",)
-        return self._get_sns_by_device_type(allowed_types)
+        return self._get_sns_where(
+            lambda device_type: is_control_capable_device_type(
+                self._config_entry, device_type
+            )
+        )
 
     def _has_control_capable_device(self) -> bool:
         """Check if any control-capable device exists (see _get_control_capable_sns)."""
