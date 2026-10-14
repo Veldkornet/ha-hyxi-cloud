@@ -9,6 +9,13 @@ cancel_subscription:
       required: true
       selector:
         text:
+    config_entry_id:
+      name: Entry
+      description: The HYXI Cloud entry whose API keys created the subscription. When omitted, the entry whose subscription list holds the code is used, or the only HYXI Cloud entry.
+      required: false
+      selector:
+        config_entry:
+          integration: hyxi_cloud
 
 set_battery_mode:
   name: Set battery mode
