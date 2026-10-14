@@ -15,7 +15,7 @@
     "hyxi_cloud_api"
   ],
   "requirements": [
-    "hyxi-cloud-api==1.5.3",
+    "hyxi-cloud-api==1.5.4",
     "modbus-connection[tmodbus]>=4.10.0",
     "tmodbus[async-serial]>=0.6.2"
   ],
