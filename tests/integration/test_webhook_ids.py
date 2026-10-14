@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
-from hyxi_cloud_api import Subscription, SubscriptionType
+from hyxi_cloud_api import HyxiApiClient, Subscription, SubscriptionType
 
 from custom_components.hyxi_cloud import _compute_subscription_fingerprint
 from custom_components.hyxi_cloud.const import (
@@ -16,6 +16,10 @@ from custom_components.hyxi_cloud.const import (
 from tests.integration.entries import accept_subscriptions, cloud_entry, serve_devices
 
 BASE_URL = "https://hyxi.example"
+# HYXI refusing a subscription for a device that already has one.
+REPEATEDLY = HyxiApiClient.SubscriptionError(
+    "request failed (code=B004002): subscribed to repeatedly"
+)
 
 _DEVICE = {
     "SN_A": {
@@ -159,10 +163,9 @@ def _deleted_cloudhooks(cloud) -> set[str]:
 def _refuse_subscriptions(client) -> None:
     """HYXI refuses to cancel the old subscriptions, and so refuses new
     ones for the same devices."""
-    client.cancel_subscription.return_value = {"success": False, "msg": "busy"}
-    refused = {"success": False, "msg": "repeatedly"}
-    client.subscribe_real_time_data.return_value = refused
-    client.subscribe_alarm.return_value = refused
+    client.cancel_subscription.side_effect = HyxiApiClient.SubscriptionError("busy")
+    client.subscribe_real_time_data.side_effect = REPEATEDLY
+    client.subscribe_alarm.side_effect = REPEATEDLY
 
 
 @pytest.mark.asyncio
@@ -208,7 +211,7 @@ async def test_old_webhook_ids_keep_working_until_resubscribed(
     assert response.status == 200
     client.process_push_data.assert_called_once()
 
-    client.cancel_subscription.return_value = {"success": True}
+    client.cancel_subscription.side_effect = None
     accept_subscriptions(client)
     await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
@@ -224,14 +227,13 @@ async def test_each_old_webhook_id_is_retired_on_its_own(
     """When only the alarm subscription could be replaced, only the old
     alarm webhook ID is retired; the old push one stays in use."""
     entry, old_ids = _upgraded_entry(hass, client)
-    client.cancel_subscription.side_effect = lambda code: {
-        "success": code != "old-push",
-        "msg": "busy",
-    }
-    client.subscribe_real_time_data.return_value = {
-        "success": False,
-        "msg": "repeatedly",
-    }
+
+    async def cancel(code):
+        if code == "old-push":
+            raise HyxiApiClient.SubscriptionError("busy")
+
+    client.cancel_subscription.side_effect = cancel
+    client.subscribe_real_time_data.side_effect = REPEATEDLY
 
     await _setup(hass, entry)
 

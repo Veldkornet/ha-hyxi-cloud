@@ -8,6 +8,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components.hyxi_cloud import (
     DOMAIN,
+    SubscriptionError,
     _battery_mode_row,
     _energy_manager_manages,
     _resolve_battery_mode_targets,
@@ -95,12 +96,11 @@ def _cancel_log_record(caplog):
 
 @pytest.mark.asyncio
 async def test_service_call_api_failure(hass, mock_coordinator, caplog):
-    """Test service raises error if client cancel API returns success=False,
-    and logs HYXI's rejection without a traceback."""
-    mock_coordinator.client.cancel_subscription.return_value = {
-        "success": False,
-        "msg": "Invalid subscribe code",
-    }
+    """Test service raises error if HYXI refuses the cancel, and logs the
+    refusal without a traceback."""
+    mock_coordinator.client.cancel_subscription.side_effect = SubscriptionError(
+        "Invalid subscribe code"
+    )
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
     setup_services(hass)
 
@@ -206,11 +206,8 @@ async def test_cancel_uses_the_entry_whose_credentials_hold_the_code(hass, mock_
 # ── set_battery_mode ───────────────────────────────────────────────────
 
 
-def _fake_device(serial="SN1", entry_id="entry_123"):
-    device = MagicMock()
-    device.identifiers = {(DOMAIN, serial)}
-    device.config_entries = [entry_id]
-    return device
+def _fake_device(serial="SN1", entry_ids=("entry_123",)):
+    return MagicMock(identifiers={(DOMAIN, serial)}, config_entries=list(entry_ids))
 
 
 @pytest.fixture
@@ -361,12 +358,10 @@ def test_resolve_battery_mode_targets_skips_unknown_and_foreign_devices(
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
     mock_coordinator.data = {"SN1": {}}
 
-    unknown = MagicMock()
-    unknown.identifiers = {("other_domain", "x")}
-    unknown.config_entries = ["entry_123"]
-    not_polled = MagicMock()
-    not_polled.identifiers = {(DOMAIN, "SN_GONE")}
-    not_polled.config_entries = ["entry_123"]
+    unknown = MagicMock(
+        identifiers={("other_domain", "x")}, config_entries=["entry_123"]
+    )
+    not_polled = _fake_device("SN_GONE")
 
     dev_reg = MagicMock()
     dev_reg.async_get.side_effect = [None, unknown, not_polled]
@@ -410,8 +405,7 @@ def test_a_device_on_cloud_and_modbus_resolves_to_modbus(order):
         "cloud": _coordinator_for("cloud", None, "HYBRID_INVERTER"),
         "modbus": _coordinator_for("modbus", "modbus", "HYBRID_INVERTER"),
     }
-    device = _fake_device()
-    device.config_entries = list(order)
+    device = _fake_device("SN1", order)
 
     row = _battery_mode_row(device, coordinators)
 

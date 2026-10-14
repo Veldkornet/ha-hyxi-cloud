@@ -636,47 +636,43 @@ async def test_async_cancel_subscription_success(hass):
 
 @pytest.mark.asyncio
 async def test_async_cancel_subscription_api_failure_response(hass):
-    """A non-success API response raises: HYXI has no "not found" error
-    code, so a failure response is never proof the subscription is gone."""
-    from custom_components.hyxi_cloud import async_cancel_subscription
-
-    class DummySubscriptionError(Exception):
-        pass
+    """HYXI's refusal, raised by the client as SubscriptionError, propagates:
+    HYXI has no "not found" error code, so a refusal is never proof the
+    subscription is gone."""
+    from custom_components.hyxi_cloud import (
+        SubscriptionError,
+        async_cancel_subscription,
+    )
 
     client = MagicMock()
-    client.SubscriptionError = DummySubscriptionError
     client.cancel_subscription = AsyncMock(
-        return_value={"success": False, "code": "C000001", "msg": "Parameter error"}
+        side_effect=SubscriptionError("request failed (code=C000001): Parameter error")
     )
 
     with patch(
         "custom_components.hyxi_cloud._async_refresh_subscriptions_for",
         new_callable=AsyncMock,
     ) as mock_unregister:
-        with pytest.raises(DummySubscriptionError):
+        with pytest.raises(SubscriptionError):
             await async_cancel_subscription(client, "test-code")
         mock_unregister.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_async_cancel_subscription_transient_error(hass):
-    """Transient errors (auth/connection/rate-limit) raise the error."""
+    """Transient errors (auth/connection/rate-limit) propagate."""
     from custom_components.hyxi_cloud import async_cancel_subscription
 
-    class DummySubscriptionError(Exception):
-        pass
-
     client = MagicMock()
-    client.SubscriptionError = DummySubscriptionError
     client.cancel_subscription = AsyncMock(
-        side_effect=DummySubscriptionError("Authentication failed")
+        side_effect=TimeoutError("Authentication failed")
     )
 
     with patch(
         "custom_components.hyxi_cloud._async_refresh_subscriptions_for",
         new_callable=AsyncMock,
     ) as mock_unregister:
-        with pytest.raises(DummySubscriptionError, match="Authentication failed"):
+        with pytest.raises(TimeoutError, match="Authentication failed"):
             await async_cancel_subscription(client, "test-code")
         mock_unregister.assert_not_called()
 

@@ -7,7 +7,7 @@ import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from hyxi_cloud_api import Subscription, SubscriptionType
+from hyxi_cloud_api import HyxiApiClient, Subscription, SubscriptionType
 
 from custom_components.hyxi_cloud.const import (
     CONF_ENABLE_PUSH,
@@ -243,7 +243,7 @@ async def test_a_blocking_subscription_that_cannot_be_cancelled_is_reported(
     hass: HomeAssistant, client, caplog
 ):
     """A failed cancel is logged and the new subscription is still tried."""
-    client.cancel_subscription.return_value = {"success": False, "msg": "busy"}
+    client.cancel_subscription.side_effect = HyxiApiClient.SubscriptionError("busy")
 
     await _setup_with_push(
         hass,

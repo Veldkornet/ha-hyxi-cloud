@@ -13,6 +13,7 @@ if "homeassistant.components.cloud" not in sys.modules:
 # These imports must follow sys.modules patching — pylint: disable=wrong-import-position
 
 from custom_components.hyxi_cloud.__init__ import (  # pylint: disable=wrong-import-position
+    SubscriptionError,
     _async_handle_alarm_webhook,
     _async_setup_alarm_subscription,
     _async_teardown_alarm_subscription,
@@ -126,11 +127,10 @@ async def test_setup_alarm_subscription_failure_still_sets_url_and_error(
     the real-time data push path already does on failure."""
     webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
     mock_coordinator.client.subscribe_alarm = AsyncMock(
-        return_value={
-            "success": False,
-            "msg": "request failed (code=B004002): At least one device sn "
-            "has been subscribed to repeatedly.",
-        }
+        side_effect=SubscriptionError(
+            "request failed (code=B004002): At least one device sn "
+            "has been subscribed to repeatedly."
+        )
     )
 
     with patch(

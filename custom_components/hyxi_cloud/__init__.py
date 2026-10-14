@@ -81,8 +81,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Repeated across several subscription setup/teardown/logging call sites below.
-_UNKNOWN_ERROR = "Unknown error"
+# The client's error when HYXI refuses a subscription call.
+SubscriptionError = HyxiApiClient.SubscriptionError
 _PUSH_SUBSCRIPTION_LABEL = "HYXI Push"
 _ALARM_PUSH_SUBSCRIPTION_LABEL = "HYXI Alarm Push"
 
@@ -1976,30 +1976,24 @@ async def _async_execute_real_time_subscription(  # pylint: disable=too-many-arg
             device_sns,
             push_rate_ms,  # API expects milliseconds
         )
-        if res.get("success"):
-            coordinator.subscribe_code = res["data"]["subscribeCode"]
-            coordinator.push_status = "active"
-            coordinator.push_error = None
-            fingerprint = _compute_subscription_fingerprint(
-                webhook_url, device_sns, push_rate_ms
-            )
-            hass.config_entries.async_update_entry(
-                entry,
-                data={
-                    **entry.data,
-                    "push_subscribe_code": coordinator.subscribe_code,
-                    "push_subscribe_fingerprint": fingerprint,
-                },
-            )
-            _LOGGER.info(
-                "Successfully subscribed to HYXI Real-Time Push (code: %s)",
-                mask_subscription_code(coordinator.subscribe_code),
-            )
-        else:
-            coordinator.push_status = "error"
-            msg = res.get("msg", _UNKNOWN_ERROR)
-            coordinator.push_error = msg
-            _log_push_subscription_failure("HYXI Real-Time Push", msg)
+        coordinator.subscribe_code = res["data"]["subscribeCode"]
+        coordinator.push_status = "active"
+        coordinator.push_error = None
+        fingerprint = _compute_subscription_fingerprint(
+            webhook_url, device_sns, push_rate_ms
+        )
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                "push_subscribe_code": coordinator.subscribe_code,
+                "push_subscribe_fingerprint": fingerprint,
+            },
+        )
+        _LOGGER.info(
+            "Successfully subscribed to HYXI Real-Time Push (code: %s)",
+            mask_subscription_code(coordinator.subscribe_code),
+        )
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.push_status = "error"
         err_msg = str(err)
@@ -2022,30 +2016,24 @@ async def _async_execute_alarm_subscription(  # pylint: disable=too-many-argumen
             device_sns,
             push_rate_ms,
         )
-        if res.get("success"):
-            coordinator.alarm_subscribe_code = res["data"]["subscribeCode"]
-            coordinator.alarm_push_status = "active"
-            coordinator.alarm_push_error = None
-            fingerprint = _compute_subscription_fingerprint(
-                webhook_url, device_sns, push_rate_ms
-            )
-            hass.config_entries.async_update_entry(
-                entry,
-                data={
-                    **entry.data,
-                    "alarm_subscribe_code": coordinator.alarm_subscribe_code,
-                    "alarm_subscribe_fingerprint": fingerprint,
-                },
-            )
-            _LOGGER.info(
-                "Successfully subscribed to HYXI Alarm Push (code: %s)",
-                mask_subscription_code(coordinator.alarm_subscribe_code),
-            )
-        else:
-            coordinator.alarm_push_status = "error"
-            msg = res.get("msg", _UNKNOWN_ERROR)
-            coordinator.alarm_push_error = msg
-            _log_push_subscription_failure(_ALARM_PUSH_SUBSCRIPTION_LABEL, msg)
+        coordinator.alarm_subscribe_code = res["data"]["subscribeCode"]
+        coordinator.alarm_push_status = "active"
+        coordinator.alarm_push_error = None
+        fingerprint = _compute_subscription_fingerprint(
+            webhook_url, device_sns, push_rate_ms
+        )
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                "alarm_subscribe_code": coordinator.alarm_subscribe_code,
+                "alarm_subscribe_fingerprint": fingerprint,
+            },
+        )
+        _LOGGER.info(
+            "Successfully subscribed to HYXI Alarm Push (code: %s)",
+            mask_subscription_code(coordinator.alarm_subscribe_code),
+        )
     except Exception as err:  # pylint: disable=broad-exception-caught
         coordinator.alarm_push_status = "error"
         err_msg = str(err)
@@ -2611,9 +2599,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 "Error manual cancelling HYXI subscription %s: %s",
                 mask_subscription_code(subscribe_code),
                 err,
-                exc_info=not isinstance(
-                    err, _subscription_error_class(coordinator.client)
-                ),
+                exc_info=not isinstance(err, SubscriptionError),
             )
             raise HomeAssistantError(f"Failed to cancel subscription: {err}") from err
         await _async_refresh_subscriptions_for(hass, coordinator)
@@ -2871,30 +2857,21 @@ async def _async_refresh_subscriptions_for(
             other.async_update_listeners()
 
 
-def _subscription_error_class(client: HyxiApiClient) -> type[BaseException]:
-    """The error the client raises when HYXI rejects a subscription call."""
-    sub_err_cls = getattr(client, "SubscriptionError", RuntimeError)
-    if isinstance(sub_err_cls, type) and issubclass(sub_err_cls, BaseException):
-        return sub_err_cls
-    return RuntimeError
-
-
 async def async_cancel_subscription(client: HyxiApiClient, code: str) -> None:
     """Cancel a subscription via the API.
 
-    HYXI has no "subscription not found" error code, so a failure response
-    (including transient/rate-limit errors) is not a reliable signal that
-    the subscription is actually gone. Any failure is re-raised so callers
-    know not to discard their own record of the code.
+    HYXI has no "subscription not found" error code, so a refusal (including
+    transient/rate-limit errors) is not a reliable signal that the
+    subscription is actually gone. The client raises SubscriptionError for
+    it, and any failure propagates so callers know not to discard their own
+    record of the code.
     """
     code = code.strip()
     if not code:
         return
 
     _LOGGER.info("Cancelling HYXI subscription: %s", mask_subscription_code(code))
-    res = await client.cancel_subscription(code)
-    if isinstance(res, dict) and not res.get("success"):
-        raise _subscription_error_class(client)(res.get("msg", _UNKNOWN_ERROR))
+    await client.cancel_subscription(code)
 
     _LOGGER.info(
         "Successfully cancelled HYXI subscription: %s", mask_subscription_code(code)
