@@ -2725,15 +2725,15 @@ async def _async_handle_set_battery_mode(call) -> None:
     # Validate every matched inverter before touching any, so a rejected
     # second one doesn't leave the first already switched.
     for entry, coordinator, sn in targets:
-        if not is_control_capable_device_type(
-            entry, device_type_of(coordinator.data[sn])
-        ):
+        device_type = device_type_of(coordinator.data[sn])
+        if not is_control_capable_device_type(entry, device_type):
             raise ServiceValidationError(
-                f"{mask_sn(sn)} on {entry.title} has no battery to switch "
-                "between modes."
-                if is_modbus_entry(entry)
-                else f"{mask_sn(sn)} on {entry.title} can't be switched between "
+                f"{mask_sn(sn)} on {entry.title} can't be switched between "
                 "battery modes over the HYXI Cloud; use a local Modbus entry."
+                if device_type in ENERGY_STORAGE_DEVICE_TYPES
+                and not is_modbus_entry(entry)
+                else f"{mask_sn(sn)} on {entry.title} has no battery to switch "
+                "between modes."
             )
         if not is_battery_control_enabled(entry):
             raise ServiceValidationError(

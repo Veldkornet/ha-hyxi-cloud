@@ -419,13 +419,14 @@ def test_a_device_on_cloud_and_modbus_resolves_to_modbus(order):
 
 
 @pytest.mark.asyncio
-async def test_set_battery_mode_names_a_modbus_device_without_a_battery(
-    battery_mode_env,
+@pytest.mark.parametrize("transport", ["modbus", None], ids=["modbus", "cloud"])
+async def test_set_battery_mode_names_a_device_without_a_battery(
+    battery_mode_env, transport
 ):
-    """A non-battery device on a Modbus entry is refused as having no
-    battery, not pointed at Modbus."""
+    """A non-battery device is refused as having no battery on either
+    transport, not pointed at Modbus."""
     hass, coordinator, entry, send = battery_mode_env
-    entry.data = {"transport": "modbus"}
+    entry.data = {"transport": transport} if transport else {}
     coordinator.data["SN1"]["device_type_code"] = "MICRO_INVERTER"
 
     with pytest.raises(ServiceValidationError, match="has no battery"):
