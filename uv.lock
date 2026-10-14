@@ -1004,7 +1004,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.165.5" },
-    { name = "hyxi-cloud-api", specifier = "==1.5.3" },
+    { name = "hyxi-cloud-api", specifier = "==1.5.4" },
     { name = "modbus-connection", extras = ["tmodbus"], specifier = ">=4.10.0" },
     { name = "modbus-connection", extras = ["tmodbus"], marker = "extra == 'modbus'", specifier = ">=4.10.0" },
     { name = "mypy", marker = "extra == 'test'", specifier = ">=2.3.0" },
@@ -1246,14 +1246,14 @@ wheels = [
 
 [[package]]
 name = "hyxi-cloud-api"
-version = "1.5.3"
+version = "1.5.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/23/7e3106de27286f5ded86cabbc54af393d3202442e432848d84017d67a12a/hyxi_cloud_api-1.5.3.tar.gz", hash = "sha256:8cee7541ed04bf2677d18e9e2bd9490d33456a70f2475f06679a04816a147f0f", size = 113703, upload-time = "2026-10-10T17:51:11.716Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/62/f1c1f02fed9bc1e66500257e97c4d5a110f88851572c3a2fe412760ffd52/hyxi_cloud_api-1.5.4.tar.gz", hash = "sha256:f1bfde0880ad3cc93577f966304e5e82298a25af6d68ad1d99650f5fb461e793", size = 114488, upload-time = "2026-10-14T17:08:31.401Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/94/1697dc92b3285819fa1abffcf44cbbba7c0d6b115bf8662afd67e815d812/hyxi_cloud_api-1.5.3-py3-none-any.whl", hash = "sha256:607078cc5097ecf623084f832cd60e3a0306c7417ef4291ada0a719bad723960", size = 42015, upload-time = "2026-10-10T17:51:10.304Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/f9/a3b8d1b20177e244dfe752d7d802ee2bad7985705a95e7bdfa05f3828f95/hyxi_cloud_api-1.5.4-py3-none-any.whl", hash = "sha256:25811ea85ae4bfd056b38a3f6ded470e8513356011332c9537623ca23632f13f", size = 42338, upload-time = "2026-10-14T17:08:29.813Z" },
 ]
 
 [[package]]
