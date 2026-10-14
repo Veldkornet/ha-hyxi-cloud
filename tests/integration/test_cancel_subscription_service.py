@@ -77,9 +77,10 @@ async def test_only_admins_can_cancel(hass: HomeAssistant, clients, hass_admin_u
     """A non-admin user may not cancel a subscription; an admin may."""
     await _add_entry(hass, "ak1")
     user = await hass.auth.async_create_user("Viewer", group_ids=["system-users"])
+    viewer = Context(user_id=user.id)
 
     with pytest.raises(Unauthorized):
-        await _cancel(hass, Context(user_id=user.id))
+        await _cancel(hass, viewer)
     clients[0].cancel_subscription.assert_not_awaited()
 
     await _cancel(hass, Context(user_id=hass_admin_user.id))

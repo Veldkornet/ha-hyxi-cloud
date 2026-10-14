@@ -161,8 +161,12 @@ async def _build_modbus_coordinator(
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Register the integration's services, once for all its entries."""
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # NOSONAR
+    """Register the integration's services, once for all its entries.
+
+    Home Assistant awaits this with its configuration, which a
+    config-entry-only integration has no use for.
+    """
     setup_services(hass)
     return True
 
