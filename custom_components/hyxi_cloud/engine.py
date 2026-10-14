@@ -29,10 +29,12 @@ from homeassistant.components import persistent_notification
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
+from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import HyxiApiClient
 
 from . import control_verify
@@ -56,6 +58,11 @@ if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+# The EM stops acting on the coordinator's data once its last good poll is
+# this many poll intervals old, and at least STALE_MIN_AGE.
+STALE_POLLS = 4
+STALE_MIN_AGE = timedelta(minutes=2)
 
 # The sun integration's fixed entity ID, read from in a few places below.
 _SUN_ENTITY_ID = "sun.sun"
@@ -125,6 +132,14 @@ class EnergyManagerEngine:
         self._last_action: str = ""
         self._not_forwarded = NotForwardedPause()
         self._in_decision: bool = False
+        # Set while the coordinator's data is too old to act on.
+        self._stale: bool = False
+        # When the engine started, standing in for a last good poll until
+        # there is one.
+        self._started_at = dt_util.utcnow()
+        # Set while decisions keep failing, so the traceback is logged once.
+        self._decision_failing: bool = False
+        self._decision_tasks: set[asyncio.Task] = set()
         self._last_fast_path_trigger: float = 0
         self._last_power_adjust: float = -999999.0
         self._last_charge_exit: float = 0
@@ -162,14 +177,13 @@ class EnergyManagerEngine:
 
     @property
     def status(self) -> str:
-        """Engine status: running, stopped, disabled, cooldown, error."""
+        """Engine status: running, stopped, disabled, stale, cooldown, error."""
         if not self._enabled:
             return "stopped"
-        # Check if em_enabled switch is off
-        em_enabled_uid = f"hyxi_{self._sn}_em_enabled"
-        em_entity = self._find_entity_id("switch", em_enabled_uid)
-        if em_entity and not self._get_ha_state_bool(em_entity, True):
+        if self._switched_off():
             return "disabled"
+        if self._stale:
+            return "stale"
         if self._last_decision == "error":
             return "error"
         cooldown = self._get_param("mode_switch_cooldown")
@@ -178,6 +192,12 @@ class EnergyManagerEngine:
         if self._dry_run:
             return "dry_run"
         return "running"
+
+    @property
+    def is_managing(self) -> bool:
+        """Whether the engine is driving its inverter: started, switched on
+        and not paused on stale data."""
+        return self._enabled and not self._switched_off() and not self._stale
 
     @property
     def decision(self) -> str:
@@ -219,6 +239,10 @@ class EnergyManagerEngine:
             return
 
         self._enabled = True
+        self._started_at = dt_util.utcnow()
+        # Earlier versions raised this notification when they reloaded on
+        # stale data; the repair issue replaces it.
+        persistent_notification.async_dismiss(self._hass, "hyxi_stale_data")
         _LOGGER.info("Energy Manager started for %s", mask_sn(self._sn))
 
         # Decision loop — interval from options or default
@@ -275,6 +299,8 @@ class EnergyManagerEngine:
             unsub()
         self._unsub_listeners.clear()
         control_verify.cancel_pending(self._verify_tasks)
+        control_verify.cancel_pending(self._decision_tasks)
+        self._clear_stale()
         _LOGGER.info("Energy Manager stopped for %s", mask_sn(self._sn))
         self._notify_sensors()
 
@@ -463,7 +489,6 @@ class EnergyManagerEngine:
         next_rising = sun_state.attributes.get("next_rising")
         if next_rising is None:
             return 12.0
-        from homeassistant.util import dt as dt_util
 
         now = dt_util.utcnow()
         if isinstance(next_rising, str):
@@ -481,7 +506,6 @@ class EnergyManagerEngine:
         next_setting = sun_state.attributes.get("next_setting")
         if next_setting is None:
             return 12.0
-        from homeassistant.util import dt as dt_util
 
         now = dt_util.utcnow()
         if isinstance(next_setting, str):
@@ -1444,61 +1468,124 @@ class EnergyManagerEngine:
 
     # ── Callbacks ───────────────────────────────────────────────────────
 
+    @property
+    def _stale_issue_id(self) -> str:
+        return f"em_stale_data_{self._coordinator.entry.entry_id}"
+
+    def _stale_after(self) -> timedelta:
+        """How old the last good poll may be before the EM stops acting on it:
+        STALE_POLLS poll intervals, and at least STALE_MIN_AGE."""
+        interval = self._coordinator.update_interval or STALE_MIN_AGE
+        return max(interval * STALE_POLLS, STALE_MIN_AGE)
+
+    def _data_age(self) -> timedelta:
+        """How old the last good poll is; since the engine started, until
+        there is one."""
+        last_success = (
+            self._coordinator.hyxi_metadata.get("last_success") or self._started_at
+        )
+        return dt_util.utcnow() - last_success
+
+    def _is_stale(self) -> bool:
+        """Whether the coordinator's data is too old to act on."""
+        return self._data_age() > self._stale_after()
+
+    def _clear_stale(self) -> None:
+        """Leave the stale state and remove its repair issue."""
+        self._stale = False
+        ir.async_delete_issue(self._hass, DOMAIN, self._stale_issue_id)
+
+    def _check_stale(self) -> bool:
+        """Whether the coordinator's data is too old to act on. Raises a repair
+        issue when it becomes stale and removes it once data is fresh again."""
+        age = self._data_age()
+        stale = age > self._stale_after()
+        if stale and not self._stale:
+            _LOGGER.warning(
+                "EM %s: no fresh data for %.0f min; pausing until it returns",
+                mask_sn(self._sn),
+                age.total_seconds() / 60,
+            )
+            ir.async_create_issue(
+                self._hass,
+                DOMAIN,
+                self._stale_issue_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="em_stale_data",
+                translation_placeholders={"entry": self._coordinator.entry.title},
+            )
+            self._set_decision("stale")
+        elif not stale and self._stale:
+            _LOGGER.info("EM %s: fresh data again; resuming", mask_sn(self._sn))
+            self._clear_stale()
+        self._stale = stale
+        return stale
+
+    def _switched_off(self) -> bool:
+        """Whether the EM's own em_enabled switch is off."""
+        em_entity = self._find_entity_id("switch", f"hyxi_{self._sn}_em_enabled")
+        return bool(em_entity) and not self._get_ha_state_bool(em_entity, True)
+
     async def _loop_tick(self, now) -> None:
-        """15-second timer callback."""
+        """Decision loop timer callback."""
         if not self._enabled:
             return
 
-        # Staleness guard: auto-reload integration if data hasn't refreshed
-        from homeassistant.util import dt as dt_util
-
-        last_success = self._coordinator.hyxi_metadata.get("last_success")
-        if last_success is not None:
-            stale_seconds = (dt_util.utcnow() - last_success).total_seconds()
-            if stale_seconds > 600:  # 10 minutes
-                _LOGGER.warning(
-                    "EM: Coordinator data stale (%.0f min) — reloading integration",
-                    stale_seconds / 60,
-                )
-                persistent_notification.async_create(
-                    self._hass,
-                    f"Energy Manager detected stale data ({stale_seconds / 60:.0f} min). "
-                    "Auto-reloading integration to restore updates.",
-                    title="HYXI Cloud: Stale Data",
-                    notification_id="hyxi_stale_data",
-                )
-                await self._hass.config_entries.async_reload(
-                    self._coordinator.entry.entry_id
-                )
-                return
-
-        # Check em_enabled switch — force self_consume on disable
-        em_enabled_uid = f"hyxi_{self._sn}_em_enabled"
-        em_entity = self._find_entity_id("switch", em_enabled_uid)
-        if em_entity and not self._get_ha_state_bool(em_entity, True):
-            if self._current_mode in ("charge", "discharge"):
+        # Switched off: force self_consume, whether or not data is fresh.
+        if self._switched_off():
+            if self._stale:
+                self._clear_stale()
+            self._set_decision("disabled")
+            if self._current_mode in ("charge", "discharge") and not self._in_decision:
                 _LOGGER.info(
                     "EM: Disabled — forcing self_consume from %s for %s",
                     self._current_mode,
                     mask_sn(self._sn),
                 )
+                self._in_decision = True
                 try:
                     await self._set_mode("self_consume")
-                except OSError, ValueError, TypeError, HyxiApiClient.ControlError:
+                except Exception:  # pylint: disable=broad-exception-caught
                     _LOGGER.debug("EM: Failed to force self_consume on disable")
-                self._set_decision("disabled")
+                finally:
+                    self._in_decision = False
             return
 
+        if self._check_stale():
+            return
+        await self._async_decide_or_fall_back()
+
+    async def _async_decide_or_fall_back(self) -> None:
+        """Make a decision; on any failure, fall back to self_consume."""
         try:
             await self._make_decision()
-        except OSError, ValueError, TypeError, HyxiApiClient.ControlError:
-            _LOGGER.exception("EM: Decision loop error")
+        except Exception:  # pylint: disable=broad-exception-caught
+            if self._decision_failing:
+                _LOGGER.debug("EM: Decision loop error", exc_info=True)
+            else:
+                _LOGGER.exception("EM: Decision loop error")
+            self._decision_failing = True
             self._set_decision("error")
+            if self._current_mode == "self_consume":
+                return
             # Safe fallback
             try:
                 await self._set_mode("self_consume")
-            except OSError, ValueError, TypeError, HyxiApiClient.ControlError:
+            except Exception:  # pylint: disable=broad-exception-caught
                 _LOGGER.debug("EM: Fallback self_consume also failed")
+        else:
+            self._decision_failing = False
+
+    @callback
+    def _request_fast_path_decision(self) -> None:
+        """Decide now, outside the loop, unless the EM is switched off or the
+        data is stale; the task is cancelled if the EM stops."""
+        if self._switched_off() or self._is_stale():
+            return
+        task = self._hass.async_create_task(self._async_decide_or_fall_back())
+        self._decision_tasks.add(task)
+        task.add_done_callback(self._decision_tasks.discard)
 
     @callback
     def _on_p1_change(self, event) -> None:
@@ -1531,7 +1618,7 @@ class EnergyManagerEngine:
             now = time.monotonic()
             if now - self._last_fast_path_trigger >= 15:
                 self._last_fast_path_trigger = now
-                self._hass.async_create_task(self._make_decision())
+                self._request_fast_path_decision()
 
     @callback
     def _on_soc_change(self, event) -> None:
@@ -1553,15 +1640,13 @@ class EnergyManagerEngine:
             now = time.monotonic()
             if now - self._last_fast_path_trigger >= 15:
                 self._last_fast_path_trigger = now
-                self._hass.async_create_task(self._make_decision())
+                self._request_fast_path_decision()
 
     @callback
     def _update_night_estimate(self, now) -> None:
         """Hourly night consumption update — EMA from P1 readings at night."""
         if not self._enabled:
             return
-
-        from homeassistant.util import dt as dt_util
 
         hour = dt_util.now().hour
         if 21 <= hour or hour < 6:

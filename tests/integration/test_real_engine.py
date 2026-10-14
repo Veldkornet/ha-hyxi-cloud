@@ -1,13 +1,16 @@
 """Integration tests for the HYXI Energy Manager decision engine."""
 
+import asyncio
 import logging
 import time
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
+from aiohttp import ClientResponseError
 from homeassistant.core import HassJob, HassJobType, HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import HyxiApiClient
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -499,6 +502,7 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
     coordinator.entry = entry
     coordinator.client = client
     coordinator.hyxi_metadata = {"last_success": dt_util.utcnow()}
+    coordinator.update_interval = timedelta(seconds=15)
     coordinator.protection_controllers = {}
     coordinator.data = {
         "SN123": {
@@ -523,16 +527,22 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
     hass.states.async_set(soc_entity_id, "18.0")
     await hass.async_block_till_done()
 
-    # 3. Test coordinator data staleness check (> 10 minutes)
+    # 3. Stale coordinator data pauses the EM with a repair issue, without
+    # reloading the entry; fresh data resumes it and clears the issue.
+    issues = ir.async_get(hass)
+    issue_id = f"em_stale_data_{entry.entry_id}"
     coordinator.hyxi_metadata["last_success"] = dt_util.utcnow() - timedelta(minutes=15)
     with patch(
         "homeassistant.config_entries.ConfigEntries.async_reload", return_value=True
     ) as mock_reload:
         await engine._loop_tick(None)
-        mock_reload.assert_called_once_with(entry.entry_id)
+        mock_reload.assert_not_called()
+    assert engine.decision == "stale"
+    assert issues.async_get_issue(DOMAIN, issue_id) is not None
 
-    # Reset metadata last success to avoid reloading in next ticks
     coordinator.hyxi_metadata["last_success"] = dt_util.utcnow()
+    await engine._loop_tick(None)
+    assert issues.async_get_issue(DOMAIN, issue_id) is None
 
     # 4. Test em_enabled switch turn off -> forces self_consume
     sw_em = er.async_get(hass).async_get_or_create(
@@ -851,6 +861,8 @@ async def test_engine_on_soc_change_fast_path(hass: HomeAssistant):
     coordinator = MagicMock()
     coordinator.entry = entry
     coordinator.protection_controllers = {}
+    coordinator.update_interval = timedelta(seconds=15)
+    coordinator.hyxi_metadata = {"last_success": dt_util.utcnow()}
     coordinator.data = {"SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0"}}}
 
     config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
@@ -958,6 +970,8 @@ async def test_engine_update_night_estimate(hass: HomeAssistant):
     coordinator = MagicMock()
     coordinator.entry = entry
     coordinator.protection_controllers = {}
+    coordinator.update_interval = timedelta(seconds=15)
+    coordinator.hyxi_metadata = {"last_success": dt_util.utcnow()}
     coordinator.data = {"SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0"}}}
 
     config = EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
@@ -1068,6 +1082,8 @@ def _make_engine(
     coordinator = MagicMock()
     coordinator.entry = entry
     coordinator.protection_controllers = {}
+    coordinator.update_interval = timedelta(seconds=15)
+    coordinator.hyxi_metadata = {"last_success": dt_util.utcnow()}
     coordinator.data = {
         "SN123": {
             "device_name": "Test Inverter",
@@ -2007,7 +2023,6 @@ async def test_engine_solar_entry_and_tune_logic(hass: HomeAssistant):
 async def test_engine_loop_tick_edge_cases(hass: HomeAssistant):
     """Test _loop_tick's disabled guard and its exception-fallback branches."""
     engine, coordinator, _entry = _make_engine(hass, options={"em_dry_run": False})
-    coordinator.hyxi_metadata = {"last_success": dt_util.utcnow()}
     client = AsyncMock()
     coordinator.client = client
 
@@ -2092,4 +2107,156 @@ async def test_engine_on_p1_change_edge_cases(hass: HomeAssistant):
         await hass.async_block_till_done()
         mock_decision.assert_called_once()
 
+    engine.stop()
+
+
+def _fresh_engine(hass: HomeAssistant, interval: timedelta = timedelta(seconds=15)):
+    """A started engine whose coordinator last polled just now."""
+    engine, coordinator, entry = _make_engine(hass, options={"em_dry_run": False})
+    coordinator.update_interval = interval
+    coordinator.client = AsyncMock()
+    engine.start()
+    return engine, coordinator, entry
+
+
+@pytest.mark.parametrize(
+    ("interval", "stale_after"),
+    [
+        (timedelta(seconds=15), timedelta(minutes=2)),
+        (timedelta(minutes=5), timedelta(minutes=20)),
+    ],
+    ids=["modbus-15s", "cloud-5min"],
+)
+@pytest.mark.asyncio
+async def test_stale_threshold_follows_the_poll_interval(
+    hass: HomeAssistant, interval, stale_after
+):
+    """Data counts as stale after four poll intervals, and never sooner
+    than two minutes."""
+    engine, _coordinator, _entry = _fresh_engine(hass, interval)
+
+    assert engine._stale_after() == stale_after
+
+    engine.stop()
+
+
+@pytest.mark.asyncio
+async def test_fast_path_decisions_wait_while_data_is_stale(hass: HomeAssistant):
+    """While the data is stale, the high-load and low-SOC fast paths don't
+    decide either."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    coordinator.hyxi_metadata["last_success"] = dt_util.utcnow() - timedelta(hours=1)
+    await engine._loop_tick(None)
+
+    with patch.object(engine, "_make_decision", new=AsyncMock()) as decide:
+        engine._request_fast_path_decision()
+        await hass.async_block_till_done()
+        decide.assert_not_awaited()
+
+    engine.stop()
+
+
+@pytest.mark.asyncio
+async def test_stopping_clears_the_issue_and_pending_decisions(hass: HomeAssistant):
+    """Stopping the EM removes its stale-data issue and cancels a fast-path
+    decision still running."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    release = asyncio.Event()
+
+    async def slow_decision():
+        await release.wait()
+
+    with patch.object(engine, "_make_decision", new=slow_decision):
+        engine._request_fast_path_decision()
+        await asyncio.sleep(0)
+        pending = set(engine._decision_tasks)
+        coordinator.hyxi_metadata["last_success"] = dt_util.utcnow() - timedelta(
+            hours=1
+        )
+        await engine._loop_tick(None)
+
+        engine.stop()
+        await hass.async_block_till_done()
+
+    assert pending and all(task.cancelled() for task in pending)
+    assert ir.async_get(hass).async_get_issue(DOMAIN, engine._stale_issue_id) is None
+
+
+@pytest.mark.asyncio
+async def test_any_decision_error_falls_back_to_self_consume(hass: HomeAssistant):
+    """Any decision error, such as an HTTP 5xx, falls back to
+    self_consume."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    error = ClientResponseError(MagicMock(), (), status=503)
+
+    with patch.object(engine, "_make_decision", new=AsyncMock(side_effect=error)):
+        await engine._loop_tick(None)
+
+    assert engine.decision == "error"
+    coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
+    engine.stop()
+
+
+@pytest.mark.asyncio
+async def test_disabling_waits_for_a_running_decision(hass: HomeAssistant):
+    """Turning the EM off doesn't switch modes while a decision is still
+    sending one."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    switch = er.async_get(hass).async_get_or_create(
+        "switch", DOMAIN, "hyxi_SN123_em_enabled", suggested_object_id="em_enabled"
+    )
+    hass.states.async_set(switch.entity_id, "off")
+    engine._current_mode = "charge"
+    engine._in_decision = True
+
+    await engine._loop_tick(None)
+
+    coordinator.client.set_mode_self_consume.assert_not_awaited()
+    engine._in_decision = False
+    engine.stop()
+
+
+@pytest.mark.asyncio
+async def test_switching_off_while_stale_forces_self_consume(hass: HomeAssistant):
+    """Paused on stale data, the status reads 'stale'; switching the EM off
+    then still forces self_consume and removes the stale-data issue."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    issue_id = engine._stale_issue_id
+    coordinator.hyxi_metadata["last_success"] = dt_util.utcnow() - timedelta(hours=1)
+    assert engine.is_managing
+    await engine._loop_tick(None)
+    assert engine.status == "stale"
+    assert not engine.is_managing
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is not None
+
+    switch = er.async_get(hass).async_get_or_create(
+        "switch", DOMAIN, "hyxi_SN123_em_enabled", suggested_object_id="em_enabled"
+    )
+    hass.states.async_set(switch.entity_id, "off")
+    engine._current_mode = "charge"
+    await engine._loop_tick(None)
+
+    coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
+    assert engine.decision == "disabled"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
+    engine.stop()
+
+
+@pytest.mark.asyncio
+async def test_repeated_decision_errors_are_quiet(hass: HomeAssistant, caplog):
+    """A decision error that keeps recurring logs its traceback once, and
+    doesn't resend self_consume once the battery is in it."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    engine._current_mode = "charge"
+
+    with patch.object(
+        engine, "_make_decision", new=AsyncMock(side_effect=KeyError("batSoc"))
+    ):
+        await engine._loop_tick(None)
+        engine._current_mode = "self_consume"
+        await engine._loop_tick(None)
+
+    errors = [r for r in caplog.records if r.message == "EM: Decision loop error"]
+    assert [r.levelname for r in errors] == ["ERROR", "DEBUG"]
+    coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
     engine.stop()

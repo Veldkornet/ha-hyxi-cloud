@@ -2803,15 +2803,11 @@ def _energy_manager_manages(
     """True when the Energy Manager engine is actively driving `serial`.
 
     False when there is no engine, its loop is stopped, its ``em_enabled``
-    switch is off, or it manages a different inverter.
+    switch is off, it is paused on stale data, or it manages a different
+    inverter.
     """
     engine = getattr(coordinator, "engine", None)
-    return (
-        engine is not None
-        and engine.enabled
-        and engine.sn == serial
-        and engine.status != "disabled"
-    )
+    return engine is not None and engine.sn == serial and engine.is_managing
 
 
 # The list of subscription codes earlier versions kept; HYXI's own

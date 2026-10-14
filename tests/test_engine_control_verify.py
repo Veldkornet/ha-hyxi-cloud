@@ -39,7 +39,9 @@ def _build_engine(transport: str = "cloud") -> EnergyManagerEngine:
     hass.async_create_task = MagicMock(side_effect=_fake_async_create_task)
 
     coordinator = MagicMock()
-    coordinator.entry = SimpleNamespace(data={"transport": transport}, options={})
+    coordinator.entry = SimpleNamespace(
+        entry_id="entry_1", data={"transport": transport}, options={}
+    )
     coordinator.client = SimpleNamespace(
         set_mode_idle=AsyncMock(return_value=_CONTROL_RESPONSE),
         set_mode_charge=AsyncMock(return_value=_CONTROL_RESPONSE),
