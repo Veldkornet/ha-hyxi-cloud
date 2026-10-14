@@ -1886,7 +1886,10 @@ async def _async_cancel_conflicting_subscriptions(
     """Cancel the subscriptions of this type HYXI holds for any of these
     devices, whoever made them: HYXI rejects a new subscription for a device
     that already has one. One without devices (as alarm subscriptions can
-    be) is taken to cover them all."""
+    be) is taken to cover them all. HYXI's list is fetched again first if
+    it couldn't be before."""
+    if coordinator.subscriptions is None:
+        await async_refresh_subscriptions(coordinator)
     if coordinator.subscriptions is None:
         _LOGGER.debug(
             "%s: HYXI's subscription list is unknown, so existing "
