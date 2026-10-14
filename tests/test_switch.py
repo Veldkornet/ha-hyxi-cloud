@@ -65,7 +65,6 @@ hyxi_cloud_api.HyxiApiClient.ControlError = MockControlError  # type: ignore[mis
 
 # Now we can safely import our component code
 from custom_components.hyxi_cloud import switch as switch_mod
-from custom_components.hyxi_cloud.const import DOMAIN
 
 
 # 2. FIXTURES
@@ -100,7 +99,7 @@ async def test_async_setup_entry_empty_data(
 ):
     """Test setup exits early when coordinator data is empty."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {}
 
     async_add_entities = MagicMock()
@@ -116,7 +115,7 @@ async def test_async_setup_entry_single_phase_hybrid(
 ):
     """Test setup for single-phase hybrid inverter."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN_HYBRID_1": {"device_type_code": "HYBRID_INVERTER"}
     }
@@ -152,7 +151,7 @@ async def test_async_setup_entry_three_phase_hybrid(
 ):
     """Test setup for three-phase hybrid inverter (skipped for frequency control)."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN_HYBRID_3": {"device_type_code": "HYBRID_INVERTER"}
     }
@@ -185,7 +184,7 @@ async def test_async_setup_entry_single_phase_all_in_one(
 ):
     """Test setup for single-phase all-in-one inverter."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {"SN_AIO_1": {"device_type_code": "ALL_IN_ONE"}}
 
     async_add_entities = MagicMock()
@@ -219,7 +218,7 @@ async def test_async_setup_entry_three_phase_all_in_one(
 ):
     """Test setup for three-phase all-in-one inverter (skipped for frequency control)."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {"SN_AIO_3": {"device_type_code": "ALL_IN_ONE"}}
 
     async_add_entities = MagicMock()
@@ -249,7 +248,7 @@ async def test_async_setup_entry_micro_inverter(
 ):
     """Test setup for microinverter."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {
         "SN_MICRO_1": {"device_type_code": "MICRO_INVERTER"}
     }
@@ -286,7 +285,7 @@ async def test_async_setup_entry_micro_ess_disabled_by_default(
     """Micro ESS control is disabled by default (MICRO_ESS_CONTROL_SUPPORTED=False)
     pending HYXI granting control API permission — see const.py for details."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
 
     async_add_entities = MagicMock()
@@ -317,7 +316,7 @@ async def test_async_setup_entry_micro_ess_when_supported(
     """Wiring still creates HyxiMicroEssPowerSwitch once HYXI grants API access
     and MICRO_ESS_CONTROL_SUPPORTED is flipped to True."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_coordinator_fixture.data = {"SN_HALO_1": {"device_type_code": "EMS"}}
 
     async_add_entities = MagicMock()
@@ -690,7 +689,7 @@ async def test_async_setup_entry_em_switches(
 ):
     """Test setup of Energy Manager switches."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry_fixture.entry_id: mock_coordinator_fixture}}
+    mock_entry_fixture.runtime_data = mock_coordinator_fixture
     mock_entry_fixture.options = {
         "em_enabled": True,
         "em_inverter_sn": "SN_EM",

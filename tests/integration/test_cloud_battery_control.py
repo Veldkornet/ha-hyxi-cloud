@@ -77,7 +77,7 @@ async def test_a_cloud_entry_offers_no_battery_control(hass: HomeAssistant, clie
         name="Energy Manager",
     )
     entry = await _setup(hass, client, {"SN_HYB": HYBRID}, CONTROL_AND_EM, entry)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     assert lookup_entity_id(hass, "button", "SN_HYB", "mode_idle") is None
     assert lookup_entity_id(hass, "number", "SN_HYB", "charge_power") is None

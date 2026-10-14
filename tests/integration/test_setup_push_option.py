@@ -183,7 +183,7 @@ async def test_push_is_not_subscribed_to_an_internal_url(hass: HomeAssistant, cl
     await hass.async_block_till_done()
 
     clients.subscribe_real_time_data.assert_not_called()
-    assert hass.data[DOMAIN][entry.entry_id].push_status == "error"
+    assert entry.runtime_data.push_status == "error"
 
 
 @pytest.mark.asyncio

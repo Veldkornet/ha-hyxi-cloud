@@ -40,6 +40,7 @@ from .control import (
     _note_manual_mode,
     async_send_battery_mode,
 )
+from .coordinator import HyxiConfigEntry
 from .entity import HyxiEntity
 
 if TYPE_CHECKING:
@@ -114,11 +115,11 @@ def _work_mode_buttons(
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HyxiConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up HYXI button entities."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     if not coordinator.data:
         return
 

@@ -28,6 +28,7 @@ from .const import (
     normalize_device_type,
     offers_device_control,
 )
+from .coordinator import HyxiConfigEntry
 from .entity import HyxiEntity, SettingsSyncMixin
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,11 +36,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: HyxiConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up HYXI switch entities."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     if not coordinator.data:
         return
 

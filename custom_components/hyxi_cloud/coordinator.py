@@ -484,3 +484,7 @@ class HyxiDiscoveryCoordinator(DataUpdateCoordinator[DiscoveryResult]):
             return
         self.update_interval = self._retry_in  # pylint: disable=attribute-defined-outside-init
         self._retry_in = min(self._retry_in * 2, DISCOVERY_INTERVAL)
+
+
+# A HYXI config entry, whose runtime_data is its coordinator.
+type HyxiConfigEntry = ConfigEntry[HyxiDataUpdateCoordinator]

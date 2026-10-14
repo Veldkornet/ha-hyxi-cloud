@@ -7,7 +7,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from hyxi_cloud_api import Subscription, SubscriptionType
 
-from custom_components.hyxi_cloud.const import CONF_ENABLE_PUSH, CONF_PUSH_URL, DOMAIN
+from custom_components.hyxi_cloud.const import CONF_ENABLE_PUSH, CONF_PUSH_URL
 from tests.integration.entries import accept_subscriptions, cloud_entry, serve_devices
 
 _DEVICES = {
@@ -80,7 +80,7 @@ async def test_leftovers_are_cleared_once_the_list_can_be_fetched(
     client.subscribe_real_time_data.assert_awaited_once()
     client.subscribe_alarm.assert_awaited_once()
     assert entry.data["push_subscribe_code"] == "code-push"
-    assert hass.data[DOMAIN][entry.entry_id].push_status == "active"
+    assert entry.runtime_data.push_status == "active"
 
 
 @pytest.mark.asyncio

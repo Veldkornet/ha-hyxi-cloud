@@ -1466,7 +1466,7 @@ async def test_halo_mode_button_press_calls_the_modbus_client(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     entity_id = lookup_entity_id(hass, "button", sn, "mode_idle")
     assert entity_id is not None
 
@@ -1496,7 +1496,7 @@ async def test_halo_protection_controller_starts(hass):
         await hass.async_block_till_done()
     await hass.async_block_till_done()
 
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     assert coordinator.protection_controllers, "no protection controller started"
 
 
@@ -1544,7 +1544,7 @@ async def test_halo_setting_numbers_appear_and_write_through(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
 
     feed_in_id = lookup_entity_id(hass, "number", sn, "feed_in_power_limit")
     soc_id = lookup_entity_id(hass, "number", sn, "vpp_min_soc")
@@ -1617,7 +1617,7 @@ async def test_hybrid_setting_numbers_appear_and_write_through(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
 
     feed_in_id = lookup_entity_id(hass, "number", sn, "feed_in_power")
     max_charge_id = lookup_entity_id(hass, "number", sn, "max_charge_current")
@@ -1682,7 +1682,7 @@ async def test_hybrid_power_command_buttons_appear_and_write_through(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
 
     for key in ("power_on", "power_off", "restart"):
         assert lookup_entity_id(hass, "button", sn, key) is not None, key
@@ -1718,7 +1718,7 @@ async def test_halo_work_mode_buttons_appear_and_write_through(hass):
     for key in ("work_mode_self_use", "work_mode_grid_backup", "work_mode_tou"):
         assert lookup_entity_id(hass, "button", sn, key) is not None, key
 
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     await coordinator.client.set_mode_charge(sn, 1000)  # dispatch on
     entity_id = lookup_entity_id(hass, "button", sn, "work_mode_tou")
     await hass.services.async_call(
@@ -1854,7 +1854,7 @@ async def test_halo_anti_starvation_switch_appears_and_writes_through(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     entity_id = lookup_entity_id(hass, "switch", sn, "anti_starvation")
     assert entity_id is not None
 
@@ -1890,7 +1890,7 @@ async def test_halo_anti_starvation_switch_shows_the_devices_real_value(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     entity_id = lookup_entity_id(hass, "switch", sn, "anti_starvation")
     self_use_id = lookup_entity_id(hass, "number", sn, "self_use_soc")
 
@@ -1929,7 +1929,7 @@ async def test_halo_dispatch_switch_reflects_and_writes_the_vpp_enable(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     entity_id = lookup_entity_id(hass, "switch", sn, "dispatch")
     assert entity_id is not None
     assert hass.states.get(entity_id).state == "off"  # seed 4146 = 0
@@ -1972,7 +1972,7 @@ async def test_unloading_a_modbus_entry_releases_dispatch(hass):
         await hass.async_block_till_done()
     await hass.async_block_till_done()
 
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     assert coordinator.protection_controllers  # control is active this run
 
     with patch.object(
@@ -2066,7 +2066,7 @@ async def test_a_write_survives_a_failed_settings_reread_past_the_refresh_window
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     self_use_id = lookup_entity_id(hass, "number", sn, "self_use_soc")
     assert hass.states.get(self_use_id).state == "10"
 
@@ -2107,7 +2107,7 @@ async def test_hybrid_anti_starvation_switch_appears_and_writes_through(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    coordinator = next(iter(hass.data[DOMAIN].values()))
+    coordinator = entry.runtime_data
     entity_id = lookup_entity_id(hass, "switch", sn, "anti_starvation")
     assert entity_id is not None
 

@@ -128,7 +128,7 @@ def mock_entry():
 async def test_async_setup_entry(mock_coordinator, mock_entry):
     """Test setting up binary sensors."""
     hass = MagicMock()
-    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    mock_entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     await bs_mod.async_setup_entry(hass, mock_entry, async_add_entities)
@@ -152,7 +152,7 @@ async def test_async_setup_entry_adds_vpp_dispatch_sensor(mock_coordinator, mock
         }
     }
     mock_entry.options = {}
-    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    mock_entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     await bs_mod.async_setup_entry(hass, mock_entry, async_add_entities)
@@ -178,7 +178,7 @@ async def test_async_setup_entry_skips_work_mode_sensor_for_modbus(mock_coordina
             "alarms": [],
         }
     }
-    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     await bs_mod.async_setup_entry(hass, entry, async_add_entities)
@@ -205,7 +205,7 @@ async def test_async_setup_entry_skips_device_alarm_sensor_for_modbus(
             "alarms": [],
         }
     }
-    hass.data = {DOMAIN: {entry.entry_id: mock_coordinator}}
+    entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     await bs_mod.async_setup_entry(hass, entry, async_add_entities)
@@ -226,7 +226,7 @@ async def test_async_setup_entry_adds_em_binary_sensors(mock_coordinator, mock_e
         bs_mod.CONF_EM_ENABLED: True,
         bs_mod.CONF_EM_INVERTER_SN: "SN123",
     }
-    hass.data = {DOMAIN: {mock_entry.entry_id: mock_coordinator}}
+    mock_entry.runtime_data = mock_coordinator
     async_add_entities = MagicMock()
 
     # The via_device_id link is exercised against a real registry in
