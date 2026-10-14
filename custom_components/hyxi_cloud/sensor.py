@@ -19,6 +19,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -1190,7 +1191,11 @@ SENSOR_TYPES = [
 SENSOR_TYPES_BY_KEY = {desc.key: desc for desc in SENSOR_TYPES}
 
 
-async def async_setup_entry(hass, entry: HyxiConfigEntry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: HyxiConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
     """Set up HYXI sensors."""
     coordinator = entry.runtime_data
     if not coordinator.data:
