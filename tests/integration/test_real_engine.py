@@ -2178,7 +2178,8 @@ async def test_stopping_clears_the_issue_and_pending_decisions(hass: HomeAssista
         engine.stop()
         await hass.async_block_till_done()
 
-    assert pending and all(task.cancelled() for task in pending)
+    assert pending
+    assert all(task.cancelled() for task in pending)
     assert ir.async_get(hass).async_get_issue(DOMAIN, engine._stale_issue_id) is None
 
 
