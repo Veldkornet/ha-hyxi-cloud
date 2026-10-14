@@ -292,6 +292,7 @@ async def test_refresh_settings_button_press_forces_refresh_and_requests_a_poll(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_three_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -331,6 +332,7 @@ async def test_async_setup_entry_three_phase(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_single_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):
@@ -372,6 +374,7 @@ async def test_async_setup_entry_single_phase(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_entry_unknown_phase(
     mock_coordinator_fixture, mock_entry_fixture
 ):

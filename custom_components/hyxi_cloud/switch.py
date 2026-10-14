@@ -19,13 +19,14 @@ from .const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     DOMAIN,
-    MICRO_ESS_CONTROL_SUPPORTED,
     detect_phase_type,
     get_raw_device_code,
     is_battery_control_enabled,
+    is_control_capable_device_type,
     is_modbus_entry,
     mask_sn,
     normalize_device_type,
+    offers_device_control,
 )
 from .entity import HyxiEntity, SettingsSyncMixin
 
@@ -113,14 +114,20 @@ def _cloud_phase_switches(
         phase = detect_phase_type(dev_data)
 
         # Frequency control (controlId 1020) — single-phase devices only
-        if is_battery_control_enabled(entry) and phase == "single_phase":
+        if (
+            is_battery_control_enabled(entry)
+            and is_control_capable_device_type(entry, device_type)
+            and phase == "single_phase"
+        ):
             entities.append(HyxiFrequencyControlSwitch(coordinator, sn, dev_data))
     elif device_type == "micro_inverter":
-        if is_battery_control_enabled(entry):
+        if is_battery_control_enabled(entry) and offers_device_control(
+            entry, device_type
+        ):
             entities.append(HyxiMicroPowerSwitch(coordinator, sn, dev_data))
     elif (
         device_type == "micro_ess"
-        and MICRO_ESS_CONTROL_SUPPORTED
+        and is_control_capable_device_type(entry, device_type)
         and is_battery_control_enabled(entry)
     ):
         entities.append(HyxiMicroEssPowerSwitch(coordinator, sn, dev_data))

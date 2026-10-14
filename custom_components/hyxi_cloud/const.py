@@ -388,13 +388,11 @@ DEVICE_TYPE_KEYS = {
     "MICRO_STORAGE_ALL_IN_ONE": "micro_ess",
 }
 
-# Micro ESS (HALO/HYX-MS3000AC) Power On/Off control (controlId 1011) is
-# fully implemented (HyxiMicroEssPowerSwitch, hyxi_cloud_api.set_micro_ess_power)
-# but disabled here: live community testing confirmed HYXI's API rejects the
-# control write for third-party developer apps with a permission error
-# (code=B003026), and there's no developer portal setting to request access.
-# Flip to True if HYXI ever grants Micro ESS control API access — see
-# README's "Micro ESS (HALO)" section for details.
+# Micro ESS (HALO/HYX-MS3000AC) cloud control (Power On/Off, controlId 1011,
+# HyxiMicroEssPowerSwitch) on top of CLOUD_BATTERY_CONTROL_SUPPORTED: live
+# community testing confirmed HYXI's API rejects the write for third-party
+# developer apps with a permission error (code=B003026). Flip to True,
+# along with CLOUD_BATTERY_CONTROL_SUPPORTED, if HYXI grants it.
 MICRO_ESS_CONTROL_SUPPORTED = False
 
 
@@ -633,26 +631,51 @@ def is_battery_control_enabled(entry: Any) -> bool:
     return False
 
 
-def is_control_capable_device_type(entry: Any, device_type: str) -> bool:
-    """Return True if this device type can receive control commands on
-    this entry's transport.
+# Device types with a battery this integration can control.
+ENERGY_STORAGE_DEVICE_TYPES = ("hybrid_inverter", "all_in_one", "micro_ess")
 
-    hybrid_inverter and all_in_one are controllable on either transport.
-    micro_ess (HALO) is controllable over local Modbus -- the register map
-    has a working VPP dispatch block with no permission check -- but not
-    over the cloud, where HYXI's API rejects the write outright (see
-    MICRO_ESS_CONTROL_SUPPORTED's docstring, a few lines above this file's
-    device-type table). This is the one place that distinction is made;
-    every entity platform should call this rather than checking
-    device_type or MICRO_ESS_CONTROL_SUPPORTED directly, so the two
-    transports can never silently disagree about which devices are
-    controllable.
+# HYXI's cloud won't control batteries with an owner's (User Authorization)
+# API keys: it filters every command it marks "VPP business usage" and
+# offers no battery charge/discharge or mode control. Flip to True if HYXI
+# grants owners battery control through the cloud.
+CLOUD_BATTERY_CONTROL_SUPPORTED = False
+
+
+def is_control_capable_device_type(entry: Any, device_type: str) -> bool:
+    """Return True if this device type's battery can be controlled on this
+    entry's transport.
+
+    Over local Modbus, every energy-storage device. Over the cloud, none
+    unless CLOUD_BATTERY_CONTROL_SUPPORTED, and then hybrid inverters and
+    all-in-ones, plus micro_ess (HALO) with MICRO_ESS_CONTROL_SUPPORTED.
+
+    This is the one place that decision is made; every entity platform,
+    battery protection, the Energy Manager and set_battery_mode call this
+    rather than checking the transport or device type themselves.
+    Microinverter power control is separate: it isn't a battery control
+    and stays available over the cloud.
     """
-    if device_type in ("hybrid_inverter", "all_in_one"):
-        return True
+    if is_modbus_entry(entry):
+        return device_type in ENERGY_STORAGE_DEVICE_TYPES
+    if not CLOUD_BATTERY_CONTROL_SUPPORTED:
+        return False
     if device_type == "micro_ess":
-        return MICRO_ESS_CONTROL_SUPPORTED or is_modbus_entry(entry)
-    return False
+        return MICRO_ESS_CONTROL_SUPPORTED
+    return device_type in ("hybrid_inverter", "all_in_one")
+
+
+def device_type_of(dev_data: dict) -> str:
+    """The normalized device type of a device's coordinator data."""
+    return normalize_device_type(get_raw_device_code(dev_data))
+
+
+def offers_device_control(entry: Any, device_type: str) -> bool:
+    """Return True if a device of this type takes device controls on this
+    entry: a controllable battery, or a microinverter over the cloud
+    (power control)."""
+    return is_control_capable_device_type(entry, device_type) or (
+        device_type == "micro_inverter" and not is_modbus_entry(entry)
+    )
 
 
 PLATFORMS: list[Platform] = [
@@ -674,6 +697,18 @@ CONF_EM_BATTERY_OVERRIDE = "em_battery_capacity_override"
 CONF_EM_BATTERY_CAPACITY = "em_battery_capacity_wh"
 CONF_EM_DRY_RUN = "em_dry_run"
 CONF_EM_LOOP_INTERVAL = "em_loop_interval"
+# Every Energy Manager option, dropped together when it's turned off.
+EM_OPTION_KEYS = (
+    CONF_EM_ENABLED,
+    CONF_EM_INVERTER_SN,
+    CONF_EM_P1_ENTITY,
+    CONF_EM_FORECAST_ENTITY,
+    CONF_EM_FORECAST_POWER_ENTITY,
+    CONF_EM_BATTERY_OVERRIDE,
+    CONF_EM_BATTERY_CAPACITY,
+    CONF_EM_LOOP_INTERVAL,
+    CONF_EM_DRY_RUN,
+)
 
 # EM parameter defaults (match pyscript values)
 EM_DEFAULTS: dict[str, int | float] = {

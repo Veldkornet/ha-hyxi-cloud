@@ -8,6 +8,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 from custom_components.hyxi_cloud import (
     DOMAIN,
+    _battery_mode_row,
     _energy_manager_manages,
     _resolve_battery_mode_targets,
     setup_services,
@@ -218,7 +219,9 @@ def battery_mode_env(hass, mock_coordinator, mock_entry):
     holding one serial, and patched device/entity registries."""
     mock_entry.title = "HYXI"
     mock_entry.options = {"enable_battery_control": True}
-    mock_coordinator.data = {"SN1": {"device_name": "Inverter"}}
+    mock_coordinator.data = {
+        "SN1": {"device_name": "Inverter", "device_type_code": "HYBRID_INVERTER"}
+    }
     mock_coordinator.engine = None
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
     setup_services(hass)
@@ -245,6 +248,7 @@ async def test_set_battery_mode_registered(hass, mock_coordinator):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_set_battery_mode_success_forwards_to_the_helper(battery_mode_env):
     hass, coordinator, _entry, send = battery_mode_env
 
@@ -270,6 +274,7 @@ async def test_set_battery_mode_no_target_raises(battery_mode_env):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_set_battery_mode_requires_device_control(battery_mode_env):
     hass, _coordinator, entry, send = battery_mode_env
     entry.options = {"enable_battery_control": False}
@@ -285,6 +290,7 @@ async def test_set_battery_mode_requires_device_control(battery_mode_env):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_set_battery_mode_blocked_while_energy_manager_runs(battery_mode_env):
     hass, coordinator, _entry, send = battery_mode_env
     coordinator.engine = MagicMock(enabled=True, sn="SN1", status="running")
@@ -300,6 +306,7 @@ async def test_set_battery_mode_blocked_while_energy_manager_runs(battery_mode_e
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_set_battery_mode_preflights_soc_protection(battery_mode_env):
     """A charge command to a battery at SOC-max is rejected before any
     command goes out -- the same guard the mode buttons apply."""
@@ -319,6 +326,7 @@ async def test_set_battery_mode_preflights_soc_protection(battery_mode_env):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_set_battery_mode_force_overrides_the_energy_manager(battery_mode_env):
     hass, coordinator, _entry, send = battery_mode_env
     coordinator.engine = MagicMock(enabled=True, sn="SN1", status="running")
@@ -333,6 +341,7 @@ async def test_set_battery_mode_force_overrides_the_energy_manager(battery_mode_
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_set_battery_mode_resolves_an_entity_target(battery_mode_env):
     hass, coordinator, _entry, send = battery_mode_env
     with patch("custom_components.hyxi_cloud.er.async_get") as ent_reg_get:
@@ -383,3 +392,48 @@ def test_energy_manager_manages(engine, expected):
     coordinator = MagicMock()
     coordinator.engine = engine
     assert _energy_manager_manages(coordinator, "SN1") is expected
+
+
+def _coordinator_for(entry_id: str, transport: str | None, device_code: str):
+    coordinator = MagicMock()
+    coordinator.entry.entry_id = entry_id
+    coordinator.entry.data = {"transport": transport} if transport else {}
+    coordinator.data = {"SN1": {"device_type_code": device_code}}
+    return coordinator
+
+
+@pytest.mark.parametrize("order", [("cloud", "modbus"), ("modbus", "cloud")])
+def test_a_device_on_cloud_and_modbus_resolves_to_modbus(order):
+    """A device on both a cloud and a Modbus entry is switched through the
+    Modbus entry, whichever comes first."""
+    coordinators = {
+        "cloud": _coordinator_for("cloud", None, "HYBRID_INVERTER"),
+        "modbus": _coordinator_for("modbus", "modbus", "HYBRID_INVERTER"),
+    }
+    device = _fake_device()
+    device.config_entries = list(order)
+
+    row = _battery_mode_row(device, coordinators)
+
+    assert row[1] is coordinators["modbus"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("transport", ["modbus", None], ids=["modbus", "cloud"])
+async def test_set_battery_mode_names_a_device_without_a_battery(
+    battery_mode_env, transport
+):
+    """A non-battery device is refused as having no battery on either
+    transport, not pointed at Modbus."""
+    hass, coordinator, entry, send = battery_mode_env
+    entry.data = {"transport": transport} if transport else {}
+    coordinator.data["SN1"]["device_type_code"] = "MICRO_INVERTER"
+
+    with pytest.raises(ServiceValidationError, match="has no battery"):
+        await hass.services.async_call(
+            DOMAIN,
+            "set_battery_mode",
+            {"device_id": "dev1", "mode": "idle"},
+            blocking=True,
+        )
+    send.assert_not_awaited()

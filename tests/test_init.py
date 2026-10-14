@@ -670,6 +670,7 @@ async def test_async_remove_entry_no_credentials_is_noop(mock_hass, mock_entry):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_battery_protection_logs_and_continues_on_start_failure(
     mock_hass, mock_entry, caplog
 ):
@@ -727,6 +728,7 @@ async def test_async_setup_battery_protection_disabled_is_noop(mock_hass, mock_e
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_async_setup_battery_protection_isolates_sibling_failures(
     mock_hass, mock_entry
 ):
@@ -1671,6 +1673,7 @@ async def test_alarm_subscription_failures_and_webhooks():
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("cloud_battery_control")
 async def test_additional_init_coverage(mock_hass, mock_entry):
     """Test additional branches and fallback paths in __init__.py for 100% coverage."""
     mock_hass.config.components = {"cloud"}

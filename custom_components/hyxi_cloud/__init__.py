@@ -23,6 +23,7 @@ from homeassistant.exceptions import (
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.typing import ConfigType
@@ -49,14 +50,18 @@ from .const import (
     DEFAULT_MODBUS_UNIT,
     DEFAULT_PUSH_RATE,
     DOMAIN,
+    EM_OPTION_KEYS,
+    ENERGY_STORAGE_DEVICE_TYPES,
     MANUFACTURER,
     MODBUS_FAMILY_HYBRID,
     MODBUS_MESSAGE_SPACING,
     PLATFORMS,
     VERSION,
     detect_phase_type,
+    device_type_of,
     entry_stable_key,
     get_raw_device_code,
+    is_battery_control_enabled,
     is_control_capable_device_type,
     is_modbus_entry,
     mask_sensitive_key_value,
@@ -65,6 +70,7 @@ from .const import (
     mask_url,
     modbus_params,
     normalize_device_type,
+    offers_device_control,
 )
 from .coordinator import HyxiDataUpdateCoordinator, HyxiDiscoveryCoordinator
 from .protection import HyxiBatteryProtectionController
@@ -261,6 +267,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _remove_work_mode_sensor_for_modbus(hass, entry, coordinator.data)
     _remove_alarm_entities_for_modbus(hass, entry, coordinator.data)
     _remove_bms_alarm_sensors(hass, entry)
+    _retire_cloud_battery_control(hass, entry, coordinator)
     _cleanup_control_entities(hass, entry, coordinator)
     await _async_setup_battery_protection(hass, coordinator)
     _async_setup_energy_manager(hass, entry, coordinator)
@@ -420,6 +427,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     Regular unload keeps subscriptions alive for reuse on the next load, so
     actual deletion of the integration must do the remote cleanup here.
     """
+    ir.async_delete_issue(hass, DOMAIN, _cloud_battery_control_issue_id(entry))
     for webhook_id in [
         *(entry.data.get(key) for key in _WEBHOOKS),
         *(
@@ -835,12 +843,18 @@ def _async_setup_energy_manager(
     """Set up the Energy Manager engine and register its virtual device."""
     em_enabled = entry.options.get(CONF_EM_ENABLED, False)
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if not em_enabled or not em_sn or em_sn not in coordinator.data:
+    em_device = (coordinator.data or {}).get(em_sn) if em_sn else None
+    battery_controllable = em_device is not None and is_control_capable_device_type(
+        entry, device_type_of(em_device)
+    )
+    if not em_enabled or not em_sn or not battery_controllable:
         _LOGGER.debug(
-            "EM not started: enabled=%s sn_configured=%s sn_in_data=%s",
+            "EM not started: enabled=%s sn_configured=%s sn_in_data=%s "
+            "battery_controllable=%s",
             em_enabled,
             bool(em_sn),
-            bool(em_sn) and em_sn in coordinator.data,
+            em_device is not None,
+            battery_controllable,
         )
         return
 
@@ -1298,6 +1312,81 @@ def _remove_bms_alarm_sensors(hass: HomeAssistant, entry: ConfigEntry) -> None:
             registry.async_remove(reg_entry.entity_id)
 
 
+# Entry data key marking that the entry was told about battery control it
+# can't use, so the repair issue is raised once.
+_BATTERY_CONTROL_NOTICE = "cloud_battery_control_notified"
+
+
+def _cloud_battery_control_issue_id(entry: ConfigEntry) -> str:
+    return f"cloud_battery_control_{entry.entry_id}"
+
+
+def _retire_cloud_battery_control(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+) -> None:
+    """Switch off battery control an entry can't use, and say why once.
+
+    An entry with device control or the Energy Manager on, and an
+    energy-storage device whose battery it can't control (see
+    is_control_capable_device_type -- over the cloud, HYXI doesn't accept
+    battery control with an owner's API keys), gets a repair issue. With
+    no controllable battery left, the Energy Manager is turned off along
+    with its device, and device control too unless microinverters still
+    use it.
+    """
+    if not (is_battery_control_enabled(entry) or entry.options.get(CONF_EM_ENABLED)):
+        return
+    types = {device_type_of(dev_data) for dev_data in (coordinator.data or {}).values()}
+    controllable = any(is_control_capable_device_type(entry, t) for t in types)
+    stranded = any(
+        t in ENERGY_STORAGE_DEVICE_TYPES
+        and not is_control_capable_device_type(entry, t)
+        for t in types
+    )
+    if not stranded:
+        return
+
+    options = dict(entry.options)
+    if not controllable:
+        if em_sn := options.get(CONF_EM_INVERTER_SN):
+            _remove_energy_manager_device(hass, entry, em_sn)
+        for key in EM_OPTION_KEYS:
+            options.pop(key, None)
+        if not any(offers_device_control(entry, t) for t in types):
+            options["enable_battery_control"] = False
+    coordinator.options = options
+    if entry.data.get(_BATTERY_CONTROL_NOTICE):
+        hass.config_entries.async_update_entry(entry, options=options)
+        return
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        _cloud_battery_control_issue_id(entry),
+        is_fixable=False,
+        is_persistent=True,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="cloud_battery_control",
+        translation_placeholders={"entry": entry.title},
+    )
+    hass.config_entries.async_update_entry(
+        entry, options=options, data={**entry.data, _BATTERY_CONTROL_NOTICE: True}
+    )
+
+
+def _remove_energy_manager_device(
+    hass: HomeAssistant, entry: ConfigEntry, em_sn: str
+) -> None:
+    """Remove the Energy Manager's virtual device, and with it its entities."""
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, f"{em_sn}_energy_manager"), entry.entry_id
+    )
+    if device is not None:
+        device_registry.async_remove_device(device.id)
+
+
 def _cleanup_control_entities(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -1318,12 +1407,18 @@ def _cleanup_control_entities(
         HYBRID_SETTING_NUMBER_DEFS,
     )
 
-    if is_battery_control_enabled(entry):
+    enabled = is_battery_control_enabled(entry)
+    # A device keeps its control entities while device control is on and it
+    # takes device controls.
+    stale_sns = [
+        sn
+        for sn, dev_data in coordinator.data.items()
+        if not enabled or not offers_device_control(entry, device_type_of(dev_data))
+    ]
+    if enabled and not stale_sns:
         return
 
-    _LOGGER.debug(
-        "Battery control is disabled. Cleaning up any registered control entities from registry"
-    )
+    _LOGGER.debug("Cleaning up control entities no longer offered from the registry")
     registry = er.async_get(hass)
     # Device-scoped (hyxi_{sn}_{key}) -- every entity that only exists at
     # all because is_battery_control_enabled(entry) was True when it was
@@ -1373,12 +1468,13 @@ def _cleanup_control_entities(
     )
 
     unique_ids_to_remove = {
-        f"hyxi_{sn}_{key}" for sn in coordinator.data for key in keys_to_remove
+        f"hyxi_{sn}_{key}" for sn in stale_sns for key in keys_to_remove
     }
     # Entry-scoped: one button per Modbus entry rather than per device SN
     # (see button.py's HyxiRefreshSettingsButton), so it isn't shaped like
     # the device-scoped ids above and needs its own entry here.
-    unique_ids_to_remove.add(f"{entry.entry_id}_refresh_settings")
+    if not enabled:
+        unique_ids_to_remove.add(f"{entry.entry_id}_refresh_settings")
 
     for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
         if reg_entry.unique_id in unique_ids_to_remove:
@@ -2629,6 +2725,16 @@ async def _async_handle_set_battery_mode(call) -> None:
     # Validate every matched inverter before touching any, so a rejected
     # second one doesn't leave the first already switched.
     for entry, coordinator, sn in targets:
+        device_type = device_type_of(coordinator.data[sn])
+        if not is_control_capable_device_type(entry, device_type):
+            raise ServiceValidationError(
+                f"{mask_sn(sn)} on {entry.title} can't be switched between "
+                "battery modes over the HYXI Cloud; use a local Modbus entry."
+                if device_type in ENERGY_STORAGE_DEVICE_TYPES
+                and not is_modbus_entry(entry)
+                else f"{mask_sn(sn)} on {entry.title} has no battery to switch "
+                "between modes."
+            )
         if not is_battery_control_enabled(entry):
             raise ServiceValidationError(
                 f"Device Control is not enabled for {entry.title}. Turn on "
@@ -2682,11 +2788,24 @@ def _battery_mode_row(
     )
     if serial is None:
         return None
-    for entry_id in device.config_entries:
-        coordinator = coordinators.get(entry_id)
-        if coordinator is not None and serial in (coordinator.data or {}):
-            return (coordinator.entry, coordinator, serial)
-    return None
+    rows = [
+        (coordinator.entry, coordinator, serial)
+        for entry_id in device.config_entries
+        if (coordinator := coordinators.get(entry_id)) is not None
+        and serial in (coordinator.data or {})
+    ]
+    # A device on both a cloud and a Modbus entry is switched through the
+    # entry that can control its battery.
+    return next(
+        (
+            row
+            for row in rows
+            if is_control_capable_device_type(
+                row[0], device_type_of(row[1].data[serial])
+            )
+        ),
+        rows[0] if rows else None,
+    )
 
 
 def _energy_manager_manages(

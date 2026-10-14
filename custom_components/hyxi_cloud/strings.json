@@ -984,5 +984,11 @@
     "no_cloud_entry": {
       "message": "No HYXI Cloud entry is loaded to cancel the subscription with."
     }
+  },
+  "issues": {
+    "cloud_battery_control": {
+      "title": "Battery control isn't available over the HYXI Cloud",
+      "description": "HYXI's cloud doesn't accept battery control commands sent with your own API keys, so the battery controls, battery protection and the Energy Manager are no longer offered for {entry}, and the options that turned them on have been switched off where nothing else uses them.\n\nTo control your battery, add a local Modbus (RS485) entry for the inverter. Microinverter power control stays available over the cloud."
+    }
   }
 }
