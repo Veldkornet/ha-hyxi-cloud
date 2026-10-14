@@ -112,7 +112,7 @@
     "step": {
       "init": {
         "title": "HYXI rendszerkonfiguráció",
-        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI-val.\n\n> ⚠️ **Eszközvezérlés**: Óvatosan engedélyezze, ha az invertert már az energiaszolgáltatója kezeli, vagy részt vesz egy Virtuális Erőmű (VPP) programban. A parancsok küldése, amíg a szolgáltatója rendelkezik az irányítással, ütközhet az ő diszpécseri ütemezésével.\n\n---",
+        "description": "Állítsa be, hogyan kommunikáljon az integráció a HYXI-val.",
         "data": {
           "update_interval": "Lekérdezési időköz (1-60 perc, alapértelmezett: 5)",
           "update_interval_modbus": "Lekérdezési időköz (1-60 másodperc, alapértelmezett: 15)",
@@ -122,6 +122,9 @@
           "enable_realtime_push": "Valós idejű Webhook Push engedélyezése",
           "realtime_push_rate": "Push frissítési gyakoriság (milliszekundum, tartomány: 5000-3600000)",
           "realtime_push_url": "Egyéni Callback URL (opcionális, dinamikus alapértelmezett)"
+        },
+        "data_description": {
+          "enable_battery_control": "Óvatosan engedélyezze, ha az invertert már az energiaszolgáltatója kezeli, vagy részt vesz egy Virtuális Erőmű (VPP) programban. A parancsok küldése, amíg a szolgáltatója rendelkezik az irányítással, ütközhet az ő diszpécseri ütemezésével."
         }
       },
       "energy_manager": {

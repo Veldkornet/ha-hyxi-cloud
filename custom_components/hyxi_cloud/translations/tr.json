@@ -112,7 +112,7 @@
     "step": {
       "init": {
         "title": "HYXI Sistem Yapılandırması",
-        "description": "Entegrasyonunuzun HYXI ile nasıl iletişim kuracağını ayarlayın.\n\n> ⚠️ **Cihaz Kontrolü**: İnverteriniz zaten enerji sağlayıcınız tarafından yönetiliyorsa veya bir Sanal Güç Santrali (VPP) programına kayıtlıysa dikkatli bir şekilde etkinleştirin. Sağlayıcınız kontrol sahibiyken komut göndermek, onların sevkiyat programıyla çakışabilir.\n\n---",
+        "description": "Entegrasyonunuzun HYXI ile nasıl iletişim kuracağını ayarlayın.",
         "data": {
           "update_interval": "Sorgulama Aralığı (1-60 Dakika, Varsayılan: 5)",
           "update_interval_modbus": "Sorgulama Aralığı (1-60 Saniye, Varsayılan: 15)",
@@ -122,6 +122,9 @@
           "enable_realtime_push": "Gerçek Zamanlı Webhook Push'u Etkinleştir",
           "realtime_push_rate": "Push Güncelleme Sıklığı (milisaniye, aralık: 5000-3600000)",
           "realtime_push_url": "Özel Callback URL'si (isteğe bağlı, dinamik varsayılan)"
+        },
+        "data_description": {
+          "enable_battery_control": "İnverteriniz zaten enerji sağlayıcınız tarafından yönetiliyorsa veya bir Sanal Güç Santrali (VPP) programına kayıtlıysa dikkatli bir şekilde etkinleştirin. Sağlayıcınız kontrol sahibiyken komut göndermek, onların sevkiyat programıyla çakışabilir."
         }
       },
       "energy_manager": {

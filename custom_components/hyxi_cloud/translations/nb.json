@@ -112,7 +112,7 @@
     "step": {
       "init": {
         "title": "HYXI Systemkonfigurasjon",
-        "description": "Juster hvordan integrasjonen din kommuniserer med HYXI.\n\n> ⚠️ **Enhetskontroll**: Aktiver med forsiktighet hvis inverteren din allerede administreres av strømleverandøren din eller er påmeldt et Virtuelt Kraftverk (VPP)-program. Sending av kommandoer mens leverandøren din har kontroll, kan komme i konflikt med deres dispatch-plan.\n\n---",
+        "description": "Juster hvordan integrasjonen din kommuniserer med HYXI.",
         "data": {
           "update_interval": "Oppdateringsintervall (1-60 minutter, standard: 5)",
           "update_interval_modbus": "Oppdateringsintervall (1-60 sekunder, standard: 15)",
@@ -122,6 +122,9 @@
           "enable_realtime_push": "Aktiver Sanntids Webhook Push",
           "realtime_push_rate": "Push-oppdateringsfrekvens (millisekunder, område: 5000-3600000)",
           "realtime_push_url": "Tilpasset Callback-URL (valgfritt, dynamisk standard)"
+        },
+        "data_description": {
+          "enable_battery_control": "Aktiver med forsiktighet hvis inverteren din allerede administreres av strømleverandøren din eller er påmeldt et Virtuelt Kraftverk (VPP)-program. Sending av kommandoer mens leverandøren din har kontroll, kan komme i konflikt med deres dispatch-plan."
         }
       },
       "energy_manager": {

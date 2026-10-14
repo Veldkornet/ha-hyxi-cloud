@@ -112,7 +112,7 @@
     "step": {
       "init": {
         "title": "HYXI Systeemconfiguratie",
-        "description": "Pas aan hoe uw integratie communiceert met HYXI.\n\n> ⚠️ **Apparaatbediening**: Schakel dit voorzichtig in als uw omvormer al wordt beheerd door uw energieleverancier of is aangemeld voor een Virtual Power Plant (VPP)-programma. Het verzenden van commando's terwijl uw leverancier de controle heeft, kan in strijd zijn met hun dispatch-schema.\n\n---",
+        "description": "Pas aan hoe uw integratie communiceert met HYXI.",
         "data": {
           "update_interval": "Update-interval (1-60 minuten, Standaard: 5)",
           "update_interval_modbus": "Update-interval (1-60 seconden, Standaard: 15)",
@@ -122,6 +122,9 @@
           "enable_realtime_push": "Realtime webhook-push inschakelen",
           "realtime_push_rate": "Push-updatefrequentie (milliseconden, bereik: 5000-3600000)",
           "realtime_push_url": "Aangepaste Callback-URL (optioneel, dynamische standaardwaarde)"
+        },
+        "data_description": {
+          "enable_battery_control": "Schakel dit voorzichtig in als uw omvormer al wordt beheerd door uw energieleverancier of is aangemeld voor een Virtual Power Plant (VPP)-programma. Het verzenden van commando's terwijl uw leverancier de controle heeft, kan in strijd zijn met hun dispatch-schema."
         }
       },
       "energy_manager": {
