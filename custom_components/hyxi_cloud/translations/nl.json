@@ -991,6 +991,10 @@
     "cloud_battery_control": {
       "title": "Batterijbesturing is niet beschikbaar via de HYXI Cloud",
       "description": "De cloud van HYXI accepteert geen batterijbesturing die met je eigen API-sleutels wordt verstuurd. Daarom worden de batterijbediening, de batterijbeveiliging en de Energy Manager niet meer aangeboden voor {entry}, en zijn de opties die ze aanzetten uitgeschakeld waar niets anders ze gebruikt.\n\nVoeg een lokaal Modbus-item (RS485) voor de omvormer toe om je batterij te besturen. Aan/uit-besturing van micro-omvormers blijft via de cloud beschikbaar."
+    },
+    "em_stale_data": {
+      "title": "Energy Manager gepauzeerd: geen actuele gegevens",
+      "description": "De Energy Manager voor {entry} heeft al een tijd geen actuele gegevens van de omvormer ontvangen. Daarom neemt hij geen beslissingen meer en laat hij de batterij in de laatste modus, in plaats van op oude metingen te handelen.\n\nHij gaat vanzelf verder zodra er weer gegevens binnenkomen. Blijft dit zo, controleer dan de verbinding met de omvormer (de Modbus-verbinding of de cloud van HYXI)."
     }
   }
 }

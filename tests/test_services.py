@@ -377,11 +377,11 @@ def test_resolve_battery_mode_targets_skips_unknown_and_foreign_devices(
     ("engine", "expected"),
     [
         (None, False),
-        (MagicMock(enabled=False, sn="SN1", status="running"), False),
-        (MagicMock(enabled=True, sn="OTHER", status="running"), False),
-        (MagicMock(enabled=True, sn="SN1", status="disabled"), False),
-        (MagicMock(enabled=True, sn="SN1", status="running"), True),
+        (MagicMock(sn="SN1", is_managing=False), False),
+        (MagicMock(sn="OTHER", is_managing=True), False),
+        (MagicMock(sn="SN1", is_managing=True), True),
     ],
+    ids=["no-engine", "not-managing", "other-inverter", "managing"],
 )
 def test_energy_manager_manages(engine, expected):
     coordinator = MagicMock()
