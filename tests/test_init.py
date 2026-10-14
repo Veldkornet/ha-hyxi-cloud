@@ -1280,6 +1280,7 @@ async def test_remove_alarm_entities_for_modbus_is_noop_for_cloud(
 # --- __init__.py Platform Tests ---
 
 from custom_components.hyxi_cloud.__init__ import (
+    SubscriptionError,
     _async_handle_alarm_webhook,
     _async_handle_webhook,
     _async_resolve_webhook_url,
@@ -1405,9 +1406,9 @@ async def test_async_setup_push_subscription_client_failure_or_error():
     coordinator = MagicMock()
     coordinator.data = {"SN123": {}}
 
-    # 1. SDK returns success=False
+    # 1. HYXI refuses the subscription
     coordinator.client.subscribe_real_time_data = AsyncMock(
-        return_value={"success": False, "msg": "API Limit exceeded"}
+        side_effect=SubscriptionError("API Limit exceeded")
     )
     with patch(
         "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
@@ -1417,9 +1418,9 @@ async def test_async_setup_push_subscription_client_failure_or_error():
         assert coordinator.push_status == "error"
         assert coordinator.push_error == "API Limit exceeded"
 
-    # 1b. SDK returns success=False with repeatedly error (B004002)
+    # 1b. HYXI refuses it as repeated (B004002)
     coordinator.client.subscribe_real_time_data = AsyncMock(
-        return_value={"success": False, "msg": "subscribed repeatedly (B004002)"}
+        side_effect=SubscriptionError("subscribed repeatedly (B004002)")
     )
     with patch(
         "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
@@ -1587,10 +1588,10 @@ async def test_alarm_subscription_failures_and_webhooks():
         await _async_setup_alarm_subscription(hass, entry, coordinator)
         assert coordinator.alarm_push_status == "inactive"
 
-    # 3. Client returns failure
+    # 3. HYXI refuses the subscription
     coordinator.data = {"SN123": {}}
     coordinator.client.subscribe_alarm = AsyncMock(
-        return_value={"success": False, "msg": "failed"}
+        side_effect=SubscriptionError("failed")
     )
     with patch(
         "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
@@ -1599,9 +1600,9 @@ async def test_alarm_subscription_failures_and_webhooks():
         await _async_setup_alarm_subscription(hass, entry, coordinator)
         assert coordinator.alarm_push_status == "error"
 
-    # 3b. Client returns failure with B004002
+    # 3b. HYXI refuses it as repeated (B004002)
     coordinator.client.subscribe_alarm = AsyncMock(
-        return_value={"success": False, "msg": "subscribed repeatedly (B004002)"}
+        side_effect=SubscriptionError("subscribed repeatedly (B004002)")
     )
     with patch(
         "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",

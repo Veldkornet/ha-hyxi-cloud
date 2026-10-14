@@ -46,6 +46,8 @@ def accept_subscriptions(
 ) -> None:
     """Make a mocked HyxiApiClient accept push and alarm subscriptions with
     the given codes."""
+    client.subscribe_real_time_data.side_effect = None
+    client.subscribe_alarm.side_effect = None
     client.subscribe_real_time_data.return_value = {
         "success": True,
         "data": {"subscribeCode": push_code},

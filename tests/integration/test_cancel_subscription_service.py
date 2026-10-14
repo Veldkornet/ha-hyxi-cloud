@@ -5,9 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import ServiceValidationError, Unauthorized
+from homeassistant.exceptions import (
+    HomeAssistantError,
+    ServiceValidationError,
+    Unauthorized,
+)
 from homeassistant.setup import async_setup_component
-from hyxi_cloud_api import Subscription, SubscriptionType
+from hyxi_cloud_api import HyxiApiClient, Subscription, SubscriptionType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import DOMAIN
@@ -168,3 +172,22 @@ async def test_an_unlisted_code_with_several_entries_needs_a_name(
         await _cancel(hass)
     clients[0].cancel_subscription.assert_not_awaited()
     clients[1].cancel_subscription.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_refused_cancel_is_logged_without_a_traceback(
+    hass: HomeAssistant, clients, caplog
+):
+    """HYXI refusing the cancel (the client's real SubscriptionError) is
+    reported as one log line, without a traceback."""
+    await _add_entry(hass, "ak1")
+    clients[0].cancel_subscription.side_effect = HyxiApiClient.SubscriptionError(
+        "request failed (code=A000012): No access permission for this resource"
+    )
+
+    with pytest.raises(HomeAssistantError, match="A000012"):
+        await _cancel(hass)
+
+    [record] = [r for r in caplog.records if "Error manual cancelling" in r.message]
+    assert "A000012" in record.message
+    assert not record.exc_info
