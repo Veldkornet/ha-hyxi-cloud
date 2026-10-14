@@ -8,6 +8,7 @@ import hmac
 import logging
 from typing import TYPE_CHECKING
 
+import probatio as vol
 from aiohttp import ClientError, web
 from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
@@ -17,10 +18,14 @@ from homeassistant.exceptions import (
     ConfigEntryError,
     ConfigEntryNotReady,
     HomeAssistantError,
+    ServiceValidationError,
 )
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.service import async_register_admin_service
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from hyxi_cloud_api import HyxiApiClient, SubscriptionType
 from hyxi_cloud_api import __version__ as API_VERSION
@@ -153,6 +158,19 @@ async def _build_modbus_coordinator(
     return HyxiModbusCoordinator(hass, client, entry)
 
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # NOSONAR
+    """Register the integration's services, once for all its entries.
+
+    Home Assistant awaits this with its configuration, which a
+    config-entry-only integration has no use for.
+    """
+    setup_services(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HYXI Cloud from a config entry."""
     _LOGGER.debug(
@@ -258,8 +276,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     if discovery is not None:
         _track_new_devices(hass, entry, coordinator, discovery, entry_devices)
-
-    setup_services(hass)
 
     _LOGGER.debug(
         "HYXI Cloud entry %s setup complete: %d devices, protection=%s, engine=%s",
@@ -369,8 +385,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
-        if not hass.data[DOMAIN]:
-            _remove_services(hass)
     _LOGGER.debug("HYXI Cloud entry %s unload result: %s", entry.entry_id, unload_ok)
     return unload_ok
 
@@ -2477,45 +2491,14 @@ def _apply_alarm_updates(
     return any_updated
 
 
-_HYXI_SERVICES = ("cancel_subscription", "set_battery_mode")
-
-
-def _remove_services(hass: HomeAssistant) -> None:
-    """Drop the custom services when the last HYXI entry unloads."""
-    for service in _HYXI_SERVICES:
-        if hass.services.has_service(DOMAIN, service):
-            hass.services.async_remove(DOMAIN, service)
-
-
 def setup_services(hass: HomeAssistant) -> None:
     """Set up custom services for HYXI Cloud."""
-    if hass.services.has_service(DOMAIN, "cancel_subscription"):
-        return
-
-    import probatio as vol
-    from homeassistant.helpers import config_validation as cv
 
     async def async_handle_cancel_subscription(call) -> None:
         """Handle the cancel_subscription service call."""
-        subscribe_code = call.data["subscribe_code"].strip()
-        if not subscribe_code:
-            raise HomeAssistantError("Subscription code cannot be empty")
-
-        cloud = [
-            coord
-            for coord in hass.data.get(DOMAIN, {}).values()
-            if not is_modbus_entry(coord.entry)
-        ]
-        if not cloud:
-            raise HomeAssistantError(
-                "No active HYXI Cloud integration entries found to call the API"
-            )
-
-        # The entry whose credentials HYXI lists the code under, else the
-        # first cloud entry.
-        coordinator = next(
-            (coord for coord in cloud if _hyxi_holds(coord, subscribe_code)),
-            cloud[0],
+        subscribe_code = call.data["subscribe_code"]
+        coordinator = _cancel_subscription_coordinator(
+            hass, subscribe_code, call.data.get("config_entry_id")
         )
         _LOGGER.info(
             "Manually cancelling HYXI subscription: %s",
@@ -2536,13 +2519,17 @@ def setup_services(hass: HomeAssistant) -> None:
             raise HomeAssistantError(f"Failed to cancel subscription: {err}") from err
         await _async_refresh_subscriptions_for(hass, coordinator)
 
-    hass.services.async_register(
+    async_register_admin_service(
+        hass,
         DOMAIN,
         "cancel_subscription",
         async_handle_cancel_subscription,
         schema=vol.Schema(
             {
-                vol.Required("subscribe_code"): cv.string,
+                vol.Required("subscribe_code"): vol.All(
+                    cv.string, str.strip, vol.Length(min=1)
+                ),
+                vol.Optional("config_entry_id"): cv.string,
             }
         ),
     )
@@ -2550,14 +2537,48 @@ def setup_services(hass: HomeAssistant) -> None:
     _register_set_battery_mode_service(hass)
 
 
+def _cancel_subscription_coordinator(
+    hass: HomeAssistant, subscribe_code: str, entry_id: str | None
+) -> HyxiDataUpdateCoordinator:
+    """The cloud entry to cancel a subscription with: the one named, else
+    the one whose HYXI subscription list holds the code, else the only one."""
+    loaded = hass.data.get(DOMAIN, {})
+    cloud = {
+        loaded_id: coord
+        for loaded_id, coord in loaded.items()
+        if not is_modbus_entry(coord.entry)
+    }
+    if entry_id:
+        if entry_id in cloud:
+            return cloud[entry_id]
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="entry_is_modbus"
+            if entry_id in loaded
+            else "entry_not_loaded",
+        )
+    if not cloud:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN, translation_key="no_cloud_entry"
+        )
+    if holding := next(
+        (coord for coord in cloud.values() if _hyxi_holds(coord, subscribe_code)),
+        None,
+    ):
+        return holding
+    if len(cloud) == 1:
+        return next(iter(cloud.values()))
+    raise ServiceValidationError(
+        translation_domain=DOMAIN, translation_key="entry_unknown_for_code"
+    )
+
+
 _BATTERY_MODES = ("idle", "charge", "discharge", "self_consume")
 
 
 def _register_set_battery_mode_service(hass: HomeAssistant) -> None:
     """Register hyxi_cloud.set_battery_mode."""
-    import probatio as vol
     from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
-    from homeassistant.helpers import config_validation as cv
 
     hass.services.async_register(
         DOMAIN,

@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import probatio as vol
 import pytest
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
@@ -9,7 +10,6 @@ from custom_components.hyxi_cloud import (
     DOMAIN,
     _energy_manager_manages,
     _resolve_battery_mode_targets,
-    async_unload_entry,
     setup_services,
 )
 
@@ -35,44 +35,6 @@ def mock_coordinator(mock_entry):
 
 
 @pytest.mark.asyncio
-async def test_service_registration_and_unload(hass, mock_entry, mock_coordinator):
-    """Both custom services register on setup and are removed when the last entry unloads."""
-    hass.data[DOMAIN] = {mock_entry.entry_id: mock_coordinator}
-
-    # Verify service registration
-    setup_services(hass)
-    assert hass.services.has_service(DOMAIN, "cancel_subscription")
-    assert hass.services.has_service(DOMAIN, "set_battery_mode")
-
-    # Re-registering doesn't crash or duplicate
-    setup_services(hass)
-    assert hass.services.has_service(DOMAIN, "cancel_subscription")
-
-    # Unload entry
-    with (
-        patch.object(
-            hass.config_entries,
-            "async_unload_platforms",
-            new_callable=AsyncMock,
-            return_value=True,
-        ),
-        patch(
-            "custom_components.hyxi_cloud._async_teardown_push_subscription",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "custom_components.hyxi_cloud._async_teardown_alarm_subscription",
-            new_callable=AsyncMock,
-        ),
-    ):
-        await async_unload_entry(hass, mock_entry)
-
-    # Verify both services were removed because no config entries remain
-    assert not hass.services.has_service(DOMAIN, "cancel_subscription")
-    assert not hass.services.has_service(DOMAIN, "set_battery_mode")
-
-
-@pytest.mark.asyncio
 async def test_service_call_success(hass, mock_coordinator):
     """Test that the cancel_subscription service calls SDK method successfully."""
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
@@ -92,11 +54,11 @@ async def test_service_call_success(hass, mock_coordinator):
 
 @pytest.mark.asyncio
 async def test_service_call_empty_code(hass, mock_coordinator):
-    """Test service raises error if subscription code is empty."""
+    """A blank subscription code is rejected by the service schema."""
     hass.data[DOMAIN] = {"entry_123": mock_coordinator}
     setup_services(hass)
 
-    with pytest.raises(HomeAssistantError, match="Subscription code cannot be empty"):
+    with pytest.raises(vol.Invalid):
         await hass.services.async_call(
             DOMAIN,
             "cancel_subscription",
@@ -114,15 +76,14 @@ async def test_service_call_no_coordinators(hass):
     # Ensure service is registered
     setup_services(hass)
 
-    with pytest.raises(
-        HomeAssistantError, match="No active HYXI Cloud integration entries found"
-    ):
+    with pytest.raises(ServiceValidationError) as err:
         await hass.services.async_call(
             DOMAIN,
             "cancel_subscription",
             {"subscribe_code": "some-code"},
             blocking=True,
         )
+    assert err.value.translation_key == "no_cloud_entry"
 
 
 def _cancel_log_record(caplog):

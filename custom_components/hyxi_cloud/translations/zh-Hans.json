@@ -944,6 +944,10 @@
         "subscribe_code": {
           "name": "订阅代码",
           "description": "32 位订阅代码。Subscription Status 传感器的“subscriptions”属性会列出 HYXI 为你的 API 密钥保存的所有订阅，包括其代码和回调 URL。"
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "The HYXI Cloud entry whose API keys created the subscription. When omitted, the entry whose subscription list holds the code is used, or the only HYXI Cloud entry."
         }
       }
     },
@@ -964,6 +968,20 @@
           "description": "即使能源管理器正在管理此逆变器也发送命令。能源管理器将在下一次决策时再次覆盖它。"
         }
       }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "The chosen entry is not a loaded HYXI Cloud entry."
+    },
+    "entry_is_modbus": {
+      "message": "The chosen entry is a Modbus entry; subscriptions belong to HYXI Cloud entries."
+    },
+    "entry_unknown_for_code": {
+      "message": "No HYXI Cloud entry is known to hold this subscription code. Choose the entry whose API keys created it."
+    },
+    "no_cloud_entry": {
+      "message": "No HYXI Cloud entry is loaded to cancel the subscription with."
     }
   }
 }

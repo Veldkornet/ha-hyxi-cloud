@@ -944,6 +944,10 @@
         "subscribe_code": {
           "name": "Tilauskoodi",
           "description": "32-merkkinen tilauskoodi. Subscription Status -anturin \"subscriptions\"-attribuutti luettelee kaikki HYXI:n API-avaimillesi pitämät tilaukset koodeineen ja takaisinkutsun URL-osoitteineen."
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "The HYXI Cloud entry whose API keys created the subscription. When omitted, the entry whose subscription list holds the code is used, or the only HYXI Cloud entry."
         }
       }
     },
@@ -964,6 +968,20 @@
           "description": "Lähettää komennon, vaikka Energianhallinta ohjaa tätä invertteriä. Energianhallinta ohittaa sen taas seuraavassa päätöksessään."
         }
       }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "The chosen entry is not a loaded HYXI Cloud entry."
+    },
+    "entry_is_modbus": {
+      "message": "The chosen entry is a Modbus entry; subscriptions belong to HYXI Cloud entries."
+    },
+    "entry_unknown_for_code": {
+      "message": "No HYXI Cloud entry is known to hold this subscription code. Choose the entry whose API keys created it."
+    },
+    "no_cloud_entry": {
+      "message": "No HYXI Cloud entry is loaded to cancel the subscription with."
     }
   }
 }

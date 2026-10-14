@@ -944,6 +944,10 @@
         "subscribe_code": {
           "name": "Código de Subscrição",
           "description": "O código de subscrição de 32 caracteres. O atributo \"subscriptions\" do sensor Subscription Status lista todas as subscrições que a HYXI mantém para as suas chaves de API, com o código e o URL de retorno."
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "The HYXI Cloud entry whose API keys created the subscription. When omitted, the entry whose subscription list holds the code is used, or the only HYXI Cloud entry."
         }
       }
     },
@@ -964,6 +968,20 @@
           "description": "Envia o comando mesmo enquanto o Gestor de Energia está a gerir este inversor. O Gestor de Energia irá substituí-lo novamente na sua próxima decisão."
         }
       }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "The chosen entry is not a loaded HYXI Cloud entry."
+    },
+    "entry_is_modbus": {
+      "message": "The chosen entry is a Modbus entry; subscriptions belong to HYXI Cloud entries."
+    },
+    "entry_unknown_for_code": {
+      "message": "No HYXI Cloud entry is known to hold this subscription code. Choose the entry whose API keys created it."
+    },
+    "no_cloud_entry": {
+      "message": "No HYXI Cloud entry is loaded to cancel the subscription with."
     }
   }
 }

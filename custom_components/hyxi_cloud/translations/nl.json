@@ -944,6 +944,10 @@
         "subscribe_code": {
           "name": "Abonnementscode",
           "description": "De abonnementscode van 32 tekens. Het attribuut \"subscriptions\" van de sensor Subscription Status toont alle abonnementen die HYXI voor je API-sleutels heeft, met hun code en callback-URL."
+        },
+        "config_entry_id": {
+          "name": "Item",
+          "description": "Het HYXI Cloud-item waarvan de API-sleutels het abonnement hebben aangemaakt. Zonder keuze wordt het item gebruikt waarvan de abonnementenlijst de code bevat, of het enige HYXI Cloud-item."
         }
       }
     },
@@ -964,6 +968,20 @@
           "description": "Stuurt de opdracht ook terwijl Energiebeheer deze omvormer aanstuurt. Energiebeheer overschrijft deze weer bij zijn volgende beslissing."
         }
       }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "Het gekozen item is geen geladen HYXI Cloud-item."
+    },
+    "entry_is_modbus": {
+      "message": "Het gekozen item is een Modbus-item; abonnementen horen bij HYXI Cloud-items."
+    },
+    "entry_unknown_for_code": {
+      "message": "Van geen enkel HYXI Cloud-item is bekend dat het deze abonnementscode heeft. Kies het item waarvan de API-sleutels het abonnement hebben aangemaakt."
+    },
+    "no_cloud_entry": {
+      "message": "Er is geen HYXI Cloud-item geladen om het abonnement mee te annuleren."
     }
   }
 }
