@@ -112,7 +112,7 @@
     "step": {
       "init": {
         "title": "Configuração do Sistema HYXI",
-        "description": "Ajuste como a integração se comunica com HYXI.\n\n> ⚠️ **Controle do Dispositivo**: Ative com cautela se o seu inversor já for gerenciado pela sua distribuidora de energia ou estiver inscrito em um programa de Usina Virtual (VPP). O envio de comandos enquanto a distribuidora tem o controle pode entrar em conflito com o cronograma de despacho dela.\n\n---",
+        "description": "Ajuste como a integração se comunica com HYXI.",
         "data": {
           "update_interval": "Intervalo de Atualização (1-60 minutos, padrão: 5)",
           "update_interval_modbus": "Intervalo de Atualização (1-60 segundos, padrão: 15)",
@@ -122,6 +122,9 @@
           "enable_realtime_push": "Ativar Push Webhook em Tempo Real",
           "realtime_push_rate": "Frequência de Atualização Push (milissegundos, intervalo: 5000-3600000)",
           "realtime_push_url": "URL de Callback Personalizada (opcional, padrão dinâmico)"
+        },
+        "data_description": {
+          "enable_battery_control": "Ative com cautela se o seu inversor já for gerenciado pela sua distribuidora de energia ou estiver inscrito em um programa de Usina Virtual (VPP). O envio de comandos enquanto a distribuidora tem o controle pode entrar em conflito com o cronograma de despacho dela."
         }
       },
       "energy_manager": {

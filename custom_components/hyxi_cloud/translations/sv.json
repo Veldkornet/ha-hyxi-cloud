@@ -112,7 +112,7 @@
     "step": {
       "init": {
         "title": "HYXI Systemkonfiguration",
-        "description": "Justera hur din integration kommunicerar med HYXI.\n\n> ⚠️ **Enhetskontroll**: Aktivera med försiktighet om din växelriktare redan hanteras av din energileverantör eller är ansluten till ett Virtuellt Kraftverk (VPP)-program. Att skicka kommandon medan leverantören har kontroll kan komma i konflikt med deras dispatch-schema.\n\n---",
+        "description": "Justera hur din integration kommunicerar med HYXI.",
         "data": {
           "update_interval": "Uppdateringsintervall (1-60 minuter, standard: 5)",
           "update_interval_modbus": "Uppdateringsintervall (1-60 sekunder, standard: 15)",
@@ -122,6 +122,9 @@
           "enable_realtime_push": "Aktivera Realtids Webhook Push",
           "realtime_push_rate": "Push-uppdateringsfrekvens (millisekunder, intervall: 5000-3600000)",
           "realtime_push_url": "Anpassad Callback-URL (valfritt, dynamiskt standardvärde)"
+        },
+        "data_description": {
+          "enable_battery_control": "Aktivera med försiktighet om din växelriktare redan hanteras av din energileverantör eller är ansluten till ett Virtuellt Kraftverk (VPP)-program. Att skicka kommandon medan leverantören har kontroll kan komma i konflikt med deras dispatch-schema."
         }
       },
       "energy_manager": {

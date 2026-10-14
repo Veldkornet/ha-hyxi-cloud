@@ -391,3 +391,13 @@ def test_strings_explain_push_at_setup():
     assert push["data"]["realtime_push_url"]
     assert push["data_description"]["realtime_push_url"]
     assert config["error"]["no_public_url"]
+
+
+@pytest.mark.parametrize("lang_file", get_all_languages())
+def test_device_control_warning_sits_on_its_toggle(lang_file):
+    """The provider/VPP warning belongs to the Device Control toggle, so it
+    only shows where that toggle does, not in the options description every
+    entry sees."""
+    init = load_translation(lang_file)["options"]["step"]["init"]
+    assert "⚠️" not in init["description"]
+    assert "VPP" in init["data_description"]["enable_battery_control"]

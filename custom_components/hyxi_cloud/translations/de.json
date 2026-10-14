@@ -112,7 +112,7 @@
     "step": {
       "init": {
         "title": "HYXI Systemkonfiguration",
-        "description": "Passen Sie an, wie Ihre Integration mit HYXI kommuniziert.\n\n> ⚠️ **Gerätesteuerung**: Aktivieren Sie dies mit Vorsicht, wenn Ihr Wechselrichter bereits von Ihrem Energieversorger verwaltet wird oder an einem Virtual-Power-Plant-Programm (VPP) teilnimmt. Das Senden von Befehlen, während Ihr Versorger die Kontrolle hat, kann mit dessen Dispatch-Zeitplan in Konflikt geraten.\n\n---",
+        "description": "Passen Sie an, wie Ihre Integration mit HYXI kommuniziert.",
         "data": {
           "update_interval": "Abfrageintervall (1-60 Minuten, Standard: 5)",
           "update_interval_modbus": "Abfrageintervall (1-60 Sekunden, Standard: 15)",
@@ -122,6 +122,9 @@
           "enable_realtime_push": "Echtzeit-Webhook-Push aktivieren",
           "realtime_push_rate": "Push-Aktualisierungsfrequenz (Millisekunden, Bereich: 5000-3600000)",
           "realtime_push_url": "Benutzerdefinierte Callback-URL (optional, dynamischer Standard)"
+        },
+        "data_description": {
+          "enable_battery_control": "Aktivieren Sie dies mit Vorsicht, wenn Ihr Wechselrichter bereits von Ihrem Energieversorger verwaltet wird oder an einem Virtual-Power-Plant-Programm (VPP) teilnimmt. Das Senden von Befehlen, während Ihr Versorger die Kontrolle hat, kann mit dessen Dispatch-Zeitplan in Konflikt geraten."
         }
       },
       "energy_manager": {
