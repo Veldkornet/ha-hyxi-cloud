@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Falha ao conectar aos servidores HYXI",
       "invalid_auth": "Chave de Acesso ou Chave Secreta inválida",
+      "vpp_keys": "Estas são chaves de API com autorização VPP. Esta integração precisa de chaves com autorização de usuário: crie-as na sua própria conta de desenvolvedor em open.hyxicloud.com.",
+      "plant_keys": "Estas são chaves de API com autorização de usina. Esta integração precisa de chaves com autorização de usuário: crie-as na sua própria conta de desenvolvedor em open.hyxicloud.com.",
       "unknown": "Ocorreu um erro inesperado",
       "no_devices": "Nenhuma planta ou dispositivo encontrado. Se o seu e-mail de desenvolvedor for diferente do e-mail do aplicativo, você deve primeiro compartilhar sua Planta do aplicativo para o e-mail de desenvolvedor.",
       "no_device": "Nada respondeu no barramento. Verifique o cabeamento, o endereço escravo e a taxa de baud.",

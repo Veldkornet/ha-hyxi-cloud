@@ -116,7 +116,7 @@ async def test_a_failed_poll_attempt_is_retried():
     mock_entry = MagicMock()
     mock_entry.data = {"access_key": "ak", "secret_key": "sk", "base_url": "url"}
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     devices = {"SN123": {"metrics": {"tinv": "45.0"}}}
     mock_client.poll_devices = AsyncMock(side_effect=[TimeoutError("boom"), devices])
 
@@ -138,7 +138,7 @@ def _auth_coordinator(fetch_effects):
     fetch_effects."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(side_effect=fetch_effects)
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -195,7 +195,7 @@ async def test_every_poll_attempt_failing_fails_the_update():
     """When every poll attempt fails, the update fails as unreachable."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -215,7 +215,7 @@ async def test_async_update_data_success():
     """Test successful data update with non-empty metrics."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(
         return_value={"SN123": {"metrics": {"tinv": "45.0"}}}
     )
@@ -239,7 +239,7 @@ async def test_async_update_data_empty_telemetry():
     """Test that empty telemetry warns but does not raise UpdateFailed."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     # Device with empty metrics (only last_seen) — should warn, not fail
     mock_client.poll_devices = AsyncMock(
         return_value={"SN123": {"metrics": {"last_seen": "2026-05-22"}}}
@@ -265,7 +265,7 @@ async def test_async_update_data_empty_telemetry_collector_only():
     """Test that empty metrics for collectors only does not raise UpdateFailed."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     # Device type "3" (collector) with empty metrics should NOT trigger UpdateFailed
     mock_client.poll_devices = AsyncMock(
         return_value={"SN123": {"device_type_code": "3", "metrics": {}}}
@@ -387,7 +387,7 @@ async def test_async_update_data_empty_devices_warning():
     """Verify update warning when no devices are returned."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(return_value={})
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -409,7 +409,7 @@ async def test_async_update_data_merge_existing_metrics():
     """Verify that update merges new metrics with existing cached metrics and derived metrics."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(
         return_value={
             "SN123": {
@@ -619,7 +619,7 @@ async def test_async_update_data_falls_back_to_fresh_cache_on_error():
     """A fetch failure falls back to a fresh on-disk cache instead of raising."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -644,7 +644,7 @@ async def test_async_update_data_ignores_expired_cache_on_error():
     """A fetch failure with only an expired cache still raises, not masking the error."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -668,7 +668,7 @@ async def test_async_update_data_cache_fallback_read_itself_fails():
     """If reading the cache during fallback also raises, the original error still propagates."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(side_effect=TimeoutError("boom"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -687,7 +687,7 @@ async def test_async_update_data_unhandled_exception_type():
     """An exception type outside ClientError/TimeoutError/UpdateFailed hits the generic branch."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(side_effect=ValueError("weird failure"))
 
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
@@ -707,7 +707,7 @@ async def test_async_update_data_save_failure_still_returns_devices():
     """A cache-write failure is logged but does not prevent returning fresh devices."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock(
         return_value={"SN123": {"metrics": {"tinv": "45.0"}}}
     )
@@ -728,7 +728,7 @@ def _discovery_coordinator(results):
     with results (a list of results or exceptions)."""
     mock_entry = MagicMock()
     mock_entry.options = {}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.discover_devices = AsyncMock(side_effect=results)
     coordinator = hc_coord.HyxiDiscoveryCoordinator(
         MagicMock(), mock_client, mock_entry
@@ -809,7 +809,7 @@ async def test_polling_before_a_discovery_falls_back_to_the_cache():
     update fails over to the cached devices without polling."""
     mock_entry = MagicMock()
     mock_entry.options = {"update_interval": 5}
-    mock_client = MagicMock()
+    mock_client = MagicMock(ensure_token=AsyncMock())
     mock_client.poll_devices = AsyncMock()
     coordinator = hc_coord.HyxiDataUpdateCoordinator(
         MagicMock(), mock_client, mock_entry

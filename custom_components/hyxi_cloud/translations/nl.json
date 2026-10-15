@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Kan geen verbinding maken met de HYXI servers",
       "invalid_auth": "Ongeldige Access Key of Secret Key",
+      "vpp_keys": "Dit zijn API-sleutels met VPP-autorisatie. Deze integratie heeft sleutels met gebruikersautorisatie nodig: maak die aan in je eigen ontwikkelaarsaccount op open.hyxicloud.com.",
+      "plant_keys": "Dit zijn API-sleutels met installatie-autorisatie. Deze integratie heeft sleutels met gebruikersautorisatie nodig: maak die aan in je eigen ontwikkelaarsaccount op open.hyxicloud.com.",
       "unknown": "Er is een onverwachte fout opgetreden",
       "no_devices": "Geen installaties of apparaten gevonden. Als je ontwikkelaars-e-mailadres verschilt van je app-e-mailadres, moet je eerst je installatie vanuit de app delen met het ontwikkelaars-e-mailadres.",
       "no_device": "Niets antwoordde op de bus. Controleer de bekabeling, het slave-adres en de baudrate.",

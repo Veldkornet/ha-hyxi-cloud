@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Nepodařilo se připojit k serverům HYXI",
       "invalid_auth": "Neplatný přístupový klíč nebo tajný klíč",
+      "vpp_keys": "Toto jsou API klíče s autorizací VPP. Tato integrace potřebuje klíče s uživatelskou autorizací: vytvořte je ve svém vlastním vývojářském účtu na open.hyxicloud.com.",
+      "plant_keys": "Toto jsou API klíče s autorizací elektrárny. Tato integrace potřebuje klíče s uživatelskou autorizací: vytvořte je ve svém vlastním vývojářském účtu na open.hyxicloud.com.",
       "unknown": "Došlo k neočekávané chybě",
       "no_devices": "Nebyly nalezeny žádné elektrárny ani zařízení. Pokud se váš vývojářský e-mail liší od e-mailu aplikace, musíte nejprve sdílet svou elektrárnu z aplikace na vývojářský e-mail.",
       "no_device": "Na sběrnici nikdo neodpověděl. Zkontrolujte kabeláž, adresu slave a přenosovou rychlost.",

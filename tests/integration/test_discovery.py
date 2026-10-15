@@ -23,12 +23,12 @@ from custom_components.hyxi_cloud.const import (
 )
 from custom_components.hyxi_cloud.coordinator import (
     DISCOVERY_INTERVAL,
-    device_store_key,
 )
 from tests.integration.entries import (
     accept_subscriptions,
     cloud_entry,
     lookup_entity_id,
+    seed_cache,
     serve_devices,
 )
 
@@ -46,17 +46,6 @@ def _inverter(sn: str) -> dict:
 
 def _devices(*sns: str) -> dict:
     return {sn: _inverter(sn) for sn in sns}
-
-
-def _seed_cache(hass_storage: dict, entry, *sns: str) -> None:
-    """Store a fresh device cache for the entry, as a previous run left it."""
-    key = device_store_key(entry.entry_id)
-    hass_storage[key] = {
-        "version": 1,
-        "minor_version": 1,
-        "key": key,
-        "data": {"cached_at": dt_util.utcnow().isoformat(), "devices": _devices(*sns)},
-    }
 
 
 @pytest.fixture
@@ -320,7 +309,7 @@ async def test_failed_startup_discovery_uses_cached_devices(
     """If discovery fails at startup, cached devices stand in for them and
     the entry still loads; nothing is polled until discovery succeeds."""
     entry = cloud_entry(hass)
-    _seed_cache(hass_storage, entry, "SN_A")
+    seed_cache(hass_storage, entry, _devices("SN_A"))
     client.discover_devices.side_effect = TimeoutError("unreachable")
 
     await _setup(hass, entry)
@@ -413,7 +402,7 @@ async def test_a_device_whose_first_poll_failed_is_added_once_polled(
     returns it. Rediscovering it asks for that poll; cached data standing in
     while polling keeps failing doesn't add it."""
     entry = cloud_entry(hass)
-    _seed_cache(hass_storage, entry, "SN_A")
+    seed_cache(hass_storage, entry, _devices("SN_A"))
     serve_devices(client, _devices("SN_A", "SN_B"))
     client.poll_devices.side_effect = TimeoutError("unreachable")
     with patch("custom_components.hyxi_cloud.coordinator.POLL_RETRY_DELAY", 0):

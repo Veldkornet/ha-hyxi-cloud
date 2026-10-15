@@ -95,6 +95,8 @@
     "error": {
       "cannot_connect": "Failed to connect to HYXI servers",
       "invalid_auth": "Invalid Access Key or Secret Key",
+      "vpp_keys": "These are VPP Authorization API keys. This integration needs User Authorization keys: create them under your own developer account on open.hyxicloud.com.",
+      "plant_keys": "These are Plant Authorization API keys. This integration needs User Authorization keys: create them under your own developer account on open.hyxicloud.com.",
       "no_devices": "No plants or devices found. If your developer email differs from your app email, you must share your Plant from the app to the developer email first.",
       "unknown": "Unexpected error occurred",
       "no_device": "Nothing answered on the bus. Check the wiring, the slave address, and the baud rate.",

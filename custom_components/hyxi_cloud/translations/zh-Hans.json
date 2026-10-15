@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "连接 HYXI 服务器失败",
       "invalid_auth": "无效的访问密钥或加密密钥",
+      "vpp_keys": "这些是 VPP 授权的 API 密钥。此集成需要用户授权的密钥：请在 open.hyxicloud.com 上您自己的开发者账号中创建。",
+      "plant_keys": "这些是电站授权的 API 密钥。此集成需要用户授权的密钥：请在 open.hyxicloud.com 上您自己的开发者账号中创建。",
       "unknown": "发生未知错误",
       "no_devices": "未找到电站或设备。如果您的开发者邮箱与应用邮箱不同，您必须先在应用中将电站分享给开发者邮箱。",
       "no_device": "总线上没有任何响应。请检查布线、从站地址和波特率。",

@@ -72,6 +72,7 @@ from .const import (
     offers_device_control,
     region_for_base_url,
     resolve_base_url,
+    wrong_key_error,
 )
 from .push_url import is_https_url, public_url_available
 
@@ -340,6 +341,8 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
         try:
             # Verify AK/SK before fetching devices.
             await client.ensure_token()
+            if error := wrong_key_error(client.authorization_type):
+                return error
 
             # Check if there are any devices/plants
             device_data = await client.get_all_device_data()

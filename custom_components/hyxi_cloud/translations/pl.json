@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Nie udało się połączyć z serwerami HYXI",
       "invalid_auth": "Nieprawidłowy klucz dostępu lub tajny klucz",
+      "vpp_keys": "To są klucze API z autoryzacją VPP. Ta integracja wymaga kluczy z autoryzacją użytkownika: utwórz je na własnym koncie dewelopera na open.hyxicloud.com.",
+      "plant_keys": "To są klucze API z autoryzacją instalacji. Ta integracja wymaga kluczy z autoryzacją użytkownika: utwórz je na własnym koncie dewelopera na open.hyxicloud.com.",
       "unknown": "Wystąpił nieoczekiwany błąd",
       "no_devices": "Nie znaleziono żadnych instalacji ani urządzeń. Jeśli Twój e-mail programisty różni się od e-maila w aplikacji, musisz najpierw udostępnić swoją instalację z aplikacji na e-mail programisty.",
       "no_device": "Nic nie odpowiedziało na magistrali. Sprawdź okablowanie, adres podrzędny i prędkość transmisji.",
