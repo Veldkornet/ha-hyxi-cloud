@@ -1,6 +1,7 @@
 """Tests for HYXI alarm push subscription lifecycle and webhook handler."""
 
 import sys
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -61,7 +62,7 @@ def mock_coordinator():
     coord.client.access_key = "test_ak"
     coord.client.cancel_subscription = AsyncMock()
     coord.client.subscribe_alarm = AsyncMock(
-        return_value={"success": True, "data": {"subscribeCode": "alarm_code_abc"}}
+        return_value=SimpleNamespace(subscribe_code="alarm_code_abc")
     )
     coord.async_update_listeners = MagicMock()
     return coord

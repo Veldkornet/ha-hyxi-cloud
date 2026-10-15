@@ -1,6 +1,7 @@
 """Integration tests for HYXI webhook push subscription and callback processing."""
 
 import sys
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -52,7 +53,7 @@ def mock_coordinator(mock_entry):
     coordinator.client = MagicMock()
     coordinator.client.access_key = "test_ak"
     coordinator.client.subscribe_real_time_data = AsyncMock(
-        return_value={"success": True, "data": {"subscribeCode": "test-sub-code"}}
+        return_value=SimpleNamespace(subscribe_code="test-sub-code")
     )
     coordinator.client.cancel_subscription = AsyncMock()
 
