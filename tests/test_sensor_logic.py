@@ -446,29 +446,25 @@ async def test_new_api_metrics_registration():
         )
 
 
+@pytest.mark.parametrize("data", [{}, None])
 @pytest.mark.asyncio
-async def test_async_setup_entry_no_data():
-    """Verify that async_setup_entry returns early when coordinator has no data."""
-
+async def test_async_setup_entry_no_data(data):
+    """With no devices yet, setup adds no device sensors but still listens
+    for devices a later poll adds."""
     hass = MagicMock()
     entry = MagicMock()
     entry.entry_id = "test_entry"
     coordinator = MagicMock()
-    coordinator.data = {}
+    coordinator.data = data
     entry.runtime_data = coordinator
-
     mock_async_add_entities = MagicMock()
-    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
 
-    # Should exit early and not add any entities if data is empty
-    mock_async_add_entities.assert_not_called()
+    with patch.object(sensor_mod, "device_entities", return_value=[]) as devices:
+        await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
 
-    # Also test None
-    coordinator.data = None
-    await sensor_mod.async_setup_entry(hass, entry, mock_async_add_entities)
-
-    # Should exit early and not add any entities if data is None
-    mock_async_add_entities.assert_not_called()
+    added = mock_async_add_entities.call_args[0][0]
+    assert not any(isinstance(e, sensor_mod.HyxiSensor) for e in added)
+    devices.assert_called_once()
 
 
 def test_sensor_int_conversion_error(base_sensor):

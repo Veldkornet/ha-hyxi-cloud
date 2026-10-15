@@ -29,7 +29,7 @@ from .const import (
     offers_device_control,
 )
 from .coordinator import HyxiConfigEntry
-from .entity import HyxiEntity, SettingsSyncMixin
+from .entity import HyxiEntity, SettingsSyncMixin, device_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,16 +41,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up HYXI switch entities."""
     coordinator = entry.runtime_data
-    if not coordinator.data:
-        return
-
-    entities: list[SwitchEntity] = []
-
-    for sn, dev_data in coordinator.data.items():
-        entities.extend(_build_device_switches(entry, coordinator, sn, dev_data))
-
-    entities.extend(_build_em_switches(entry, coordinator))
-
+    entities = [
+        *device_entities(
+            hass, entry, coordinator, async_add_entities, _build_device_switches
+        ),
+        *_build_em_switches(entry, coordinator),
+    ]
     if entities:
         async_add_entities(entities)
 
@@ -140,7 +136,11 @@ def _build_em_switches(entry: ConfigEntry, coordinator) -> list[SwitchEntity]:
     """Build the EM-only toggle switches, if EM is enabled for this inverter."""
     entities: list[SwitchEntity] = []
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if not (entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data):
+    if not (
+        entry.options.get(CONF_EM_ENABLED)
+        and em_sn
+        and em_sn in (coordinator.data or {})
+    ):
         return entities
 
     # Grid charge toggle on inverter device

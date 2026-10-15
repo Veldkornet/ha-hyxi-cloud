@@ -50,7 +50,7 @@ from .const import (
     modbus_service_device_info,
     normalize_device_type,
 )
-from .entity import via_device_id
+from .entity import device_entities, on_new_devices, via_device_id
 
 if TYPE_CHECKING:
     from .coordinator import HyxiConfigEntry, HyxiDataUpdateCoordinator
@@ -1201,28 +1201,40 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     if not coordinator.data:
         _LOGGER.warning("HYXI Setup: No data available in coordinator during setup")
-        return
 
-    entities: list[SensorEntity] = []
-    entities.extend(_build_hardware_sensors(entry, coordinator))
-    entities.extend(_integration_health_sensors(entry, coordinator))
-    entities.extend(_microinverter_aggregate_sensors(entry, coordinator))
-    entities.extend(_battery_energy_period_sensors(coordinator))
-    entities.extend(_battery_protection_sensors(entry, coordinator))
-    entities.extend(_em_sensors(entry, coordinator))
+    entities = [
+        *device_entities(
+            hass, entry, coordinator, async_add_entities, _build_device_sensors
+        ),
+        *_microinverter_aggregate_sensors(entry, coordinator, coordinator.data or {}),
+        *_integration_health_sensors(entry, coordinator),
+        *_em_sensors(entry, coordinator),
+    ]
+    async_add_entities(entities)
 
-    if entities:
-        async_add_entities(entities)
+    @callback
+    def _add_totals_with_the_first_microinverter(devices: dict[str, dict]) -> None:
+        earlier = {
+            sn: dev_data
+            for sn, dev_data in coordinator.data.items()
+            if sn not in devices
+        }
+        if not _microinverter_aggregate_sensors(entry, coordinator, earlier):
+            async_add_entities(
+                _microinverter_aggregate_sensors(entry, coordinator, devices)
+            )
+
+    on_new_devices(hass, entry, _add_totals_with_the_first_microinverter)
 
 
-def _build_hardware_sensors(entry, coordinator) -> list[SensorEntity]:
-    """Section 1: hardware sensors, one pass per device in coordinator.data."""
-    entities: list[SensorEntity] = []
-    for sn, dev_data in coordinator.data.items():
-        entities.extend(
-            _build_device_hardware_sensors(entry, coordinator, sn, dev_data)
-        )
-    return entities
+def _build_device_sensors(entry, coordinator, sn, dev_data) -> list[SensorEntity]:
+    """The sensors for one device."""
+    device = {sn: dev_data}
+    return [
+        *_build_device_hardware_sensors(entry, coordinator, sn, dev_data),
+        *_battery_energy_period_sensors(coordinator, device),
+        *_battery_protection_sensors(entry, coordinator, device),
+    ]
 
 
 def _build_device_hardware_sensors(
@@ -1384,13 +1396,13 @@ def _integration_health_sensors(entry, coordinator) -> list[SensorEntity]:
     return entities
 
 
-def _microinverter_aggregate_sensors(entry, coordinator) -> list[SensorEntity]:
+def _microinverter_aggregate_sensors(entry, coordinator, devices) -> list[SensorEntity]:
     """Section 2b: aggregate sensors summed across all microinverters, if any
-    are present on this entry.
+    of these devices is one.
     """
     has_micro_inverter = any(
         normalize_device_type(get_raw_device_code(dev_data)) == "micro_inverter"
-        for dev_data in coordinator.data.values()
+        for dev_data in devices.values()
     )
     if not has_micro_inverter:
         return []
@@ -1427,7 +1439,7 @@ def _microinverter_aggregate_sensors(entry, coordinator) -> list[SensorEntity]:
     ]
 
 
-def _battery_protection_sensors(entry, coordinator) -> list[SensorEntity]:
+def _battery_protection_sensors(entry, coordinator, devices) -> list[SensorEntity]:
     """Section 3: battery-protection last-sent-mode sensors, one per
     control-capable device, if battery control is enabled.
     """
@@ -1435,7 +1447,7 @@ def _battery_protection_sensors(entry, coordinator) -> list[SensorEntity]:
         return []
 
     entities: list[SensorEntity] = []
-    for sn, dev_data in coordinator.data.items():
+    for sn, dev_data in devices.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if not is_control_capable_device_type(entry, device_type):
             continue
@@ -1460,7 +1472,7 @@ def _battery_protection_sensors(entry, coordinator) -> list[SensorEntity]:
 _BATTERY_ENERGY_PERIODS = ("today", "week", "month", "year")
 
 
-def _battery_energy_period_sensors(coordinator) -> list[SensorEntity]:
+def _battery_energy_period_sensors(coordinator, devices) -> list[SensorEntity]:
     """Section 3b: per-period battery charge/discharge energy, derived from
     the lifetime counter with a local-midnight reset.
 
@@ -1469,7 +1481,7 @@ def _battery_energy_period_sensors(coordinator) -> list[SensorEntity]:
     these are computed here. One set per device that reports a battery.
     """
     entities: list[SensorEntity] = []
-    for sn, dev_data in coordinator.data.items():
+    for sn, dev_data in devices.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if device_type == "collector":
             continue
@@ -1492,7 +1504,11 @@ def _battery_energy_period_sensors(coordinator) -> list[SensorEntity]:
 def _em_sensors(entry, coordinator) -> list[SensorEntity]:
     """Section 4: Energy Manager sensors, if EM is enabled for this inverter."""
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if not (entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data):
+    if not (
+        entry.options.get(CONF_EM_ENABLED)
+        and em_sn
+        and em_sn in (coordinator.data or {})
+    ):
         return []
 
     em_device_info = DeviceInfo(
