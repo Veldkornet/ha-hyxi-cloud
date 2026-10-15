@@ -7,6 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.storage import Store
 
 from .const import (
     BATTERY_SENSORS,
@@ -800,7 +801,6 @@ def _cleanup_control_entities(
     # Imported here rather than at the top, so that importing the entry's
     # setup doesn't load the button and number platforms.
     from .button import POWER_COMMAND_ICONS, WORK_MODE_ICONS
-    from .const import is_battery_control_enabled
     from .number import (
         HALO_SETTING_NUMBER_DEFS,
         HYBRID_SETTING_NUMBER_DEFS,
@@ -892,6 +892,4 @@ _LEGACY_SUBSCRIPTION_STORE = "hyxi_cloud_subscriptions"
 
 async def _async_remove_subscription_store(hass: HomeAssistant) -> None:
     """Delete the subscription code list earlier versions kept, if any."""
-    from homeassistant.helpers.storage import Store
-
     await Store(hass, 1, _LEGACY_SUBSCRIPTION_STORE).async_remove()

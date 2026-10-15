@@ -2,14 +2,22 @@
 
 import functools
 import hmac
+import json
 import logging
+from urllib.parse import parse_qs
 
 from aiohttp import web
 from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import (
+    DATA_ALARM_SUBSCRIBE_CODE,
+    DATA_ALARM_WEBHOOK_ID,
+    DATA_LEGACY_WEBHOOKS,
+    DATA_PUSH_SUBSCRIBE_CODE,
+    DATA_PUSH_WEBHOOK_ID,
     DOMAIN,
     mask_sensitive_key_value,
     mask_sn,
@@ -25,14 +33,9 @@ _LOGGER = logging.getLogger(__name__)
 # Entry data keys of the push and alarm webhook IDs, each with the entry
 # data key of its subscription code and the suffix of its legacy ID.
 _WEBHOOKS = {
-    "webhook_id": ("push_subscribe_code", ""),
-    "alarm_webhook_id": ("alarm_subscribe_code", "_alarm"),
+    DATA_PUSH_WEBHOOK_ID: (DATA_PUSH_SUBSCRIBE_CODE, ""),
+    DATA_ALARM_WEBHOOK_ID: (DATA_ALARM_SUBSCRIBE_CODE, "_alarm"),
 }
-
-
-# Entry data key of the legacy webhooks still in use: webhook ID key ->
-# the subscription code made with the legacy ID (None if there was none).
-_LEGACY_WEBHOOKS = "legacy_webhooks"
 
 
 def _legacy_webhook_id(entry: ConfigEntry, key: str) -> str:
@@ -49,8 +52,8 @@ def _register_webhook(
     """Handle HYXI's pushes to webhook_id with the push or alarm handler,
     per key."""
     name, handler = {
-        "webhook_id": ("HYXI Cloud Push", _async_handle_webhook),
-        "alarm_webhook_id": ("HYXI Cloud Alarm Push", _async_handle_alarm_webhook),
+        DATA_PUSH_WEBHOOK_ID: ("HYXI Cloud Push", _async_handle_webhook),
+        DATA_ALARM_WEBHOOK_ID: ("HYXI Cloud Alarm Push", _async_handle_alarm_webhook),
     }[key]
     try:
         webhook.async_register(
@@ -81,12 +84,12 @@ def _ensure_webhook_ids(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, st
             missing.append(key)
     if not missing:
         return ids
-    legacy = dict(entry.data.get(_LEGACY_WEBHOOKS, {}))
+    legacy = dict(entry.data.get(DATA_LEGACY_WEBHOOKS, {}))
     for key in missing:
         ids[key] = webhook.async_generate_id()
         legacy[key] = entry.data.get(_WEBHOOKS[key][0])
     hass.config_entries.async_update_entry(
-        entry, data={**entry.data, **ids, _LEGACY_WEBHOOKS: legacy}
+        entry, data={**entry.data, **ids, DATA_LEGACY_WEBHOOKS: legacy}
     )
     return ids
 
@@ -96,7 +99,7 @@ def _register_legacy_webhooks(
 ) -> None:
     """Handle pushes to the entry's legacy webhook IDs until they are
     retired."""
-    for key in entry.data.get(_LEGACY_WEBHOOKS, {}):
+    for key in entry.data.get(DATA_LEGACY_WEBHOOKS, {}):
         legacy_id = _legacy_webhook_id(entry, key)
         _register_webhook(hass, coordinator, key, legacy_id)
         entry.async_on_unload(
@@ -110,7 +113,7 @@ async def _async_retire_legacy_webhooks(
     """Retire each legacy webhook whose subscription code the entry no
     longer holds: stop handling it and delete its cloudhook. One whose
     cloudhook could not be deleted is kept and retried at the next setup."""
-    held = entry.data.get(_LEGACY_WEBHOOKS, {})
+    held = entry.data.get(DATA_LEGACY_WEBHOOKS, {})
     legacy = dict(held)
     for key, code in held.items():
         if code and entry.data.get(_WEBHOOKS[key][0]) == code:
@@ -121,10 +124,25 @@ async def _async_retire_legacy_webhooks(
             del legacy[key]
     if legacy == held:
         return
-    data = {k: v for k, v in entry.data.items() if k != _LEGACY_WEBHOOKS}
+    data = {k: v for k, v in entry.data.items() if k != DATA_LEGACY_WEBHOOKS}
     if legacy:
-        data[_LEGACY_WEBHOOKS] = legacy
+        data[DATA_LEGACY_WEBHOOKS] = legacy
     hass.config_entries.async_update_entry(entry, data=data)
+
+
+async def async_delete_entry_cloudhooks(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Delete the cloudhooks of the entry's webhooks, legacy ones included."""
+    for webhook_id in [
+        *(entry.data.get(key) for key in _WEBHOOKS),
+        *(
+            _legacy_webhook_id(entry, key)
+            for key in entry.data.get(DATA_LEGACY_WEBHOOKS, {})
+        ),
+    ]:
+        if webhook_id:
+            await _async_delete_cloudhook(hass, webhook_id)
 
 
 async def _async_delete_cloudhook(hass: HomeAssistant, webhook_id: str) -> bool:
@@ -221,8 +239,6 @@ async def _async_handle_webhook(
     coordinator: HyxiDataUpdateCoordinator,
 ) -> web.Response:
     """Handle incoming webhook request from HYXI Cloud."""
-    from homeassistant.util import dt as dt_util
-
     if not _is_authorized_webhook_request(request, coordinator):
         # Do not log the header value — it is user-controlled (CWE-117 Log Injection).
         _LOGGER.warning("Unauthorized push attempt received on the HYXI push webhook")
@@ -288,13 +304,11 @@ async def _parse_webhook_payload(request: web.Request, context: str) -> dict | N
     text = ""
     try:
         text = await request.text()
-        import json
 
         try:
             return json.loads(text)
         except ValueError:
             # Maybe it's URL-encoded? Some platforms send payload={...}
-            from urllib.parse import parse_qs
 
             parsed = parse_qs(text)
             if "payload" in parsed:
@@ -354,8 +368,6 @@ async def _async_handle_alarm_webhook(
             "Unauthorized alarm push attempt received on the HYXI alarm webhook"
         )
         return web.Response(status=401, text="Unauthorized")
-
-    from homeassistant.util import dt as dt_util
 
     payload = await _parse_webhook_payload(request, "alarm push")
     if payload is None:

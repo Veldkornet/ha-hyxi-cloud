@@ -46,6 +46,7 @@ from .const import (
     detect_phase_type,
     device_type_of,
     get_raw_device_code,
+    is_battery_control_enabled,
     is_control_capable_device_type,
     is_modbus_entry,
     mask_sn,
@@ -84,18 +85,17 @@ from .subscriptions import (
     _async_teardown_push_subscription,
     async_cancel_subscription,
     async_refresh_subscriptions,
+    entry_subscription_codes,
 )
 from .webhooks import (
-    _LEGACY_WEBHOOKS,
-    _WEBHOOKS,
-    _async_delete_cloudhook,
     _ensure_webhook_ids,
-    _legacy_webhook_id,
     _register_legacy_webhooks,
+    async_delete_entry_cloudhooks,
 )
 
 if TYPE_CHECKING:
     from .modbus_coordinator import HyxiModbusCoordinator
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -214,18 +214,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
     if modbus:
         coordinator = await _build_modbus_coordinator(hass, entry)
     else:
-        access_key = entry.data.get(CONF_ACCESS_KEY)
-        secret_key = entry.data.get(CONF_SECRET_KEY)
-
-        if not access_key or not secret_key:
+        client = _cloud_client(hass, entry)
+        if client is None:
             _LOGGER.error("HYXI Integration could not find Access/Secret keys.")
             return False
-
-        # Base URL always defaults to global OpenAPI.
-        base_url = entry.data.get("base_url") or BASE_URL_DEFAULT
-
-        session = async_get_clientsession(hass)
-        client = HyxiApiClient(access_key, secret_key, base_url, session)
 
         coordinator = HyxiDataUpdateCoordinator(hass, client, entry)
         discovery = HyxiDiscoveryCoordinator(hass, client, entry)
@@ -305,6 +297,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
     )
 
     return True
+
+
+def _cloud_client(hass: HomeAssistant, entry: ConfigEntry) -> HyxiApiClient | None:
+    """A HYXI client for the entry's API keys, on Home Assistant's shared
+    session, or None if the entry lacks them; the base URL defaults to the
+    global OpenAPI."""
+    access_key = entry.data.get(CONF_ACCESS_KEY)
+    secret_key = entry.data.get(CONF_SECRET_KEY)
+    if not access_key or not secret_key:
+        return None
+    return HyxiApiClient(
+        access_key,
+        secret_key,
+        entry.data.get("base_url") or BASE_URL_DEFAULT,
+        async_get_clientsession(hass),
+    )
 
 
 async def _async_first_discovery(
@@ -464,33 +472,15 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     actual deletion of the integration must do the remote cleanup here.
     """
     ir.async_delete_issue(hass, DOMAIN, _cloud_battery_control_issue_id(entry))
-    for webhook_id in [
-        *(entry.data.get(key) for key in _WEBHOOKS),
-        *(
-            _legacy_webhook_id(entry, key)
-            for key in entry.data.get(_LEGACY_WEBHOOKS, {})
-        ),
-    ]:
-        if webhook_id:
-            await _async_delete_cloudhook(hass, webhook_id)
+    await async_delete_entry_cloudhooks(hass, entry)
 
-    raw_codes = [
-        entry.data.get("push_subscribe_code"),
-        entry.data.get("alarm_subscribe_code"),
-    ]
-    codes: list[str] = [c for c in raw_codes if c]
+    codes = entry_subscription_codes(entry)
     if not codes:
         return
 
-    access_key = entry.data.get(CONF_ACCESS_KEY)
-    secret_key = entry.data.get(CONF_SECRET_KEY)
-    if not access_key or not secret_key:
+    client = _cloud_client(hass, entry)
+    if client is None:
         return
-
-    session = async_get_clientsession(hass)
-    client = HyxiApiClient(
-        access_key, secret_key, entry.data.get("base_url") or BASE_URL_DEFAULT, session
-    )
     for code in codes:
         try:
             await async_cancel_subscription(client, code)
@@ -573,7 +563,6 @@ async def _async_setup_battery_protection(
     devices: dict[str, dict],
 ) -> None:
     """Start battery protection on those of `devices` it supports."""
-    from .const import is_battery_control_enabled
 
     if not is_battery_control_enabled(coordinator.entry):
         _LOGGER.debug("Battery control and protection is disabled by user settings")

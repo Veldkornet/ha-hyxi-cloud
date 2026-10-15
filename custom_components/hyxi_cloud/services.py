@@ -4,6 +4,7 @@ import logging
 
 import probatio as vol
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import (
     HomeAssistantError,
@@ -18,6 +19,7 @@ from .const import (
     DOMAIN,
     ENERGY_STORAGE_DEVICE_TYPES,
     device_type_of,
+    is_battery_control_enabled,
     is_control_capable_device_type,
     is_modbus_entry,
     mask_sn,
@@ -119,8 +121,6 @@ _BATTERY_MODES = ("idle", "charge", "discharge", "self_consume")
 
 def _register_set_battery_mode_service(hass: HomeAssistant) -> None:
     """Register hyxi_cloud.set_battery_mode."""
-    from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
-
     hass.services.async_register(
         DOMAIN,
         "set_battery_mode",
@@ -145,10 +145,6 @@ def _register_set_battery_mode_service(hass: HomeAssistant) -> None:
 
 async def _async_handle_set_battery_mode(call) -> None:
     """Send a battery mode command to every inverter the call targets."""
-    from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID
-    from homeassistant.exceptions import ServiceValidationError
-
-    from .const import is_battery_control_enabled
     from .control import async_send_battery_mode, preflight_battery_mode
 
     hass = call.hass

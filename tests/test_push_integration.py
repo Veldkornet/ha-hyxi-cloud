@@ -508,10 +508,10 @@ async def test_button_press_renew(mock_coordinator, mock_entry):
 
         with (
             patch(
-                "custom_components.hyxi_cloud.subscriptions._async_teardown_push_subscription"
+                "custom_components.hyxi_cloud.button._async_teardown_push_subscription"
             ) as mock_teardown_push,
             patch(
-                "custom_components.hyxi_cloud.subscriptions._async_teardown_alarm_subscription"
+                "custom_components.hyxi_cloud.button._async_teardown_alarm_subscription"
             ) as mock_teardown_alarm,
             patch(
                 "custom_components.hyxi_cloud.subscriptions._async_setup_push_subscription"
@@ -692,7 +692,7 @@ async def test_button_press_renew_error(mock_coordinator, mock_entry):
         button.hass = hass
 
         with patch(
-            "custom_components.hyxi_cloud.subscriptions._async_teardown_push_subscription",
+            "custom_components.hyxi_cloud.button._async_teardown_push_subscription",
             side_effect=RuntimeError("teardown blew up"),
         ):
             with pytest.raises(

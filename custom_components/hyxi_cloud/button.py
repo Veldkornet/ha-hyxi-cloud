@@ -42,6 +42,11 @@ from .control import (
 )
 from .coordinator import HyxiConfigEntry
 from .entity import HyxiEntity, device_entities
+from .subscriptions import (
+    _async_sync_subscriptions,
+    _async_teardown_alarm_subscription,
+    _async_teardown_push_subscription,
+)
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -546,12 +551,6 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
         local code even if the remote cancel fails, since this is an
         explicit user action -- an old subscription HYXI still holds stays
         listed on the Subscription Status sensor for manual cancelling."""
-        from .subscriptions import (
-            _async_sync_subscriptions,
-            _async_teardown_alarm_subscription,
-            _async_teardown_push_subscription,
-        )
-
         _LOGGER.info("Manually triggered HYXI push subscription renewal (data + alarm)")
         try:
             # Tear down old subscriptions first, forcing a local reset even
