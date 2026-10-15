@@ -45,6 +45,7 @@ from .const import (
     is_modbus_entry,
     is_null_value,
     is_zero_value,
+    mask_sensitive_key_value,
     mask_sn,
     modbus_service_device_info,
     normalize_device_type,
@@ -1249,32 +1250,7 @@ def _log_device_processing(sn: str, device_type: str, metrics: dict) -> None:
     if not _LOGGER.isEnabledFor(logging.DEBUG):
         return
 
-    logged_metrics = {
-        k: (
-            mask_sn(str(v))
-            if k
-            in {
-                "deviceSn",
-                "parentSn",
-                "batSn",
-                "emsSn",
-                "alias",
-                "plantId",
-                "gprsImei",
-                "plantAddress",
-                "plantName",
-                "deviceName",
-                "alarmName",
-                "token",
-                "access_token",
-                "refresh_token",
-                "password",
-            }
-            and v is not None
-            else v
-        )
-        for k, v in metrics.items()
-    }
+    logged_metrics = {k: mask_sensitive_key_value(k, v) for k, v in metrics.items()}
 
     _LOGGER.debug(
         "HYXI Processing Device %s (Normalized Type: %s). Metrics: %s",

@@ -444,35 +444,51 @@ def mask_url(url: str | None) -> str:
         return "https://[MASKED_DOMAIN]/api/webhook/hyxi_cloud_***"
 
 
-def mask_sensitive_key_value(key: str, value: Any) -> Any:
-    """Check if key contains sensitive info (SN, plant ID, IMEI, alias, address, etc.) and mask it."""
-    if value is None:
-        return None
-
-    sensitive_exact = {
+# Sensitive device fields besides the serial, plant ID and IMEI fields
+# is_sensitive_key matches by name.
+_SENSITIVE_KEYS = frozenset(
+    {
         "alias",
         "plantaddress",
         "plantname",
         "devicename",
         "alarmname",
-        "gprsimei",
-        "sn",
-        "plantid",
-        "parentsn",
-        "devicesn",
-        "batsn",
-        "emssn",
     }
+)
+# Secrets, never shown even masked.
+_CREDENTIAL_KEYS = frozenset({"token", "access_token", "refresh_token", "password"})
+# What a credential is shown as.
+CREDENTIAL_MASK = "**REDACTED**"
 
+
+def is_serial_key(key: Any) -> bool:
+    """Whether a device field holds a serial number, matched
+    case-insensitively."""
+    return str(key).lower().endswith("sn")
+
+
+def is_sensitive_key(key: Any) -> bool:
+    """Whether a device field holds an identifier (SN, plant ID, IMEI, alias,
+    address, etc.) or a secret, matched case-insensitively."""
     key_lower = str(key).lower()
-    if (
-        key_lower in sensitive_exact
-        or key_lower.endswith("sn")
+    return (
+        key_lower in _SENSITIVE_KEYS
+        or key_lower in _CREDENTIAL_KEYS
+        or is_serial_key(key)
         or "plantid" in key_lower
         or "imei" in key_lower
-    ):
-        return mask_sn(str(value))
+    )
 
+
+def mask_sensitive_key_value(key: str, value: Any) -> Any:
+    """Mask the value if its key holds sensitive info (see is_sensitive_key),
+    or hide it entirely if it is a credential."""
+    if value is None:
+        return None
+    if str(key).lower() in _CREDENTIAL_KEYS:
+        return CREDENTIAL_MASK
+    if is_sensitive_key(key):
+        return mask_sn(str(value))
     return value
 
 

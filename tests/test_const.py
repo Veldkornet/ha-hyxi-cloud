@@ -352,6 +352,10 @@ def test_mask_sensitive_key_value():
     # 6. Check different types of values
     assert mask_sensitive_key_value("sn", 12345) == mask_sn("12345")
 
+    # 7. Credentials are hidden entirely, not hashed
+    for key in ("token", "access_token", "refresh_token", "Password"):
+        assert mask_sensitive_key_value(key, "secret-123") == "**REDACTED**"
+
 
 def test_resolve_base_url():
     """Verify each region resolves to its documented HYXI Cloud server."""
