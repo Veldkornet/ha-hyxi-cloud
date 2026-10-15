@@ -31,6 +31,24 @@ This project uses modern CI/CD to keep the code clean and secure.
    - *Note: PRs containing hardcoded secrets or insecure Python patterns will be blocked.*
 5. **Testing:** If you add a new sensor, ensure it has a `device_class`, `state_class`, and appropriate units.
 
+## 🧪 Running the Tests
+
+CI runs two separate suites and then checks their combined coverage, which must stay at 100%:
+
+```bash
+uv sync --extra test
+uv run pytest tests/ --ignore=tests/integration -p no:warnings --cov --cov-report=
+HYXI_INTEGRATION_TEST=1 uv run pytest tests/integration -p no:warnings --cov --cov-append --cov-report=
+uv run coverage report -m --fail-under=100
+uv run mypy --config-file mypy.ini
+```
+
+- `tests/` holds fast unit tests with Home Assistant mocked out; `tests/integration/` runs against a real Home Assistant. Run them separately as above: running a single unit test file alone, or both suites together, can fail in ways CI doesn't.
+- A change to anything Home Assistant shows or checks itself (entity states and attributes, setup and options screens, reloads, reauthentication) needs a test in `tests/integration/`.
+- New text shown in Home Assistant goes in `strings.json` and in every file under `translations/`.
+
+[AGENTS.md](AGENTS.md) has more detail on the layout and conventions.
+
 ## 🔖 Releasing (Version Bumps)
 
 `manifest.json`'s `version` field is the only version string you ever edit by hand. Everything else derives from it automatically:
