@@ -21,19 +21,19 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.hyxi_cloud.__init__ import (
-    _async_register_devices,
-    _migrate_energy_manager_inverter_sn,
-    _migrate_hybrid_battery_serial,
-    _migrate_hybrid_inverter_serial,
-    _migrate_hybrid_serial_decoding,
-    _reconstruct_pre_fix_battery_serial,
-)
 from custom_components.hyxi_cloud.const import (
     CONF_EM_INVERTER_SN,
     CONF_TRANSPORT,
     DOMAIN,
     TRANSPORT_MODBUS,
+)
+from custom_components.hyxi_cloud.devices import _async_register_devices
+from custom_components.hyxi_cloud.migrations import (
+    _migrate_energy_manager_inverter_sn,
+    _migrate_hybrid_battery_serial,
+    _migrate_hybrid_inverter_serial,
+    _migrate_hybrid_serial_decoding,
+    _reconstruct_pre_fix_battery_serial,
 )
 
 # The exact values used throughout this session's investigation: a real

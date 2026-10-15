@@ -6,14 +6,14 @@ import probatio as vol
 import pytest
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
-from custom_components.hyxi_cloud import (
-    DOMAIN,
-    SubscriptionError,
+from custom_components.hyxi_cloud.const import DOMAIN
+from custom_components.hyxi_cloud.services import (
     _battery_mode_row,
     _energy_manager_manages,
     _resolve_battery_mode_targets,
     setup_services,
 )
+from custom_components.hyxi_cloud.subscriptions import SubscriptionError
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +22,7 @@ def loaded():
     without setting real entries up."""
     coordinators: dict = {}
     with patch(
-        "custom_components.hyxi_cloud._loaded_coordinators",
+        "custom_components.hyxi_cloud.services._loaded_coordinators",
         return_value=coordinators,
     ):
         yield coordinators
@@ -238,8 +238,12 @@ def battery_mode_env(hass, mock_coordinator, mock_entry, loaded):
     dev_reg.async_get.return_value = _fake_device()
     ent_reg = MagicMock()
     with (
-        patch("custom_components.hyxi_cloud.dr.async_get", return_value=dev_reg),
-        patch("custom_components.hyxi_cloud.er.async_get", return_value=ent_reg),
+        patch(
+            "custom_components.hyxi_cloud.services.dr.async_get", return_value=dev_reg
+        ),
+        patch(
+            "custom_components.hyxi_cloud.services.er.async_get", return_value=ent_reg
+        ),
         patch(
             "custom_components.hyxi_cloud.control.async_send_battery_mode",
             new_callable=AsyncMock,
@@ -352,7 +356,7 @@ async def test_set_battery_mode_force_overrides_the_energy_manager(battery_mode_
 @pytest.mark.usefixtures("cloud_battery_control")
 async def test_set_battery_mode_resolves_an_entity_target(battery_mode_env):
     hass, coordinator, _entry, send = battery_mode_env
-    with patch("custom_components.hyxi_cloud.er.async_get") as ent_reg_get:
+    with patch("custom_components.hyxi_cloud.services.er.async_get") as ent_reg_get:
         ent_reg_get.return_value.async_get.return_value = MagicMock(device_id="dev1")
         await hass.services.async_call(
             DOMAIN,
@@ -377,8 +381,13 @@ def test_resolve_battery_mode_targets_skips_unknown_and_foreign_devices(
     dev_reg = MagicMock()
     dev_reg.async_get.side_effect = [None, unknown, not_polled]
     with (
-        patch("custom_components.hyxi_cloud.dr.async_get", return_value=dev_reg),
-        patch("custom_components.hyxi_cloud.er.async_get", return_value=MagicMock()),
+        patch(
+            "custom_components.hyxi_cloud.services.dr.async_get", return_value=dev_reg
+        ),
+        patch(
+            "custom_components.hyxi_cloud.services.er.async_get",
+            return_value=MagicMock(),
+        ),
     ):
         rows = _resolve_battery_mode_targets(hass, {"a", "b", "c"}, set())
     assert rows == []

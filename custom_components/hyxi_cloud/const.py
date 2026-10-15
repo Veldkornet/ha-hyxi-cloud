@@ -307,6 +307,19 @@ CONF_PUSH_RATE = "realtime_push_rate"
 CONF_PUSH_URL = "realtime_push_url"
 DEFAULT_PUSH_RATE = 10  # 10 seconds (converted to ms at SDK call site)
 
+# Entry data keys of the real-time and alarm push: each one's webhook ID, its
+# subscription code, and the fingerprint of what the subscription was made
+# with.
+DATA_PUSH_WEBHOOK_ID = "webhook_id"
+DATA_ALARM_WEBHOOK_ID = "alarm_webhook_id"
+DATA_PUSH_SUBSCRIBE_CODE = "push_subscribe_code"
+DATA_ALARM_SUBSCRIBE_CODE = "alarm_subscribe_code"
+DATA_PUSH_SUBSCRIBE_FINGERPRINT = "push_subscribe_fingerprint"
+DATA_ALARM_SUBSCRIBE_FINGERPRINT = "alarm_subscribe_fingerprint"
+# Entry data key of the legacy webhooks still in use: webhook ID key -> the
+# subscription code made with the legacy ID (None if there was none).
+DATA_LEGACY_WEBHOOKS = "legacy_webhooks"
+
 NULL_VALUES = {"", "null", "none", "na", "--"}
 
 # Metric keys whose sensors belong to the battery pack rather than the

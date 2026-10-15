@@ -7,12 +7,12 @@ import pytest
 from homeassistant.core import HomeAssistant
 from hyxi_cloud_api import HyxiApiClient, Subscription, SubscriptionType
 
-from custom_components.hyxi_cloud import _compute_subscription_fingerprint
 from custom_components.hyxi_cloud.const import (
     CONF_ENABLE_PUSH,
     CONF_PUSH_URL,
     DEFAULT_PUSH_RATE,
 )
+from custom_components.hyxi_cloud.subscriptions import _compute_subscription_fingerprint
 from tests.integration.entries import accept_subscriptions, cloud_entry, serve_devices
 
 BASE_URL = "https://hyxi.example"
