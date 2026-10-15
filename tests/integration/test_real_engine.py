@@ -2241,6 +2241,30 @@ async def test_a_hung_decision_falls_back_to_self_consume(hass: HomeAssistant):
 
 
 @pytest.mark.asyncio
+async def test_a_cut_off_mode_write_leaves_the_mode_unknown(hass: HomeAssistant):
+    """A mode write cut off midway leaves both the current mode and its
+    trace unknown, so a late result for the earlier send isn't taken as the
+    current mode's."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    engine._current_mode = "self_consume"
+    engine._current_mode_trace_id = "earlier-send"
+
+    async def hung_write(*_args):
+        await asyncio.Event().wait()
+
+    coordinator.client.set_mode_charge.side_effect = hung_write
+    write = hass.async_create_task(engine._set_mode("charge", 1000))
+    await asyncio.sleep(0)
+    write.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await write
+
+    assert engine._current_mode is None
+    assert engine._current_mode_trace_id is None
+    engine.stop()
+
+
+@pytest.mark.asyncio
 async def test_disabling_waits_for_a_running_decision(hass: HomeAssistant):
     """Turning the EM off doesn't switch modes while a decision is still
     sending one; it forces self_consume once that decision finishes."""

@@ -729,6 +729,7 @@ class EnergyManagerEngine:
             # Cut off by a time limit or a stop, the write may still have
             # reached the inverter.
             self._current_mode = None
+            self._current_mode_trace_id = None
             raise
         except HyxiApiClient.ControlNotForwardedError as err:
             self._control_not_forwarded("mode", mode, err)
