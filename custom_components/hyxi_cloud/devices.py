@@ -1,7 +1,5 @@
 """Device registry entries for a HYXI config entry's devices."""
 
-import logging
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -11,8 +9,6 @@ from .const import (
     MANUFACTURER,
 )
 from .coordinator import HyxiDataUpdateCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 
 def _link_battery_device(
