@@ -275,7 +275,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
     _remove_bms_alarm_sensors(hass, entry)
     _retire_cloud_battery_control(hass, entry, coordinator)
     _cleanup_control_entities(hass, entry, coordinator)
-    await _async_setup_battery_protection(hass, coordinator)
+    await _async_setup_battery_protection(hass, coordinator, coordinator.data)
     _async_setup_energy_manager(hass, entry, coordinator)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -358,29 +358,44 @@ def _track_new_devices(
         if not added:
             return
         known.update(added)
-        if (
-            entry.options.get(CONF_EM_ENABLED)
-            and entry.options.get(CONF_EM_INVERTER_SN) in added
-        ):
-            _LOGGER.info("HYXI found the Energy Manager's inverter; reloading")
-            hass.config_entries.async_schedule_reload(entry.entry_id)
-            return
-        _LOGGER.info("HYXI found %d new device(s); adding them", len(added))
-        new = {sn: coordinator.data[sn] for sn in added}
-        _async_register_devices(hass, entry, coordinator)
-        async_dispatcher_send(hass, new_devices_signal(entry), new)
-        entry.async_create_task(
-            hass, _async_setup_battery_protection(hass, coordinator, new)
+        _async_add_new_devices(
+            hass, entry, coordinator, {sn: coordinator.data[sn] for sn in added}
         )
-        if entry.options.get(CONF_ENABLE_PUSH) is True:
-            entry.async_create_task(
-                hass, _async_sync_subscriptions(hass, entry, coordinator)
-            )
 
     # The discovery coordinator has no entities; this listener is also what
     # keeps it on its schedule.
     entry.async_on_unload(discovery.async_add_listener(_on_discovery))
     entry.async_on_unload(coordinator.async_add_listener(_on_poll))
+
+
+@callback
+def _async_add_new_devices(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+    new: dict[str, dict],
+) -> None:
+    """Register devices a poll added, signal the platforms to add their
+    entities, start their battery protection and renew the push
+    subscription to cover them; or reload, if one is the Energy Manager's
+    inverter."""
+    if (
+        entry.options.get(CONF_EM_ENABLED)
+        and entry.options.get(CONF_EM_INVERTER_SN) in new
+    ):
+        _LOGGER.info("HYXI found the Energy Manager's inverter; reloading")
+        hass.config_entries.async_schedule_reload(entry.entry_id)
+        return
+    _LOGGER.info("HYXI found %d new device(s); adding them", len(new))
+    _async_register_devices(hass, entry, coordinator)
+    async_dispatcher_send(hass, new_devices_signal(entry), new)
+    entry.async_create_task(
+        hass, _async_setup_battery_protection(hass, coordinator, new)
+    )
+    if entry.options.get(CONF_ENABLE_PUSH) is True:
+        entry.async_create_task(
+            hass, _async_sync_subscriptions(hass, entry, coordinator)
+        )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool:
@@ -1502,10 +1517,9 @@ def _cleanup_control_entities(
 async def _async_setup_battery_protection(
     hass: HomeAssistant,
     coordinator: HyxiDataUpdateCoordinator,
-    devices: dict[str, dict] | None = None,
+    devices: dict[str, dict],
 ) -> None:
-    """Start battery protection on supported battery control devices: the
-    given new ones, or all of the coordinator's."""
+    """Start battery protection on those of `devices` it supports."""
     from .const import is_battery_control_enabled
 
     if not is_battery_control_enabled(coordinator.entry):
@@ -1514,7 +1528,7 @@ async def _async_setup_battery_protection(
 
     tasks = []
     task_sns = []
-    for sn, dev_data in (coordinator.data if devices is None else devices).items():
+    for sn, dev_data in devices.items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if not is_control_capable_device_type(coordinator.entry, device_type):
             _LOGGER.debug(

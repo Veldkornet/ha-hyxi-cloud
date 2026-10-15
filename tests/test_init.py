@@ -697,7 +697,7 @@ async def test_async_setup_battery_protection_logs_and_continues_on_start_failur
         caplog.set_level(logging.WARNING)
         # Must not raise -- a single device's failed start no longer takes
         # the whole config entry down.
-        await _async_setup_battery_protection(mock_hass, coordinator)
+        await _async_setup_battery_protection(mock_hass, coordinator, coordinator.data)
 
     # The controller stays registered (not cleaned up) so the coordinator's
     # own listener keeps it retrying on future refreshes.
@@ -719,7 +719,7 @@ async def test_async_setup_battery_protection_disabled_is_noop(mock_hass, mock_e
     coordinator.protection_controllers = {}
     coordinator.data = {"SN123": {"device_type_code": "1", "model": "H10K-HT"}}
 
-    await _async_setup_battery_protection(mock_hass, coordinator)
+    await _async_setup_battery_protection(mock_hass, coordinator, coordinator.data)
 
     assert not coordinator.protection_controllers
 
@@ -750,7 +750,7 @@ async def test_async_setup_battery_protection_isolates_sibling_failures(
 
     with patch.object(HyxiBatteryProtectionController, "async_start", fake_start):
         # Must not raise -- SN_FAIL's failure is isolated to itself.
-        await _async_setup_battery_protection(mock_hass, coordinator)
+        await _async_setup_battery_protection(mock_hass, coordinator, coordinator.data)
 
     assert "SN_FAIL" in coordinator.protection_controllers
     assert "SN_OK" in coordinator.protection_controllers
@@ -1848,7 +1848,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
         "SN123": {"device_type_code": "1", "phase_type": "invalid_phase"}
     }
     # Should complete without error and not create a protection controller
-    await _async_setup_battery_protection(mock_hass, coordinator)
+    await _async_setup_battery_protection(mock_hass, coordinator, coordinator.data)
     assert not coordinator.protection_controllers
 
     # 12. Cleanup control entities (lines 242, 277-283)
