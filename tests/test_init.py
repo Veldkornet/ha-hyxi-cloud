@@ -389,16 +389,15 @@ async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
-        error = ConfigEntryAuthFailed("keys rejected")
-        mock_coordinator.async_config_entry_first_refresh = AsyncMock(side_effect=error)
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock(
+            side_effect=ConfigEntryAuthFailed
+        )
 
         with patch("custom_components.hyxi_cloud._LOGGER.error") as mock_logger:
             with pytest.raises(ConfigEntryAuthFailed):
                 await async_setup_entry(mock_hass, mock_entry)
 
-            mock_logger.assert_called_with(
-                "Authentication failed during setup: %s", error
-            )
+            mock_logger.assert_called_with("Authentication failed during setup")
 
 
 @pytest.mark.asyncio

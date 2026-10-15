@@ -232,8 +232,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
         if discovery is not None:
             await _async_first_discovery(discovery, coordinator)
         await coordinator.async_config_entry_first_refresh()
-    except ConfigEntryAuthFailed as err:
-        _LOGGER.error("Authentication failed during setup: %s", err)
+    except ConfigEntryAuthFailed:
+        _LOGGER.error("Authentication failed during setup")
         raise
     except (
         UpdateFailed,
