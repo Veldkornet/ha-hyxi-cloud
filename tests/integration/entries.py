@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
-from hyxi_cloud_api import DiscoveryResult
+from hyxi_cloud_api import DiscoveryResult, SubscribeResult
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY, DOMAIN
@@ -50,14 +50,10 @@ def accept_subscriptions(
     the given codes."""
     client.subscribe_real_time_data.side_effect = None
     client.subscribe_alarm.side_effect = None
-    client.subscribe_real_time_data.return_value = {
-        "success": True,
-        "data": {"subscribeCode": push_code},
-    }
-    client.subscribe_alarm.return_value = {
-        "success": True,
-        "data": {"subscribeCode": alarm_code},
-    }
+    client.subscribe_real_time_data.return_value = SubscribeResult(
+        subscribe_code=push_code
+    )
+    client.subscribe_alarm.return_value = SubscribeResult(subscribe_code=alarm_code)
 
 
 def seed_cache(hass_storage: dict, entry, devices: dict) -> None:

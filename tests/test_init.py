@@ -1,6 +1,7 @@
 """Tests for the initial setup of the HYXI Cloud integration."""
 
 import sys
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -1716,12 +1717,12 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
 
     # Success response from real time subscription
     coordinator.client.subscribe_real_time_data = AsyncMock(
-        return_value={"success": True, "data": {"subscribeCode": "sub_code_123"}}
+        return_value=SimpleNamespace(subscribe_code="sub_code_123")
     )
 
     # Success response from alarm subscription
     coordinator.client.subscribe_alarm = AsyncMock(
-        return_value={"success": True, "data": {"subscribeCode": "alarm_code_123"}}
+        return_value=SimpleNamespace(subscribe_code="alarm_code_123")
     )
 
     # Mock resolves webhook URL successfully

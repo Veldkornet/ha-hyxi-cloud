@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.core import HomeAssistant
+from hyxi_cloud_api import SubscribeResult
 
 from custom_components.hyxi_cloud.const import (
     CONF_ACCESS_KEY,
@@ -34,14 +35,12 @@ def clients():
         entry_client = AsyncMock()
         entry_client.compute_derived_metrics = MagicMock(return_value={})
         entry_client.list_subscriptions.return_value = []
-        entry_client.subscribe_real_time_data.return_value = {
-            "success": True,
-            "data": {"subscribeCode": "new-data"},
-        }
-        entry_client.subscribe_alarm.return_value = {
-            "success": True,
-            "data": {"subscribeCode": "new-alarm"},
-        }
+        entry_client.subscribe_real_time_data.return_value = SubscribeResult(
+            subscribe_code="new-data"
+        )
+        entry_client.subscribe_alarm.return_value = SubscribeResult(
+            subscribe_code="new-alarm"
+        )
         serve_devices(entry_client, _DEVICES)
         entry_cls.return_value = entry_client
         yield entry_client

@@ -7,7 +7,12 @@ import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from hyxi_cloud_api import HyxiApiClient, Subscription, SubscriptionType
+from hyxi_cloud_api import (
+    HyxiApiClient,
+    SubscribeResult,
+    Subscription,
+    SubscriptionType,
+)
 
 from custom_components.hyxi_cloud.const import (
     CONF_ENABLE_PUSH,
@@ -198,14 +203,10 @@ def _subscription(code, subscribe_type, devices, url="https://old.example/cb"):
 
 async def _setup_with_push(hass: HomeAssistant, client, held):
     client.list_subscriptions.return_value = held
-    client.subscribe_real_time_data.return_value = {
-        "success": True,
-        "data": {"subscribeCode": "new-data"},
-    }
-    client.subscribe_alarm.return_value = {
-        "success": True,
-        "data": {"subscribeCode": "new-alarm"},
-    }
+    client.subscribe_real_time_data.return_value = SubscribeResult(
+        subscribe_code="new-data"
+    )
+    client.subscribe_alarm.return_value = SubscribeResult(subscribe_code="new-alarm")
     entry = cloud_entry(hass)
     hass.config_entries.async_update_entry(
         entry,

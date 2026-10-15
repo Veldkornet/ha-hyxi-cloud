@@ -9,7 +9,7 @@ from aiohttp import ClientError
 from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from hyxi_cloud_api import HyxiApiClient, SubscriptionType
+from hyxi_cloud_api import HyxiApiClient, SubscribeResult, SubscriptionType
 
 from .const import (
     CONF_ENABLE_PUSH,
@@ -48,7 +48,7 @@ class _Channel:
     label: str
     subscription_type: SubscriptionType
     # The client's method that subscribes.
-    subscribe: Callable[[HyxiApiClient], Callable[..., Awaitable[dict]]]
+    subscribe: Callable[[HyxiApiClient], Callable[..., Awaitable[SubscribeResult]]]
     # Entry data keys.
     webhook_key: str
     code_key: str
@@ -329,7 +329,7 @@ async def _async_execute_subscription(  # pylint: disable=too-many-arguments, to
             device_sns,
             push_rate_ms,  # API expects milliseconds
         )
-        code = res["data"]["subscribeCode"]
+        code = res.subscribe_code
         _mark_active(coordinator, channel, code)
         fingerprint = _compute_subscription_fingerprint(
             webhook_url, device_sns, push_rate_ms
