@@ -152,6 +152,42 @@ def get_work_mode_button_keys() -> set[str]:
     raise AssertionError("WORK_MODE_ICONS not found in button.py")
 
 
+def get_credential_error_keys() -> set[str]:
+    """The error codes the config flow's credential check returns: those it
+    returns directly, and the wrong-key errors in const.py. Read from the
+    source rather than imported, like get_work_mode_button_keys."""
+    package = Path(__file__).parent / "../custom_components/hyxi_cloud"
+    keys: set[str] = set()
+    for node in ast.walk(ast.parse((package / "config_flow.py").read_text("utf-8"))):
+        if isinstance(node, ast.AsyncFunctionDef) and node.name == "_validate_input":
+            keys |= {
+                ret.value.value
+                for ret in ast.walk(node)
+                if isinstance(ret, ast.Return)
+                and isinstance(ret.value, ast.Constant)
+                and isinstance(ret.value.value, str)
+            }
+    for node in ast.parse((package / "const.py").read_text("utf-8")).body:
+        if (
+            isinstance(node, ast.Assign)
+            and any(getattr(t, "id", None) == "WRONG_KEY_KINDS" for t in node.targets)
+            and isinstance(node.value, ast.Dict)
+        ):
+            keys |= {ast.literal_eval(value)[1] for value in node.value.values}
+    return keys
+
+
+@pytest.mark.parametrize("lang_file", ["../strings.json", *get_all_languages()])
+def test_credential_errors_are_translated(lang_file):
+    """Every error the credential check can show, such as API keys of the
+    wrong kind, has a message in every language."""
+    keys = get_credential_error_keys()
+    assert {"invalid_auth", "vpp_keys", "plant_keys"} <= keys
+    errors = load_translation(lang_file)["config"]["error"]
+    for key in keys:
+        assert errors.get(key), f"Error '{key}' is missing from {lang_file}"
+
+
 @pytest.mark.parametrize("lang_file", get_all_languages())
 def test_work_mode_button_names_are_translated(lang_file):
     """Buttons have no code-key coverage above, so a missing name would only

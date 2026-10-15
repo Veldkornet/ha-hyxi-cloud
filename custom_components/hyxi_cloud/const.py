@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from homeassistant.const import Platform
 from homeassistant.helpers.device_registry import DeviceInfo
+from hyxi_cloud_api import AuthorizationType
 
 if TYPE_CHECKING:
     from modbus_connection import ModbusSerialParams, ModbusTcpParams
@@ -306,6 +307,21 @@ CONF_ENABLE_PUSH = "enable_realtime_push"
 CONF_PUSH_RATE = "realtime_push_rate"
 CONF_PUSH_URL = "realtime_push_url"
 DEFAULT_PUSH_RATE = 10  # 10 seconds (converted to ms at SDK call site)
+
+# API keys of another kind than the User Authorization keys the integration
+# reads the devices with: each kind's name, as on HYXI's developer site, and
+# its config flow error.
+WRONG_KEY_KINDS = {
+    AuthorizationType.VPP: ("VPP", "vpp_keys"),
+    AuthorizationType.PLANT: ("Plant", "plant_keys"),
+}
+
+
+def wrong_key_error(kind: AuthorizationType | None) -> str | None:
+    """The config flow error for API keys HYXI reports as this kind, or None
+    for User Authorization keys or keys whose kind it doesn't report."""
+    return WRONG_KEY_KINDS[kind][1] if kind in WRONG_KEY_KINDS else None
+
 
 # Entry data keys of the real-time and alarm push: each one's webhook ID, its
 # subscription code, and the fingerprint of what the subscription was made

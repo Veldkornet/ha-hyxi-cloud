@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "HYXI sunucularına bağlanılamadı",
       "invalid_auth": "Geçersiz Erişim Anahtarı veya Gizli Anahtar",
+      "vpp_keys": "Bunlar VPP yetkilendirmeli API anahtarlarıdır. Bu entegrasyon kullanıcı yetkilendirmeli anahtarlar gerektirir: bunları open.hyxicloud.com üzerindeki kendi geliştirici hesabınızda oluşturun.",
+      "plant_keys": "Bunlar santral yetkilendirmeli API anahtarlarıdır. Bu entegrasyon kullanıcı yetkilendirmeli anahtarlar gerektirir: bunları open.hyxicloud.com üzerindeki kendi geliştirici hesabınızda oluşturun.",
       "unknown": "Beklenmedik bir hata oluştu",
       "no_devices": "Herhangi bir santral veya cihaz bulunamadı. Geliştirici e-posta adresiniz uygulama e-posta adresinizden farklıysa, öncelikle santralinizi uygulamadan geliştirici e-posta adresinizle paylaşmalısınız.",
       "no_device": "Hatta hiçbir şey yanıt vermedi. Kablolamayı, slave adresini ve baud hızını kontrol edin.",

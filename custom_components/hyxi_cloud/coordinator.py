@@ -14,12 +14,18 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from hyxi_cloud_api import DiscoveryResult, HyxiApiClient, HyxiAuthError, Subscription
+from hyxi_cloud_api import (
+    DiscoveryResult,
+    HyxiApiClient,
+    HyxiAuthError,
+    Subscription,
+)
 
 from .const import (
     CONF_BACK_DISCOVERY,
     DEFAULT_MODBUS_INTERVAL,
     DOMAIN,
+    WRONG_KEY_KINDS,
     get_raw_device_code,
     get_software_version,
     is_modbus_entry,
@@ -59,22 +65,39 @@ DISCOVERY_INTERVAL = timedelta(hours=1)
 DISCOVERY_RETRY = timedelta(minutes=5)
 
 
-async def _with_auth_recheck[T](fetch: Callable[[], Awaitable[T]]) -> T:
-    """Run fetch, raising ConfigEntryAuthFailed only if HYXI rejects the API
-    keys on two attempts in a row."""
+async def _with_auth_recheck[T](
+    client: HyxiApiClient, fetch: Callable[[], Awaitable[T]]
+) -> T:
+    """Run fetch with a token for the API keys, raising ConfigEntryAuthFailed
+    if HYXI reports them as another kind than User Authorization keys, or
+    rejects them on two attempts in a row."""
     try:
-        return await fetch()
+        return await _fetch_with_user_keys(client, fetch)
     except HyxiAuthError:
         _LOGGER.warning(
             "HYXI Cloud rejected the API keys; retrying in %ss", AUTH_RECHECK_DELAY
         )
     await asyncio.sleep(AUTH_RECHECK_DELAY)
     try:
-        return await fetch()
+        return await _fetch_with_user_keys(client, fetch)
     except HyxiAuthError as err:
         raise ConfigEntryAuthFailed(
             "HYXI Cloud rejected the access/secret key"
         ) from err
+
+
+async def _fetch_with_user_keys[T](
+    client: HyxiApiClient, fetch: Callable[[], Awaitable[T]]
+) -> T:
+    """Get a token, refuse API keys of another kind than User Authorization
+    keys before using them, and run fetch."""
+    await client.ensure_token()
+    if wrong := WRONG_KEY_KINDS.get(client.authorization_type):
+        raise ConfigEntryAuthFailed(
+            f"HYXI reports these as {wrong[0]} Authorization API keys; "
+            "the integration needs User Authorization keys"
+        )
+    return await fetch()
 
 
 def device_store_key(entry_id: str) -> str:
@@ -308,7 +331,9 @@ class HyxiDataUpdateCoordinator(DataUpdateCoordinator):
             if attempt > 1:
                 await asyncio.sleep((attempt - 1) * POLL_RETRY_DELAY)
             try:
-                devices = await _with_auth_recheck(self.client.poll_devices)
+                devices = await _with_auth_recheck(
+                    self.client, self.client.poll_devices
+                )
             except (ClientError, TimeoutError) as err:
                 _LOGGER.debug(
                     "HYXI poll attempt %d/%d failed: %s", attempt, POLL_ATTEMPTS, err
@@ -465,9 +490,10 @@ class HyxiDiscoveryCoordinator(DataUpdateCoordinator[DiscoveryResult]):
         allow_back_discovery = self.entry.options.get(CONF_BACK_DISCOVERY, False)
         try:
             result = await _with_auth_recheck(
+                self.client,
                 lambda: self.client.discover_devices(
                     allow_back_discovery=allow_back_discovery
-                )
+                ),
             )
         except (ClientError, TimeoutError) as err:
             raise UpdateFailed(f"HYXI device discovery failed: {err}") from err

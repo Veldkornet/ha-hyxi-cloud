@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Connessione ai server HYXI non riuscita",
       "invalid_auth": "Chiave di accesso o chiave segreta non valida",
+      "vpp_keys": "Queste sono chiavi API con autorizzazione VPP. Questa integrazione richiede chiavi con autorizzazione utente: creale nel tuo account sviluppatore su open.hyxicloud.com.",
+      "plant_keys": "Queste sono chiavi API con autorizzazione impianto. Questa integrazione richiede chiavi con autorizzazione utente: creale nel tuo account sviluppatore su open.hyxicloud.com.",
       "unknown": "Si è verificato un errore imprevisto",
       "no_devices": "Nessun impianto o dispositivo trovato. Se l'e-mail dello sviluppatore differisce da quella dell'app, devi prima condividere il tuo impianto dall'app all'e-mail dello sviluppatore.",
       "no_device": "Nessuna risposta sul bus. Controlla il cablaggio, l'indirizzo slave e il baud rate.",

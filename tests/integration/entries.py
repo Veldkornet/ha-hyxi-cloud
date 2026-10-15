@@ -4,10 +4,12 @@ from unittest.mock import AsyncMock
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import DiscoveryResult
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY, DOMAIN
+from custom_components.hyxi_cloud.coordinator import device_store_key
 
 
 def cloud_entry(hass: HomeAssistant, access_key: str = "ak") -> MockConfigEntry:
@@ -55,4 +57,15 @@ def accept_subscriptions(
     client.subscribe_alarm.return_value = {
         "success": True,
         "data": {"subscribeCode": alarm_code},
+    }
+
+
+def seed_cache(hass_storage: dict, entry, devices: dict) -> None:
+    """Store a fresh device cache for the entry, as a previous run left it."""
+    key = device_store_key(entry.entry_id)
+    hass_storage[key] = {
+        "version": 1,
+        "minor_version": 1,
+        "key": key,
+        "data": {"cached_at": dt_util.utcnow().isoformat(), "devices": devices},
     }

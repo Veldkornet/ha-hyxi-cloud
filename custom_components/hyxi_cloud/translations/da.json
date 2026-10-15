@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Kunne ikke forbinde til HYXI-servere",
       "invalid_auth": "Ugyldig adgangsnøgle eller hemmelig nøgle",
+      "vpp_keys": "Dette er API-nøgler med VPP-autorisation. Denne integration kræver nøgler med brugerautorisation: opret dem under din egen udviklerkonto på open.hyxicloud.com.",
+      "plant_keys": "Dette er API-nøgler med anlægsautorisation. Denne integration kræver nøgler med brugerautorisation: opret dem under din egen udviklerkonto på open.hyxicloud.com.",
       "unknown": "Uventet fejl opstod",
       "no_devices": "Ingen anlæg eller enheder fundet. Hvis din udvikler-e-mail er forskellig fra din app-e-mail, skal du først dele dit anlæg fra appen til udvikler-e-mailen.",
       "no_device": "Intet svarede på bussen. Tjek kablingen, slaveadressen og baudraten.",

@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Nem sikerült csatlakozni a HYXI szerverekhez",
       "invalid_auth": "Érvénytelen hozzáférési kulcs vagy titkos kulcs",
+      "vpp_keys": "Ezek VPP-jogosultságú API-kulcsok. Ehhez az integrációhoz felhasználói jogosultságú kulcsok kellenek: hozd létre őket a saját fejlesztői fiókodban az open.hyxicloud.com oldalon.",
+      "plant_keys": "Ezek erőmű-jogosultságú API-kulcsok. Ehhez az integrációhoz felhasználói jogosultságú kulcsok kellenek: hozd létre őket a saját fejlesztői fiókodban az open.hyxicloud.com oldalon.",
       "unknown": "Váratlan hiba történt",
       "no_devices": "Nem található erőmű vagy eszköz. Ha a fejlesztői e-mail-címe eltér az alkalmazás e-mail-címétől, először meg kell osztania az erőművét az alkalmazásból a fejlesztői e-mail-címmel.",
       "no_device": "Semmi sem válaszolt a buszon. Ellenőrizd a vezetékezést, a slave címet és az átviteli sebességet.",

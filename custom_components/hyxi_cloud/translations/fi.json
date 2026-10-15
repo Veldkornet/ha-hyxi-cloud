@@ -94,6 +94,8 @@
     "error": {
       "cannot_connect": "Yhteys HYXI-palvelimiin epäonnistui",
       "invalid_auth": "Virheellinen Access Key tai Secret Key",
+      "vpp_keys": "Nämä ovat VPP-valtuutuksen API-avaimia. Tämä integraatio tarvitsee käyttäjävaltuutuksen avaimet: luo ne omalla kehittäjätililläsi osoitteessa open.hyxicloud.com.",
+      "plant_keys": "Nämä ovat voimalavaltuutuksen API-avaimia. Tämä integraatio tarvitsee käyttäjävaltuutuksen avaimet: luo ne omalla kehittäjätililläsi osoitteessa open.hyxicloud.com.",
       "unknown": "Tapahtui odottamaton virhe",
       "no_devices": "Laitoksia tai laitteita ei löytynyt. Jos kehittäjän sähköpostiosoitteesi eroaa sovelluksen sähköpostiosoitteesta, sinun on ensin jaettava laitoksesi sovelluksesta kehittäjän sähköpostiosoitteeseen.",
       "no_device": "Väylässä ei vastannut mikään. Tarkista johdotus, orjaosoite ja baudinopeus.",
