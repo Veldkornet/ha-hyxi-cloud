@@ -108,6 +108,8 @@ Setup probes the bus and picks the register map automatically (Hybrid or HALO). 
 
 Opening a bug report? Attach **debug logs**: **Settings → Devices & Services → HYXI → ⋮ → Enable debug logging**, wait 5–10 minutes, then **Disable debug logging** to download the file. Serial numbers, plant IDs, and your home address are masked automatically.
 
+The entry's **diagnostics** help too: **Settings → Devices & Services → HYXI → ⋮ → Download diagnostics**. They hold the entry's settings, connection and push status, subscriptions and the latest device data, with API keys, addresses, callback URLs, subscription codes and device names removed and serial numbers replaced by placeholders.
+
 Common issues — credentials, stale data, Modbus detection, push-subscription lockouts, Energy Manager status — are covered in the [Troubleshooting][wiki-troubleshooting] wiki.
 
 ## Disclaimer
