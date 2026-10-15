@@ -52,7 +52,13 @@ from .const import (
     mask_sn,
     normalize_device_type,
 )
-from .control import NOT_FORWARDED_PAUSE, NOT_FORWARDED_REASON, NotForwardedPause
+from .control import (
+    NOT_FORWARDED_PAUSE,
+    NOT_FORWARDED_REASON,
+    RUN_TIMEOUT,
+    CoalescingRunner,
+    NotForwardedPause,
+)
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -63,6 +69,11 @@ _LOGGER = logging.getLogger(__name__)
 # this many poll intervals old, and at least STALE_MIN_AGE.
 STALE_POLLS = 4
 STALE_MIN_AGE = timedelta(minutes=2)
+
+# Longest one decision may take, leaving the rest of its run's time limit for
+# the self_consume fallback; a control write still pending by then is
+# abandoned.
+DECISION_TIMEOUT = RUN_TIMEOUT / 2
 
 # The sun integration's fixed entity ID, read from in a few places below.
 _SUN_ENTITY_ID = "sun.sun"
@@ -131,7 +142,6 @@ class EnergyManagerEngine:
         self._last_decision: str = ""
         self._last_action: str = ""
         self._not_forwarded = NotForwardedPause()
-        self._in_decision: bool = False
         # Set while the coordinator's data is too old to act on.
         self._stale: bool = False
         # When the engine started, standing in for a last good poll until
@@ -139,7 +149,9 @@ class EnergyManagerEngine:
         self._started_at = dt_util.utcnow()
         # Set while decisions keep failing, so the traceback is logged once.
         self._decision_failing: bool = False
-        self._decision_tasks: set[asyncio.Task] = set()
+        self._decisions = CoalescingRunner(
+            hass, self._async_step, f"EM {mask_sn(config.sn)}: decision"
+        )
         self._last_fast_path_trigger: float = 0
         self._last_power_adjust: float = -999999.0
         self._last_charge_exit: float = 0
@@ -299,7 +311,7 @@ class EnergyManagerEngine:
             unsub()
         self._unsub_listeners.clear()
         control_verify.cancel_pending(self._verify_tasks)
-        control_verify.cancel_pending(self._decision_tasks)
+        self._decisions.cancel()
         self._clear_stale()
         _LOGGER.info("Energy Manager stopped for %s", mask_sn(self._sn))
         self._notify_sensors()
@@ -713,6 +725,11 @@ class EnergyManagerEngine:
 
             return True
 
+        except asyncio.CancelledError:
+            # Cut off by a time limit or a stop, the write may still have
+            # reached the inverter.
+            self._current_mode = None
+            raise
         except HyxiApiClient.ControlNotForwardedError as err:
             self._control_not_forwarded("mode", mode, err)
             return False
@@ -1026,7 +1043,8 @@ class EnergyManagerEngine:
     # ── Main decision engine ────────────────────────────────────────────
 
     async def _make_decision(self) -> None:
-        """Core decision logic. Called every EM_LOOP_INTERVAL seconds.
+        """Core decision logic, run by the loop every EM_LOOP_INTERVAL seconds
+        and by the fast paths.
 
         Priority order:
           1. Safety: SOC below minimum -> emergency charge
@@ -1036,66 +1054,57 @@ class EnergyManagerEngine:
           4b. Night preservation -> idle if SOC <= night target
           5. Solar optimization -> self_consume first, charge on sustained export
         """
-        if self._in_decision:
-            _LOGGER.debug(
-                "EM: Decision engine already executing, skipping concurrent run"
-            )
+        # Read soc_min/soc_max from EXISTING protection number entities
+        solar = self._get_solar()
+        s = DecisionState(
+            soc=self._get_soc(),
+            solar=solar,
+            p1=self._get_p1(),
+            home_load=self._get_home_load(),
+            soc_min=self._get_protection_param("soc_min", 20),
+            soc_max=self._get_protection_param("soc_max", 90),
+            max_charge=self._get_param("max_charge_power"),
+            max_discharge=self._get_param("max_discharge_power"),
+            is_night=self._is_night(),
+            solar_producing=solar > 50,
+            night_soc_target=self._soc_needed_for_night(),
+        )
+
+        _LOGGER.debug(
+            "EM TICK: SOC=%.0f%% P1=%.0fW solar=%.0fW load=%.0fW "
+            "night=%s night_target=%.0f%%",
+            s.soc,
+            s.p1,
+            s.solar,
+            s.home_load,
+            s.is_night,
+            s.night_soc_target,
+        )
+
+        # PRIORITY 1 & 2: SOC safety limits
+        if await self._check_soc_limits(s):
             return
-        self._in_decision = True
-        try:
-            # Read soc_min/soc_max from EXISTING protection number entities
-            solar = self._get_solar()
-            s = DecisionState(
-                soc=self._get_soc(),
-                solar=solar,
-                p1=self._get_p1(),
-                home_load=self._get_home_load(),
-                soc_min=self._get_protection_param("soc_min", 20),
-                soc_max=self._get_protection_param("soc_max", 90),
-                max_charge=self._get_param("max_charge_power"),
-                max_discharge=self._get_param("max_discharge_power"),
-                is_night=self._is_night(),
-                solar_producing=solar > 50,
-                night_soc_target=self._soc_needed_for_night(),
-            )
 
-            _LOGGER.debug(
-                "EM TICK: SOC=%.0f%% P1=%.0fW solar=%.0fW load=%.0fW "
-                "night=%s night_target=%.0f%%",
-                s.soc,
-                s.p1,
-                s.solar,
-                s.home_load,
-                s.is_night,
-                s.night_soc_target,
-            )
+        # PRIORITY 2b: Export limiting
+        if await self._check_export_limit(s):
+            return
 
-            # PRIORITY 1 & 2: SOC safety limits
-            if await self._check_soc_limits(s):
-                return
+        # PRIORITY 3: Sustained high load
+        if await self._check_high_load(s):
+            return
 
-            # PRIORITY 2b: Export limiting
-            if await self._check_export_limit(s):
-                return
+        # PRIORITY 4 & 4b: Night mode
+        if await self._check_night(s):
+            return
 
-            # PRIORITY 3: Sustained high load
-            if await self._check_high_load(s):
-                return
+        # PRIORITY 5: Solar optimization
+        if await self._check_solar(s):
+            return
 
-            # PRIORITY 4 & 4b: Night mode
-            if await self._check_night(s):
-                return
-
-            # PRIORITY 5: Solar optimization
-            if await self._check_solar(s):
-                return
-
-            # ── DEFAULT: self_consume as safe fallback ─────────────────────
-            self._set_decision("idle_default")
-            if self._current_mode in ("charge", "discharge"):
-                await self._set_mode("self_consume")
-        finally:
-            self._in_decision = False
+        # ── DEFAULT: self_consume as safe fallback ─────────────────────
+        self._set_decision("idle_default")
+        if self._current_mode in ("charge", "discharge"):
+            await self._set_mode("self_consume")
 
     async def _handle_low_soc(self, s: DecisionState) -> None:
         """SOC at/below minimum: emergency solar charge, grid-charge
@@ -1486,10 +1495,6 @@ class EnergyManagerEngine:
         )
         return dt_util.utcnow() - last_success
 
-    def _is_stale(self) -> bool:
-        """Whether the coordinator's data is too old to act on."""
-        return self._data_age() > self._stale_after()
-
     def _clear_stale(self) -> None:
         """Leave the stale state and remove its repair issue."""
         self._stale = False
@@ -1527,29 +1532,31 @@ class EnergyManagerEngine:
         em_entity = self._find_entity_id("switch", f"hyxi_{self._sn}_em_enabled")
         return bool(em_entity) and not self._get_ha_state_bool(em_entity, True)
 
-    async def _loop_tick(self, now) -> None:
-        """Decision loop timer callback."""
-        if not self._enabled:
-            return
+    @callback
+    def _loop_tick(self, now) -> None:
+        """Decision loop timer callback: take a step, or another once the
+        running one finishes."""
+        if self._enabled:
+            self._decisions.request()
 
+    async def _async_step(self) -> None:
+        """Force self_consume if switched off, pause on stale data, or
+        decide."""
         # Switched off: force self_consume, whether or not data is fresh.
         if self._switched_off():
             if self._stale:
                 self._clear_stale()
             self._set_decision("disabled")
-            if self._current_mode in ("charge", "discharge") and not self._in_decision:
+            if self._current_mode in ("charge", "discharge"):
                 _LOGGER.info(
                     "EM: Disabled — forcing self_consume from %s for %s",
                     self._current_mode,
                     mask_sn(self._sn),
                 )
-                self._in_decision = True
                 try:
                     await self._set_mode("self_consume")
                 except Exception:  # pylint: disable=broad-exception-caught
                     _LOGGER.debug("EM: Failed to force self_consume on disable")
-                finally:
-                    self._in_decision = False
             return
 
         if self._check_stale():
@@ -1559,7 +1566,8 @@ class EnergyManagerEngine:
     async def _async_decide_or_fall_back(self) -> None:
         """Make a decision; on any failure, fall back to self_consume."""
         try:
-            await self._make_decision()
+            async with asyncio.timeout(DECISION_TIMEOUT):
+                await self._make_decision()
         except Exception:  # pylint: disable=broad-exception-caught
             if self._decision_failing:
                 _LOGGER.debug("EM: Decision loop error", exc_info=True)
@@ -1576,16 +1584,6 @@ class EnergyManagerEngine:
                 _LOGGER.debug("EM: Fallback self_consume also failed")
         else:
             self._decision_failing = False
-
-    @callback
-    def _request_fast_path_decision(self) -> None:
-        """Decide now, outside the loop, unless the EM is switched off or the
-        data is stale; the task is cancelled if the EM stops."""
-        if self._switched_off() or self._is_stale():
-            return
-        task = self._hass.async_create_task(self._async_decide_or_fall_back())
-        self._decision_tasks.add(task)
-        task.add_done_callback(self._decision_tasks.discard)
 
     @callback
     def _on_p1_change(self, event) -> None:
@@ -1618,7 +1616,7 @@ class EnergyManagerEngine:
             now = time.monotonic()
             if now - self._last_fast_path_trigger >= 15:
                 self._last_fast_path_trigger = now
-                self._request_fast_path_decision()
+                self._decisions.request()
 
     @callback
     def _on_soc_change(self, event) -> None:
@@ -1640,7 +1638,7 @@ class EnergyManagerEngine:
             now = time.monotonic()
             if now - self._last_fast_path_trigger >= 15:
                 self._last_fast_path_trigger = now
-                self._request_fast_path_decision()
+                self._decisions.request()
 
     @callback
     def _update_night_estimate(self, now) -> None:

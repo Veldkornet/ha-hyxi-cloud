@@ -18,6 +18,7 @@ import pytest
 
 from custom_components.hyxi_cloud import control_verify
 from custom_components.hyxi_cloud.engine import EMEntityConfig, EnergyManagerEngine
+from tests import conftest
 
 _CONTROL_RESPONSE = {
     "success": True,
@@ -25,18 +26,10 @@ _CONTROL_RESPONSE = {
 }
 
 
-def _fake_async_create_task(coro):
-    """Stand in for HomeAssistant.async_create_task: don't run the
-    coroutine, but close it so an unawaited background task doesn't leave
-    a "coroutine was never awaited" RuntimeWarning behind."""
-    coro.close()
-    return MagicMock()
-
-
 def _build_engine(transport: str = "cloud") -> EnergyManagerEngine:
     """Build a real EnergyManagerEngine with a minimal mocked hass/coordinator."""
     hass = MagicMock()
-    hass.async_create_task = MagicMock(side_effect=_fake_async_create_task)
+    hass.async_create_task = MagicMock(side_effect=conftest.discard_task)
 
     coordinator = MagicMock()
     coordinator.entry = SimpleNamespace(
