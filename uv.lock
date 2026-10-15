@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.14.2, <3.15"
 
 [[package]]
@@ -1004,7 +1004,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.165.5" },
-    { name = "hyxi-cloud-api", specifier = "==1.5.4" },
+    { name = "hyxi-cloud-api", specifier = "==1.5.5" },
     { name = "modbus-connection", extras = ["tmodbus"], specifier = ">=4.10.0" },
     { name = "modbus-connection", extras = ["tmodbus"], marker = "extra == 'modbus'", specifier = ">=4.10.0" },
     { name = "mypy", marker = "extra == 'test'", specifier = ">=2.3.0" },
@@ -1246,14 +1246,14 @@ wheels = [
 
 [[package]]
 name = "hyxi-cloud-api"
-version = "1.5.4"
+version = "1.5.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/99/62/f1c1f02fed9bc1e66500257e97c4d5a110f88851572c3a2fe412760ffd52/hyxi_cloud_api-1.5.4.tar.gz", hash = "sha256:f1bfde0880ad3cc93577f966304e5e82298a25af6d68ad1d99650f5fb461e793", size = 114488, upload-time = "2026-10-14T17:08:31.401Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/92/30/382822803522fa74359212afd8b4cec3ad96b4d2185ec44701b61e2e8abc/hyxi_cloud_api-1.5.5.tar.gz", hash = "sha256:0bfa814ed46ef1b8125fffef2d1e93e941b4e17c8dea49944fb2b1474a23358f", size = 115355, upload-time = "2026-10-15T12:02:02.517Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/f9/a3b8d1b20177e244dfe752d7d802ee2bad7985705a95e7bdfa05f3828f95/hyxi_cloud_api-1.5.4-py3-none-any.whl", hash = "sha256:25811ea85ae4bfd056b38a3f6ded470e8513356011332c9537623ca23632f13f", size = 42338, upload-time = "2026-10-14T17:08:29.813Z" },
+    { url = "https://files.pythonhosted.org/packages/41/8c/52c47e3da7d442b43a69bb87ff13e41cf431116cd0f8b4d6e16ada6306a4/hyxi_cloud_api-1.5.5-py3-none-any.whl", hash = "sha256:f2ae5ad052779a987a0b56bb7e361bb0b844ca7f821edc1112969d6151ac34f1", size = 42742, upload-time = "2026-10-15T12:02:00.852Z" },
 ]
 
 [[package]]
