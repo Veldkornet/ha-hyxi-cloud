@@ -13,14 +13,14 @@ if "homeassistant.components.cloud" not in sys.modules:
 # These imports must follow sys.modules patching above — pylint: disable=wrong-import-position
 
 import custom_components.hyxi_cloud.button as button_mod
-from custom_components.hyxi_cloud.__init__ import (
-    _async_handle_webhook,
-    _async_setup_push_subscription,
-    _async_teardown_push_subscription,
-)
 from custom_components.hyxi_cloud.button import HyxiRenewSubscriptionButton
 from custom_components.hyxi_cloud.const import CONF_ENABLE_PUSH, CONF_PUSH_RATE, DOMAIN
 from custom_components.hyxi_cloud.sensor import HyxiSubscriptionStatusSensor
+from custom_components.hyxi_cloud.subscriptions import (
+    _async_setup_push_subscription,
+    _async_teardown_push_subscription,
+)
+from custom_components.hyxi_cloud.webhooks import _async_handle_webhook
 
 # pylint: enable=wrong-import-position
 
@@ -75,7 +75,7 @@ async def test_setup_push_subscription_disabled(mock_coordinator, mock_entry):
     mock_entry.options[CONF_ENABLE_PUSH] = False
 
     hass = MagicMock()
-    with patch("custom_components.hyxi_cloud.__init__.webhook") as mock_webhook:
+    with patch("custom_components.hyxi_cloud.webhooks.webhook") as mock_webhook:
         await _async_setup_push_subscription(hass, mock_entry, mock_coordinator)
 
         assert mock_coordinator.push_status == "inactive"
@@ -136,7 +136,7 @@ async def test_setup_push_subscription_success(mock_coordinator, mock_entry):
             mock_comp.cloud.async_active_subscription.return_value = False
 
     with (
-        patch("custom_components.hyxi_cloud.__init__.webhook") as mock_webhook,
+        patch("custom_components.hyxi_cloud.webhooks.webhook") as mock_webhook,
         patch(
             "custom_components.hyxi_cloud.push_url.network.get_url",
             return_value="https://my-ha.local",
@@ -175,7 +175,9 @@ async def test_setup_push_subscription_reuses_unchanged_subscription(
 ):
     """A persisted code whose fingerprint still matches current params is
     reused on reload/restart -- no cancel, no new subscribe call."""
-    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+    from custom_components.hyxi_cloud.subscriptions import (
+        _compute_subscription_fingerprint,
+    )
 
     hass = MagicMock()
     webhook_url = "https://my-ha.local/api/webhook/hyxi_cloud_entry_123"
@@ -186,9 +188,9 @@ async def test_setup_push_subscription_reuses_unchanged_subscription(
     }
 
     with (
-        patch("custom_components.hyxi_cloud.__init__.webhook"),
+        patch("custom_components.hyxi_cloud.webhooks.webhook"),
         patch(
-            "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+            "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
             new=AsyncMock(return_value=webhook_url),
         ),
     ):
@@ -213,7 +215,9 @@ async def test_setup_push_subscription_reuses_only_codes_hyxi_holds(
     holds it; otherwise a fresh subscription is made."""
     from types import SimpleNamespace
 
-    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+    from custom_components.hyxi_cloud.subscriptions import (
+        _compute_subscription_fingerprint,
+    )
 
     hass = MagicMock()
     webhook_url = "https://my-ha.local/api/webhook/hyxi_cloud_entry_123"
@@ -229,9 +233,9 @@ async def test_setup_push_subscription_reuses_only_codes_hyxi_holds(
     mock_coordinator.client.list_subscriptions = AsyncMock(return_value=[])
 
     with (
-        patch("custom_components.hyxi_cloud.__init__.webhook"),
+        patch("custom_components.hyxi_cloud.webhooks.webhook"),
         patch(
-            "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+            "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
             new=AsyncMock(return_value=webhook_url),
         ),
     ):
@@ -273,7 +277,9 @@ async def test_setup_push_subscription_recreates_when_rate_changed(
 ):
     """A fingerprint computed for a different push rate is stale -- the old
     code is cancelled and a fresh subscription is made."""
-    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+    from custom_components.hyxi_cloud.subscriptions import (
+        _compute_subscription_fingerprint,
+    )
 
     hass = MagicMock()
     webhook_url = "https://my-ha.local/api/webhook/hyxi_cloud_entry_123"
@@ -289,9 +295,9 @@ async def test_setup_push_subscription_recreates_when_rate_changed(
     )
 
     with (
-        patch("custom_components.hyxi_cloud.__init__.webhook"),
+        patch("custom_components.hyxi_cloud.webhooks.webhook"),
         patch(
-            "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+            "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
             new=AsyncMock(return_value=webhook_url),
         ),
     ):
@@ -309,7 +315,7 @@ async def test_teardown_push_subscription(mock_coordinator):
     mock_coordinator.webhook_id = "hyxi_cloud_entry_123"
     mock_coordinator.subscribe_code = "test-sub-code"
 
-    with patch("custom_components.hyxi_cloud.__init__.webhook") as mock_webhook:
+    with patch("custom_components.hyxi_cloud.subscriptions.webhook") as mock_webhook:
         await _async_teardown_push_subscription(hass, mock_coordinator)
 
         assert mock_coordinator.push_enabled is False
@@ -340,7 +346,7 @@ async def test_teardown_push_subscription_preserves_code_on_cancel_failure(
     )
     mock_entry.data = {"push_subscribe_code": "test-sub-code"}
 
-    with patch("custom_components.hyxi_cloud.__init__.webhook"):
+    with patch("custom_components.hyxi_cloud.subscriptions.webhook"):
         await _async_teardown_push_subscription(hass, mock_coordinator, mock_entry)
 
         assert mock_coordinator.subscribe_code == "test-sub-code"
@@ -359,7 +365,7 @@ async def test_teardown_push_subscription_no_remote_cancel_on_unload(
     mock_coordinator.subscribe_code = "test-sub-code"
     mock_entry.data = {"push_subscribe_code": "test-sub-code"}
 
-    with patch("custom_components.hyxi_cloud.__init__.webhook") as mock_webhook:
+    with patch("custom_components.hyxi_cloud.subscriptions.webhook") as mock_webhook:
         await _async_teardown_push_subscription(
             hass, mock_coordinator, mock_entry, cancel_remote=False
         )
@@ -386,7 +392,7 @@ async def test_teardown_push_subscription_force_clears_on_cancel_failure(
     )
     mock_entry.data = {"push_subscribe_code": "test-sub-code"}
 
-    with patch("custom_components.hyxi_cloud.__init__.webhook"):
+    with patch("custom_components.hyxi_cloud.subscriptions.webhook"):
         await _async_teardown_push_subscription(
             hass, mock_coordinator, mock_entry, force=True
         )
@@ -409,7 +415,7 @@ async def test_webhook_handler_unauthorized(mock_coordinator):
     request.headers = {"accessKey": "wrong_ak"}
 
     with patch(
-        "custom_components.hyxi_cloud.__init__.web.Response"
+        "custom_components.hyxi_cloud.webhooks.web.Response"
     ) as mock_response_class:
         await _async_handle_webhook("webhook_123", request, mock_coordinator)
         mock_response_class.assert_called_once_with(status=401, text="Unauthorized")
@@ -432,7 +438,7 @@ async def test_webhook_handler_success(mock_coordinator):
     }
 
     with patch(
-        "custom_components.hyxi_cloud.__init__.web.json_response"
+        "custom_components.hyxi_cloud.webhooks.web.json_response"
     ) as mock_json_res:
         await _async_handle_webhook("webhook_123", request, mock_coordinator)
 
@@ -502,16 +508,16 @@ async def test_button_press_renew(mock_coordinator, mock_entry):
 
         with (
             patch(
-                "custom_components.hyxi_cloud._async_teardown_push_subscription"
+                "custom_components.hyxi_cloud.subscriptions._async_teardown_push_subscription"
             ) as mock_teardown_push,
             patch(
-                "custom_components.hyxi_cloud._async_teardown_alarm_subscription"
+                "custom_components.hyxi_cloud.subscriptions._async_teardown_alarm_subscription"
             ) as mock_teardown_alarm,
             patch(
-                "custom_components.hyxi_cloud._async_setup_push_subscription"
+                "custom_components.hyxi_cloud.subscriptions._async_setup_push_subscription"
             ) as mock_setup_push,
             patch(
-                "custom_components.hyxi_cloud._async_setup_alarm_subscription"
+                "custom_components.hyxi_cloud.subscriptions._async_setup_alarm_subscription"
             ) as mock_setup_alarm,
         ):
             await button.async_press()
@@ -544,7 +550,7 @@ async def test_setup_push_subscription_via_nabu_casa(mock_coordinator, mock_entr
     )
 
     try:
-        with patch("custom_components.hyxi_cloud.__init__.webhook") as mock_webhook:
+        with patch("custom_components.hyxi_cloud.webhooks.webhook") as mock_webhook:
             mock_webhook.async_generate_path.return_value = (
                 "/api/webhook/hyxi_cloud_entry_123"
             )
@@ -591,7 +597,7 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
 
     caplog.set_level(logging.DEBUG)
 
-    with patch("custom_components.hyxi_cloud.__init__.web.json_response"):
+    with patch("custom_components.hyxi_cloud.webhooks.web.json_response"):
         await _async_handle_webhook("webhook_123", request, mock_coordinator)
 
         # Check logs for expected text
@@ -611,7 +617,7 @@ async def test_webhook_handler_logging_details(mock_coordinator, caplog):
 @pytest.mark.asyncio
 async def test_async_cancel_subscription_empty_code(hass):
     """Test a blank/whitespace-only code is a no-op -- nothing to cancel."""
-    from custom_components.hyxi_cloud import async_cancel_subscription
+    from custom_components.hyxi_cloud.subscriptions import async_cancel_subscription
 
     client = MagicMock()
     client.cancel_subscription = AsyncMock()
@@ -624,7 +630,7 @@ async def test_async_cancel_subscription_empty_code(hass):
 @pytest.mark.asyncio
 async def test_async_cancel_subscription_success(hass):
     """A confirmed cancel completes without raising."""
-    from custom_components.hyxi_cloud import async_cancel_subscription
+    from custom_components.hyxi_cloud.subscriptions import async_cancel_subscription
 
     client = MagicMock()
     client.cancel_subscription = AsyncMock(return_value={"success": True})
@@ -639,7 +645,7 @@ async def test_async_cancel_subscription_api_failure_response(hass):
     """HYXI's refusal, raised by the client as SubscriptionError, propagates:
     HYXI has no "not found" error code, so a refusal is never proof the
     subscription is gone."""
-    from custom_components.hyxi_cloud import (
+    from custom_components.hyxi_cloud.subscriptions import (
         SubscriptionError,
         async_cancel_subscription,
     )
@@ -650,7 +656,7 @@ async def test_async_cancel_subscription_api_failure_response(hass):
     )
 
     with patch(
-        "custom_components.hyxi_cloud._async_refresh_subscriptions_for",
+        "custom_components.hyxi_cloud.services._async_refresh_subscriptions_for",
         new_callable=AsyncMock,
     ) as mock_unregister:
         with pytest.raises(SubscriptionError):
@@ -661,7 +667,7 @@ async def test_async_cancel_subscription_api_failure_response(hass):
 @pytest.mark.asyncio
 async def test_async_cancel_subscription_transient_error(hass):
     """Transient errors (auth/connection/rate-limit) propagate."""
-    from custom_components.hyxi_cloud import async_cancel_subscription
+    from custom_components.hyxi_cloud.subscriptions import async_cancel_subscription
 
     client = MagicMock()
     client.cancel_subscription = AsyncMock(
@@ -669,7 +675,7 @@ async def test_async_cancel_subscription_transient_error(hass):
     )
 
     with patch(
-        "custom_components.hyxi_cloud._async_refresh_subscriptions_for",
+        "custom_components.hyxi_cloud.services._async_refresh_subscriptions_for",
         new_callable=AsyncMock,
     ) as mock_unregister:
         with pytest.raises(TimeoutError, match="Authentication failed"):
@@ -686,7 +692,7 @@ async def test_button_press_renew_error(mock_coordinator, mock_entry):
         button.hass = hass
 
         with patch(
-            "custom_components.hyxi_cloud._async_teardown_push_subscription",
+            "custom_components.hyxi_cloud.subscriptions._async_teardown_push_subscription",
             side_effect=RuntimeError("teardown blew up"),
         ):
             with pytest.raises(

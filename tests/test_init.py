@@ -76,13 +76,28 @@ if "aiohttp" not in sys.modules:
 mock_api = sys.modules["hyxi_cloud_api"]
 
 
-import custom_components.hyxi_cloud.__init__ as hc_init  # pylint: disable=wrong-import-position
+import custom_components.hyxi_cloud as hc_init  # pylint: disable=wrong-import-position
+from custom_components.hyxi_cloud.subscriptions import (  # pylint: disable=wrong-import-position
+    SubscriptionError,
+    _async_setup_alarm_subscription,
+    _async_setup_push_subscription,
+    _async_teardown_alarm_subscription,
+    _async_teardown_push_subscription,
+)
+from custom_components.hyxi_cloud.webhooks import (  # pylint: disable=wrong-import-position
+    _async_handle_alarm_webhook,
+    _async_handle_webhook,
+    _async_resolve_webhook_url,
+)
 
-# DIRECT NAMESPACE INJECTION: Force the component to use our authoritative classes
-# This is the only way to guarantee class identity consistency in a mocked environment.
-hc_init.ConfigEntryAuthFailed = ConfigEntryAuthFailed
-hc_init.ConfigEntryNotReady = ConfigEntryNotReady
-hc_init.UpdateFailed = UpdateFailed
+
+@pytest.fixture(autouse=True)
+def authoritative_exceptions(monkeypatch):
+    """Have setup raise and catch this module's exception classes, for class
+    identity in the mocked environment, restoring the package's afterwards."""
+    monkeypatch.setattr(hc_init, "ConfigEntryAuthFailed", ConfigEntryAuthFailed)
+    monkeypatch.setattr(hc_init, "ConfigEntryNotReady", ConfigEntryNotReady)
+    monkeypatch.setattr(hc_init, "UpdateFailed", UpdateFailed)
 
 
 # Redefine for local use is now redundant but kept for legacy nomenclature compatibility
@@ -97,7 +112,7 @@ async_reload_entry = hc_init.async_reload_entry
 
 # Inject back into the module if they were mocked by mistake during the import process
 
-from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position # pylint: disable=wrong-import-position
+from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position
     DOMAIN,
     PLATFORMS,
 )
@@ -108,11 +123,15 @@ def mock_subscription_listing():
     """Setup's subscription listing and old-store cleanup, stubbed."""
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.async_refresh_subscriptions",
+            "custom_components.hyxi_cloud.async_refresh_subscriptions",
             new_callable=AsyncMock,
         ),
         patch(
-            "custom_components.hyxi_cloud.__init__._async_remove_subscription_store",
+            "custom_components.hyxi_cloud.subscriptions.async_refresh_subscriptions",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "custom_components.hyxi_cloud._async_remove_subscription_store",
             new_callable=AsyncMock,
         ),
     ):
@@ -123,7 +142,7 @@ def mock_subscription_listing():
 def mock_discovery_coordinator():
     """A discovery coordinator whose startup discovery succeeds."""
     with patch(
-        "custom_components.hyxi_cloud.__init__.HyxiDiscoveryCoordinator"
+        "custom_components.hyxi_cloud.HyxiDiscoveryCoordinator"
     ) as discovery_class:
         discovery_class.return_value.async_config_entry_first_refresh = AsyncMock()
         yield discovery_class.return_value
@@ -183,13 +202,13 @@ async def test_async_setup_entry_success(mock_hass, mock_entry):
     """Test successful setup of entry."""
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
-        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
-        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
-        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.migrations.er.async_get"),
+        patch("custom_components.hyxi_cloud.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -265,15 +284,15 @@ async def test_async_setup_entry_uses_shared_session_not_owned(mock_hass, mock_e
     """
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
         patch(
-            "custom_components.hyxi_cloud.__init__.async_get_clientsession"
+            "custom_components.hyxi_cloud.async_get_clientsession"
         ) as mock_get_session,
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient") as mock_client_cls,
-        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
-        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
-        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_cls,
+        patch("custom_components.hyxi_cloud.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.migrations.er.async_get"),
+        patch("custom_components.hyxi_cloud.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -307,13 +326,13 @@ async def test_async_setup_entry_parent_link(mock_hass, mock_entry):
     """Test successful setup of entry with parentSn relationship."""
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
-        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
-        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
-        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.migrations.er.async_get"),
+        patch("custom_components.hyxi_cloud.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -363,10 +382,10 @@ async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
     """Test setup failing due to authentication error."""
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -374,9 +393,7 @@ async def test_async_setup_entry_auth_failed(mock_hass, mock_entry):
             side_effect=ConfigEntryAuthFailed
         )
 
-        with patch(
-            "custom_components.hyxi_cloud.__init__._LOGGER.error"
-        ) as mock_logger:
+        with patch("custom_components.hyxi_cloud._LOGGER.error") as mock_logger:
             with pytest.raises(ConfigEntryAuthFailed):
                 await async_setup_entry(mock_hass, mock_entry)
 
@@ -388,10 +405,10 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
     """Test setup failing due to general exception."""
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -399,9 +416,7 @@ async def test_async_setup_entry_not_ready(mock_hass, mock_entry):
             side_effect=UpdateFailed("Timeout")
         )
 
-        with patch(
-            "custom_components.hyxi_cloud.__init__._LOGGER.warning"
-        ) as mock_logger:
+        with patch("custom_components.hyxi_cloud._LOGGER.warning") as mock_logger:
             with pytest.raises(ConfigEntryNotReady) as exc:
                 await async_setup_entry(mock_hass, mock_entry)
 
@@ -417,10 +432,10 @@ async def test_async_setup_entry_client_error(mock_hass, mock_entry):
     """Test setup failing due to ClientError."""
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         # Use our local sys.modules injected class
@@ -430,9 +445,7 @@ async def test_async_setup_entry_client_error(mock_hass, mock_entry):
             side_effect=client_err
         )
 
-        with patch(
-            "custom_components.hyxi_cloud.__init__._LOGGER.warning"
-        ) as mock_logger:
+        with patch("custom_components.hyxi_cloud._LOGGER.warning") as mock_logger:
             with pytest.raises(ConfigEntryNotReady) as exc:
                 await async_setup_entry(mock_hass, mock_entry)
 
@@ -448,10 +461,10 @@ async def test_async_setup_entry_timeout_error(mock_hass, mock_entry):
     """Test setup failing due to TimeoutError."""
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -459,9 +472,7 @@ async def test_async_setup_entry_timeout_error(mock_hass, mock_entry):
             side_effect=TimeoutError("Connection timed out")
         )
 
-        with patch(
-            "custom_components.hyxi_cloud.__init__._LOGGER.warning"
-        ) as mock_logger:
+        with patch("custom_components.hyxi_cloud._LOGGER.warning") as mock_logger:
             with pytest.raises(ConfigEntryNotReady) as exc:
                 await async_setup_entry(mock_hass, mock_entry)
 
@@ -478,7 +489,7 @@ async def test_async_setup_entry_missing_keys(mock_hass):
     entry = MagicMock()
     entry.data = {}
 
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.error") as mock_logger:
+    with patch("custom_components.hyxi_cloud._LOGGER.error") as mock_logger:
         result = await async_setup_entry(mock_hass, entry)
         assert result is False
         mock_logger.assert_called_with(
@@ -588,7 +599,7 @@ async def test_dispatch_release_swallows_a_failed_write():
 @pytest.mark.asyncio
 async def test_async_remove_entry_cancels_subscriptions(mock_hass, mock_entry):
     """Permanent entry removal cancels both subscriptions remotely."""
-    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+    from custom_components.hyxi_cloud import async_remove_entry
 
     mock_entry.data = {
         "access_key": "ak",
@@ -598,10 +609,10 @@ async def test_async_remove_entry_cancels_subscriptions(mock_hass, mock_entry):
     }
 
     with (
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient") as mock_client_cls,
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_cls,
         patch(
-            "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
+            "custom_components.hyxi_cloud.async_cancel_subscription",
             new_callable=AsyncMock,
         ) as mock_cancel,
     ):
@@ -616,7 +627,7 @@ async def test_async_remove_entry_cancels_subscriptions(mock_hass, mock_entry):
 @pytest.mark.asyncio
 async def test_async_remove_entry_survives_cancel_failure(mock_hass, mock_entry):
     """Removal must not raise even if the remote cancel fails."""
-    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+    from custom_components.hyxi_cloud import async_remove_entry
 
     mock_entry.data = {
         "access_key": "ak",
@@ -625,10 +636,10 @@ async def test_async_remove_entry_survives_cancel_failure(mock_hass, mock_entry)
     }
 
     with (
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
         patch(
-            "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
+            "custom_components.hyxi_cloud.async_cancel_subscription",
             new=AsyncMock(side_effect=RuntimeError("network error")),
         ),
     ):
@@ -638,13 +649,11 @@ async def test_async_remove_entry_survives_cancel_failure(mock_hass, mock_entry)
 @pytest.mark.asyncio
 async def test_async_remove_entry_no_codes_is_noop(mock_hass, mock_entry):
     """No stored subscription codes at all -- nothing to cancel, no client built."""
-    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+    from custom_components.hyxi_cloud import async_remove_entry
 
     mock_entry.data = {"access_key": "ak", "secret_key": "sk"}
 
-    with patch(
-        "custom_components.hyxi_cloud.__init__.HyxiApiClient"
-    ) as mock_client_cls:
+    with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_cls:
         await async_remove_entry(mock_hass, mock_entry)
 
         mock_client_cls.assert_not_called()
@@ -654,13 +663,11 @@ async def test_async_remove_entry_no_codes_is_noop(mock_hass, mock_entry):
 async def test_async_remove_entry_no_credentials_is_noop(mock_hass, mock_entry):
     """Codes are stored but credentials are missing -- can't build a client
     to cancel them remotely, so bail out rather than raise."""
-    from custom_components.hyxi_cloud.__init__ import async_remove_entry
+    from custom_components.hyxi_cloud import async_remove_entry
 
     mock_entry.data = {"push_subscribe_code": "sub_code_123"}
 
-    with patch(
-        "custom_components.hyxi_cloud.__init__.HyxiApiClient"
-    ) as mock_client_cls:
+    with patch("custom_components.hyxi_cloud.HyxiApiClient") as mock_client_cls:
         await async_remove_entry(mock_hass, mock_entry)
 
         mock_client_cls.assert_not_called()
@@ -778,7 +785,7 @@ async def test_async_reload_entry(mock_hass, mock_entry):
     mock_entry.options = {"opt": "new"}
     mock_entry.runtime_data.options = {"opt": "old"}
 
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_logger:
+    with patch("custom_components.hyxi_cloud._LOGGER.debug") as mock_logger:
         await async_reload_entry(mock_hass, mock_entry)
 
         mock_logger.assert_called_with(
@@ -800,13 +807,13 @@ async def test_async_setup_entry_battery_first_class_device(mock_hass, mock_entr
     """
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
-        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
-        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
-        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.migrations.er.async_get"),
+        patch("custom_components.hyxi_cloud.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -881,13 +888,13 @@ async def test_async_setup_entry_self_sn_skips_link(
     """
     with (
         patch(
-            "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator"
+            "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator"
         ) as mock_coordinator_class,
-        patch("custom_components.hyxi_cloud.__init__.async_get_clientsession"),
-        patch("custom_components.hyxi_cloud.__init__.HyxiApiClient"),
-        patch("custom_components.hyxi_cloud.__init__.dr.async_get") as mock_dr_get,
-        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
-        patch("custom_components.hyxi_cloud.__init__.async_reload_entry"),
+        patch("custom_components.hyxi_cloud.async_get_clientsession"),
+        patch("custom_components.hyxi_cloud.HyxiApiClient"),
+        patch("custom_components.hyxi_cloud.dr.async_get") as mock_dr_get,
+        patch("custom_components.hyxi_cloud.migrations.er.async_get"),
+        patch("custom_components.hyxi_cloud.async_reload_entry"),
     ):
         mock_coordinator = mock_coordinator_class.return_value
         mock_coordinator.async_preload_cache = AsyncMock()
@@ -914,9 +921,9 @@ async def test_async_setup_entry_self_sn_skips_link(
 @pytest.mark.asyncio
 async def test_remove_legacy_select_entities(mock_hass):
     """Test removal of legacy select entities."""
-    from custom_components.hyxi_cloud.__init__ import _remove_legacy_select_entities
+    from custom_components.hyxi_cloud.migrations import _remove_legacy_select_entities
 
-    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+    with patch("custom_components.hyxi_cloud.migrations.er.async_get") as mock_er_get:
         mock_registry = MagicMock()
         mock_er_get.return_value = mock_registry
 
@@ -936,7 +943,7 @@ async def test_remove_legacy_select_entities(mock_hass):
         devices: dict[str, dict] = {"123": {}, "456": {}}
 
         with patch(
-            "custom_components.hyxi_cloud.__init__._LOGGER.debug"
+            "custom_components.hyxi_cloud.migrations._LOGGER.debug"
         ) as mock_logger:
             _remove_legacy_select_entities(mock_hass, devices)
 
@@ -964,13 +971,13 @@ async def test_remove_legacy_select_entities(mock_hass):
 @pytest.mark.asyncio
 async def test_migrate_vpp_dispatch_to_work_mode(mock_hass, mock_entry):
     """Test the vpp_dispatch -> work_mode unique_id migration."""
-    from custom_components.hyxi_cloud.__init__ import (
+    from custom_components.hyxi_cloud.migrations import (
         _migrate_vpp_dispatch_to_work_mode,
     )
 
     mock_entry.entry_id = "test_id"
 
-    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+    with patch("custom_components.hyxi_cloud.migrations.er.async_get") as mock_er_get:
         mock_registry = MagicMock()
         mock_er_get.return_value = mock_registry
 
@@ -986,7 +993,7 @@ async def test_migrate_vpp_dispatch_to_work_mode(mock_hass, mock_entry):
         devices: dict[str, dict] = {"123": {}, "456": {}}
 
         with patch(
-            "custom_components.hyxi_cloud.__init__._LOGGER.debug"
+            "custom_components.hyxi_cloud.migrations._LOGGER.debug"
         ) as mock_logger:
             _migrate_vpp_dispatch_to_work_mode(mock_hass, mock_entry, devices)
 
@@ -1013,13 +1020,13 @@ async def test_migrate_vpp_dispatch_to_work_mode_unique_id_collision(
     keep the work_mode entity (and its history) and drop the now-redundant
     legacy duplicate, without ever calling async_update_entity.
     """
-    from custom_components.hyxi_cloud.__init__ import (
+    from custom_components.hyxi_cloud.migrations import (
         _migrate_vpp_dispatch_to_work_mode,
     )
 
     mock_entry.entry_id = "test_id"
 
-    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+    with patch("custom_components.hyxi_cloud.migrations.er.async_get") as mock_er_get:
         mock_registry = MagicMock()
         mock_er_get.return_value = mock_registry
 
@@ -1044,7 +1051,7 @@ async def test_migrate_vpp_dispatch_to_work_mode_unique_id_collision(
 
 def test_rekey_registry_entity_noop_when_ids_equal():
     """No lookups at all when there is nothing to move."""
-    from custom_components.hyxi_cloud.__init__ import _rekey_registry_entity
+    from custom_components.hyxi_cloud.migrations import _rekey_registry_entity
 
     registry = MagicMock()
     _rekey_registry_entity(registry, "sensor", "hyxi_A_batSoc", "hyxi_A_batSoc")
@@ -1053,7 +1060,7 @@ def test_rekey_registry_entity_noop_when_ids_equal():
 
 def test_rekey_registry_entity_noop_when_old_missing():
     """A no-op when the old unique_id isn't registered."""
-    from custom_components.hyxi_cloud.__init__ import _rekey_registry_entity
+    from custom_components.hyxi_cloud.migrations import _rekey_registry_entity
 
     registry = MagicMock()
     registry.async_get_entity_id.return_value = None
@@ -1065,7 +1072,7 @@ def test_rekey_registry_entity_noop_when_old_missing():
 def test_rekey_registry_entity_drops_clashing_new_entry():
     """When new_unique_id is already taken, the newer entry is removed so the
     older, history-carrying one can take it."""
-    from custom_components.hyxi_cloud.__init__ import _rekey_registry_entity
+    from custom_components.hyxi_cloud.migrations import _rekey_registry_entity
 
     registry = MagicMock()
     ids = {"hyxi_A_batSoc": "sensor.old", "hyxi_B_batSoc": "sensor.fresh"}
@@ -1082,7 +1089,7 @@ def test_inverter_sn_via_device_resolution_paths():
     device's via_device link."""
     from types import SimpleNamespace
 
-    from custom_components.hyxi_cloud.__init__ import _inverter_sn_via_device
+    from custom_components.hyxi_cloud.migrations import _inverter_sn_via_device
 
     reg = MagicMock()
     assert _inverter_sn_via_device(reg, None, {}) is None
@@ -1114,7 +1121,7 @@ async def test_migrate_battery_sensor_unique_ids_filters_registry_entries(
     can be mapped to an inverter are re-keyed."""
     from types import SimpleNamespace
 
-    from custom_components.hyxi_cloud.__init__ import (
+    from custom_components.hyxi_cloud.migrations import (
         _migrate_battery_sensor_unique_ids,
     )
 
@@ -1138,14 +1145,14 @@ async def test_migrate_battery_sensor_unique_ids_filters_registry_entries(
     ]
 
     with (
-        patch("custom_components.hyxi_cloud.__init__.er.async_get"),
-        patch("custom_components.hyxi_cloud.__init__.dr.async_get"),
+        patch("custom_components.hyxi_cloud.migrations.er.async_get"),
+        patch("custom_components.hyxi_cloud.dr.async_get"),
         patch(
-            "custom_components.hyxi_cloud.__init__.er.async_entries_for_config_entry",
+            "custom_components.hyxi_cloud.migrations.er.async_entries_for_config_entry",
             return_value=entries,
         ),
         patch(
-            "custom_components.hyxi_cloud.__init__._rekey_registry_entity"
+            "custom_components.hyxi_cloud.migrations._rekey_registry_entity"
         ) as mock_rekey,
     ):
         _migrate_battery_sensor_unique_ids(
@@ -1159,7 +1166,7 @@ async def test_migrate_battery_sensor_unique_ids_filters_registry_entries(
 def test_battery_serial_to_inverter_map_excludes_ambiguous_and_junk():
     """Blank/non-string serials, self/first-class-device serials, and serials
     reported by more than one inverter are all left out of the map."""
-    from custom_components.hyxi_cloud.__init__ import _battery_serial_to_inverter
+    from custom_components.hyxi_cloud.migrations import _battery_serial_to_inverter
 
     devices = {
         "INV_A": {"metrics": {"batSn": "SHARED"}},
@@ -1180,14 +1187,14 @@ async def test_remove_work_mode_sensor_for_modbus(mock_hass, mock_entry):
     """A Modbus entry's pre-existing work_mode entity (from before it was
     gated out, or from switching a device from cloud to Modbus) is removed
     from the registry rather than left dangling."""
-    from custom_components.hyxi_cloud.__init__ import (
+    from custom_components.hyxi_cloud.migrations import (
         _remove_work_mode_sensor_for_modbus,
     )
 
     mock_entry.entry_id = "test_id"
     mock_entry.data = {"transport": "modbus"}
 
-    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+    with patch("custom_components.hyxi_cloud.migrations.er.async_get") as mock_er_get:
         mock_registry = MagicMock()
         mock_er_get.return_value = mock_registry
 
@@ -1213,11 +1220,11 @@ async def test_remove_work_mode_sensor_for_modbus_is_noop_for_cloud(
 ):
     """A cloud entry still gets HyxiWorkModeSensor -- this must never touch
     the registry for one, not even to check whether the entity exists."""
-    from custom_components.hyxi_cloud.__init__ import (
+    from custom_components.hyxi_cloud.migrations import (
         _remove_work_mode_sensor_for_modbus,
     )
 
-    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+    with patch("custom_components.hyxi_cloud.migrations.er.async_get") as mock_er_get:
         _remove_work_mode_sensor_for_modbus(mock_hass, mock_entry, {"123": {}})
 
         mock_er_get.assert_not_called()
@@ -1229,14 +1236,14 @@ async def test_remove_alarm_entities_for_modbus(mock_hass, mock_entry):
     (from before they were gated out, or from switching a device from
     cloud to Modbus) are removed from the registry rather than left
     dangling."""
-    from custom_components.hyxi_cloud.__init__ import (
+    from custom_components.hyxi_cloud.migrations import (
         _remove_alarm_entities_for_modbus,
     )
 
     mock_entry.entry_id = "test_id"
     mock_entry.data = {"transport": "modbus"}
 
-    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+    with patch("custom_components.hyxi_cloud.migrations.er.async_get") as mock_er_get:
         mock_registry = MagicMock()
         mock_er_get.return_value = mock_registry
 
@@ -1265,28 +1272,14 @@ async def test_remove_alarm_entities_for_modbus_is_noop_for_cloud(
 ):
     """A cloud entry still gets both alarm entities -- this must never
     touch the registry for either, not even to check whether they exist."""
-    from custom_components.hyxi_cloud.__init__ import (
+    from custom_components.hyxi_cloud.migrations import (
         _remove_alarm_entities_for_modbus,
     )
 
-    with patch("custom_components.hyxi_cloud.__init__.er.async_get") as mock_er_get:
+    with patch("custom_components.hyxi_cloud.migrations.er.async_get") as mock_er_get:
         _remove_alarm_entities_for_modbus(mock_hass, mock_entry, {"123": {}})
 
         mock_er_get.assert_not_called()
-
-
-# --- __init__.py Platform Tests ---
-
-from custom_components.hyxi_cloud.__init__ import (
-    SubscriptionError,
-    _async_handle_alarm_webhook,
-    _async_handle_webhook,
-    _async_resolve_webhook_url,
-    _async_setup_alarm_subscription,
-    _async_setup_push_subscription,
-    _async_teardown_alarm_subscription,
-    _async_teardown_push_subscription,
-)
 
 
 @pytest.mark.asyncio
@@ -1300,7 +1293,7 @@ async def test_async_reload_entry_options_not_changed():
     # We populate the coordinator options to match entry options
     mock_entry.runtime_data.options = {"opt": "val"}
 
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_log:
+    with patch("custom_components.hyxi_cloud._LOGGER.debug") as mock_log:
         await async_reload_entry(mock_hass, mock_entry)
         mock_log.assert_any_call(
             "HYXI: Config entry data updated, skipping reload as options did not change"
@@ -1377,7 +1370,7 @@ async def test_async_setup_push_subscription_no_url_or_devices():
 
     # 1. Webhook URL cannot be resolved
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value=None,
     ):
         await _async_setup_push_subscription(hass, entry, coordinator)
@@ -1386,7 +1379,7 @@ async def test_async_setup_push_subscription_no_url_or_devices():
 
     # 2. Webhook URL resolved but no devices available
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_push_subscription(hass, entry, coordinator)
@@ -1407,7 +1400,7 @@ async def test_async_setup_push_subscription_client_failure_or_error():
         side_effect=SubscriptionError("API Limit exceeded")
     )
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_push_subscription(hass, entry, coordinator)
@@ -1419,7 +1412,7 @@ async def test_async_setup_push_subscription_client_failure_or_error():
         side_effect=SubscriptionError("subscribed repeatedly (B004002)")
     )
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_push_subscription(hass, entry, coordinator)
@@ -1431,7 +1424,7 @@ async def test_async_setup_push_subscription_client_failure_or_error():
         side_effect=Exception("conn_error")
     )
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_push_subscription(hass, entry, coordinator)
@@ -1443,7 +1436,7 @@ async def test_async_setup_push_subscription_client_failure_or_error():
         side_effect=Exception("Error B004002: subscribed repeatedly")
     )
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_push_subscription(hass, entry, coordinator)
@@ -1548,7 +1541,7 @@ async def test_webhook_handle_untracked_device():
         return_value={"SN999": {"metrics": {"batSoc": 80}}}
     )
 
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_debug:
+    with patch("custom_components.hyxi_cloud.webhooks._LOGGER.debug") as mock_debug:
         res = await _async_handle_webhook("webhook_id", request, coordinator)
         assert res.status == 200
         assert (
@@ -1569,7 +1562,7 @@ async def test_alarm_subscription_failures_and_webhooks():
 
     # 1. Webhook URL unresolved
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value=None,
     ):
         await _async_setup_alarm_subscription(hass, entry, coordinator)
@@ -1578,7 +1571,7 @@ async def test_alarm_subscription_failures_and_webhooks():
     # 2. No devices available
     coordinator.data = {}
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_alarm_subscription(hass, entry, coordinator)
@@ -1590,7 +1583,7 @@ async def test_alarm_subscription_failures_and_webhooks():
         side_effect=SubscriptionError("failed")
     )
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_alarm_subscription(hass, entry, coordinator)
@@ -1601,7 +1594,7 @@ async def test_alarm_subscription_failures_and_webhooks():
         side_effect=SubscriptionError("subscribed repeatedly (B004002)")
     )
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_alarm_subscription(hass, entry, coordinator)
@@ -1610,7 +1603,7 @@ async def test_alarm_subscription_failures_and_webhooks():
     # 4. Client raises exception
     coordinator.client.subscribe_alarm = AsyncMock(side_effect=Exception("err"))
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_alarm_subscription(hass, entry, coordinator)
@@ -1621,7 +1614,7 @@ async def test_alarm_subscription_failures_and_webhooks():
         side_effect=Exception("err repeatedly B004002")
     )
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://url",
     ):
         await _async_setup_alarm_subscription(hass, entry, coordinator)
@@ -1658,7 +1651,7 @@ async def test_alarm_subscription_failures_and_webhooks():
         return_value={"SN999": [{"alarmCode": "100"}]}
     )
     coordinator.data = {"SN123": {}}
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+    with patch("custom_components.hyxi_cloud.webhooks._LOGGER.warning") as mock_warn:
         res_ok = await _async_handle_alarm_webhook(
             "alarm_webhook_id", request, coordinator
         )
@@ -1672,10 +1665,11 @@ async def test_alarm_subscription_failures_and_webhooks():
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("cloud_battery_control")
 async def test_additional_init_coverage(mock_hass, mock_entry):
-    """Test additional branches and fallback paths in __init__.py for 100% coverage."""
+    """Test additional branches and fallback paths in setup, the webhooks and
+    the subscriptions."""
     mock_hass.config.components = {"cloud"}
 
-    # 1. Test ValueError raised by Nabu Casa resolved URL (line 345)
+    # 1. Test ValueError raised by Nabu Casa resolved URL
     class CustomCloudNotAvailable(BaseException):
         pass
 
@@ -1693,7 +1687,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
             with pytest.raises(ValueError, match="real_val_err"):
                 await _async_resolve_webhook_url(mock_hass, "web_id", None)
 
-    # 2. Test successful real-time push subscription (lines 449-456)
+    # 2. Test successful real-time push subscription
     from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY
 
     mock_entry.data = {
@@ -1732,7 +1726,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
 
     # Mock resolves webhook URL successfully
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         return_value="https://webhook.url",
     ):
         await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
@@ -1743,20 +1737,20 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
         assert coordinator.alarm_push_status == "active"
         assert coordinator.alarm_subscribe_code == "alarm_code_123"
 
-    # 3. Webhook registration already registered (ValueError) (lines 407-409, 628-629)
+    # 3. Webhook registration already registered (ValueError)
     with patch(
         "homeassistant.components.webhook.async_register",
         side_effect=ValueError("Already registered"),
     ):
         with patch(
-            "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+            "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
             return_value="https://webhook.url",
         ):
             # These should not crash (they catch ValueError)
             await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
             await _async_setup_alarm_subscription(mock_hass, mock_entry, coordinator)
 
-    # 4. Webhook unregister raises KeyError (lines 479-481, 693-695)
+    # 4. Webhook unregister raises KeyError
     with patch(
         "homeassistant.components.webhook.async_unregister",
         side_effect=KeyError("Not found"),
@@ -1768,7 +1762,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
         assert coordinator.webhook_id is None
         assert coordinator.alarm_webhook_id is None
 
-    # 5. Push data webhook process with empty results (line 549)
+    # 5. Push data webhook process with empty results
     request = MagicMock()
     request.headers = {"accessKey": "correct_ak"}
     request.text = AsyncMock(return_value="{}")
@@ -1776,14 +1770,14 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     res = await _async_handle_webhook("web_id", request, coordinator)
     assert res.status == 200
 
-    # 6. Push data webhook with coordinator.data is None (line 554)
+    # 6. Push data webhook with coordinator.data is None
     coordinator.data = None
     coordinator.client.process_push_data = MagicMock(
         return_value={"SN123": {"metrics": {"batSoc": 85}}}
     )
     from custom_components.hyxi_cloud.const import mask_sn
 
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.debug") as mock_debug:
+    with patch("custom_components.hyxi_cloud.webhooks._LOGGER.debug") as mock_debug:
         res = await _async_handle_webhook("web_id", request, coordinator)
         assert res.status == 200
         assert coordinator.data == {}
@@ -1792,7 +1786,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
             "Received push data for untracked device SN: %s", mask_sn("SN123")
         )
 
-    # 7. Push data webhook updates successfully (line 577-580)
+    # 7. Push data webhook updates successfully
     coordinator.data = {"SN123": {"metrics": {}}}
     coordinator.async_update_listeners = MagicMock()
     res = await _async_handle_webhook("web_id", request, coordinator)
@@ -1800,17 +1794,17 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     assert coordinator.data["SN123"]["metrics"] == {"batSoc": 85}
     coordinator.async_update_listeners.assert_called_once()
 
-    # 8. Alarm push webhook empty results (line 755)
+    # 8. Alarm push webhook empty results
     coordinator.client.process_alarm_push_data = MagicMock(return_value={})
     res = await _async_handle_alarm_webhook("alarm_web_id", request, coordinator)
     assert res.status == 200
 
-    # 9. Alarm push webhook with coordinator.data is None (line 758)
+    # 9. Alarm push webhook with coordinator.data is None
     coordinator.data = None
     coordinator.client.process_alarm_push_data = MagicMock(
         return_value={"SN123": [{"alarmCode": "99"}]}
     )
-    with patch("custom_components.hyxi_cloud.__init__._LOGGER.warning") as mock_warn:
+    with patch("custom_components.hyxi_cloud.webhooks._LOGGER.warning") as mock_warn:
         res = await _async_handle_alarm_webhook("alarm_web_id", request, coordinator)
         assert res.status == 200
         assert coordinator.data == {}
@@ -1819,7 +1813,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
             mask_sn("SN123"),
         )
 
-    # 10. Alarm push webhook merges alarm records successfully (lines 770-783, 790)
+    # 10. Alarm push webhook merges alarm records successfully
     coordinator.data = {"SN123": {"alarms": [{"alarmCode": "99", "msg": "old"}]}}
     coordinator.async_update_listeners = MagicMock()
     coordinator.client.process_alarm_push_data = MagicMock(
@@ -1838,7 +1832,7 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     assert alarms_by_code["99"]["msg"] == "new"
     coordinator.async_update_listeners.assert_called_once()
 
-    # 11. Battery protection setup with invalid phase type (line 303)
+    # 11. Battery protection setup with invalid phase type
     from custom_components.hyxi_cloud import _async_setup_battery_protection
 
     coordinator.entry = mock_entry
@@ -1851,15 +1845,15 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
     await _async_setup_battery_protection(mock_hass, coordinator, coordinator.data)
     assert not coordinator.protection_controllers
 
-    # 12. Cleanup control entities (lines 242, 277-283)
-    # 12a. When battery control is enabled, cleanup returns early (line 242)
-    from custom_components.hyxi_cloud import _cleanup_control_entities
+    # 12. Cleanup control entities
+    # 12a. When battery control is enabled, cleanup returns early
+    from custom_components.hyxi_cloud.migrations import _cleanup_control_entities
 
     with patch("homeassistant.helpers.entity_registry.async_get") as mock_er:
         _cleanup_control_entities(mock_hass, mock_entry, coordinator)
         mock_er.assert_not_called()
 
-    # 12b. When battery control is disabled, remove specific control entities (lines 277-283)
+    # 12b. When battery control is disabled, remove specific control entities
     mock_entry.options = {"enable_battery_control": False}
     coordinator.data = {"SN123": {}}
     mock_registry = MagicMock()
@@ -1991,47 +1985,43 @@ async def test_additional_init_coverage(mock_hass, mock_entry):
         return_value=mock_engine,
     ):
         with patch(
-            "custom_components.hyxi_cloud.__init__.HyxiBatteryProtectionController",
+            "custom_components.hyxi_cloud.HyxiBatteryProtectionController",
             return_value=mock_controller,
         ):
             with patch(
-                "custom_components.hyxi_cloud.__init__.HyxiDataUpdateCoordinator",
+                "custom_components.hyxi_cloud.HyxiDataUpdateCoordinator",
                 return_value=coordinator,
             ):
                 with patch(
-                    "custom_components.hyxi_cloud.__init__._remove_legacy_select_entities"
+                    "custom_components.hyxi_cloud._remove_legacy_select_entities"
                 ):
                     with (
                         patch(
-                            "custom_components.hyxi_cloud.__init__._remove_purge_subscriptions_button"
+                            "custom_components.hyxi_cloud._remove_purge_subscriptions_button"
                         ),
                         patch(
-                            "custom_components.hyxi_cloud.__init__._migrate_vpp_dispatch_to_work_mode"
+                            "custom_components.hyxi_cloud._migrate_vpp_dispatch_to_work_mode"
                         ),
                         patch(
-                            "custom_components.hyxi_cloud.__init__._migrate_battery_sensor_unique_ids"
+                            "custom_components.hyxi_cloud._migrate_battery_sensor_unique_ids"
                         ),
                         patch(
-                            "custom_components.hyxi_cloud.__init__._merge_duplicate_battery_energy_sensors"
+                            "custom_components.hyxi_cloud._merge_duplicate_battery_energy_sensors"
                         ),
                         patch(
-                            "custom_components.hyxi_cloud.__init__._migrate_microinverter_sum_identifiers"
+                            "custom_components.hyxi_cloud._migrate_microinverter_sum_identifiers"
                         ),
-                        patch(
-                            "custom_components.hyxi_cloud.__init__._remove_bms_alarm_sensors"
-                        ),
+                        patch("custom_components.hyxi_cloud._remove_bms_alarm_sensors"),
                     ):
                         with patch(
-                            "custom_components.hyxi_cloud.__init__._cleanup_control_entities"
+                            "custom_components.hyxi_cloud._cleanup_control_entities"
                         ):
-                            with patch(
-                                "custom_components.hyxi_cloud.__init__.dr.async_get"
-                            ):
+                            with patch("custom_components.hyxi_cloud.dr.async_get"):
                                 with patch(
-                                    "custom_components.hyxi_cloud.__init__.async_get_clientsession"
+                                    "custom_components.hyxi_cloud.async_get_clientsession"
                                 ):
                                     with patch(
-                                        "custom_components.hyxi_cloud.__init__.HyxiApiClient"
+                                        "custom_components.hyxi_cloud.HyxiApiClient"
                                     ):
                                         # Run setup
                                         res_setup = await async_setup_entry(
@@ -2059,7 +2049,7 @@ async def test_alarm_webhook_url_encoded_payload_fallback():
     import json
     from urllib.parse import urlencode
 
-    from custom_components.hyxi_cloud.__init__ import _async_handle_alarm_webhook
+    from custom_components.hyxi_cloud.webhooks import _async_handle_alarm_webhook
 
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
@@ -2083,7 +2073,7 @@ async def test_alarm_webhook_logs_masked_alarm_details_at_debug(caplog):
     sensitive fields masked."""
     import logging
 
-    from custom_components.hyxi_cloud.__init__ import _async_handle_alarm_webhook
+    from custom_components.hyxi_cloud.webhooks import _async_handle_alarm_webhook
 
     coordinator = MagicMock()
     coordinator.client.access_key = "correct_ak"
@@ -2122,7 +2112,7 @@ async def test_async_setup_push_deactivation_cleanup(mock_hass, mock_entry):
     coordinator.client.cancel_subscription = AsyncMock(return_value={"success": True})
 
     with patch(
-        "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
+        "custom_components.hyxi_cloud.subscriptions.async_cancel_subscription",
         new=AsyncMock(),
     ) as mock_cancel:
         await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)
@@ -2172,7 +2162,7 @@ async def test_async_setup_push_deactivation_preserves_code_on_cancel_failure(
     coordinator.client = MagicMock()
 
     with patch(
-        "custom_components.hyxi_cloud.__init__.async_cancel_subscription",
+        "custom_components.hyxi_cloud.subscriptions.async_cancel_subscription",
         new=AsyncMock(side_effect=RuntimeError("temporary network error")),
     ):
         await _async_setup_push_subscription(mock_hass, mock_entry, coordinator)

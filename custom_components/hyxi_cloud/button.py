@@ -546,7 +546,7 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
         local code even if the remote cancel fails, since this is an
         explicit user action -- an old subscription HYXI still holds stays
         listed on the Subscription Status sensor for manual cancelling."""
-        from . import (
+        from .subscriptions import (
             _async_sync_subscriptions,
             _async_teardown_alarm_subscription,
             _async_teardown_push_subscription,

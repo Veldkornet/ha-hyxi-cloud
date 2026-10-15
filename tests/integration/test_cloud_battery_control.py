@@ -10,13 +10,13 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
 
-from custom_components.hyxi_cloud import _cloud_battery_control_issue_id
 from custom_components.hyxi_cloud.const import (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     CONF_EM_P1_ENTITY,
     DOMAIN,
 )
+from custom_components.hyxi_cloud.migrations import _cloud_battery_control_issue_id
 from tests.integration.entries import cloud_entry, lookup_entity_id, serve_devices
 
 HYBRID = {

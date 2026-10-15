@@ -9,7 +9,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from hyxi_cloud_api import HyxiApiClient
 
-from custom_components.hyxi_cloud import _async_handle_webhook
+from custom_components.hyxi_cloud.webhooks import _async_handle_webhook
 from tests.integration.entries import cloud_entry, lookup_entity_id, serve_devices
 
 SN = "INV123"

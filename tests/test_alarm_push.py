@@ -12,16 +12,16 @@ if "homeassistant.components.cloud" not in sys.modules:
 
 # These imports must follow sys.modules patching — pylint: disable=wrong-import-position
 
-from custom_components.hyxi_cloud.__init__ import (  # pylint: disable=wrong-import-position
-    SubscriptionError,
-    _async_handle_alarm_webhook,
-    _async_setup_alarm_subscription,
-    _async_teardown_alarm_subscription,
-)
 from custom_components.hyxi_cloud.const import (  # pylint: disable=wrong-import-position
     CONF_ENABLE_PUSH,
     CONF_PUSH_RATE,
 )
+from custom_components.hyxi_cloud.subscriptions import (  # pylint: disable=wrong-import-position
+    SubscriptionError,
+    _async_setup_alarm_subscription,
+    _async_teardown_alarm_subscription,
+)
+from custom_components.hyxi_cloud.webhooks import _async_handle_alarm_webhook
 
 # pylint: enable=wrong-import-position
 
@@ -90,7 +90,7 @@ async def test_setup_alarm_subscription_success(
     """Happy path: subscription registered and code persisted."""
     webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         new=AsyncMock(return_value=webhook_url),
     ):
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
@@ -106,7 +106,7 @@ async def test_setup_alarm_subscription_success(
 async def test_setup_alarm_subscription_no_url(mock_hass, mock_entry, mock_coordinator):
     """When URL resolution fails, status is set to error and subscribe is not called."""
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         new=AsyncMock(return_value=None),
     ):
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
@@ -134,7 +134,7 @@ async def test_setup_alarm_subscription_failure_still_sets_url_and_error(
     )
 
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         new=AsyncMock(return_value=webhook_url),
     ):
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
@@ -153,7 +153,7 @@ async def test_setup_alarm_cancels_prior_orphan(
     mock_entry.data = {"alarm_subscribe_code": "old_code_xyz"}
 
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         new=AsyncMock(
             return_value="https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
         ),
@@ -169,7 +169,9 @@ async def test_setup_alarm_reuses_unchanged_subscription(
 ):
     """A persisted code whose fingerprint still matches current params is
     reused as-is on reload/restart -- no cancel, no new subscribe call."""
-    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+    from custom_components.hyxi_cloud.subscriptions import (
+        _compute_subscription_fingerprint,
+    )
 
     webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
     fingerprint = _compute_subscription_fingerprint(webhook_url, ["SN001"], 10000)
@@ -179,7 +181,7 @@ async def test_setup_alarm_reuses_unchanged_subscription(
     }
 
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         new=AsyncMock(return_value=webhook_url),
     ):
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
@@ -196,7 +198,9 @@ async def test_setup_alarm_recreates_when_device_list_changed(
 ):
     """A fingerprint computed for a different device list is treated as
     stale -- the old code is cancelled and a fresh subscription made."""
-    from custom_components.hyxi_cloud import _compute_subscription_fingerprint
+    from custom_components.hyxi_cloud.subscriptions import (
+        _compute_subscription_fingerprint,
+    )
 
     webhook_url = "https://example.ngrok.app/api/webhook/hyxi_cloud_entry_test_alarm"
     stale_fingerprint = _compute_subscription_fingerprint(
@@ -208,7 +212,7 @@ async def test_setup_alarm_recreates_when_device_list_changed(
     }
 
     with patch(
-        "custom_components.hyxi_cloud.__init__._async_resolve_webhook_url",
+        "custom_components.hyxi_cloud.subscriptions._async_resolve_webhook_url",
         new=AsyncMock(return_value=webhook_url),
     ):
         await _async_setup_alarm_subscription(mock_hass, mock_entry, mock_coordinator)
@@ -458,7 +462,7 @@ async def test_handle_alarm_webhook_logging_details(
 
     caplog.set_level(logging.DEBUG)
 
-    with patch("custom_components.hyxi_cloud.__init__.web.json_response"):
+    with patch("custom_components.hyxi_cloud.webhooks.web.json_response"):
         await _async_handle_alarm_webhook(
             "hyxi_cloud_entry_test_alarm", request, mock_coordinator
         )
