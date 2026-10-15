@@ -33,7 +33,7 @@ from .const import (
     normalize_device_type,
 )
 from .coordinator import HyxiConfigEntry
-from .entity import SettingsSyncMixin
+from .entity import SettingsSyncMixin, device_entities
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -311,16 +311,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up HYXI number entities for charge/discharge power settings."""
     coordinator = entry.runtime_data
-    if not coordinator.data:
-        return
-
-    entities: list[NumberEntity] = []
-
-    for sn, dev_data in coordinator.data.items():
-        entities.extend(_build_device_numbers(entry, coordinator, sn, dev_data))
-
-    entities.extend(_build_em_numbers(entry, coordinator))
-
+    entities = [
+        *device_entities(
+            hass, entry, coordinator, async_add_entities, _build_device_numbers
+        ),
+        *_build_em_numbers(entry, coordinator),
+    ]
     if entities:
         async_add_entities(entities)
 
@@ -406,7 +402,11 @@ def _build_em_numbers(
     """Build the EM-only number entities, if EM is enabled for this inverter."""
     entities: list[NumberEntity] = []
     em_sn = entry.options.get(CONF_EM_INVERTER_SN)
-    if not (entry.options.get(CONF_EM_ENABLED) and em_sn and em_sn in coordinator.data):
+    if not (
+        entry.options.get(CONF_EM_ENABLED)
+        and em_sn
+        and em_sn in (coordinator.data or {})
+    ):
         return entities
 
     em_dev_data = coordinator.data.get(em_sn, {})

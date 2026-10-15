@@ -25,6 +25,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -77,6 +78,7 @@ from .coordinator import (
     HyxiDataUpdateCoordinator,
     HyxiDiscoveryCoordinator,
 )
+from .entity import new_devices_signal
 from .protection import HyxiBatteryProtectionController
 from .push_url import cloud_subscription_active, external_https_url, is_https_url
 
@@ -276,8 +278,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
     await _async_setup_battery_protection(hass, coordinator)
     _async_setup_energy_manager(hass, entry, coordinator)
 
-    # The devices the platforms create entities for.
-    entry_devices = frozenset(coordinator.data or {})
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Start EM engine after platforms are loaded (entities need to exist first)
@@ -286,7 +286,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     if discovery is not None:
-        _track_new_devices(hass, entry, coordinator, discovery, entry_devices)
+        # After the platforms, so each is listening for new devices.
+        _track_new_devices(hass, entry, coordinator, discovery)
 
     _LOGGER.debug(
         "HYXI Cloud entry %s setup complete: %d devices, protection=%s, engine=%s",
@@ -323,19 +324,18 @@ def _track_new_devices(
     entry: ConfigEntry,
     coordinator: HyxiDataUpdateCoordinator,
     discovery: HyxiDiscoveryCoordinator,
-    entry_devices: frozenset[str],
 ) -> None:
-    """Reload the entry when polling returns devices it has no entities for.
+    """Poll as soon as discovery finds devices that haven't been polled, and
+    once a poll returns new devices, register them, signal the platforms to
+    add their entities, start their battery protection and update the push
+    subscription to cover them. The Energy Manager's inverter turning up
+    only now needs a reload, as the Energy Manager starts with the entry.
 
-    Platforms create entities from the devices polled at setup, so a device
-    discovered later needs a reload. Waiting for a live poll that includes
-    it, rather than reacting to discovery alone, keeps a failing poll (which
-    falls back to cached devices) from reloading the entry over and over.
-    Discovery requests that poll as soon as it finds unpolled devices. A
-    device that disappears needs no reload: it drops out of the polled data
-    and its entities go unavailable.
+    Waiting for a poll that includes a device, rather than reacting to
+    discovery alone, keeps cached devices (which stand in while polling
+    fails) from counting. A device that disappears drops out of the polled
+    data and its entities go unavailable.
     """
-    reload_scheduled = False
 
     @callback
     def _on_discovery() -> None:
@@ -348,19 +348,34 @@ def _track_new_devices(
         if unpolled or coordinator.hyxi_metadata["cache_active"]:
             entry.async_create_task(hass, coordinator.async_request_refresh())
 
+    known = set(coordinator.data or {})
+
     @callback
     def _on_poll() -> None:
-        nonlocal reload_scheduled
-        if reload_scheduled or coordinator.hyxi_metadata["cache_active"]:
+        if coordinator.hyxi_metadata["cache_active"]:
             return
-        added = frozenset(coordinator.data or {}) - entry_devices
-        if added:
-            _LOGGER.info(
-                "HYXI found %d new device(s); reloading to add their entities",
-                len(added),
-            )
-            reload_scheduled = True
+        added = (coordinator.data or {}).keys() - known
+        if not added:
+            return
+        known.update(added)
+        if (
+            entry.options.get(CONF_EM_ENABLED)
+            and entry.options.get(CONF_EM_INVERTER_SN) in added
+        ):
+            _LOGGER.info("HYXI found the Energy Manager's inverter; reloading")
             hass.config_entries.async_schedule_reload(entry.entry_id)
+            return
+        _LOGGER.info("HYXI found %d new device(s); adding them", len(added))
+        new = {sn: coordinator.data[sn] for sn in added}
+        _async_register_devices(hass, entry, coordinator)
+        async_dispatcher_send(hass, new_devices_signal(entry), new)
+        entry.async_create_task(
+            hass, _async_setup_battery_protection(hass, coordinator, new)
+        )
+        if entry.options.get(CONF_ENABLE_PUSH) is True:
+            entry.async_create_task(
+                hass, _async_sync_subscriptions(hass, entry, coordinator)
+            )
 
     # The discovery coordinator has no entities; this listener is also what
     # keeps it on its schedule.
@@ -1487,8 +1502,10 @@ def _cleanup_control_entities(
 async def _async_setup_battery_protection(
     hass: HomeAssistant,
     coordinator: HyxiDataUpdateCoordinator,
+    devices: dict[str, dict] | None = None,
 ) -> None:
-    """Start battery protection on supported battery control devices."""
+    """Start battery protection on supported battery control devices: the
+    given new ones, or all of the coordinator's."""
     from .const import is_battery_control_enabled
 
     if not is_battery_control_enabled(coordinator.entry):
@@ -1497,7 +1514,7 @@ async def _async_setup_battery_protection(
 
     tasks = []
     task_sns = []
-    for sn, dev_data in coordinator.data.items():
+    for sn, dev_data in (coordinator.data if devices is None else devices).items():
         device_type = normalize_device_type(get_raw_device_code(dev_data))
         if not is_control_capable_device_type(coordinator.entry, device_type):
             _LOGGER.debug(

@@ -41,7 +41,7 @@ from .control import (
     async_send_battery_mode,
 )
 from .coordinator import HyxiConfigEntry
-from .entity import HyxiEntity
+from .entity import HyxiEntity, device_entities
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -120,13 +120,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up HYXI button entities."""
     coordinator = entry.runtime_data
-    if not coordinator.data:
-        return
-
-    entities: list[ButtonEntity] = []
-
-    for sn, dev_data in coordinator.data.items():
-        entities.extend(_build_device_buttons(entry, coordinator, sn, dev_data))
+    entities: list[ButtonEntity] = device_entities(
+        hass, entry, coordinator, async_add_entities, _build_device_buttons
+    )
 
     # Expose the Renew Push Subscription button if push is enabled
     if entry.options.get(CONF_ENABLE_PUSH, False) is True:

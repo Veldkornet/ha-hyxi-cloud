@@ -3,18 +3,61 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER
 
 if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
     from .coordinator import HyxiDataUpdateCoordinator
+
+
+def new_devices_signal(entry: ConfigEntry) -> str:
+    """The dispatcher signal the entry sends with the devices a poll has
+    added, once they are in the device registry."""
+    return f"{DOMAIN}_{entry.entry_id}_new_devices"
+
+
+def on_new_devices(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    handle: Callable[[dict[str, dict]], None],
+) -> None:
+    """Call `handle`, in the event loop, with each batch of devices a poll
+    adds to the entry."""
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, new_devices_signal(entry), callback(handle))
+    )
+
+
+def device_entities(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: HyxiDataUpdateCoordinator,
+    async_add_entities: AddEntitiesCallback,
+    build: Callable[[Any, Any, str, dict], list[Any]],
+) -> list[Any]:
+    """The entities `build` makes for each of the coordinator's devices.
+    Those of each device a poll adds later are added as it arrives."""
+
+    def _for(devices: dict[str, dict]) -> list[Any]:
+        return [
+            entity
+            for sn, dev_data in devices.items()
+            for entity in build(entry, coordinator, sn, dev_data)
+        ]
+
+    on_new_devices(hass, entry, lambda devices: async_add_entities(_for(devices)))
+    return _for(coordinator.data or {})
 
 
 def via_device_id(
