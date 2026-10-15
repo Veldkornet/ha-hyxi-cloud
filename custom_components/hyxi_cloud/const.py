@@ -453,12 +453,12 @@ _SENSITIVE_KEYS = frozenset(
         "plantname",
         "devicename",
         "alarmname",
-        "token",
-        "access_token",
-        "refresh_token",
-        "password",
     }
 )
+# Secrets, never shown even masked.
+_CREDENTIAL_KEYS = frozenset({"token", "access_token", "refresh_token", "password"})
+# What a credential is shown as.
+CREDENTIAL_MASK = "**REDACTED**"
 
 
 def is_serial_key(key: Any) -> bool:
@@ -473,6 +473,7 @@ def is_sensitive_key(key: Any) -> bool:
     key_lower = str(key).lower()
     return (
         key_lower in _SENSITIVE_KEYS
+        or key_lower in _CREDENTIAL_KEYS
         or is_serial_key(key)
         or "plantid" in key_lower
         or "imei" in key_lower
@@ -480,9 +481,12 @@ def is_sensitive_key(key: Any) -> bool:
 
 
 def mask_sensitive_key_value(key: str, value: Any) -> Any:
-    """Mask the value if its key holds sensitive info (see is_sensitive_key)."""
+    """Mask the value if its key holds sensitive info (see is_sensitive_key),
+    or hide it entirely if it is a credential."""
     if value is None:
         return None
+    if str(key).lower() in _CREDENTIAL_KEYS:
+        return CREDENTIAL_MASK
     if is_sensitive_key(key):
         return mask_sn(str(value))
     return value
