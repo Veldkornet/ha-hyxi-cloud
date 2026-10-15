@@ -1,6 +1,8 @@
 """Tests for the shared battery-control primitives (control.py)."""
 
 # pylint: disable=missing-function-docstring, wrong-import-position
+import asyncio
+import contextlib
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
@@ -444,3 +446,130 @@ def test_on_verify_result_failure_with_no_controller_logs_its_own_warning(caplog
         )
 
     assert "rejected by the device" in caplog.text
+
+
+# ── CoalescingRunner ────────────────────────────────────────────────────
+
+
+def _runner(routine, **kwargs) -> control_mod.CoalescingRunner:
+    """A runner on real tasks."""
+    hass = MagicMock()
+    hass.async_create_task = conftest.create_task
+    return control_mod.CoalescingRunner(hass, routine, "Test routine", **kwargs)
+
+
+def _blocking_routine() -> tuple[list[str], asyncio.Event, object]:
+    """A routine that waits for the returned event; the list records each
+    run's start and end."""
+    runs: list[str] = []
+    release = asyncio.Event()
+
+    async def routine() -> None:
+        runs.append("start")
+        await release.wait()
+        runs.append("end")
+
+    return runs, release, routine
+
+
+@pytest.mark.asyncio
+async def test_a_request_during_a_run_runs_once_more_afterwards():
+    """Requests while the routine runs neither cancel it nor start a second
+    one alongside; it runs once more after it finishes."""
+    runs, release, routine = _blocking_routine()
+    runner = _runner(routine)
+
+    task = runner.request()
+    await asyncio.sleep(0)
+    assert runner.request() is task
+    assert runner.request() is task
+    assert runs == ["start"]
+
+    release.set()
+    await task
+    assert runs == ["start", "end", "start", "end"]
+
+
+@pytest.mark.asyncio
+async def test_a_failed_run_is_logged_and_a_requested_run_still_runs(caplog):
+    """A run that fails is logged, and one requested meanwhile still runs."""
+    release = asyncio.Event()
+    calls = 0
+
+    async def routine() -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            await release.wait()
+            raise RuntimeError("broken")
+
+    runner = _runner(routine)
+    task = runner.request()
+    await asyncio.sleep(0)
+    runner.request()
+    release.set()
+    await task
+
+    assert calls == 2
+    assert "Test routine failed" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_hung_run_gives_way(caplog):
+    """A run stuck past the time limit is abandoned, so a requested run can
+    go ahead."""
+    runs, _release, routine = _blocking_routine()
+    runner = _runner(routine, timeout=0.01)
+
+    task = runner.request()
+    await asyncio.sleep(0)
+    runner.request()
+    await task
+
+    assert runs == ["start", "start"]
+    assert "Test routine took over 0.01s; abandoned it" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_cancel_stops_the_running_routine():
+    """cancel() cancels the running routine, and a later request starts a
+    new run."""
+    runs, release, routine = _blocking_routine()
+    runner = _runner(routine)
+    task = runner.request()
+    await asyncio.sleep(0)
+
+    runner.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+    assert task.cancelled()
+
+    release.set()
+    await runner.request()
+    assert runs == ["start", "start", "end"]
+
+
+@pytest.mark.asyncio
+async def test_a_request_from_the_routine_itself_does_not_start_a_second_run():
+    """A request the routine makes before its first await, such as a state
+    change it causes, finds it running rather than starting a run alongside."""
+    runner: control_mod.CoalescingRunner
+    runs = 0
+    running = 0
+    most_running = 0
+
+    async def routine() -> None:
+        nonlocal runs, running, most_running
+        runs += 1
+        running += 1
+        most_running = max(most_running, running)
+        if runs == 1:
+            runner.request()
+        await asyncio.sleep(0)
+        running -= 1
+
+    runner = _runner(routine)
+    await runner.request()
+
+    assert most_running == 1
+    assert runs == 2

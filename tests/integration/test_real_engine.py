@@ -535,13 +535,15 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
     with patch(
         "homeassistant.config_entries.ConfigEntries.async_reload", return_value=True
     ) as mock_reload:
-        await engine._loop_tick(None)
+        engine._loop_tick(None)
+        await hass.async_block_till_done()
         mock_reload.assert_not_called()
     assert engine.decision == "stale"
     assert issues.async_get_issue(DOMAIN, issue_id) is not None
 
     coordinator.hyxi_metadata["last_success"] = dt_util.utcnow()
-    await engine._loop_tick(None)
+    engine._loop_tick(None)
+    await hass.async_block_till_done()
     assert issues.async_get_issue(DOMAIN, issue_id) is None
 
     # 4. Test em_enabled switch turn off -> forces self_consume
@@ -553,7 +555,8 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
     )
     hass.states.async_set(sw_em.entity_id, "off")
     engine._current_mode = "charge"  # simulate currently charging
-    await engine._loop_tick(None)
+    engine._loop_tick(None)
+    await hass.async_block_till_done()
     assert engine.decision == "disabled"
     client.set_mode_self_consume.assert_called_once_with("SN123")
 
@@ -561,7 +564,8 @@ async def test_engine_callbacks_and_staleness(hass: HomeAssistant):
     hass.states.async_set(sw_em.entity_id, "on")
     # Make get_soc raise exception
     with patch.object(engine, "_get_soc", side_effect=ValueError("Test exception")):
-        await engine._loop_tick(None)
+        engine._loop_tick(None)
+        await hass.async_block_till_done()
         assert engine.decision == "error"
 
     engine.stop()
@@ -1370,19 +1374,13 @@ async def test_engine_pauses_peak_shaving_separately_and_resets_on_success(
 
 
 @pytest.mark.asyncio
-async def test_engine_make_decision_guards(hass: HomeAssistant):
-    """Test the concurrent-run guard and the default-fallback branch."""
+async def test_engine_make_decision_default_fallback(hass: HomeAssistant):
+    """Test the default-fallback branch."""
     engine, coordinator, _entry = _make_engine(hass, options={"em_dry_run": True})
     registry = er.async_get(hass)
 
-    # Concurrent-run guard: a decision already in progress is skipped
-    engine._in_decision = True
-    await engine._make_decision()  # returns immediately, no state read attempted
-    assert engine.decision == ""  # never got past the guard to set a decision
-
     # Default fallback: nothing (solar/night/high-load/export) applies, and
     # the engine is currently mid charge -> forced back to self_consume.
-    engine._in_decision = False
     engine._current_mode = "charge"
     coordinator.data["SN123"]["metrics"]["ppv"] = "0.0"  # not solar-producing
     coordinator.data["SN123"]["metrics"]["batSoc"] = "50.0"  # well within limits
@@ -2021,13 +2019,15 @@ async def test_engine_solar_entry_and_tune_logic(hass: HomeAssistant):
 
 @pytest.mark.asyncio
 async def test_engine_loop_tick_edge_cases(hass: HomeAssistant):
-    """Test _loop_tick's disabled guard and its exception-fallback branches."""
+    """Test _loop_tick's disabled guard and the step's exception-fallback
+    branches."""
     engine, coordinator, _entry = _make_engine(hass, options={"em_dry_run": False})
     client = AsyncMock()
     coordinator.client = client
 
     # Disabled engine -> immediate no-op
-    await engine._loop_tick(None)
+    engine._loop_tick(None)
+    await hass.async_block_till_done()
 
     engine.start()
 
@@ -2047,7 +2047,8 @@ async def test_engine_loop_tick_edge_cases(hass: HomeAssistant):
     with patch.object(
         engine, "_set_mode", new=AsyncMock(side_effect=ValueError("api down"))
     ):
-        await engine._loop_tick(None)
+        engine._loop_tick(None)
+        await hass.async_block_till_done()
     assert engine.decision == "disabled"
 
     # Decision loop raises, and the fallback self_consume ALSO raises --
@@ -2061,7 +2062,8 @@ async def test_engine_loop_tick_edge_cases(hass: HomeAssistant):
             new=AsyncMock(side_effect=HyxiApiClient.ControlError("also boom")),
         ),
     ):
-        await engine._loop_tick(None)  # must not raise
+        engine._loop_tick(None)  # must not raise
+        await hass.async_block_till_done()
     assert engine.decision == "error"
 
     engine.stop()
@@ -2141,25 +2143,9 @@ async def test_stale_threshold_follows_the_poll_interval(
 
 
 @pytest.mark.asyncio
-async def test_fast_path_decisions_wait_while_data_is_stale(hass: HomeAssistant):
-    """While the data is stale, the high-load and low-SOC fast paths don't
-    decide either."""
-    engine, coordinator, _entry = _fresh_engine(hass)
-    coordinator.hyxi_metadata["last_success"] = dt_util.utcnow() - timedelta(hours=1)
-    await engine._loop_tick(None)
-
-    with patch.object(engine, "_make_decision", new=AsyncMock()) as decide:
-        engine._request_fast_path_decision()
-        await hass.async_block_till_done()
-        decide.assert_not_awaited()
-
-    engine.stop()
-
-
-@pytest.mark.asyncio
 async def test_stopping_clears_the_issue_and_pending_decisions(hass: HomeAssistant):
-    """Stopping the EM removes its stale-data issue and cancels a fast-path
-    decision still running."""
+    """Stopping the EM removes its stale-data issue and cancels a decision
+    still running."""
     engine, coordinator, _entry = _fresh_engine(hass)
     release = asyncio.Event()
 
@@ -2167,20 +2153,46 @@ async def test_stopping_clears_the_issue_and_pending_decisions(hass: HomeAssista
         await release.wait()
 
     with patch.object(engine, "_make_decision", new=slow_decision):
-        engine._request_fast_path_decision()
+        decision = engine._decisions.request()
         await asyncio.sleep(0)
-        pending = set(engine._decision_tasks)
         coordinator.hyxi_metadata["last_success"] = dt_util.utcnow() - timedelta(
             hours=1
         )
-        await engine._loop_tick(None)
+        assert engine._check_stale()
 
         engine.stop()
         await hass.async_block_till_done()
 
-    assert pending
-    assert all(task.cancelled() for task in pending)
+    assert decision.cancelled()
     assert ir.async_get(hass).async_get_issue(DOMAIN, engine._stale_issue_id) is None
+
+
+@pytest.mark.asyncio
+async def test_a_fast_path_during_a_decision_decides_again_afterwards(
+    hass: HomeAssistant,
+):
+    """A fast-path request while a decision is running isn't dropped: the
+    EM decides once more when the running decision finishes."""
+    engine, _coordinator, _entry = _fresh_engine(hass)
+    release = asyncio.Event()
+    decisions = 0
+
+    async def slow_decision():
+        nonlocal decisions
+        decisions += 1
+        await release.wait()
+
+    with patch.object(engine, "_make_decision", new=slow_decision):
+        engine._loop_tick(None)
+        await asyncio.sleep(0)
+        engine._decisions.request()
+        assert decisions == 1
+
+        release.set()
+        await hass.async_block_till_done()
+
+    assert decisions == 2
+    engine.stop()
 
 
 @pytest.mark.asyncio
@@ -2191,7 +2203,8 @@ async def test_any_decision_error_falls_back_to_self_consume(hass: HomeAssistant
     error = ClientResponseError(MagicMock(), (), status=503)
 
     with patch.object(engine, "_make_decision", new=AsyncMock(side_effect=error)):
-        await engine._loop_tick(None)
+        engine._loop_tick(None)
+        await hass.async_block_till_done()
 
     assert engine.decision == "error"
     coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
@@ -2199,21 +2212,84 @@ async def test_any_decision_error_falls_back_to_self_consume(hass: HomeAssistant
 
 
 @pytest.mark.asyncio
+async def test_a_hung_decision_falls_back_to_self_consume(hass: HomeAssistant):
+    """A decision whose mode write hangs past the time limit is abandoned and
+    treated as a failed one: the EM sends self_consume even though it last
+    sent it, since the abandoned write may still have reached the
+    inverter."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    engine._current_mode = "self_consume"
+
+    async def hung_write(*_args):
+        await asyncio.Event().wait()
+
+    coordinator.client.set_mode_charge.side_effect = hung_write
+
+    async def charging_decision():
+        await engine._set_mode("charge", 1000)
+
+    with (
+        patch("custom_components.hyxi_cloud.engine.DECISION_TIMEOUT", 0.01),
+        patch.object(engine, "_make_decision", new=charging_decision),
+    ):
+        engine._loop_tick(None)
+        await hass.async_block_till_done()
+
+    assert engine.decision == "error"
+    coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
+    engine.stop()
+
+
+@pytest.mark.asyncio
+async def test_a_cut_off_mode_write_leaves_the_mode_unknown(hass: HomeAssistant):
+    """A mode write cut off midway leaves both the current mode and its
+    trace unknown, so a late result for the earlier send isn't taken as the
+    current mode's."""
+    engine, coordinator, _entry = _fresh_engine(hass)
+    engine._current_mode = "self_consume"
+    engine._current_mode_trace_id = "earlier-send"
+
+    async def hung_write(*_args):
+        await asyncio.Event().wait()
+
+    coordinator.client.set_mode_charge.side_effect = hung_write
+    write = hass.async_create_task(engine._set_mode("charge", 1000))
+    await asyncio.sleep(0)
+    write.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await write
+
+    assert engine._current_mode is None
+    assert engine._current_mode_trace_id is None
+    engine.stop()
+
+
+@pytest.mark.asyncio
 async def test_disabling_waits_for_a_running_decision(hass: HomeAssistant):
     """Turning the EM off doesn't switch modes while a decision is still
-    sending one."""
+    sending one; it forces self_consume once that decision finishes."""
     engine, coordinator, _entry = _fresh_engine(hass)
     switch = er.async_get(hass).async_get_or_create(
         "switch", DOMAIN, "hyxi_SN123_em_enabled", suggested_object_id="em_enabled"
     )
-    hass.states.async_set(switch.entity_id, "off")
     engine._current_mode = "charge"
-    engine._in_decision = True
+    release = asyncio.Event()
 
-    await engine._loop_tick(None)
+    async def slow_decision():
+        await release.wait()
 
-    coordinator.client.set_mode_self_consume.assert_not_awaited()
-    engine._in_decision = False
+    with patch.object(engine, "_make_decision", new=slow_decision):
+        engine._loop_tick(None)
+        await asyncio.sleep(0)
+        hass.states.async_set(switch.entity_id, "off")
+        engine._loop_tick(None)
+        await asyncio.sleep(0)
+
+        coordinator.client.set_mode_self_consume.assert_not_awaited()
+        release.set()
+        await hass.async_block_till_done()
+
+    coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
     engine.stop()
 
 
@@ -2225,7 +2301,8 @@ async def test_switching_off_while_stale_forces_self_consume(hass: HomeAssistant
     issue_id = engine._stale_issue_id
     coordinator.hyxi_metadata["last_success"] = dt_util.utcnow() - timedelta(hours=1)
     assert engine.is_managing
-    await engine._loop_tick(None)
+    engine._loop_tick(None)
+    await hass.async_block_till_done()
     assert engine.status == "stale"
     assert not engine.is_managing
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is not None
@@ -2235,7 +2312,8 @@ async def test_switching_off_while_stale_forces_self_consume(hass: HomeAssistant
     )
     hass.states.async_set(switch.entity_id, "off")
     engine._current_mode = "charge"
-    await engine._loop_tick(None)
+    engine._loop_tick(None)
+    await hass.async_block_till_done()
 
     coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
     assert engine.decision == "disabled"
@@ -2253,9 +2331,11 @@ async def test_repeated_decision_errors_are_quiet(hass: HomeAssistant, caplog):
     with patch.object(
         engine, "_make_decision", new=AsyncMock(side_effect=KeyError("batSoc"))
     ):
-        await engine._loop_tick(None)
+        engine._loop_tick(None)
+        await hass.async_block_till_done()
         engine._current_mode = "self_consume"
-        await engine._loop_tick(None)
+        engine._loop_tick(None)
+        await hass.async_block_till_done()
 
     errors = [r for r in caplog.records if r.message == "EM: Decision loop error"]
     assert [r.levelname for r in errors] == ["ERROR", "DEBUG"]

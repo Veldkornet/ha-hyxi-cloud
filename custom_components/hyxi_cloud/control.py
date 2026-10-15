@@ -9,10 +9,12 @@ hyxi_cloud.set_battery_mode service can use them without a platform module
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from hyxi_cloud_api import HyxiApiClient
@@ -56,6 +58,68 @@ class NotForwardedPause:
 
 
 _LOGGER = logging.getLogger(__name__)
+
+# Longest one run of a CoalescingRunner may take by default before it gives
+# way to newer data; a control write still pending by then is abandoned.
+RUN_TIMEOUT = 120
+
+
+class CoalescingRunner:
+    """Runs an automatic-control routine as one task at a time. A request
+    while it runs is neither dropped nor allowed to cancel it, since it may be
+    in the middle of a control write: the routine runs once more when it
+    finishes. Each run is abandoned after `timeout` seconds."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        routine: Callable[[], Awaitable[None]],
+        name: str,
+        timeout: float = RUN_TIMEOUT,
+    ) -> None:
+        """Run `routine`, naming it `name` in the log."""
+        self._hass = hass
+        self._routine = routine
+        self._name = name
+        self._timeout = timeout
+        self._task: asyncio.Task | None = None
+        self._again = False
+
+    @callback
+    def request(self) -> asyncio.Task:
+        """Run the routine, or run it again once the running one finishes.
+        Returns the task running it."""
+        if self._task is not None and not self._task.done():
+            self._again = True
+            return self._task
+        # Not started eagerly, so a request the routine's first steps make
+        # already finds it running.
+        self._task = self._hass.async_create_task(
+            self._run_until_settled(), eager_start=False
+        )
+        return self._task
+
+    def cancel(self) -> None:
+        """Cancel the running routine, if any."""
+        if self._task is not None and not self._task.done():
+            self._task.cancel()
+        self._task = None
+
+    async def _run_until_settled(self) -> None:
+        """Run, and again while a run was requested meanwhile."""
+        while True:
+            self._again = False
+            try:
+                async with asyncio.timeout(self._timeout):
+                    await self._routine()
+            except TimeoutError:
+                _LOGGER.warning(
+                    "%s took over %ss; abandoned it", self._name, self._timeout
+                )
+            except Exception:  # pylint: disable=broad-exception-caught
+                _LOGGER.exception("%s failed", self._name)
+            if not self._again:
+                return
 
 
 def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:

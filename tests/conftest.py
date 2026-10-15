@@ -1,5 +1,6 @@
 """Configuration for pytest."""
 
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -114,3 +115,17 @@ def cloud_battery_control():
         "custom_components.hyxi_cloud.const.CLOUD_BATTERY_CONTROL_SUPPORTED", True
     ):
         yield
+
+
+def discard_task(coro, **_kwargs):
+    """Stand in for HomeAssistant.async_create_task without running the
+    coroutine, closing it so it leaves no "coroutine was never awaited"
+    RuntimeWarning behind."""
+    coro.close()
+    return MagicMock()
+
+
+def create_task(coro, eager_start: bool = True) -> asyncio.Task:
+    """Start a task as HomeAssistant.async_create_task does: eagerly, unless
+    asked not to."""
+    return asyncio.get_running_loop().create_task(coro, eager_start=eager_start)
