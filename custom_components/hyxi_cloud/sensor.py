@@ -1900,7 +1900,8 @@ class HyxiSensor(HyxiBaseSensor):
 
     @property
     def device_info(self):
-        """Return dynamic device information to ensure versions update in UI."""
+        """The device the sensor belongs to: its battery device for a battery
+        sensor whose battery is known, else the polled device."""
         dev_data = self._dev_data
         metrics = self._metrics
         bat_sn = metrics.get("batSn")
