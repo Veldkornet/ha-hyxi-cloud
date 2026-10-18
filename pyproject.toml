@@ -36,7 +36,7 @@ dependencies = [
 modbus = [
     "modbus-connection[tmodbus]>=4.10.0",
     # tools/fake_hyxi.py needs a Modbus *server*, which tmodbus does not provide.
-    "pymodbus>=3.15.0",
+    "pymodbus>=3.13.1",
 ]
 test = [
     "pytest>=9.0.3",
