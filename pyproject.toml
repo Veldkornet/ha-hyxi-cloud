@@ -21,9 +21,9 @@ dependencies = [
     "modbus-connection[tmodbus]>=4.10.0",
     # Listed explicitly too: HA's requirement installer checks package+version
     # only, not extras, so a bare modbus-connection pulled in by something
-    # else can mask this and leave tmodbus itself uninstalled. Floors track
-    # what Core's `modbus` integration currently pins (4.10.0 / 0.6.2), so
-    # its own install already satisfies ours.
+    # else can mask this and leave tmodbus itself uninstalled. Core's `modbus`
+    # integration pins both, and its pins must satisfy these floors so its own
+    # install already satisfies ours (tests/test_core_pins.py checks this).
     "tmodbus[async-serial]>=0.6.2",
 ]
 
@@ -31,17 +31,20 @@ dependencies = [
 # Dev-only: tools/modbus_probe.py needs a Modbus stack to talk to hardware.
 # modbus-connection[tmodbus] is already a runtime dependency above; it's
 # repeated here so this extra is self-contained. pymodbus is not a runtime
-# dependency -- it's only for tools/fake_hyxi.py, which needs a Modbus
-# *server* that tmodbus does not provide.
+# dependency: tools/fake_hyxi.py needs a Modbus *server*, which tmodbus does
+# not provide, and the test extra needs it for Core's `modbus` integration.
 modbus = [
     "modbus-connection[tmodbus]>=4.10.0",
-    # tools/fake_hyxi.py needs a Modbus *server*, which tmodbus does not provide.
-    "pymodbus>=3.15.0",
+    # Exactly what Core's `modbus` manifest pins, so the tools and tests run
+    # the pymodbus Home Assistant installs; tests/test_core_pins.py checks it.
+    "pymodbus==3.13.1",
 ]
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
+    # tests/test_core_pins.py parses requirement specifiers.
+    "packaging>=26.2",
     "hypothesis>=6.165.5",
     "pytest-homeassistant-custom-component>=0.13.355",
     "mypy>=2.3.0",
@@ -49,10 +52,9 @@ test = [
     # `modbus` integration (async_get_unit). Importing that module pulls in
     # homeassistant/components/modbus/modbus.py, which imports pymodbus at
     # module level -- so the test env needs pymodbus even though our own
-    # code never imports it. At runtime Core installs it from the `modbus`
-    # manifest (==3.13.1); it is deliberately absent from our manifest.json
-    # requirements so the two pins can never disagree.
-    "pymodbus>=3.13.1",
+    # code never imports it. It is deliberately absent from our manifest.json
+    # requirements: at runtime Core installs it from its own manifest.
+    "ha-hyxi-cloud[modbus]",
 ]
 
 [tool.ruff]
