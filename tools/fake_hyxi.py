@@ -331,10 +331,10 @@ def to_simdata(words: dict[int, int]) -> list[SimData]:
         if address - run_prev - 1 <= GAP_FILL:
             run.extend(words.get(a, 0) for a in range(run_prev + 1, address + 1))
         else:
-            blocks.append(SimData(run_start, values=run, datatype=DataType.REGISTERS))
+            blocks.append(SimData(run_start, values=run, datatype=DataType.UINT16))
             run_start, run = address, [words[address]]
         run_prev = address
-    blocks.append(SimData(run_start, values=run, datatype=DataType.REGISTERS))
+    blocks.append(SimData(run_start, values=run, datatype=DataType.UINT16))
     return blocks
 
 
