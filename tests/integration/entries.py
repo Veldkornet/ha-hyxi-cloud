@@ -8,7 +8,12 @@ from homeassistant.util import dt as dt_util
 from hyxi_cloud_api import DiscoveryResult, SubscribeResult
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.hyxi_cloud.const import CONF_ACCESS_KEY, CONF_SECRET_KEY, DOMAIN
+from custom_components.hyxi_cloud.const import (
+    CONF_ACCESS_KEY,
+    CONF_SECRET_KEY,
+    DOMAIN,
+    device_unique_id,
+)
 from custom_components.hyxi_cloud.coordinator import device_store_key
 
 
@@ -34,13 +39,15 @@ def serve_devices(client: AsyncMock, devices: dict) -> None:
 
 
 def lookup_entity_id(
-    hass: HomeAssistant, platform: str, sn: str, key: str
+    hass: HomeAssistant, entry, platform: str, sn: str, key: str
 ) -> str | None:
     """Look up an entity by its unique_id, the same way _get_power_value
     does in production -- entity_id is slugified from the device name, not
     derived from the serial number, so guessing the string directly is
     fragile."""
-    return er.async_get(hass).async_get_entity_id(platform, DOMAIN, f"hyxi_{sn}_{key}")
+    return er.async_get(hass).async_get_entity_id(
+        platform, DOMAIN, device_unique_id(entry, sn, key)
+    )
 
 
 def accept_subscriptions(

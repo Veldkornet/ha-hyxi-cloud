@@ -927,6 +927,45 @@ async def test_engine_on_soc_change_fast_path(hass: HomeAssistant):
         engine.stop()
 
 
+@pytest.mark.asyncio
+async def test_engine_listens_to_the_battery_soc_sensor(hass: HomeAssistant):
+    """The low-SOC fast path follows the inverter's real SOC sensor: a drop
+    below soc_min on that entity triggers a decision."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"access_key": "test_ak", "secret_key": "test_sk"},
+        options={
+            CONF_EM_ENABLED: True,
+            CONF_EM_INVERTER_SN: "SN123",
+            CONF_EM_P1_ENTITY: "sensor.p1_meter",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.protection_controllers = {}
+    coordinator.update_interval = timedelta(seconds=15)
+    coordinator.hyxi_metadata = {"last_success": dt_util.utcnow()}
+    coordinator.data = {"SN123": {"metrics": {"batSoc": "50.0", "ppv": "0.0"}}}
+
+    engine = EnergyManagerEngine(
+        hass, coordinator, EMEntityConfig(sn="SN123", p1_entity="sensor.p1_meter")
+    )
+    registry = er.async_get(hass)
+    soc_min = registry.async_get_or_create("number", DOMAIN, "hyxi_SN123_soc_min")
+    hass.states.async_set(soc_min.entity_id, "20")
+    soc = registry.async_get_or_create("sensor", DOMAIN, "hyxi_SN123_batSoc")
+    hass.states.async_set(soc.entity_id, "50")
+
+    with patch.object(engine, "_make_decision", new=AsyncMock()) as mock_decision:
+        engine.start()
+        hass.states.async_set(soc.entity_id, "10")
+        await hass.async_block_till_done()
+        mock_decision.assert_called_once()
+        engine.stop()
+
+
 def test_engine_registered_callbacks_run_on_the_event_loop(hass: HomeAssistant):
     """Every handler start() registers with async_track_time_interval /
     async_track_state_change_event must be classified by Home Assistant as

@@ -34,6 +34,7 @@ from .const import (
     CONF_MODBUS_PORT,
     DOMAIN,
     MANUFACTURER,
+    device_unique_id,
     get_raw_device_code,
     is_modbus_entry,
     mask_sn,
@@ -432,7 +433,7 @@ class EMBinarySensor(BinarySensorEntity):
         self._coordinator = coordinator
         self._sn = sn
         self._key = key
-        self._attr_unique_id = f"hyxi_{sn}_em_{key}"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, f"em_{key}")
         self._attr_translation_key = f"em_{key}"
         self._attr_device_info = device_info
         self._attr_icon = self._ICONS.get(key)

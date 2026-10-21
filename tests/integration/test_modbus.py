@@ -986,7 +986,9 @@ async def test_setup_removes_stale_bms_alarm_sensors(hass):
         await hass.async_block_till_done()
 
     assert all(registry.async_get(entity_id) is None for entity_id in stale)
-    assert registry.async_get_entity_id("sensor", DOMAIN, f"hyxi_{sn}_batCapacityAh")
+    assert registry.async_get_entity_id(
+        "sensor", DOMAIN, f"hyxi_modbus_{sn}_batCapacityAh"
+    )
 
 
 def _seeded_hybrid_connection() -> MockModbusConnection:
@@ -1372,7 +1374,7 @@ async def test_setting_up_a_modbus_entry_creates_entities(hass):
     entity_registry = er.async_get(hass)
     device_registry = dr.async_get(hass)
     bat_soc = entity_registry.async_get(f"sensor.hyxi_{sn}_batsoc")
-    assert bat_soc.unique_id == f"hyxi_{sn}_batSoc"
+    assert bat_soc.unique_id == f"hyxi_modbus_{sn}_batSoc"
     bat_device = device_registry.async_get(bat_soc.device_id)
     assert (DOMAIN, "4213571357") in bat_device.identifiers
 
@@ -1437,16 +1439,16 @@ async def test_halo_control_entities_appear_when_control_is_enabled(hass):
 
     sn = "10201234567810"
     for key in ("mode_idle", "mode_charge", "mode_discharge", "mode_self_consume"):
-        assert lookup_entity_id(hass, "button", sn, key) is not None, key
+        assert lookup_entity_id(hass, entry, "button", sn, key) is not None, key
 
     # The mode buttons read their wattage from these; without them a charge
     # command would silently fall back to a hardcoded 100W.
-    assert lookup_entity_id(hass, "number", sn, "charge_power") is not None
-    assert lookup_entity_id(hass, "number", sn, "discharge_power") is not None
+    assert lookup_entity_id(hass, entry, "number", sn, "charge_power") is not None
+    assert lookup_entity_id(hass, entry, "number", sn, "discharge_power") is not None
 
     # No local equivalent of the cloud's 5-state peak-shaving surface --
     # HALO must never get those buttons.
-    assert lookup_entity_id(hass, "button", sn, "peak_shaving_hold") is None
+    assert lookup_entity_id(hass, entry, "button", sn, "peak_shaving_hold") is None
 
 
 @pytest.mark.asyncio
@@ -1467,7 +1469,7 @@ async def test_halo_mode_button_press_calls_the_modbus_client(hass):
 
     sn = "10201234567810"
     coordinator = entry.runtime_data
-    entity_id = lookup_entity_id(hass, "button", sn, "mode_idle")
+    entity_id = lookup_entity_id(hass, entry, "button", sn, "mode_idle")
     assert entity_id is not None
 
     with patch.object(
@@ -1522,8 +1524,8 @@ async def test_hybrid_control_entities_still_appear_unaffected(hass):
 
     sn = "10201234567810"
     assert HYBRID_DEVICE_CODE == "HYBRID_INVERTER"
-    assert lookup_entity_id(hass, "button", sn, "mode_idle") is not None
-    assert lookup_entity_id(hass, "number", sn, "charge_power") is not None
+    assert lookup_entity_id(hass, entry, "button", sn, "mode_idle") is not None
+    assert lookup_entity_id(hass, entry, "number", sn, "charge_power") is not None
 
 
 @pytest.mark.asyncio
@@ -1546,8 +1548,8 @@ async def test_halo_setting_numbers_appear_and_write_through(hass):
     sn = "10201234567810"
     coordinator = entry.runtime_data
 
-    feed_in_id = lookup_entity_id(hass, "number", sn, "feed_in_power_limit")
-    soc_id = lookup_entity_id(hass, "number", sn, "vpp_min_soc")
+    feed_in_id = lookup_entity_id(hass, entry, "number", sn, "feed_in_power_limit")
+    soc_id = lookup_entity_id(hass, entry, "number", sn, "vpp_min_soc")
     assert feed_in_id is not None
     assert soc_id is not None
     for key in (
@@ -1557,12 +1559,12 @@ async def test_halo_setting_numbers_appear_and_write_through(hass):
         "self_use_soc",
         "discharge_min_soc",
     ):
-        assert lookup_entity_id(hass, "number", sn, key) is not None, key
+        assert lookup_entity_id(hass, entry, "number", sn, key) is not None, key
 
     # Hybrid-only settings must not appear on a HALO entry.
-    assert lookup_entity_id(hass, "number", sn, "feed_in_power") is None
-    assert lookup_entity_id(hass, "number", sn, "max_charge_current") is None
-    assert lookup_entity_id(hass, "number", sn, "backup_soc") is None
+    assert lookup_entity_id(hass, entry, "number", sn, "feed_in_power") is None
+    assert lookup_entity_id(hass, entry, "number", sn, "max_charge_current") is None
+    assert lookup_entity_id(hass, entry, "number", sn, "backup_soc") is None
 
     with patch.object(
         coordinator.client,
@@ -1585,7 +1587,7 @@ async def test_halo_setting_numbers_appear_and_write_through(hass):
         )
     spy.assert_awaited_once_with(15)
 
-    self_use_id = lookup_entity_id(hass, "number", sn, "self_use_soc")
+    self_use_id = lookup_entity_id(hass, entry, "number", sn, "self_use_soc")
     with patch.object(
         coordinator.client,
         "set_self_use_soc",
@@ -1619,9 +1621,11 @@ async def test_hybrid_setting_numbers_appear_and_write_through(hass):
     sn = "10201234567810"
     coordinator = entry.runtime_data
 
-    feed_in_id = lookup_entity_id(hass, "number", sn, "feed_in_power")
-    max_charge_id = lookup_entity_id(hass, "number", sn, "max_charge_current")
-    max_discharge_id = lookup_entity_id(hass, "number", sn, "max_discharge_current")
+    feed_in_id = lookup_entity_id(hass, entry, "number", sn, "feed_in_power")
+    max_charge_id = lookup_entity_id(hass, entry, "number", sn, "max_charge_current")
+    max_discharge_id = lookup_entity_id(
+        hass, entry, "number", sn, "max_discharge_current"
+    )
     assert feed_in_id is not None
     assert max_charge_id is not None
     assert max_discharge_id is not None
@@ -1632,12 +1636,12 @@ async def test_hybrid_setting_numbers_appear_and_write_through(hass):
         "feed_in_soc",
         "off_grid_soc",
     ):
-        assert lookup_entity_id(hass, "number", sn, key) is not None, key
+        assert lookup_entity_id(hass, entry, "number", sn, key) is not None, key
 
     # HALO-only settings must not appear on a hybrid entry.
-    assert lookup_entity_id(hass, "number", sn, "feed_in_power_limit") is None
-    assert lookup_entity_id(hass, "number", sn, "vpp_min_soc") is None
-    assert lookup_entity_id(hass, "number", sn, "off_grid_min_soc") is None
+    assert lookup_entity_id(hass, entry, "number", sn, "feed_in_power_limit") is None
+    assert lookup_entity_id(hass, entry, "number", sn, "vpp_min_soc") is None
+    assert lookup_entity_id(hass, entry, "number", sn, "off_grid_min_soc") is None
 
     with patch.object(
         coordinator.client,
@@ -1652,7 +1656,7 @@ async def test_hybrid_setting_numbers_appear_and_write_through(hass):
         )
     spy.assert_awaited_once_with(32.5)
 
-    backup_soc_id = lookup_entity_id(hass, "number", sn, "backup_soc")
+    backup_soc_id = lookup_entity_id(hass, entry, "number", sn, "backup_soc")
     with patch.object(
         coordinator.client, "set_backup_soc", wraps=coordinator.client.set_backup_soc
     ) as spy:
@@ -1685,9 +1689,9 @@ async def test_hybrid_power_command_buttons_appear_and_write_through(hass):
     coordinator = entry.runtime_data
 
     for key in ("power_on", "power_off", "restart"):
-        assert lookup_entity_id(hass, "button", sn, key) is not None, key
+        assert lookup_entity_id(hass, entry, "button", sn, key) is not None, key
 
-    restart_id = lookup_entity_id(hass, "button", sn, "restart")
+    restart_id = lookup_entity_id(hass, entry, "button", sn, "restart")
     with patch.object(
         coordinator.client, "restart", wraps=coordinator.client.restart
     ) as spy:
@@ -1716,11 +1720,11 @@ async def test_halo_work_mode_buttons_appear_and_write_through(hass):
 
     sn = "10201234567810"
     for key in ("work_mode_self_use", "work_mode_grid_backup", "work_mode_tou"):
-        assert lookup_entity_id(hass, "button", sn, key) is not None, key
+        assert lookup_entity_id(hass, entry, "button", sn, key) is not None, key
 
     coordinator = entry.runtime_data
     await coordinator.client.set_mode_charge(sn, 1000)  # dispatch on
-    entity_id = lookup_entity_id(hass, "button", sn, "work_mode_tou")
+    entity_id = lookup_entity_id(hass, entry, "button", sn, "work_mode_tou")
     await hass.services.async_call(
         "button", "press", {"entity_id": entity_id}, blocking=True
     )
@@ -1752,13 +1756,17 @@ async def test_halo_work_mode_button_refreshes_the_dispatch_switch(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    switch_id = lookup_entity_id(hass, "switch", sn, "dispatch")
+    switch_id = lookup_entity_id(hass, entry, "switch", sn, "dispatch")
     assert hass.states.get(switch_id).state == "on"  # seed 4146 = 1
 
     await hass.services.async_call(
         "button",
         "press",
-        {"entity_id": lookup_entity_id(hass, "button", sn, "work_mode_self_use")},
+        {
+            "entity_id": lookup_entity_id(
+                hass, entry, "button", sn, "work_mode_self_use"
+            )
+        },
         blocking=True,
     )
     await hass.async_block_till_done()
@@ -1783,7 +1791,7 @@ async def test_hybrid_has_no_work_mode_buttons(hass):
 
     sn = "10201234567810"
     for key in ("work_mode_self_use", "work_mode_grid_backup", "work_mode_tou"):
-        assert lookup_entity_id(hass, "button", sn, key) is None, key
+        assert lookup_entity_id(hass, entry, "button", sn, key) is None, key
 
 
 @pytest.mark.asyncio
@@ -1802,7 +1810,7 @@ async def test_hybrid_undocumented_operating_mode_18_is_a_valid_state(hass):
         await hass.async_block_till_done()
 
     entity_id = lookup_entity_id(
-        hass, "sensor", "10201234567810", "currentOperatingMode"
+        hass, entry, "sensor", "10201234567810", "currentOperatingMode"
     )
     assert entity_id is not None
     assert hass.states.get(entity_id).state == "18"
@@ -1825,13 +1833,13 @@ async def test_halo_vpp_mode_button_updates_the_dispatch_switch(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    switch_id = lookup_entity_id(hass, "switch", sn, "dispatch")
+    switch_id = lookup_entity_id(hass, entry, "switch", sn, "dispatch")
     assert hass.states.get(switch_id).state == "off"  # seed 4146 = 0
 
     await hass.services.async_call(
         "button",
         "press",
-        {"entity_id": lookup_entity_id(hass, "button", sn, "mode_idle")},
+        {"entity_id": lookup_entity_id(hass, entry, "button", sn, "mode_idle")},
         blocking=True,
     )
     await hass.async_block_till_done()
@@ -1856,7 +1864,7 @@ async def test_halo_has_no_power_command_buttons(hass):
 
     sn = "10201234567810"
     for key in ("power_on", "power_off", "restart"):
-        assert lookup_entity_id(hass, "button", sn, key) is None, key
+        assert lookup_entity_id(hass, entry, "button", sn, key) is None, key
 
 
 @pytest.mark.asyncio
@@ -1877,7 +1885,7 @@ async def test_halo_anti_starvation_switch_appears_and_writes_through(hass):
 
     sn = "10201234567810"
     coordinator = entry.runtime_data
-    entity_id = lookup_entity_id(hass, "switch", sn, "anti_starvation")
+    entity_id = lookup_entity_id(hass, entry, "switch", sn, "anti_starvation")
     assert entity_id is not None
 
     with patch.object(
@@ -1913,8 +1921,8 @@ async def test_halo_anti_starvation_switch_shows_the_devices_real_value(hass):
 
     sn = "10201234567810"
     coordinator = entry.runtime_data
-    entity_id = lookup_entity_id(hass, "switch", sn, "anti_starvation")
-    self_use_id = lookup_entity_id(hass, "number", sn, "self_use_soc")
+    entity_id = lookup_entity_id(hass, entry, "switch", sn, "anti_starvation")
+    self_use_id = lookup_entity_id(hass, entry, "number", sn, "self_use_soc")
 
     # HOLDING_REGISTERS seeds 4121 = 1 (enabled) and 4134 = 10.
     assert hass.states.get(entity_id).state == "on"
@@ -1952,7 +1960,7 @@ async def test_halo_dispatch_switch_reflects_and_writes_the_vpp_enable(hass):
 
     sn = "10201234567810"
     coordinator = entry.runtime_data
-    entity_id = lookup_entity_id(hass, "switch", sn, "dispatch")
+    entity_id = lookup_entity_id(hass, entry, "switch", sn, "dispatch")
     assert entity_id is not None
     assert hass.states.get(entity_id).state == "off"  # seed 4146 = 0
 
@@ -2032,7 +2040,7 @@ async def test_refresh_settings_button_forces_an_immediate_settings_read(hass):
     await hass.async_block_till_done()
 
     sn = "10201234567810"
-    self_use_id = lookup_entity_id(hass, "number", sn, "self_use_soc")
+    self_use_id = lookup_entity_id(hass, entry, "number", sn, "self_use_soc")
     assert hass.states.get(self_use_id).state == "10"
 
     button_id = er.async_get(hass).async_get_entity_id(
@@ -2089,7 +2097,7 @@ async def test_a_write_survives_a_failed_settings_reread_past_the_refresh_window
 
     sn = "10201234567810"
     coordinator = entry.runtime_data
-    self_use_id = lookup_entity_id(hass, "number", sn, "self_use_soc")
+    self_use_id = lookup_entity_id(hass, entry, "number", sn, "self_use_soc")
     assert hass.states.get(self_use_id).state == "10"
 
     await hass.services.async_call(
@@ -2130,7 +2138,7 @@ async def test_hybrid_anti_starvation_switch_appears_and_writes_through(hass):
 
     sn = "10201234567810"
     coordinator = entry.runtime_data
-    entity_id = lookup_entity_id(hass, "switch", sn, "anti_starvation")
+    entity_id = lookup_entity_id(hass, entry, "switch", sn, "anti_starvation")
     assert entity_id is not None
 
     with patch.object(

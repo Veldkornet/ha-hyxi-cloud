@@ -137,16 +137,16 @@ async def test_a_discovered_device_is_added_without_a_reload(
     serve_devices(client, _devices("SN_A"))
     await _setup(hass, entry)
     coordinator = entry.runtime_data
-    assert lookup_entity_id(hass, "sensor", "SN_B", "batSoc") is None
+    assert lookup_entity_id(hass, entry, "sensor", "SN_B", "batSoc") is None
 
     await _discover(hass, client, coordinator, _devices("SN_A", "SN_B"))
 
     assert entry.runtime_data is coordinator
     assert _registered(hass, entry, "SN_B")
-    entity_id = lookup_entity_id(hass, "sensor", "SN_B", "batSoc")
+    entity_id = lookup_entity_id(hass, entry, "sensor", "SN_B", "batSoc")
     assert entity_id is not None
     assert hass.states.get(entity_id).state == "50"
-    assert lookup_entity_id(hass, "button", "SN_B", "clear_alarms") is not None
+    assert lookup_entity_id(hass, entry, "button", "SN_B", "clear_alarms") is not None
 
 
 @pytest.mark.asyncio
@@ -194,7 +194,7 @@ async def test_a_new_controllable_device_gets_battery_protection(
     assert entry.runtime_data is coordinator
     assert coordinator.protection_controllers["SN_A"] is first
     assert "SN_B" in coordinator.protection_controllers
-    assert lookup_entity_id(hass, "sensor", "SN_B", "last_sent_mode") is not None
+    assert lookup_entity_id(hass, entry, "sensor", "SN_B", "last_sent_mode") is not None
 
 
 @pytest.mark.asyncio
@@ -421,4 +421,4 @@ async def test_a_device_whose_first_poll_failed_is_added_once_polled(
 
     assert entry.runtime_data is coordinator
     assert _registered(hass, entry, "SN_B")
-    assert lookup_entity_id(hass, "sensor", "SN_B", "batSoc") is not None
+    assert lookup_entity_id(hass, entry, "sensor", "SN_B", "batSoc") is not None

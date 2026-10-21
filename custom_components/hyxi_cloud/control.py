@@ -20,7 +20,7 @@ from homeassistant.helpers import entity_registry as er
 from hyxi_cloud_api import HyxiApiClient
 
 from . import control_verify
-from .const import DOMAIN, is_modbus_entry, mask_sn
+from .const import DOMAIN, device_unique_id, is_modbus_entry, mask_sn
 
 # Why HYXI does not forward a battery mode command (ControlNotForwardedError).
 NOT_FORWARDED_REASON = (
@@ -122,22 +122,21 @@ class CoalescingRunner:
                 return
 
 
-def _get_power_value(hass: HomeAssistant, sn: str, direction: str) -> int:
+def _get_power_value(hass: HomeAssistant, coordinator, sn: str, direction: str) -> int:
     """Read the wattage from the paired number entity.
 
     Looks up the entity by unique_id via the entity registry, since HA-assigned
     entity_ids don't follow a predictable pattern.
     Falls back to 100W if the number entity has not been set yet.
     """
-    unique_id = f"hyxi_{sn}_{direction}_power"
+    unique_id = device_unique_id(coordinator.entry, sn, f"{direction}_power")
     registry = er.async_get(hass)
     entity_id = registry.async_get_entity_id("number", DOMAIN, unique_id)
     if entity_id is None:
-        # unique_id contains unmasked sn, so we should mask it here for logs or just avoid logging unmasked unique_id
-        masked_unique_id = f"hyxi_{mask_sn(sn)}_{direction}_power"
         _LOGGER.warning(
-            "Power number entity (unique_id=%s) not found in registry, using 100W default",
-            masked_unique_id,
+            "%s power number entity of %s not found in registry, using 100W default",
+            direction,
+            mask_sn(sn),
         )
         return 100
     state = hass.states.get(entity_id)
@@ -317,13 +316,19 @@ async def async_send_battery_mode(
             response = await client.set_mode_idle(sn)
         elif mode == "charge":
             _block_manual_charge_if_needed(coordinator, sn)
-            watts = power if power is not None else _get_power_value(hass, sn, "charge")
+            watts = (
+                power
+                if power is not None
+                else _get_power_value(hass, coordinator, sn, "charge")
+            )
             _LOGGER.debug("Setting %s to CHARGE at %dW", mask_sn(sn), watts)
             response = await client.set_mode_charge(sn, watts)
         elif mode == "discharge":
             _block_manual_discharge_if_needed(coordinator, sn)
             watts = (
-                power if power is not None else _get_power_value(hass, sn, "discharge")
+                power
+                if power is not None
+                else _get_power_value(hass, coordinator, sn, "discharge")
             )
             _LOGGER.debug("Setting %s to DISCHARGE at %dW", mask_sn(sn), watts)
             response = await client.set_mode_discharge(sn, watts)

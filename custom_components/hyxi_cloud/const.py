@@ -264,6 +264,31 @@ def is_modbus_entry(entry: Any) -> bool:
     return entry_transport(entry) == TRANSPORT_MODBUS
 
 
+# The config entries' version: 2 moved Modbus entries' device entities
+# onto their own unique_id prefix, which earlier versions don't read.
+CONFIG_VERSION = 2
+
+
+UNIQUE_ID_PREFIX = "hyxi_"
+MODBUS_UNIQUE_ID_PREFIX = "hyxi_modbus_"
+
+
+def unique_id_prefix(entry: Any) -> str:
+    """The prefix of this entry's device entities' unique_ids.
+
+    Home Assistant keeps a device per config entry, but an entity's
+    unique_id per integration, so a Modbus entry marks its own: a device
+    set up over both the cloud and Modbus then gets each entry's entities,
+    instead of the second entry's being dropped as duplicates.
+    """
+    return MODBUS_UNIQUE_ID_PREFIX if is_modbus_entry(entry) else UNIQUE_ID_PREFIX
+
+
+def device_unique_id(entry: Any, sn: str, key: str) -> str:
+    """The unique_id of device `sn`'s `key` entity on this entry."""
+    return f"{unique_id_prefix(entry)}{sn}_{key}"
+
+
 def modbus_service_device_info(entry_id: str) -> DeviceInfo:
     """Device info for the one non-inverter device every Modbus entry gets.
 

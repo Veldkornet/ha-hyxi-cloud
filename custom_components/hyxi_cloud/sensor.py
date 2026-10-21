@@ -37,6 +37,7 @@ from .const import (
     MODBUS_TYPE_SERIAL,
     NULL_VALUES,
     detect_phase_type,
+    device_unique_id,
     entry_stable_key,
     get_raw_device_code,
     get_software_version,
@@ -1881,7 +1882,7 @@ class HyxiSensor(HyxiBaseSensor):
         # unique_id from one restart to the next. Battery-device *grouping*
         # still follows batSn -- see the device_info property.
         key_lower = description.key.lower()
-        self._attr_unique_id = f"hyxi_{sn}_{description.key}"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, description.key)
         self._attr_translation_key = description.translation_key or key_lower
         self.entity_id = f"sensor.hyxi_{sn}_{key_lower}"
 
@@ -2432,7 +2433,9 @@ class HyxiBatteryEnergyPeriodSensor(
         self._last_total: float | None = None
         self._attr_native_value: float | None = None
 
-        self._attr_unique_id = f"hyxi_{sn}_bat_{direction}_{period}"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, f"bat_{direction}_{period}"
+        )
         self.entity_id = f"sensor.hyxi_{sn}_bat_{direction}_{period}"
         self._attr_translation_key = f"bat_{direction}_{period}"
         self._attr_icon = self._ICONS[direction]
@@ -2553,7 +2556,7 @@ class HyxiLastSentModeSensor(
         """Initialize the last sent mode sensor."""
         super().__init__(coordinator)
         self._sn = sn
-        self._attr_unique_id = f"hyxi_{sn}_last_sent_mode"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, "last_sent_mode")
 
     async def async_added_to_hass(self) -> None:
         """Restore the last tracked mode and replay it after restart."""
@@ -2635,7 +2638,9 @@ class EMSensor(SensorEntity):
         self._coordinator = coordinator
         self._sn = sn
         self._key = sensor_def.key
-        self._attr_unique_id = f"hyxi_{sn}_em_{sensor_def.key}"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, f"em_{sensor_def.key}"
+        )
         self._attr_translation_key = f"em_{sensor_def.key}"
         self._attr_device_info = sensor_def.device_info
         self._attr_native_unit_of_measurement = sensor_def.unit

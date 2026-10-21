@@ -22,6 +22,9 @@ conftest.ensure_mock("homeassistant.helpers.entity_registry")
 from custom_components.hyxi_cloud import control as control_mod
 from custom_components.hyxi_cloud.const import DOMAIN
 
+CLOUD = MagicMock(entry=MagicMock(data={}))
+MODBUS = MagicMock(entry=MagicMock(data={"transport": "modbus"}))
+
 HomeAssistantError = control_mod.HomeAssistantError
 # Whatever the shared hyxi_cloud_api mock resolved ControlError to for this
 # run -- a real exception class in the full suite (set by a sibling test
@@ -51,13 +54,28 @@ def test_get_power_value_valid_state():
         state.state = "3000.0"
         hass.states.get.return_value = state
 
-        result = control_mod._get_power_value(hass, "SN123", "charge")
+        result = control_mod._get_power_value(hass, CLOUD, "SN123", "charge")
 
         registry.async_get_entity_id.assert_called_once_with(
             "number", DOMAIN, "hyxi_SN123_charge_power"
         )
         hass.states.get.assert_called_once_with("number.hyxi_sn123_charge_power")
         assert result == 3000
+
+
+def test_get_power_value_looks_up_the_modbus_entrys_own_number():
+    hass = MagicMock()
+    registry = MagicMock()
+    registry.async_get_entity_id.return_value = None
+
+    with patch(
+        "custom_components.hyxi_cloud.control.er.async_get", return_value=registry
+    ):
+        control_mod._get_power_value(hass, MODBUS, "SN123", "charge")
+
+    registry.async_get_entity_id.assert_called_once_with(
+        "number", DOMAIN, "hyxi_modbus_SN123_charge_power"
+    )
 
 
 def test_get_power_value_entity_not_found():
@@ -68,7 +86,7 @@ def test_get_power_value_entity_not_found():
     with patch(
         "custom_components.hyxi_cloud.control.er.async_get", return_value=registry
     ):
-        assert control_mod._get_power_value(hass, "SN123", "charge") == 100
+        assert control_mod._get_power_value(hass, CLOUD, "SN123", "charge") == 100
 
 
 def test_get_power_value_invalid_state():
@@ -82,20 +100,20 @@ def test_get_power_value_invalid_state():
         state_unknown = MagicMock()
         state_unknown.state = "unknown"
         hass.states.get.return_value = state_unknown
-        assert control_mod._get_power_value(hass, "SN123", "charge") == 100
+        assert control_mod._get_power_value(hass, CLOUD, "SN123", "charge") == 100
 
         state_invalid = MagicMock()
         state_invalid.state = "abc"
         hass.states.get.return_value = state_invalid
-        assert control_mod._get_power_value(hass, "SN123", "charge") == 100
+        assert control_mod._get_power_value(hass, CLOUD, "SN123", "charge") == 100
 
         state_inf = MagicMock()
         state_inf.state = "inf"  # float() parses it, int() overflows
         hass.states.get.return_value = state_inf
-        assert control_mod._get_power_value(hass, "SN123", "charge") == 100
+        assert control_mod._get_power_value(hass, CLOUD, "SN123", "charge") == 100
 
         hass.states.get.return_value = None
-        assert control_mod._get_power_value(hass, "SN123", "charge") == 100
+        assert control_mod._get_power_value(hass, CLOUD, "SN123", "charge") == 100
 
 
 # ── SOC-protection guards ──────────────────────────────────────────────

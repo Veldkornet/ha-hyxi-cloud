@@ -26,6 +26,7 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     detect_phase_type,
+    device_unique_id,
     get_raw_device_code,
     is_battery_control_enabled,
     is_control_capable_device_type,
@@ -254,7 +255,7 @@ class HyxiClearAlarmsButton(
         """Initialize the clear alarms button."""
         super().__init__(coordinator)
         self._sn = sn
-        self._attr_unique_id = f"hyxi_{sn}_clear_alarms"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, "clear_alarms")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": dev_data.get("device_name") or f"Device {sn}",
@@ -301,7 +302,7 @@ class HyxiMicroRestartButton(
         """Initialize the microinverter restart button."""
         super().__init__(coordinator)
         self._sn = sn
-        self._attr_unique_id = f"hyxi_{sn}_micro_restart"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, "micro_restart")
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": dev_data.get("device_name") or f"Device {sn}",
@@ -339,7 +340,7 @@ class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntit
         super().__init__(coordinator)
         self._sn = sn
         self._mode = mode
-        self._attr_unique_id = f"hyxi_{sn}_mode_{mode}"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, f"mode_{mode}")
         self._attr_translation_key = f"mode_{mode}"
         self._attr_icon = MODE_ICONS.get(mode, "mdi:solar-power-variant-outline")
         self._attr_device_info = {
@@ -377,7 +378,9 @@ class HyxiPeakShavingButton(
         super().__init__(coordinator)
         self._sn = sn
         self._option = option
-        self._attr_unique_id = f"hyxi_{sn}_peak_shaving_{option}"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, f"peak_shaving_{option}"
+        )
         self._attr_translation_key = f"peak_shaving_{option}"
         self._attr_icon = PEAK_SHAVING_ICONS.get(
             option, "mdi:chart-bell-curve-cumulative"
@@ -439,7 +442,7 @@ class HyxiPowerCommandButton(
         super().__init__(coordinator)
         self._sn = sn
         self._action = action
-        self._attr_unique_id = f"hyxi_{sn}_{action}"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, action)
         self._attr_translation_key = action
         self._attr_icon = POWER_COMMAND_ICONS.get(action, "mdi:power")
         self._attr_device_info = {
@@ -489,7 +492,9 @@ class HyxiWorkModeButton(HyxiEntity, ButtonEntity):
         """Initialize the work mode button."""
         super().__init__(coordinator, sn, dev_data)
         self._mode = mode
-        self._attr_unique_id = f"hyxi_{sn}_work_mode_{mode}"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, f"work_mode_{mode}"
+        )
         self._attr_translation_key = f"work_mode_{mode}"
         self._attr_icon = WORK_MODE_ICONS[mode]
 
