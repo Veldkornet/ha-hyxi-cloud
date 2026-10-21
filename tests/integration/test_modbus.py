@@ -1787,6 +1787,28 @@ async def test_hybrid_has_no_work_mode_buttons(hass):
 
 
 @pytest.mark.asyncio
+async def test_hybrid_undocumented_operating_mode_18_is_a_valid_state(hass):
+    """Mode 18 at 1265, reported by real hybrids but in no source, passes
+    HA's own options validation rather than falling back to unknown."""
+    entry = _modbus_entry(hass, modbus_family="hybrid")
+    connection = _seeded_hybrid_connection()
+    connection.for_unit(1).load_raw({"input": {1265: 18}})
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    entity_id = lookup_entity_id(
+        hass, "sensor", "10201234567810", "currentOperatingMode"
+    )
+    assert entity_id is not None
+    assert hass.states.get(entity_id).state == "18"
+
+
+@pytest.mark.asyncio
 async def test_halo_vpp_mode_button_updates_the_dispatch_switch(hass):
     """Pressing a VPP mode button turns dispatch on, and the switch follows
     on the next poll rather than staying off until the hourly re-read."""

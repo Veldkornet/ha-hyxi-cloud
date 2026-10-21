@@ -427,7 +427,9 @@ cloud inference, but 1265 is a different register on a different device
 family, so it doesn't settle the HALO/cloud conflict on its own. 11 and
 13–16 had been observed on a real hybrid before the reply; 12 and 17 have
 not. A guess that 11–17 were 1–7's VPP counterparts at value+10 turned out
-to be wrong.
+to be wrong. A real hybrid also reports 18, often, which no source
+documents. It is declared with no state translation, so the sensor shows
+the raw number rather than going unknown, until HYXI says what it means.
 
 The cloud set came from reading the phone app, not from watching a device.
 The HALO document is a vendor statement about the same field on a *different*
