@@ -381,7 +381,11 @@ def _migrate_vpp_dispatch_to_work_mode(
 
 
 def _rekey_registry_entity(
-    registry: er.EntityRegistry, domain: str, old_unique_id: str, new_unique_id: str
+    registry: er.EntityRegistry,
+    domain: str,
+    old_unique_id: str,
+    new_unique_id: str,
+    *serials: str,
 ) -> None:
     """Move a registry entry from old_unique_id to new_unique_id, in place.
 
@@ -393,6 +397,9 @@ def _rekey_registry_entity(
     always the longer-history row) and the clashing entry is dropped; this
     is logged at warning level since the dropped row's statistics, if any,
     are then orphaned and a user may want to reconcile them by hand.
+
+    `serials` are the ones the ids and entity_ids can embed, masked in the
+    log lines.
     """
     if old_unique_id == new_unique_id:
         return
@@ -403,19 +410,20 @@ def _rekey_registry_entity(
     if clash is None:
         _LOGGER.debug(
             "Re-keying %s unique_id %s -> %s",
-            old_entity_id,
-            old_unique_id,
-            new_unique_id,
+            _mask_serials_in(old_entity_id, *serials),
+            _mask_serials_in(old_unique_id, *serials),
+            _mask_serials_in(new_unique_id, *serials),
         )
     else:
+        masked_clash = _mask_serials_in(clash, *serials)
         _LOGGER.warning(
             "Re-keying %s to unique_id %s but %s already holds it; dropping %s "
             "(any statistics it accumulated are now orphaned -- reconcile via "
             "Developer Tools > Statistics if needed)",
-            old_entity_id,
-            new_unique_id,
-            clash,
-            clash,
+            _mask_serials_in(old_entity_id, *serials),
+            _mask_serials_in(new_unique_id, *serials),
+            masked_clash,
+            masked_clash,
         )
         registry.async_remove(clash)
     registry.async_update_entity(old_entity_id, new_unique_id=new_unique_id)
@@ -447,9 +455,12 @@ def _mark_modbus_unique_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
             UNIQUE_ID_PREFIX
         ) or not registry.async_get(reg_entry.entity_id):
             continue
-        if cloud_device := _cloud_twin(
-            device_registry, reg_entry.device_id, cloud_entry_ids
-        ):
+        device = (
+            device_registry.async_get(reg_entry.device_id)
+            if reg_entry.device_id
+            else None
+        )
+        if cloud_device := _cloud_twin(device_registry, device, cloud_entry_ids):
             registry.async_update_entity(
                 reg_entry.entity_id,
                 config_entry_id=cloud_device.config_entry_id,
@@ -462,16 +473,34 @@ def _mark_modbus_unique_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
             reg_entry.unique_id,
             MODBUS_UNIQUE_ID_PREFIX
             + reg_entry.unique_id.removeprefix(UNIQUE_ID_PREFIX),
+            *_device_serials(device_registry, device),
         )
+
+
+def _device_serials(
+    device_registry: dr.DeviceRegistry, device: dr.BaseDeviceEntry | None
+) -> list[str]:
+    """The identifiers of a device and of the device it hangs off: the
+    serials an entity on it can embed (a battery's entities are keyed on
+    its inverter's serial)."""
+    devices = [device]
+    # A ChildDeviceEntry carries no via_device_id; getattr keeps this total.
+    if via_id := getattr(device, "via_device_id", None):
+        devices.append(device_registry.async_get(via_id))
+    return [
+        identifier
+        for dev in devices
+        if dev is not None
+        for _domain, identifier in dev.identifiers
+    ]
 
 
 def _cloud_twin(
     device_registry: dr.DeviceRegistry,
-    device_id: str | None,
+    device: dr.BaseDeviceEntry | None,
     cloud_entry_ids: list[str],
 ) -> dr.DeviceEntry | None:
     """The cloud entries' device with one of this device's identifiers."""
-    device = device_registry.async_get(device_id) if device_id else None
     if device is None:
         return None
     for identifier in sorted(device.identifiers):
@@ -603,6 +632,8 @@ def _migrate_battery_sensor_unique_ids(
             "sensor",
             reg_entry.unique_id,
             device_unique_id(entry, inverter_sn, key),
+            id_sn,
+            inverter_sn,
         )
 
 

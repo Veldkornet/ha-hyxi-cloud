@@ -1161,7 +1161,12 @@ async def test_migrate_battery_sensor_unique_ids_filters_registry_entries(
         )
 
     mock_rekey.assert_called_once()
-    assert mock_rekey.call_args[0][2:] == ("hyxi_BAT_batP", "hyxi_INV_batP")
+    assert mock_rekey.call_args[0][2:] == (
+        "hyxi_BAT_batP",
+        "hyxi_INV_batP",
+        "BAT",
+        "INV",
+    )
 
 
 def test_battery_serial_to_inverter_map_excludes_ambiguous_and_junk():

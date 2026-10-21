@@ -3,6 +3,7 @@ set up over both the cloud and Modbus gets each entry's entities, and an
 existing Modbus entry's entities move to the prefix without losing their
 entity_ids."""
 
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -206,3 +207,52 @@ async def test_a_row_already_on_the_modbus_prefix_gives_way(hass: HomeAssistant)
     assert entry.state is ConfigEntryState.LOADED
     assert registry.async_get(older).unique_id == f"hyxi_modbus_{SN}_batSoc"
     assert registry.async_get(newer) is None
+
+
+@pytest.mark.asyncio
+async def test_the_migration_logs_no_serials(hass: HomeAssistant, caplog):
+    """Re-keying logs masked ids, also for an entity keyed on the
+    inverter's serial that sits on its battery's device, and on a clash."""
+    caplog.set_level(logging.DEBUG, logger="custom_components.hyxi_cloud")
+    entry = _modbus_entry(hass, modbus_family="halo")
+    devices = dr.async_get(hass)
+    inverter = devices.async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers={(DOMAIN, SN)}
+    )
+    battery = devices.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, "BAT0001")},
+        via_device_id=inverter.id,
+    )
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"hyxi_{SN}_bat_charge_today",
+        config_entry=entry,
+        device_id=battery.id,
+        suggested_object_id=f"hyxi_{SN}_bat_charge_today",
+    )
+    registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"hyxi_{SN}_batSoc",
+        config_entry=entry,
+        device_id=inverter.id,
+        suggested_object_id=f"hyxi_{SN}_batsoc",
+    )
+    registry.async_get_or_create(
+        "sensor", DOMAIN, f"hyxi_modbus_{SN}_batSoc", config_entry=entry
+    )
+
+    caplog.clear()
+    assert await async_migrate_entry(hass, entry)
+
+    ours = "\n".join(
+        record.getMessage()
+        for record in caplog.records
+        if record.name.startswith("custom_components.hyxi_cloud")
+    )
+    assert "Re-keying" in ours
+    assert "already holds it" in ours
+    assert SN not in ours
