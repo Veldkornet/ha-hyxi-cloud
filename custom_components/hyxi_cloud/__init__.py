@@ -192,8 +192,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # NOSON
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool:
+async def async_migrate_entry(  # NOSONAR
+    hass: HomeAssistant, entry: HyxiConfigEntry
+) -> bool:
     """Bring an entry from an earlier config version up to this one.
+
+    Home Assistant awaits this, though it awaits nothing itself.
 
     Version 2 gives a Modbus entry's device entities their own unique_id
     prefix (see unique_id_prefix).

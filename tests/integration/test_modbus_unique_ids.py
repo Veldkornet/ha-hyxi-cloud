@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
+from custom_components.hyxi_cloud import async_migrate_entry
 from custom_components.hyxi_cloud.const import CONFIG_VERSION, DOMAIN
 from tests.integration.entries import cloud_entry, lookup_entity_id, serve_devices
 from tests.integration.test_modbus import _modbus_entry, _seeded_connection
@@ -168,12 +169,16 @@ async def test_a_shared_row_goes_back_to_the_cloud_entry(
         suggested_object_id="halo_battery_soc",
     ).entity_id
 
-    await _setup(hass, cloud)
-
+    # Migrated before setup: the entries set up together, and the cloud
+    # entry registering the row first would hand it over by itself.
+    assert await async_migrate_entry(hass, modbus)
     row = registry.async_get(shared)
     assert row.unique_id == f"hyxi_{SN}_batSoc"
     assert row.config_entry_id == cloud.entry_id
     assert row.device_id == cloud_device.id
+
+    await _setup(hass, cloud)
+
     assert hass.states.get(shared).state == "80"
     modbus_soc = lookup_entity_id(hass, modbus, "sensor", SN, "batSoc")
     assert hass.states.get(modbus_soc).state == "78"
