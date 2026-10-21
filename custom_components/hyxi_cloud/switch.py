@@ -20,6 +20,7 @@ from .const import (
     CONF_EM_INVERTER_SN,
     DOMAIN,
     detect_phase_type,
+    device_unique_id,
     get_raw_device_code,
     is_battery_control_enabled,
     is_control_capable_device_type,
@@ -195,7 +196,9 @@ class HyxiFrequencyControlSwitch(HyxiEntity, SwitchEntity):
     def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
         """Initialize the frequency control switch."""
         super().__init__(coordinator, sn, dev_data)
-        self._attr_unique_id = f"hyxi_{sn}_frequency_control"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, "frequency_control"
+        )
 
     async def async_turn_on(self, **kwargs) -> None:
         """Enable frequency control."""
@@ -247,7 +250,7 @@ class HyxiMicroPowerSwitch(HyxiEntity, SwitchEntity):
     def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
         """Initialize the microinverter power switch."""
         super().__init__(coordinator, sn, dev_data)
-        self._attr_unique_id = f"hyxi_{sn}_micro_power"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, "micro_power")
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on the microinverter."""
@@ -312,7 +315,9 @@ class HyxiAntiStarvationSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
     ) -> None:
         """Initialize the anti-starvation switch."""
         super().__init__(coordinator, sn, dev_data)
-        self._attr_unique_id = f"hyxi_{sn}_anti_starvation"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, "anti_starvation"
+        )
         self._client_method = client_method
         self._sync_from_settings(dev_data)
 
@@ -385,7 +390,7 @@ class HyxiDispatchSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
     def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
         """Initialize the dispatch switch."""
         super().__init__(coordinator, sn, dev_data)
-        self._attr_unique_id = f"hyxi_{sn}_dispatch"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, "dispatch")
         self._sync_from_settings(dev_data)
 
     def _apply_settings_metrics(self, metrics: dict) -> None:
@@ -435,7 +440,9 @@ class HyxiMicroEssPowerSwitch(HyxiEntity, SwitchEntity):
     def __init__(self, coordinator, sn: str, dev_data: dict) -> None:
         """Initialize the Micro ESS power switch."""
         super().__init__(coordinator, sn, dev_data)
-        self._attr_unique_id = f"hyxi_{sn}_micro_ess_power"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, "micro_ess_power"
+        )
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on the Micro ESS."""
@@ -504,7 +511,7 @@ class EMToggleSwitch(SwitchEntity, RestoreEntity):
         """Initialize the EM toggle switch."""
         self._sn = sn
         key = toggle_def.key
-        self._attr_unique_id = f"hyxi_{sn}_em_{key}"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, f"em_{key}")
         self._attr_translation_key = f"em_{key}"
         self._attr_icon = self._ICONS.get(key, "mdi:toggle-switch")
         self._attr_is_on = toggle_def.default_on

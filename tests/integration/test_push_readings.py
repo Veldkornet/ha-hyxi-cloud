@@ -60,8 +60,8 @@ async def _push(hass: HomeAssistant, coordinator, reading: dict) -> None:
     await hass.async_block_till_done()
 
 
-def _state(hass: HomeAssistant, key: str) -> str:
-    return hass.states.get(lookup_entity_id(hass, "sensor", SN, key)).state
+def _state(hass: HomeAssistant, entry, key: str) -> str:
+    return hass.states.get(lookup_entity_id(hass, entry, "sensor", SN, key)).state
 
 
 @pytest.mark.asyncio
@@ -96,16 +96,16 @@ async def test_a_push_after_a_poll_keeps_time_and_phase_powers(
 
     await _push(hass, coordinator, CAPTURED_READING)
 
-    assert _state(hass, "last_seen") == "2026-10-10T16:31:30+00:00"
-    assert _state(hass, "batSoc") == "89"
-    assert float(_state(hass, "ph1p")) == 1201.0
-    assert float(_state(hass, "ph2p")) == 1189.0
-    assert float(_state(hass, "ph3p")) == 1195.0
+    assert _state(hass, entry, "last_seen") == "2026-10-10T16:31:30+00:00"
+    assert _state(hass, entry, "batSoc") == "89"
+    assert float(_state(hass, entry, "ph1p")) == 1201.0
+    assert float(_state(hass, entry, "ph2p")) == 1189.0
+    assert float(_state(hass, entry, "ph3p")) == 1195.0
 
     freezer.tick(60)
     await _push(hass, coordinator, {**CAPTURED_READING, "batSoc": 70})
 
-    assert _state(hass, "batSoc") == "89"
+    assert _state(hass, entry, "batSoc") == "89"
     assert coordinator.last_push_received == ARRIVAL + timedelta(seconds=60)
 
     older = CAPTURED_READING["collectTime"] - 60_000
@@ -113,12 +113,12 @@ async def test_a_push_after_a_poll_keeps_time_and_phase_powers(
         hass, coordinator, {**CAPTURED_READING, "collectTime": older, "batSoc": 70}
     )
 
-    assert _state(hass, "batSoc") == "89"
+    assert _state(hass, entry, "batSoc") == "89"
 
     later = CAPTURED_READING["collectTime"] + 60_000
     await _push(
         hass, coordinator, {**CAPTURED_READING, "collectTime": later, "batSoc": 80}
     )
 
-    assert _state(hass, "batSoc") == "80"
-    assert _state(hass, "last_seen") == "2026-10-10T16:32:30+00:00"
+    assert _state(hass, entry, "batSoc") == "80"
+    assert _state(hass, entry, "last_seen") == "2026-10-10T16:32:30+00:00"

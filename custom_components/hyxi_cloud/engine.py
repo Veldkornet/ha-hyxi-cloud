@@ -47,6 +47,7 @@ from .const import (
     EM_DEFAULTS,
     EM_LOOP_INTERVAL,
     detect_phase_type,
+    device_unique_id,
     get_raw_device_code,
     is_modbus_entry,
     mask_sn,
@@ -280,7 +281,7 @@ class EnergyManagerEngine:
             )
 
         # Low-SOC fast-path: listen for battery SOC changes
-        soc_entity = self._find_entity_id("sensor", f"hyxi_{self._sn}_batsoc")
+        soc_entity = self._find_entity_id("sensor", "batSoc")
         if soc_entity:
             self._unsub_listeners.append(
                 async_track_state_change_event(
@@ -332,8 +333,9 @@ class EnergyManagerEngine:
 
     # ── State reading helpers ───────────────────────────────────────────
 
-    def _find_entity_id(self, domain: str, unique_id: str) -> str | None:
-        """Look up an entity_id by unique_id via the entity registry."""
+    def _find_entity_id(self, domain: str, key: str) -> str | None:
+        """Look up this inverter's `key` entity via the entity registry."""
+        unique_id = device_unique_id(self._coordinator.entry, self._sn, key)
         registry = er.async_get(self._hass)
         return registry.async_get_entity_id(domain, DOMAIN, unique_id)
 
@@ -398,11 +400,10 @@ class EnergyManagerEngine:
             return self._get_battery_capacity()
 
         default = EM_DEFAULTS.get(key, 0)
-        unique_id = f"hyxi_{self._sn}_em_{key}"
-        entity_id = self._find_entity_id("number", unique_id)
+        entity_id = self._find_entity_id("number", f"em_{key}")
         if not entity_id:
             # Try switch domain for boolean params
-            entity_id = self._find_entity_id("switch", unique_id)
+            entity_id = self._find_entity_id("switch", f"em_{key}")
             if entity_id:
                 return 1.0 if self._get_ha_state_bool(entity_id) else 0.0
             return float(default)
@@ -423,8 +424,7 @@ class EnergyManagerEngine:
         state-machine write, mirroring how _get_param/_get_ha_state_float
         read it, if the entity object can't be found (e.g. not yet added).
         """
-        unique_id = f"hyxi_{self._sn}_em_{key}"
-        entity_id = self._find_entity_id("number", unique_id)
+        entity_id = self._find_entity_id("number", f"em_{key}")
         if not entity_id:
             return
 
@@ -460,8 +460,7 @@ class EnergyManagerEngine:
 
     def _get_protection_param(self, key: str, default: float) -> float:
         """Read a value from the existing protection number entities."""
-        unique_id = f"hyxi_{self._sn}_{key}"
-        entity_id = self._find_entity_id("number", unique_id)
+        entity_id = self._find_entity_id("number", key)
         if not entity_id:
             return default
         return self._get_ha_state_float(entity_id, default)
@@ -969,8 +968,7 @@ class EnergyManagerEngine:
         tracked = self._last_sent_power.get(direction, 0)
         if tracked > 0:
             return tracked
-        unique_id = f"hyxi_{self._sn}_{direction}_power"
-        entity_id = self._find_entity_id("number", unique_id)
+        entity_id = self._find_entity_id("number", f"{direction}_power")
         if entity_id:
             return self._get_ha_state_float(entity_id, 0)
         return 0
@@ -1125,8 +1123,7 @@ class EnergyManagerEngine:
                 await self._adjust_power("charge", int(charge_target))
             return
 
-        grid_charge_uid = f"hyxi_{self._sn}_em_grid_charge_allowed"
-        grid_entity = self._find_entity_id("switch", grid_charge_uid)
+        grid_entity = self._find_entity_id("switch", "em_grid_charge_allowed")
         if self._get_ha_state_bool(grid_entity):
             grid_charge_w = min(2000, int(s.max_charge))
             self._set_decision("grid_charge_emergency")
@@ -1194,8 +1191,7 @@ class EnergyManagerEngine:
         if not self._has_peak_shaving():
             return False
 
-        export_limit_uid = f"hyxi_{self._sn}_em_export_limiting"
-        export_limit_entity = self._find_entity_id("switch", export_limit_uid)
+        export_limit_entity = self._find_entity_id("switch", "em_export_limiting")
         if not self._get_ha_state_bool(export_limit_entity, False):
             if self._pv_curtailed:
                 await self._release_pv_curtailment()
@@ -1234,8 +1230,7 @@ class EnergyManagerEngine:
     async def _check_high_load(self, s: DecisionState) -> bool:
         """PRIORITY 3: Sustained high load. Returns True if handled."""
         # Check if high load feature is enabled by the user
-        high_load_assist_uid = f"hyxi_{self._sn}_em_high_load_battery_assist"
-        high_load_entity = self._find_entity_id("switch", high_load_assist_uid)
+        high_load_entity = self._find_entity_id("switch", "em_high_load_battery_assist")
         high_load_assist = self._get_ha_state_bool(high_load_entity, False)
         if not high_load_assist:
             return False
@@ -1262,8 +1257,7 @@ class EnergyManagerEngine:
     async def _check_night(self, s: DecisionState) -> bool:
         """PRIORITY 4 & 4b: Night mode. Returns True if handled."""
         # Check if night mode feature is enabled by the user
-        night_mode_uid = f"hyxi_{self._sn}_em_night_mode"
-        night_mode_entity = self._find_entity_id("switch", night_mode_uid)
+        night_mode_entity = self._find_entity_id("switch", "em_night_mode")
         if not self._get_ha_state_bool(night_mode_entity, False):
             return False
 
@@ -1530,7 +1524,7 @@ class EnergyManagerEngine:
 
     def _switched_off(self) -> bool:
         """Whether the EM's own em_enabled switch is off."""
-        em_entity = self._find_entity_id("switch", f"hyxi_{self._sn}_em_enabled")
+        em_entity = self._find_entity_id("switch", "em_enabled")
         return bool(em_entity) and not self._get_ha_state_bool(em_entity, True)
 
     @callback

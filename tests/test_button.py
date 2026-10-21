@@ -604,7 +604,7 @@ async def test_mode_button_press_charge_discharge(
     mock_coordinator_fixture.client.set_mode_charge.assert_called_once_with(
         "SN123", 5000
     )
-    mock_get_power.assert_any_call(hass, "SN123", "charge")
+    mock_get_power.assert_any_call(hass, mock_coordinator_fixture, "SN123", "charge")
 
     btn_discharge = button_mod.HyxiModeButton(
         mock_coordinator_fixture, "SN123", {}, "discharge"
@@ -614,7 +614,7 @@ async def test_mode_button_press_charge_discharge(
     mock_coordinator_fixture.client.set_mode_discharge.assert_called_once_with(
         "SN123", 5000
     )
-    mock_get_power.assert_any_call(hass, "SN123", "discharge")
+    mock_get_power.assert_any_call(hass, mock_coordinator_fixture, "SN123", "discharge")
 
 
 @pytest.mark.asyncio

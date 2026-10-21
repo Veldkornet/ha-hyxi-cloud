@@ -40,6 +40,7 @@ from .const import (
     CONF_REGION,
     CONF_SECRET_KEY,
     CONF_TRANSPORT,
+    CONFIG_VERSION,
     DEFAULT_MODBUS_BAUDRATE,
     DEFAULT_MODBUS_FAMILY,
     DEFAULT_MODBUS_FRAMER,
@@ -311,7 +312,7 @@ def _build_em_schema(
 class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Handle a config flow for HYXI Cloud."""
 
-    VERSION = 1
+    VERSION = CONFIG_VERSION
 
     @staticmethod
     @callback

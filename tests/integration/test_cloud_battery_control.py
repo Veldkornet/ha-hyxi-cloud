@@ -79,8 +79,8 @@ async def test_a_cloud_entry_offers_no_battery_control(hass: HomeAssistant, clie
     entry = await _setup(hass, client, {"SN_HYB": HYBRID}, CONTROL_AND_EM, entry)
     coordinator = entry.runtime_data
 
-    assert lookup_entity_id(hass, "button", "SN_HYB", "mode_idle") is None
-    assert lookup_entity_id(hass, "number", "SN_HYB", "charge_power") is None
+    assert lookup_entity_id(hass, entry, "button", "SN_HYB", "mode_idle") is None
+    assert lookup_entity_id(hass, entry, "number", "SN_HYB", "charge_power") is None
     assert not coordinator.protection_controllers
     assert coordinator.engine is None
     assert entry.options["enable_battery_control"] is False
@@ -106,8 +106,8 @@ async def test_microinverter_power_control_stays_on_the_cloud(
         {"enable_battery_control": True},
     )
 
-    assert lookup_entity_id(hass, "switch", "SN_MIC", "micro_power") is not None
-    assert lookup_entity_id(hass, "button", "SN_HYB", "mode_idle") is None
+    assert lookup_entity_id(hass, entry, "switch", "SN_MIC", "micro_power") is not None
+    assert lookup_entity_id(hass, entry, "button", "SN_HYB", "mode_idle") is None
     assert entry.options["enable_battery_control"] is True
     assert _issue(hass, entry) is not None
 
@@ -172,7 +172,7 @@ async def test_cloud_battery_control_returns_with_the_flag(hass: HomeAssistant, 
         hass, client, {"SN_HYB": HYBRID}, {"enable_battery_control": True}
     )
 
-    assert lookup_entity_id(hass, "button", "SN_HYB", "mode_idle") is not None
+    assert lookup_entity_id(hass, entry, "button", "SN_HYB", "mode_idle") is not None
     assert entry.options["enable_battery_control"] is True
     assert _issue(hass, entry) is None
 

@@ -920,7 +920,7 @@ async def test_async_setup_entry_self_sn_skips_link(
 
 
 @pytest.mark.asyncio
-async def test_remove_legacy_select_entities(mock_hass):
+async def test_remove_legacy_select_entities(mock_hass, mock_entry):
     """Test removal of legacy select entities."""
     from custom_components.hyxi_cloud.migrations import _remove_legacy_select_entities
 
@@ -946,7 +946,7 @@ async def test_remove_legacy_select_entities(mock_hass):
         with patch(
             "custom_components.hyxi_cloud.migrations._LOGGER.debug"
         ) as mock_logger:
-            _remove_legacy_select_entities(mock_hass, devices)
+            _remove_legacy_select_entities(mock_hass, mock_entry, devices)
 
             # Check that the registry was fetched
             mock_er_get.assert_called_once_with(mock_hass)
@@ -1251,7 +1251,7 @@ async def test_remove_alarm_entities_for_modbus(mock_hass, mock_entry):
         def mock_get_entity_id(domain, component, unique_id):
             if (domain, unique_id) == ("binary_sensor", "test_id_123_device_alarm"):
                 return "binary_sensor.hyx_123_device_alarm"
-            if (domain, unique_id) == ("button", "hyxi_123_clear_alarms"):
+            if (domain, unique_id) == ("button", "hyxi_modbus_123_clear_alarms"):
                 return "button.hyxi_123_clear_alarms"
             return None
 

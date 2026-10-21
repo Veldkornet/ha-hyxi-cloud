@@ -25,6 +25,7 @@ from .const import (
     EM_DEFAULTS,
     MANUFACTURER,
     detect_phase_type,
+    device_unique_id,
     get_raw_device_code,
     is_battery_control_enabled,
     is_control_capable_device_type,
@@ -446,7 +447,9 @@ class HyxiPowerNumber(
         super().__init__(coordinator)
         self._sn = sn
         self._direction = direction
-        self._attr_unique_id = f"hyxi_{sn}_{direction}_power"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, f"{direction}_power"
+        )
         self._attr_translation_key = f"{direction}_power"
         metrics = dev_data.get("metrics") or {}
         metric_key = _MAX_POWER_KEYS.get(direction, "")
@@ -520,7 +523,7 @@ class HyxiSettingNumber(
         super().__init__(coordinator)
         self._sn = sn
         self._definition = definition
-        self._attr_unique_id = f"hyxi_{sn}_{definition.key}"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, definition.key)
         self._attr_translation_key = definition.key
         self._attr_native_unit_of_measurement = definition.unit
         self._attr_native_min_value = definition.min_val
@@ -610,7 +613,9 @@ class HyxiMicroPowerLimit(
         """Initialize the micro power limit entity."""
         super().__init__(coordinator)
         self._sn = sn
-        self._attr_unique_id = f"hyxi_{sn}_micro_power_limit"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, "micro_power_limit"
+        )
         self._attr_device_info = {
             "identifiers": {(DOMAIN, sn)},
             "name": dev_data.get("device_name") or f"Device {sn}",
@@ -684,7 +689,7 @@ class HyxiProtectionNumber(
         super().__init__(coordinator)
         self._sn = sn
         key = str(definition["key"])
-        self._attr_unique_id = f"hyxi_{sn}_{key}"
+        self._attr_unique_id = device_unique_id(coordinator.entry, sn, key)
         self._attr_translation_key = key
         self._attr_native_unit_of_measurement = str(definition["unit"])
         self._attr_native_min_value = int(definition["min"])
@@ -760,7 +765,9 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
     ) -> None:
         """Initialize the EM parameter number entity."""
         self._sn = sn
-        self._attr_unique_id = f"hyxi_{sn}_em_{numdef.key}"
+        self._attr_unique_id = device_unique_id(
+            coordinator.entry, sn, f"em_{numdef.key}"
+        )
         self._attr_translation_key = f"em_{numdef.key}"
         self._attr_native_unit_of_measurement = numdef.unit
         self._attr_native_min_value = numdef.min_val

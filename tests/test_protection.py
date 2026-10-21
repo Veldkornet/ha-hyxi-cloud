@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from custom_components.hyxi_cloud import control_verify
+from custom_components.hyxi_cloud.const import DOMAIN
 from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 from tests import conftest
 
@@ -286,11 +287,19 @@ async def test_proactive_state_restore_on_start():
     mock_state = SimpleNamespace(state="charge")
     controller._hass.states = SimpleNamespace(get=MagicMock(return_value=mock_state))
     controller._hass.async_create_task = conftest.create_task
+    registry = MagicMock()
+    registry.async_get_entity_id.return_value = "sensor.inverter_last_sent_mode"
 
-    await controller.async_start()
+    with patch(
+        "custom_components.hyxi_cloud.protection.er.async_get", return_value=registry
+    ):
+        await controller.async_start()
 
+    registry.async_get_entity_id.assert_called_once_with(
+        "sensor", DOMAIN, "hyxi_SN123_last_sent_mode"
+    )
     controller._hass.states.get.assert_called_once_with(
-        "sensor.hyxi_SN123_last_sent_mode"
+        "sensor.inverter_last_sent_mode"
     )
     assert controller.last_sent_mode == "charge"
 

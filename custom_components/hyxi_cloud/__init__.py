@@ -35,6 +35,7 @@ from .const import (
     CONF_MODBUS_FAMILY,
     CONF_MODBUS_UNIT,
     CONF_SECRET_KEY,
+    CONFIG_VERSION,
     DEFAULT_MODBUS_FAMILY,
     DEFAULT_MODBUS_UNIT,
     DOMAIN,
@@ -65,6 +66,7 @@ from .migrations import (
     _async_remove_subscription_store,
     _cleanup_control_entities,
     _cloud_battery_control_issue_id,
+    _mark_modbus_unique_ids,
     _merge_duplicate_battery_energy_sensors,
     _migrate_battery_sensor_unique_ids,
     _migrate_hybrid_serial_decoding,
@@ -190,6 +192,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:  # NOSON
     return True
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool:
+    """Bring an entry from an earlier config version up to this one.
+
+    Version 2 gives a Modbus entry's device entities their own unique_id
+    prefix (see unique_id_prefix).
+    """
+    if entry.version < 2 and is_modbus_entry(entry):
+        _mark_modbus_unique_ids(hass, entry)
+    hass.config_entries.async_update_entry(entry, version=CONFIG_VERSION)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool:
     """Set up HYXI Cloud from a config entry."""
     _LOGGER.debug(
@@ -263,7 +277,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
     _migrate_hybrid_serial_decoding(hass, entry, coordinator.data)
     _async_register_devices(hass, entry, coordinator)
 
-    _remove_legacy_select_entities(hass, coordinator.data)
+    _remove_legacy_select_entities(hass, entry, coordinator.data)
     _remove_purge_subscriptions_button(hass, entry)
     _migrate_vpp_dispatch_to_work_mode(hass, entry, coordinator.data)
     _migrate_battery_sensor_unique_ids(hass, entry, coordinator.data)

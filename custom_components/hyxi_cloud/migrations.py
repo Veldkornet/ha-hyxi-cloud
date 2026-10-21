@@ -16,7 +16,10 @@ from .const import (
     DOMAIN,
     EM_OPTION_KEYS,
     ENERGY_STORAGE_DEVICE_TYPES,
+    MODBUS_UNIQUE_ID_PREFIX,
+    UNIQUE_ID_PREFIX,
     device_type_of,
+    device_unique_id,
     entry_stable_key,
     get_raw_device_code,
     is_battery_control_enabled,
@@ -25,6 +28,7 @@ from .const import (
     mask_sn,
     normalize_device_type,
     offers_device_control,
+    unique_id_prefix,
 )
 from .coordinator import HyxiDataUpdateCoordinator
 
@@ -226,7 +230,7 @@ def _migrate_energy_manager_inverter_sn(
     under identifiers={(DOMAIN, f"{em_sn}_energy_manager")} (see
     binary_sensor.py/number.py/sensor.py/switch.py's EM device_info). Its
     entities are already covered by _migrate_hybrid_inverter_serial's
-    generic unique_id scan (they're all hyxi_{sn}_em_*, matching that
+    generic unique_id scan (they all end in _{sn}_em_*, matching that
     scan's delimited pattern), but the device identifier itself is not, so
     it's handled here the same way as the inverter/battery devices.
 
@@ -315,13 +319,15 @@ def _remove_purge_subscriptions_button(hass: HomeAssistant, entry: ConfigEntry) 
         registry.async_remove(entity_id)
 
 
-def _remove_legacy_select_entities(hass: HomeAssistant, devices: dict) -> None:
+def _remove_legacy_select_entities(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
     """Remove obsolete select entities replaced by stateless buttons."""
     registry = er.async_get(hass)
     for sn in devices:
         for unique_id in (
-            f"hyxi_{sn}_operating_mode",
-            f"hyxi_{sn}_peak_shaving",
+            device_unique_id(entry, sn, "operating_mode"),
+            device_unique_id(entry, sn, "peak_shaving"),
         ):
             entity_id = registry.async_get_entity_id("select", DOMAIN, unique_id)
             if entity_id is not None:
@@ -415,19 +421,81 @@ def _rekey_registry_entity(
     registry.async_update_entity(old_entity_id, new_unique_id=new_unique_id)
 
 
+def _mark_modbus_unique_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Move a Modbus entry's device entities onto the Modbus unique_id prefix
+    (see unique_id_prefix), keeping each entity_id and with it its history.
+
+    An entity on a device a cloud entry also has goes to that entry
+    instead: the cloud entry creates the same unique_id, and whichever
+    entry registered it last owns the row, whichever one's entity it is.
+    The Modbus entry then creates its own.
+
+    Runs once, from async_migrate_entry: a Modbus device's own serial can
+    start with "modbus_" (the fallback when its identity is unreadable), so
+    the ids themselves can't tell whether they've been moved.
+    """
+    registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+    cloud_entry_ids = [
+        other.entry_id
+        for other in hass.config_entries.async_entries(DOMAIN)
+        if not is_modbus_entry(other)
+    ]
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        # Skips a row an earlier re-key dropped for holding its new id.
+        if not reg_entry.unique_id.startswith(
+            UNIQUE_ID_PREFIX
+        ) or not registry.async_get(reg_entry.entity_id):
+            continue
+        if cloud_device := _cloud_twin(
+            device_registry, reg_entry.device_id, cloud_entry_ids
+        ):
+            registry.async_update_entity(
+                reg_entry.entity_id,
+                config_entry_id=cloud_device.config_entry_id,
+                device_id=cloud_device.id,
+            )
+            continue
+        _rekey_registry_entity(
+            registry,
+            reg_entry.domain,
+            reg_entry.unique_id,
+            MODBUS_UNIQUE_ID_PREFIX
+            + reg_entry.unique_id.removeprefix(UNIQUE_ID_PREFIX),
+        )
+
+
+def _cloud_twin(
+    device_registry: dr.DeviceRegistry,
+    device_id: str | None,
+    cloud_entry_ids: list[str],
+) -> dr.DeviceEntry | None:
+    """The cloud entries' device with one of this device's identifiers."""
+    device = device_registry.async_get(device_id) if device_id else None
+    if device is None:
+        return None
+    for identifier in sorted(device.identifiers):
+        for entry_id in cloud_entry_ids:
+            if twin := device_registry.async_get_device_by_identifier(
+                identifier, entry_id
+            ):
+                return twin
+    return None
+
+
 def _split_battery_unique_id(
-    unique_id: str, keys_longest_first: list[str]
+    unique_id: str, prefix: str, keys_longest_first: list[str]
 ) -> tuple[str, str] | None:
-    """Split a ``hyxi_{sn}_{battery-key}`` unique_id into ``(sn, key)``.
+    """Split a ``{prefix}{sn}_{battery-key}`` unique_id into ``(sn, key)``.
 
     Returns None if it isn't one. Serials and some keys both contain
     underscores, so the key is matched as a suffix, longest first, rather
     than splitting on ``_`` (e.g. so ``bat_charge_total`` wins and its sn
     isn't left with a trailing ``_charge``).
     """
-    if not unique_id.startswith("hyxi_"):
+    if not unique_id.startswith(prefix):
         return None
-    body = unique_id[len("hyxi_") :]
+    body = unique_id[len(prefix) :]
     for key in keys_longest_first:
         suffix = f"_{key}"
         if body.endswith(suffix):
@@ -517,7 +585,9 @@ def _migrate_battery_sensor_unique_ids(
     for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
         if reg_entry.domain != "sensor":
             continue
-        parsed = _split_battery_unique_id(reg_entry.unique_id, keys_longest_first)
+        parsed = _split_battery_unique_id(
+            reg_entry.unique_id, unique_id_prefix(entry), keys_longest_first
+        )
         if parsed is None:
             continue
         id_sn, key = parsed
@@ -529,7 +599,10 @@ def _migrate_battery_sensor_unique_ids(
         if inverter_sn is None:
             continue
         _rekey_registry_entity(
-            registry, "sensor", reg_entry.unique_id, f"hyxi_{inverter_sn}_{key}"
+            registry,
+            "sensor",
+            reg_entry.unique_id,
+            device_unique_id(entry, inverter_sn, key),
         )
 
 
@@ -688,7 +761,7 @@ def _remove_alarm_entities_for_modbus(
     for sn in devices:
         for domain, unique_id in (
             ("binary_sensor", f"{entry.entry_id}_{sn}_device_alarm"),
-            ("button", f"hyxi_{sn}_clear_alarms"),
+            ("button", device_unique_id(entry, sn, "clear_alarms")),
         ):
             entity_id = registry.async_get_entity_id(domain, DOMAIN, unique_id)
             if entity_id is not None:
@@ -819,7 +892,7 @@ def _cleanup_control_entities(
 
     _LOGGER.debug("Cleaning up control entities no longer offered from the registry")
     registry = er.async_get(hass)
-    # Device-scoped (hyxi_{sn}_{key}) -- every entity that only exists at
+    # Device-scoped (device_unique_id) -- every entity that only exists at
     # all because is_battery_control_enabled(entry) was True when it was
     # created, cloud and Modbus alike. Keep this in sync with every
     # is_battery_control_enabled(entry) check in button.py/number.py/
@@ -867,7 +940,7 @@ def _cleanup_control_entities(
     )
 
     unique_ids_to_remove = {
-        f"hyxi_{sn}_{key}" for sn in stale_sns for key in keys_to_remove
+        device_unique_id(entry, sn, key) for sn in stale_sns for key in keys_to_remove
     }
     # Entry-scoped: one button per Modbus entry rather than per device SN
     # (see button.py's HyxiRefreshSettingsButton), so it isn't shaped like

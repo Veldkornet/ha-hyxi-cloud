@@ -12,7 +12,13 @@ from homeassistant.helpers import entity_registry as er
 from hyxi_cloud_api import HyxiApiClient
 
 from . import control_verify
-from .const import DOMAIN, detect_phase_type, is_modbus_entry, mask_sn
+from .const import (
+    DOMAIN,
+    detect_phase_type,
+    device_unique_id,
+    is_modbus_entry,
+    mask_sn,
+)
 from .control import NOT_FORWARDED_REASON, CoalescingRunner, NotForwardedPause
 
 if TYPE_CHECKING:
@@ -125,8 +131,8 @@ class HyxiBatteryProtectionController:
         )
 
         # Proactively restore the last sent mode from HASS state registry if it exists
-        entity_id = f"sensor.hyxi_{self._sn}_last_sent_mode"
-        if (state := self._hass.states.get(entity_id)) is not None:
+        entity_id = self._entity_id("sensor", "last_sent_mode")
+        if entity_id and (state := self._hass.states.get(entity_id)) is not None:
             mode = state.state
             if mode not in ("unknown", "unavailable", ""):
                 self._last_sent_mode = mode
@@ -638,11 +644,15 @@ class HyxiBatteryProtectionController:
             raise ValueError(f"Unsupported single-phase protection mode: {mode}")
         return await client.set_peak_shaving(self._sn, mode)
 
+    def _entity_id(self, domain: str, key: str) -> str | None:
+        """Look up this inverter's `key` entity via the entity registry."""
+        return er.async_get(self._hass).async_get_entity_id(
+            domain, DOMAIN, device_unique_id(self._coordinator.entry, self._sn, key)
+        )
+
     def _get_param(self, key: str, default: int) -> int:
         """Read a protection number value from the entity registry."""
-        unique_id = f"hyxi_{self._sn}_{key}"
-        registry = er.async_get(self._hass)
-        entity_id = registry.async_get_entity_id("number", DOMAIN, unique_id)
+        entity_id = self._entity_id("number", key)
         if entity_id is None:
             return default
 
@@ -664,9 +674,7 @@ class HyxiBatteryProtectionController:
 
     def _get_power_value(self, direction: str) -> int:
         """Read the stored charge or discharge power value."""
-        unique_id = f"hyxi_{self._sn}_{direction}_power"
-        registry = er.async_get(self._hass)
-        entity_id = registry.async_get_entity_id("number", DOMAIN, unique_id)
+        entity_id = self._entity_id("number", f"{direction}_power")
         if entity_id is None:
             return 100
 
