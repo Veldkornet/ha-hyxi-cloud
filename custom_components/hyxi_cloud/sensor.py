@@ -845,7 +845,10 @@ SENSOR_TYPES = [
         # 1-7 come from the hybrid protocol document. 11-17 are VPP modes
         # confirmed by HYXI in a private reply, not yet in any document:
         # 11 is older firmware's undivided VPP mode, 12-17 newer
-        # firmware's VPP2 sub-modes. See docs/modbus-provenance.md.
+        # firmware's VPP2 sub-modes. 18 is undocumented but observed on
+        # real hardware -- listed with no state translation, like invSts's
+        # 6, so it displays as the raw number rather than "unknown".
+        # See docs/modbus-provenance.md.
         options=[
             "1",
             "2",
@@ -861,6 +864,7 @@ SENSOR_TYPES = [
             "15",
             "16",
             "17",
+            "18",
         ],
         icon="mdi:state-machine",
     ),
