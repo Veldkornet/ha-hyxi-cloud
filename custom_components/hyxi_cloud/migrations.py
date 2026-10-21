@@ -433,10 +433,10 @@ def _mark_modbus_unique_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Move a Modbus entry's device entities onto the Modbus unique_id prefix
     (see unique_id_prefix), keeping each entity_id and with it its history.
 
-    An entity on a device a cloud entry also has goes to that entry
-    instead: the cloud entry creates the same unique_id, and whichever
-    entry registered it last owns the row, whichever one's entity it is.
-    The Modbus entry then creates its own.
+    Each row stays with the entry that owns it. On a device a cloud entry
+    also has, an id both entries created belonged to whichever registered
+    it last, so the row's history can be either entry's; the cloud entry
+    creates a fresh entity for one the Modbus entry kept.
 
     Runs once, from async_migrate_entry: a Modbus device's own serial can
     start with "modbus_" (the fallback when its identity is unreadable), so
@@ -444,28 +444,11 @@ def _mark_modbus_unique_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """
     registry = er.async_get(hass)
     device_registry = dr.async_get(hass)
-    cloud_entry_ids = [
-        other.entry_id
-        for other in hass.config_entries.async_entries(DOMAIN)
-        if not is_modbus_entry(other)
-    ]
     for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
         # Skips a row an earlier re-key dropped for holding its new id.
         if not reg_entry.unique_id.startswith(
             UNIQUE_ID_PREFIX
         ) or not registry.async_get(reg_entry.entity_id):
-            continue
-        device = (
-            device_registry.async_get(reg_entry.device_id)
-            if reg_entry.device_id
-            else None
-        )
-        if cloud_device := _cloud_twin(device_registry, device, cloud_entry_ids):
-            registry.async_update_entity(
-                reg_entry.entity_id,
-                config_entry_id=cloud_device.config_entry_id,
-                device_id=cloud_device.id,
-            )
             continue
         _rekey_registry_entity(
             registry,
@@ -473,16 +456,17 @@ def _mark_modbus_unique_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
             reg_entry.unique_id,
             MODBUS_UNIQUE_ID_PREFIX
             + reg_entry.unique_id.removeprefix(UNIQUE_ID_PREFIX),
-            *_device_serials(device_registry, device),
+            *_device_serials(device_registry, reg_entry.device_id),
         )
 
 
 def _device_serials(
-    device_registry: dr.DeviceRegistry, device: dr.BaseDeviceEntry | None
+    device_registry: dr.DeviceRegistry, device_id: str | None
 ) -> list[str]:
     """The identifiers of a device and of the device it hangs off: the
     serials an entity on it can embed (a battery's entities are keyed on
     its inverter's serial)."""
+    device = device_registry.async_get(device_id) if device_id else None
     devices = [device]
     # A ChildDeviceEntry carries no via_device_id; getattr keeps this total.
     if via_id := getattr(device, "via_device_id", None):
@@ -493,23 +477,6 @@ def _device_serials(
         if dev is not None
         for _domain, identifier in dev.identifiers
     ]
-
-
-def _cloud_twin(
-    device_registry: dr.DeviceRegistry,
-    device: dr.BaseDeviceEntry | None,
-    cloud_entry_ids: list[str],
-) -> dr.DeviceEntry | None:
-    """The cloud entries' device with one of this device's identifiers."""
-    if device is None:
-        return None
-    for identifier in sorted(device.identifiers):
-        for entry_id in cloud_entry_ids:
-            if twin := device_registry.async_get_device_by_identifier(
-                identifier, entry_id
-            ):
-                return twin
-    return None
 
 
 def _split_battery_unique_id(

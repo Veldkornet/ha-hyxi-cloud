@@ -144,45 +144,49 @@ async def test_a_cloud_entry_keeps_its_unique_ids(hass: HomeAssistant, cloud_cli
 
 
 @pytest.mark.asyncio
-async def test_a_shared_row_goes_back_to_the_cloud_entry(
+async def test_rows_on_a_device_a_cloud_entry_also_has_stay_with_modbus(
     hass: HomeAssistant, cloud_client
 ):
-    """A row both entries registered, which the Modbus entry ended up
-    owning, goes to the cloud entry with its entity_id; the Modbus entry
-    creates its own SOC sensor."""
+    """On a device both entries have, the Modbus entry keeps and re-keys the
+    rows it owns -- one only Modbus creates and one both entries create --
+    and the cloud entry creates a fresh entity for the shared one."""
     cloud = cloud_entry(hass)
     serve_devices(cloud_client, {SN: CLOUD_HALO})
     modbus = _modbus_entry(hass, modbus_family="halo")
     devices = dr.async_get(hass)
-    cloud_device = devices.async_get_or_create(
+    devices.async_get_or_create(
         config_entry_id=cloud.entry_id, identifiers={(DOMAIN, SN)}
     )
     modbus_device = devices.async_get_or_create(
         config_entry_id=modbus.entry_id, identifiers={(DOMAIN, SN)}
     )
     registry = er.async_get(hass)
-    shared = registry.async_get_or_create(
-        "sensor",
-        DOMAIN,
-        f"hyxi_{SN}_batSoc",
-        config_entry=modbus,
-        device_id=modbus_device.id,
-        suggested_object_id="halo_battery_soc",
-    ).entity_id
+    rows = {
+        key: registry.async_get_or_create(
+            domain,
+            DOMAIN,
+            f"hyxi_{SN}_{key}",
+            config_entry=modbus,
+            device_id=modbus_device.id,
+            suggested_object_id=f"halo_{key.lower()}",
+        ).entity_id
+        for domain, key in (("sensor", "batSoc"), ("switch", "dispatch"))
+    }
 
     # Migrated before setup: the entries set up together, and the cloud
-    # entry registering the row first would hand it over by itself.
+    # entry registering the shared id first would take the row over.
     assert await async_migrate_entry(hass, modbus)
-    row = registry.async_get(shared)
-    assert row.unique_id == f"hyxi_{SN}_batSoc"
-    assert row.config_entry_id == cloud.entry_id
-    assert row.device_id == cloud_device.id
+    for key, entity_id in rows.items():
+        row = registry.async_get(entity_id)
+        assert row.unique_id == f"hyxi_modbus_{SN}_{key}"
+        assert row.config_entry_id == modbus.entry_id
 
     await _setup(hass, cloud)
 
-    assert hass.states.get(shared).state == "80"
-    modbus_soc = lookup_entity_id(hass, modbus, "sensor", SN, "batSoc")
-    assert hass.states.get(modbus_soc).state == "78"
+    assert hass.states.get(rows["batSoc"]).state == "78"
+    cloud_soc = lookup_entity_id(hass, cloud, "sensor", SN, "batSoc")
+    assert cloud_soc not in (None, rows["batSoc"])
+    assert hass.states.get(cloud_soc).state == "80"
 
 
 @pytest.mark.asyncio
