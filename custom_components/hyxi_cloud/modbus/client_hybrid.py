@@ -266,8 +266,6 @@ class HyxiHybridModbusClient:
             "tinv": self.status.inverter_temperature,
             "boostTemper": self.status.boost_temperature,
             "dspTemper": self.status.dsp_temperature,
-            # No documented value table for self-test status, unlike the
-            # three fields below -- passed through raw rather than guessed.
             "selfTestStatus": self.status.self_test_status,
             "gridMode": self.status.grid_mode,
             "runCommand": self.status.run_command,
