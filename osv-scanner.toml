@@ -1,0 +1,17 @@
+# Test-only exact pins inherited from homeassistant (via
+# pytest-homeassistant-custom-component). Keyed by version, so a new pin is
+# scanned again as soon as Home Assistant moves it.
+
+[[PackageOverrides]]
+name = "pillow"
+version = "12.3.0"
+ecosystem = "PyPI"
+ignore = true
+reason = "Test-only; exact pin inherited from homeassistant"
+
+[[PackageOverrides]]
+name = "uv"
+version = "0.12.23"
+ecosystem = "PyPI"
+ignore = true
+reason = "Test-only; exact pin inherited from homeassistant"
