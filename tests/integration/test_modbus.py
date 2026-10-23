@@ -1795,12 +1795,13 @@ async def test_hybrid_has_no_work_mode_buttons(hass):
 
 
 @pytest.mark.asyncio
-async def test_hybrid_undocumented_operating_mode_18_is_a_valid_state(hass):
-    """Mode 18 at 1265, reported by real hybrids but in no source, passes
-    HA's own options validation rather than falling back to unknown."""
+async def test_hybrid_operating_mode_and_self_test_values_are_valid_states(hass):
+    """Values real hybrids report at 1265 and 23, documented only in HYXI's
+    private replies, pass HA's own options validation rather than falling
+    back to unknown."""
     entry = _modbus_entry(hass, modbus_family="hybrid")
     connection = _seeded_hybrid_connection()
-    connection.for_unit(1).load_raw({"input": {1265: 18}})
+    connection.for_unit(1).load_raw({"input": {1265: 18, 23: 9}})
 
     with patch(
         "homeassistant.components.modbus.connection.ModbusConnection",
@@ -1809,11 +1810,10 @@ async def test_hybrid_undocumented_operating_mode_18_is_a_valid_state(hass):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
 
-    entity_id = lookup_entity_id(
-        hass, entry, "sensor", "10201234567810", "currentOperatingMode"
-    )
-    assert entity_id is not None
-    assert hass.states.get(entity_id).state == "18"
+    for key, expected in (("currentOperatingMode", "18"), ("selfTestStatus", "9")):
+        entity_id = lookup_entity_id(hass, entry, "sensor", "10201234567810", key)
+        assert entity_id is not None, key
+        assert hass.states.get(entity_id).state == expected, key
 
 
 @pytest.mark.asyncio

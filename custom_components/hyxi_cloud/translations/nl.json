@@ -491,8 +491,11 @@
           "13": "VPP (inactief)",
           "14": "VPP (laden)",
           "15": "VPP (ontladen)",
-          "16": "VPP (zelfverbruik)",
-          "17": "VPP (back-up geforceerd laden)"
+          "16": "VPP (zelfverbruik, eerst teruglevering)",
+          "17": "VPP (back-up geforceerd laden)",
+          "18": "VPP (zelfverbruik, eerst laden)",
+          "31": "Zelfverbruik met piekbesparing",
+          "32": "Back-up met piekbesparing"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Lekstroom"
       },
       "selfteststatus": {
-        "name": "Zelftest status"
+        "name": "Zelftest status",
+        "state": {
+          "0": "Stand-by",
+          "1": "Zelftest bezig (1)",
+          "2": "Zelftest bezig (2)",
+          "3": "Zelftest bezig (3)",
+          "4": "Zelftest bezig (4)",
+          "5": "Zelftest bezig (5)",
+          "6": "Zelftest bezig (6)",
+          "7": "Zelftest bezig (7)",
+          "8": "Zelftest bezig (8)",
+          "9": "Zelftest voltooid"
+        }
       },
       "pvpower": {
         "name": "Totaal PV-vermogen"

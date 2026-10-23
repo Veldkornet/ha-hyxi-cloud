@@ -491,8 +491,11 @@
           "13": "VPP (nečinnost)",
           "14": "VPP (nabíjení)",
           "15": "VPP (vybíjení)",
-          "16": "VPP (vlastní spotřeba)",
-          "17": "VPP (záložní nucené nabíjení)"
+          "16": "VPP (vlastní spotřeba, nejprve export)",
+          "17": "VPP (záložní nucené nabíjení)",
+          "18": "VPP (vlastní spotřeba, nejprve nabíjení)",
+          "31": "Vlastní spotřeba s omezováním špiček",
+          "32": "Záloha s omezováním špiček"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Svodový proud"
       },
       "selfteststatus": {
-        "name": "Stav samotestu"
+        "name": "Stav samotestu",
+        "state": {
+          "0": "Pohotovost",
+          "1": "Probíhá samotest (1)",
+          "2": "Probíhá samotest (2)",
+          "3": "Probíhá samotest (3)",
+          "4": "Probíhá samotest (4)",
+          "5": "Probíhá samotest (5)",
+          "6": "Probíhá samotest (6)",
+          "7": "Probíhá samotest (7)",
+          "8": "Probíhá samotest (8)",
+          "9": "Samotest dokončen"
+        }
       },
       "pvpower": {
         "name": "Celkový výkon PV"

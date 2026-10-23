@@ -491,8 +491,11 @@
           "13": "VPP (inaktiv)",
           "14": "VPP (opladning)",
           "15": "VPP (afladning)",
-          "16": "VPP (eget forbrug)",
-          "17": "VPP (backup tvungen opladning)"
+          "16": "VPP (eget forbrug, eksport først)",
+          "17": "VPP (backup tvungen opladning)",
+          "18": "VPP (eget forbrug, opladning først)",
+          "31": "Eget forbrug med spidsbelastningsudjævning",
+          "32": "Backup med spidsbelastningsudjævning"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Lækstrøm"
       },
       "selfteststatus": {
-        "name": "Selvtest-status"
+        "name": "Selvtest-status",
+        "state": {
+          "0": "Standby",
+          "1": "Selvtest i gang (1)",
+          "2": "Selvtest i gang (2)",
+          "3": "Selvtest i gang (3)",
+          "4": "Selvtest i gang (4)",
+          "5": "Selvtest i gang (5)",
+          "6": "Selvtest i gang (6)",
+          "7": "Selvtest i gang (7)",
+          "8": "Selvtest i gang (8)",
+          "9": "Selvtest fuldført"
+        }
       },
       "pvpower": {
         "name": "Total PV-effekt"

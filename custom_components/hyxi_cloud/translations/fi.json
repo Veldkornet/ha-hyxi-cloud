@@ -491,8 +491,11 @@
           "13": "VPP (valmiustila)",
           "14": "VPP (lataus)",
           "15": "VPP (purku)",
-          "16": "VPP (omakäyttö)",
-          "17": "VPP (varavirran pakotettu lataus)"
+          "16": "VPP (omakäyttö, syöttö verkkoon ensin)",
+          "17": "VPP (varavirran pakotettu lataus)",
+          "18": "VPP (omakäyttö, lataus ensin)",
+          "31": "Omakäyttö huipputehon leikkauksella",
+          "32": "Varavirta huipputehon leikkauksella"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Vuotovirta"
       },
       "selfteststatus": {
-        "name": "Itsetestauksen tila"
+        "name": "Itsetestauksen tila",
+        "state": {
+          "0": "Valmiustila",
+          "1": "Itsetestaus käynnissä (1)",
+          "2": "Itsetestaus käynnissä (2)",
+          "3": "Itsetestaus käynnissä (3)",
+          "4": "Itsetestaus käynnissä (4)",
+          "5": "Itsetestaus käynnissä (5)",
+          "6": "Itsetestaus käynnissä (6)",
+          "7": "Itsetestaus käynnissä (7)",
+          "8": "Itsetestaus käynnissä (8)",
+          "9": "Itsetestaus valmis"
+        }
       },
       "pvpower": {
         "name": "PV-kokonaisteho"

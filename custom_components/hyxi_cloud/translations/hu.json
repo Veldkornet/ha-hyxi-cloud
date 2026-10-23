@@ -491,8 +491,11 @@
           "13": "VPP (készenlét)",
           "14": "VPP (töltés)",
           "15": "VPP (kisütés)",
-          "16": "VPP (saját fogyasztás)",
-          "17": "VPP (tartalék kényszerített töltés)"
+          "16": "VPP (saját fogyasztás, előbb betáplálás)",
+          "17": "VPP (tartalék kényszerített töltés)",
+          "18": "VPP (saját fogyasztás, előbb töltés)",
+          "31": "Saját fogyasztás csúcskisímítással",
+          "32": "Tartalék csúcskisímítással"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Szivárgási áram"
       },
       "selfteststatus": {
-        "name": "Önteszt állapota"
+        "name": "Önteszt állapota",
+        "state": {
+          "0": "Készenlét",
+          "1": "Önteszt folyamatban (1)",
+          "2": "Önteszt folyamatban (2)",
+          "3": "Önteszt folyamatban (3)",
+          "4": "Önteszt folyamatban (4)",
+          "5": "Önteszt folyamatban (5)",
+          "6": "Önteszt folyamatban (6)",
+          "7": "Önteszt folyamatban (7)",
+          "8": "Önteszt folyamatban (8)",
+          "9": "Önteszt befejeződött"
+        }
       },
       "pvpower": {
         "name": "PV teljesítmény"

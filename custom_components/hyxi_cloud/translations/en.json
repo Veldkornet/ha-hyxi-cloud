@@ -532,8 +532,11 @@
           "13": "VPP (idle)",
           "14": "VPP (charging)",
           "15": "VPP (discharging)",
-          "16": "VPP (self-use)",
-          "17": "VPP (backup forced charging)"
+          "16": "VPP (self-use, export first)",
+          "17": "VPP (backup forced charging)",
+          "18": "VPP (self-use, charge first)",
+          "31": "Self-use with peak shaving",
+          "32": "Backup with peak shaving"
         }
       },
       "insulationresistance": {
@@ -543,7 +546,19 @@
         "name": "Leakage Current"
       },
       "selfteststatus": {
-        "name": "Self-test Status"
+        "name": "Self-test Status",
+        "state": {
+          "0": "Standby",
+          "1": "Self-test in progress (1)",
+          "2": "Self-test in progress (2)",
+          "3": "Self-test in progress (3)",
+          "4": "Self-test in progress (4)",
+          "5": "Self-test in progress (5)",
+          "6": "Self-test in progress (6)",
+          "7": "Self-test in progress (7)",
+          "8": "Self-test in progress (8)",
+          "9": "Self-test completed"
+        }
       },
       "pvpower": {
         "name": "PV Power"
