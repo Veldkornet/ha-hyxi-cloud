@@ -124,7 +124,8 @@ jobs:
           retry-on-snapshot-warnings-timeout: 60
           # These advisories are for exact pins inherited from homeassistant
           # (test-only, via pytest-homeassistant-custom-component in the [test]
-          # extra; osv-scanner.toml ignores the same pins for the OSV scan).
+          # extra; osv-scanner.toml does the same for the OSV scan, per package
+          # version rather than per advisory).
           # Never shipped to real integration users, who run inside their own
           # already-existing HA install. Can't be bumped independently until
           # homeassistant patches its own pins upstream.
