@@ -11,7 +11,7 @@ on:
     # Publishing either draft (beta or stable) doesn't touch main or any PR,
     # so without this the *other* draft would sit showing stale pre-publish
     # content until the next push/PR event happened to trigger a refresh.
-    # committish is hardcoded to main below regardless of trigger, so this
+    # commitish is hardcoded to main below regardless of trigger, so this
     # is safe to fire on any release event.
     types: [published]
 
@@ -45,7 +45,7 @@ jobs:
       - name: Update Beta Draft
         uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
-          committish: main
+          commitish: main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -59,7 +59,7 @@ jobs:
       - name: Update Stable Draft
         uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
-          committish: main
+          commitish: main
           # prerelease: false is the only override that matters here --
           # it's a boolean input (checked by type, not truthiness) so it
           # reliably overrides the config's prerelease: true. An empty-string

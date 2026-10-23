@@ -42,9 +42,9 @@ categories:
           "python:uv",
         ]
       labels-mode: "only"
-  # Every category below is exclusive: true, so with all of them now
-  # exclusive, declaration order = priority -- the first match wins and the
-  # PR is never checked against the rest. A PR can legitimately carry more
+  # Every changelog category below is exclusive: true, so declaration
+  # order = priority -- the first match wins and the PR is never checked
+  # against the rest. A PR can legitimately carry more
   # than one label (a breaking-change PR that also updates a .md file picks
   # up "documentation" too), so what matters most to a user reading the
   # release notes needs to be listed first, or it'd get buried under a
@@ -119,6 +119,20 @@ categories:
     when:
       labels: ["chore"]
     exclusive: true
+  # Version bump rules. type: version-resolver renders no changelog section
+  # and is matched independently of the changelog categories' exclusive
+  # settings; the highest matching increment wins. The last one, with no
+  # `when`, is the fallback, so every other PR bumps the patch version.
+  - type: "version-resolver"
+    semver-increment: "major"
+    when:
+      labels: ["breaking-change"]
+  - type: "version-resolver"
+    semver-increment: "minor"
+    when:
+      labels: ["new-feature"]
+  - type: "version-resolver"
+    semver-increment: "patch"
 
 template: |
   # HYXI $RESOLVED_VERSION ⚡🔋☀️
@@ -130,18 +144,3 @@ template: |
   ---
 
   **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
-
-version-resolver:
-  major:
-    labels:
-      - "breaking-change"
-  minor:
-    labels:
-      - "new-feature"
-  patch:
-    labels:
-      - "bugfix"
-      - "bug"
-      - "chore"
-      - "runtime-deps"
-  default: patch
