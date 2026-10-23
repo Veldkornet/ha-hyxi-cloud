@@ -896,29 +896,35 @@ def test_hybrid_nominal_capacity_carries_the_hardware_confirmed_kwh_unit():
 
 
 def test_observed_undocumented_enum_values_are_declared_not_hidden():
-    """invSts=6 and currentOperatingMode=18 are undocumented but observed on
-    real hybrid inverter hardware. They are declared with no state
-    translation -- shown as the raw number rather than "unknown" -- without
-    guessing what they mean."""
+    """invSts=6 is undocumented but observed on real hybrid inverter
+    hardware. It is declared with no state translation -- shown as the raw
+    number rather than "unknown" -- without guessing what it means."""
     invsts = sensor_mod.SENSOR_TYPES_BY_KEY["invSts"]
     assert invsts.options == ["0", "1", "2", "3", "4", "6"]
-    mode = sensor_mod.SENSOR_TYPES_BY_KEY["currentOperatingMode"]
-    assert mode.options is not None
-    assert "18" in mode.options
 
 
-def test_current_operating_mode_options_all_have_shipped_labels():
-    """Every declared 1265 value, VPP modes 11-17 included, has a label in
-    the shipped en.json -- except the undocumented 18, which has none."""
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    [
+        (
+            "currentOperatingMode",
+            {"1", "2", "3", "4", "5", "6", "7"}
+            | {str(n) for n in range(11, 19)}
+            | {"31", "32"},
+        ),
+        ("selfTestStatus", {str(n) for n in range(10)}),
+    ],
+)
+def test_hybrid_mode_and_self_test_options_all_have_shipped_labels(key, expected):
+    """Every value HYXI documented for registers 1265 and 23 is declared,
+    and each has a label in the shipped en.json."""
     from tests.test_translations import load_translation
 
-    states = load_translation("en.json")["entity"]["sensor"]["currentoperatingmode"][
-        "state"
-    ]
-    mode = sensor_mod.SENSOR_TYPES_BY_KEY["currentOperatingMode"]
-    assert mode.options is not None
-    assert set(states) == set(mode.options) - {"18"}
-    assert {"11", "12", "13", "14", "15", "16", "17"} <= set(mode.options)
+    states = load_translation("en.json")["entity"]["sensor"][key.lower()]["state"]
+    description = sensor_mod.SENSOR_TYPES_BY_KEY[key]
+    assert description.options is not None
+    assert set(description.options) == expected
+    assert set(states) == expected
 
 
 def _invsts_sensor(raw_device_code: str, *, modbus: bool) -> sensor_mod.HyxiSensor:

@@ -22,6 +22,7 @@ decode against it.
 | HYXIPower *HYX-H(5\~12)K-HT User Manual*, V1.2, 2024-07 | Alarm code table; lists port 14 as "Reserved Communication" with no pinout | **Vendor, published.** Superseded on the pinout question by the protocol document above — see below. |
 | [Issue #662](https://github.com/Veldkornet/ha-hyxi-cloud/issues/662) and a [matching HA community post](https://community.home-assistant.io/t/hyxipower-integration/926093/28), both user Ton123 — the same contributor who supplied the *Micro Storage RS485 MODBUS* document two rows above | HALO / HYX-MS3000AC RS485 pinout: PIN7 = A, PIN8 = B (T568B white-brown / brown), RJ45 in a circular weatherproof housing, all other pins unused | **First-party to this project, relayed claim, corroborated twice, unconfirmed on hardware.** Stated on this repo's own issue tracker by the person who obtained and supplied the HALO protocol document itself. HYXI has now given the assignment twice — the original ("PIN7 = A, PIN8 = B … white-brown and brown") and a later re-confirmation Ton123 requested ("from right to left: first pin 485B, then 485A, others idle"), which agrees once counted from the other end. Still a relayed account of private messages, not text in the document (serial parameters only, no pinout); this exact pin assignment has not been independently confirmed by someone wiring it and reporting back. See "HALO's RS485 wiring" below. |
 | HYXI developers' written reply to this project's maintainer, 2026-10-09 | Hybrid register 1265 values 11–17; HALO 4048/4049 vs the 4146–4152 VPP block; HALO BMS alarm words 5000–5002; HALO 4024 writes while 4146 is enabled | **Vendor claim, private communication, first-hand.** Received directly by the maintainer, not relayed by a third party, but not (yet) in any published document — HYXI said the documents will be updated in a future revision. Ranks below the documents above where they overlap. 11 and 13–16 had already been observed on real hybrid hardware before the reply; the meanings it gives them, and its HALO answers, are not yet checked against a device. |
+| HYXI developers' second written reply to this project's maintainer, 2026-10-23 | Hybrid register 1265 values 18, 31 and 32; hybrid register 23 (self-test status) values 0–9 | **Vendor claim, private communication, first-hand.** Same standing as the 2026-10-09 reply above. 18 had already been observed, often, on a real hybrid before the reply; 9 at register 23 too. HYXI said 31 and 32 apply to the HT models (the question did not name one) and that the 1265 values may change in future firmware. |
 | `hyxi_cloud_api.VPP_ACTIVE_MODES` | Cloud `workMode` values 13 and 14 | **Inference, unconfirmed.** Derived by reverse-engineering the HYXI phone app's APK. Never observed on a device. See rule 1. |
 
 ## HALO register map (from registers.py)
@@ -402,6 +403,15 @@ reliably specific to the device the surrounding table describes.** Treat
 every worked example as illustrative, not as a byte-exact fixture, until
 checked against real hardware.
 
+## Hybrid self-test status (register 23)
+
+The hybrid document names register 23 ("inverter system self-test status")
+but gives no value table. HYXI's 2026-10-23 reply (see Sources) gives one:
+`0 standby`, `1–8 device self-test in progress`, `9 self-test completed`.
+1–8 share a meaning, so each keeps its number in its label rather than
+being collapsed into one. 9 had been observed on a real hybrid before the
+reply.
+
 ## Rules for anyone changing this code
 
 ### 1. Never reconcile a device's work-mode field with the cloud's `VPP_ACTIVE_MODES`
@@ -427,9 +437,12 @@ cloud inference, but 1265 is a different register on a different device
 family, so it doesn't settle the HALO/cloud conflict on its own. 11 and
 13–16 had been observed on a real hybrid before the reply; 12 and 17 have
 not. A guess that 11–17 were 1–7's VPP counterparts at value+10 turned out
-to be wrong. A real hybrid also reports 18, often, which no source
-documents. It is declared with no state translation, so the sensor shows
-the raw number rather than going unknown, until HYXI says what it means.
+to be wrong. HYXI's 2026-10-23 reply (see Sources) added three more: `18 VPP
+self-consumption`, which differs from 16 only in where surplus PV goes
+(16: load, then grid, then battery; 18: load, then battery, then grid), and,
+on the HT models, `31 self-consumption with peak shaving` and `32 backup
+with peak shaving`. 18 had been observed, often, on a real hybrid before
+the reply; 31 and 32 have not.
 
 The cloud set came from reading the phone app, not from watching a device.
 The HALO document is a vendor statement about the same field on a *different*

@@ -491,8 +491,11 @@
           "13": "VPP (rustend)",
           "14": "VPP (laai)",
           "15": "VPP (ontlaai)",
-          "16": "VPP (selfgebruik)",
-          "17": "VPP (rugsteun geforseerde laai)"
+          "16": "VPP (selfgebruik, uitvoer eerste)",
+          "17": "VPP (rugsteun geforseerde laai)",
+          "18": "VPP (selfgebruik, laai eerste)",
+          "31": "Selfgebruik met piekbesnoeiing",
+          "32": "Rugsteun met piekbesnoeiing"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Lekstroom"
       },
       "selfteststatus": {
-        "name": "Selftoetsstatus"
+        "name": "Selftoetsstatus",
+        "state": {
+          "0": "Gereedheid",
+          "1": "Selftoets aan die gang (1)",
+          "2": "Selftoets aan die gang (2)",
+          "3": "Selftoets aan die gang (3)",
+          "4": "Selftoets aan die gang (4)",
+          "5": "Selftoets aan die gang (5)",
+          "6": "Selftoets aan die gang (6)",
+          "7": "Selftoets aan die gang (7)",
+          "8": "Selftoets aan die gang (8)",
+          "9": "Selftoets voltooi"
+        }
       },
       "pvpower": {
         "name": "Totale PV-krag"

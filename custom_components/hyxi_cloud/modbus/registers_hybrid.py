@@ -95,7 +95,8 @@ class HybridStatus(Component):
     """0 init, 1 standby, 2 DC-side startup, 3 self-test startup,
     4 self-test wait, 5 inverter operation, 6 steady state operation."""
     self_test_status = integer(23, signed=False)
-    """Inverter system self-test status."""
+    """Inverter system self-test status: 0 standby, 1-8 self-test in
+    progress, 9 self-test completed (values from HYXI, not the document)."""
     grid_mode = integer(25, signed=False)
     """1 grid-connected, 0 off-grid."""
     run_command = integer(26, signed=False)
@@ -106,8 +107,11 @@ class HybridStatus(Component):
     """1 self-use, 2 backup(green), 3 backup(grid), 4 feed-in, 5 off-grid,
     6 battery SOC calibration, 7 battery forced charging (vendor document).
     11 VPP (older ARM firmware), and on newer ARM firmware 12 VPP2 off-grid,
-    13 idle, 14 charging, 15 discharging, 16 self-consumption, 17 backup
-    forced charging (HYXI's private reply, not yet in the document). Distinct
+    13 idle, 14 charging, 15 discharging, 16 self-consumption (export
+    before charging), 17 backup forced charging, 18 self-consumption
+    (charging before export); on HT models 31 self-consumption with peak
+    shaving, 32 backup with peak shaving (HYXI's private replies, not yet in
+    the document). Distinct
     from both the HALO document's work_mode and the cloud client's workMode
     -- see docs/modbus-provenance.md, rule 1."""
 

@@ -491,8 +491,11 @@
           "13": "VPP (inactivo)",
           "14": "VPP (carga)",
           "15": "VPP (descarga)",
-          "16": "VPP (autoconsumo)",
-          "17": "VPP (carga forzada de respaldo)"
+          "16": "VPP (autoconsumo, exportación primero)",
+          "17": "VPP (carga forzada de respaldo)",
+          "18": "VPP (autoconsumo, carga primero)",
+          "31": "Autoconsumo con control de picos de demanda",
+          "32": "Respaldo con control de picos de demanda"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Corriente de fuga"
       },
       "selfteststatus": {
-        "name": "Estado de autoprueba"
+        "name": "Estado de autoprueba",
+        "state": {
+          "0": "Espera",
+          "1": "Autoprueba en curso (1)",
+          "2": "Autoprueba en curso (2)",
+          "3": "Autoprueba en curso (3)",
+          "4": "Autoprueba en curso (4)",
+          "5": "Autoprueba en curso (5)",
+          "6": "Autoprueba en curso (6)",
+          "7": "Autoprueba en curso (7)",
+          "8": "Autoprueba en curso (8)",
+          "9": "Autoprueba completada"
+        }
       },
       "pvpower": {
         "name": "Potencia PV total"

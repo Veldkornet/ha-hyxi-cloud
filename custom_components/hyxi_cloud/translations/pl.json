@@ -491,8 +491,11 @@
           "13": "VPP (bezczynność)",
           "14": "VPP (ładowanie)",
           "15": "VPP (rozładowanie)",
-          "16": "VPP (autokonsumpcja)",
-          "17": "VPP (wymuszone ładowanie awaryjne)"
+          "16": "VPP (autokonsumpcja, najpierw eksport)",
+          "17": "VPP (wymuszone ładowanie awaryjne)",
+          "18": "VPP (autokonsumpcja, najpierw ładowanie)",
+          "31": "Autokonsumpcja z redukcją szczytów",
+          "32": "Zasilanie awaryjne z redukcją szczytów"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Prąd upływu"
       },
       "selfteststatus": {
-        "name": "Stan autotestu"
+        "name": "Stan autotestu",
+        "state": {
+          "0": "Czuwanie",
+          "1": "Autotest w toku (1)",
+          "2": "Autotest w toku (2)",
+          "3": "Autotest w toku (3)",
+          "4": "Autotest w toku (4)",
+          "5": "Autotest w toku (5)",
+          "6": "Autotest w toku (6)",
+          "7": "Autotest w toku (7)",
+          "8": "Autotest w toku (8)",
+          "9": "Autotest zakończony"
+        }
       },
       "pvpower": {
         "name": "Całkowita moc PV"

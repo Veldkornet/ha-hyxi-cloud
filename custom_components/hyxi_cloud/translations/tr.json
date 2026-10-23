@@ -491,8 +491,11 @@
           "13": "VPP (Bekleme)",
           "14": "VPP (Şarj)",
           "15": "VPP (Deşarj)",
-          "16": "VPP (Öz Tüketim)",
-          "17": "VPP (Yedek Zorunlu Şarj)"
+          "16": "VPP (Öz Tüketim, Önce Şebekeye Verme)",
+          "17": "VPP (Yedek Zorunlu Şarj)",
+          "18": "VPP (Öz Tüketim, Önce Şarj)",
+          "31": "Pik Tıraşlamalı Öz Tüketim",
+          "32": "Pik Tıraşlamalı Yedek"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Kaçak Akım"
       },
       "selfteststatus": {
-        "name": "Kendi Kendini Test Durumu"
+        "name": "Kendi Kendini Test Durumu",
+        "state": {
+          "0": "Bekleme",
+          "1": "Kendi Kendini Test Sürüyor (1)",
+          "2": "Kendi Kendini Test Sürüyor (2)",
+          "3": "Kendi Kendini Test Sürüyor (3)",
+          "4": "Kendi Kendini Test Sürüyor (4)",
+          "5": "Kendi Kendini Test Sürüyor (5)",
+          "6": "Kendi Kendini Test Sürüyor (6)",
+          "7": "Kendi Kendini Test Sürüyor (7)",
+          "8": "Kendi Kendini Test Sürüyor (8)",
+          "9": "Kendi Kendini Test Tamamlandı"
+        }
       },
       "pvpower": {
         "name": "Toplam PV Gücü"

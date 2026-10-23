@@ -491,8 +491,11 @@
           "13": "VPP (inattivo)",
           "14": "VPP (carica)",
           "15": "VPP (scarica)",
-          "16": "VPP (autoconsumo)",
-          "17": "VPP (carica forzata di backup)"
+          "16": "VPP (autoconsumo, prima immissione)",
+          "17": "VPP (carica forzata di backup)",
+          "18": "VPP (autoconsumo, prima ricarica)",
+          "31": "Autoconsumo con rasatura dei picchi",
+          "32": "Backup con rasatura dei picchi"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Corrente di dispersione"
       },
       "selfteststatus": {
-        "name": "Stato autotest"
+        "name": "Stato autotest",
+        "state": {
+          "0": "Standby",
+          "1": "Autotest in corso (1)",
+          "2": "Autotest in corso (2)",
+          "3": "Autotest in corso (3)",
+          "4": "Autotest in corso (4)",
+          "5": "Autotest in corso (5)",
+          "6": "Autotest in corso (6)",
+          "7": "Autotest in corso (7)",
+          "8": "Autotest in corso (8)",
+          "9": "Autotest completato"
+        }
       },
       "pvpower": {
         "name": "Potenza PV totale"

@@ -843,13 +843,11 @@ SENSOR_TYPES = [
         key="currentOperatingMode",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # 1-7 come from the hybrid protocol document. 11-17 are VPP modes
-        # confirmed by HYXI in a private reply, not yet in any document:
-        # 11 is older firmware's undivided VPP mode, 12-17 newer
-        # firmware's VPP2 sub-modes. 18 is undocumented but observed on
-        # real hardware -- listed with no state translation, like invSts's
-        # 6, so it displays as the raw number rather than "unknown".
-        # See docs/modbus-provenance.md.
+        # 1-7 come from the hybrid protocol document. The rest were
+        # confirmed by HYXI in private replies, not yet in any document:
+        # 11 is older firmware's undivided VPP mode, 12-18 newer
+        # firmware's VPP2 sub-modes, and 31/32 the HT models' peak-shaving
+        # modes. See docs/modbus-provenance.md.
         options=[
             "1",
             "2",
@@ -866,8 +864,20 @@ SENSOR_TYPES = [
             "16",
             "17",
             "18",
+            "31",
+            "32",
         ],
         icon="mdi:state-machine",
+    ),
+    SensorEntityDescription(
+        key="selfTestStatus",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # Confirmed by HYXI in a private reply; the hybrid protocol
+        # document names register 23 but gives no values. 1-8 are all
+        # "self-test in progress", so each keeps its number in its label.
+        options=[str(n) for n in range(10)],
+        icon="mdi:progress-check",
     ),
     # Raw diagnostic values with no documented unit or value table --
     # passed through rather than guessed. See docs/modbus-provenance.md.
@@ -882,11 +892,6 @@ SENSOR_TYPES = [
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:flash-alert",
-    ),
-    SensorEntityDescription(
-        key="selfTestStatus",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:progress-check",
     ),
     SensorEntityDescription(
         key="pvPower",

@@ -491,8 +491,11 @@
           "13": "VPP (inaktivt)",
           "14": "VPP (laddning)",
           "15": "VPP (urladdning)",
-          "16": "VPP (egenanvändning)",
-          "17": "VPP (backup-tvångsladdning)"
+          "16": "VPP (egenanvändning, export först)",
+          "17": "VPP (backup-tvångsladdning)",
+          "18": "VPP (egenanvändning, laddning först)",
+          "31": "Egenanvändning med topplastreducering",
+          "32": "Backup med topplastreducering"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Läckström"
       },
       "selfteststatus": {
-        "name": "Självteststatus"
+        "name": "Självteststatus",
+        "state": {
+          "0": "Standby",
+          "1": "Självtest pågår (1)",
+          "2": "Självtest pågår (2)",
+          "3": "Självtest pågår (3)",
+          "4": "Självtest pågår (4)",
+          "5": "Självtest pågår (5)",
+          "6": "Självtest pågår (6)",
+          "7": "Självtest pågår (7)",
+          "8": "Självtest pågår (8)",
+          "9": "Självtest slutfört"
+        }
       },
       "pvpower": {
         "name": "Total PV-effekt"

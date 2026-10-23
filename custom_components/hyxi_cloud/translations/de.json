@@ -491,8 +491,11 @@
           "13": "VPP (Leerlauf)",
           "14": "VPP (Laden)",
           "15": "VPP (Entladen)",
-          "16": "VPP (Eigenverbrauch)",
-          "17": "VPP (Backup-Zwangsladung)"
+          "16": "VPP (Eigenverbrauch, Einspeisung zuerst)",
+          "17": "VPP (Backup-Zwangsladung)",
+          "18": "VPP (Eigenverbrauch, Laden zuerst)",
+          "31": "Eigenverbrauch mit Spitzenlastkappung",
+          "32": "Backup mit Spitzenlastkappung"
         }
       },
       "insulationresistance": {
@@ -502,7 +505,19 @@
         "name": "Ableitstrom"
       },
       "selfteststatus": {
-        "name": "Selbsttest-Status"
+        "name": "Selbsttest-Status",
+        "state": {
+          "0": "Standby",
+          "1": "Selbsttest läuft (1)",
+          "2": "Selbsttest läuft (2)",
+          "3": "Selbsttest läuft (3)",
+          "4": "Selbsttest läuft (4)",
+          "5": "Selbsttest läuft (5)",
+          "6": "Selbsttest läuft (6)",
+          "7": "Selbsttest läuft (7)",
+          "8": "Selbsttest läuft (8)",
+          "9": "Selbsttest abgeschlossen"
+        }
       },
       "pvpower": {
         "name": "PV-Gesamtleistung"
