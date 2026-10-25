@@ -10,11 +10,3 @@ ecosystem = "PyPI"
 ignore = true
 effectiveUntil = 2027-01-31
 reason = "Test-only; exact pin inherited from homeassistant"
-
-[[PackageOverrides]]
-name = "uv"
-version = "0.12.23"
-ecosystem = "PyPI"
-ignore = true
-effectiveUntil = 2027-01-31
-reason = "Test-only; exact pin inherited from homeassistant"
