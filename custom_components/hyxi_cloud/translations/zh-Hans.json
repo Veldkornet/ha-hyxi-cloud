@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 智能电表（功率传感器）",
           "em_extra_pv_entities": "其他光伏逆变器功率（可选）",
           "em_forecast_entity": "今日剩余太阳能预测（可选）",
-          "em_forecast_power_entity": "当前太阳能功率预测（可选）",
           "em_inverter_sn": "要控制的逆变器",
           "em_battery_capacity_override": "覆盖电池容量",
           "em_battery_capacity_wh": "电池容量 (Wh)",

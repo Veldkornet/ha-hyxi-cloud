@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 Smart Meter (Leistungssensor)",
           "em_extra_pv_entities": "Leistung weiterer Solarwechselrichter (optional)",
           "em_forecast_entity": "Solarprognose für den restlichen Tag (optional)",
-          "em_forecast_power_entity": "Solarprognose aktuelle Leistung (optional)",
           "em_inverter_sn": "Zu steuernder Wechselrichter",
           "em_battery_capacity_override": "Batteriekapazität überschreiben",
           "em_battery_capacity_wh": "Batteriekapazität (Wh)",

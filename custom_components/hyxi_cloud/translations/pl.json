@@ -136,7 +136,6 @@
           "em_p1_entity": "Inteligentny licznik P1 (czujnik mocy)",
           "em_extra_pv_entities": "Moc innych falowników PV (opcjonalnie)",
           "em_forecast_entity": "Pozostała dzisiejsza prognoza słoneczna (opcjonalnie)",
-          "em_forecast_power_entity": "Aktualna moc z prognozy słonecznej (opcjonalnie)",
           "em_inverter_sn": "Falownik do sterowania",
           "em_battery_capacity_override": "Zastąp pojemność baterii",
           "em_battery_capacity_wh": "Pojemność baterii (Wh)",

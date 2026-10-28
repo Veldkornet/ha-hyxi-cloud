@@ -267,6 +267,8 @@ def is_modbus_entry(entry: Any) -> bool:
 # The config entries' version: 2 moved Modbus entries' device entities
 # onto their own unique_id prefix, which earlier versions don't read.
 CONFIG_VERSION = 2
+# Their minor version; async_migrate_entry says what each step changes.
+CONFIG_MINOR_VERSION = 2
 
 
 UNIQUE_ID_PREFIX = "hyxi_"
@@ -763,11 +765,12 @@ CONF_EM_INVERTER_SN = "em_inverter_sn"
 CONF_EM_P1_ENTITY = "em_p1_entity"
 CONF_EM_EXTRA_PV_ENTITIES = "em_extra_pv_entities"
 CONF_EM_FORECAST_ENTITY = "em_forecast_entity"
-CONF_EM_FORECAST_POWER_ENTITY = "em_forecast_power_entity"
 CONF_EM_BATTERY_OVERRIDE = "em_battery_capacity_override"
 CONF_EM_BATTERY_CAPACITY = "em_battery_capacity_wh"
 CONF_EM_DRY_RUN = "em_dry_run"
 CONF_EM_LOOP_INTERVAL = "em_loop_interval"
+# Read only by the 2.2 migration, which removes it from entries' options.
+CONF_EM_FORECAST_POWER_ENTITY = "em_forecast_power_entity"
 # Every Energy Manager option, dropped together when it's turned off.
 EM_OPTION_KEYS = (
     CONF_EM_ENABLED,
@@ -775,7 +778,6 @@ EM_OPTION_KEYS = (
     CONF_EM_P1_ENTITY,
     CONF_EM_EXTRA_PV_ENTITIES,
     CONF_EM_FORECAST_ENTITY,
-    CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_BATTERY_OVERRIDE,
     CONF_EM_BATTERY_CAPACITY,
     CONF_EM_LOOP_INTERVAL,

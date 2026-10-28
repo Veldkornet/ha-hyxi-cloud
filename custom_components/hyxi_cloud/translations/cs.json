@@ -136,7 +136,6 @@
           "em_p1_entity": "Chytrý měřič P1 (senzor výkonu)",
           "em_extra_pv_entities": "Výkon dalších solárních střídačů (volitelné)",
           "em_forecast_entity": "Zbývající solární předpověď dnes (volitelné)",
-          "em_forecast_power_entity": "Aktuální solární výkon předpověď (volitelné)",
           "em_inverter_sn": "Měnič k ovládání",
           "em_battery_capacity_override": "Přepsat kapacitu baterie",
           "em_battery_capacity_wh": "Kapacita baterie (Wh)",

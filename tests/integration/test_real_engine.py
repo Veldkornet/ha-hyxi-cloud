@@ -65,7 +65,6 @@ async def test_engine_lifecycle_and_helpers(hass: HomeAssistant):
         sn="SN123",
         p1_entity="sensor.p1_meter",
         forecast_entity="sensor.solar_forecast",
-        forecast_power_entity="sensor.solar_forecast_power",
     )
 
     engine = EnergyManagerEngine(hass, coordinator, config)
@@ -686,7 +685,6 @@ async def test_engine_status_property(hass: HomeAssistant):
         sn="SN123",
         p1_entity="sensor.p1_meter",
         forecast_entity="sensor.solar_forecast",
-        forecast_power_entity="sensor.solar_forecast_power",
     )
 
     engine = EnergyManagerEngine(hass, coordinator, config)

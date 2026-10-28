@@ -136,7 +136,6 @@
           "em_p1_entity": "Smart Meter P1 (sensore di potenza)",
           "em_extra_pv_entities": "Potenza di altri inverter solari (opzionale)",
           "em_forecast_entity": "Previsione Solare Rimanente Oggi (opzionale)",
-          "em_forecast_power_entity": "Previsione Solare Potenza Attuale (opzionale)",
           "em_inverter_sn": "Inverter da Controllare",
           "em_battery_capacity_override": "Sovrascrivi Capacità Batteria",
           "em_battery_capacity_wh": "Capacità Batteria (Wh)",

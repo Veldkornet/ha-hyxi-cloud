@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 Smartmåler (effektsensor)",
           "em_extra_pv_entities": "Effekt fra andre solcelleinvertere (valgfritt)",
           "em_forecast_entity": "Gjenværende Solprognose i Dag (valgfritt)",
-          "em_forecast_power_entity": "Nåværende Solprognose Effekt (valgfritt)",
           "em_inverter_sn": "Inverter som skal Styres",
           "em_battery_capacity_override": "Overstyr Batterikapasitet",
           "em_battery_capacity_wh": "Batterikapasitet (Wh)",

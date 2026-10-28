@@ -136,7 +136,6 @@
           "em_p1_entity": "Compteur intelligent P1 (capteur de puissance)",
           "em_extra_pv_entities": "Puissance des autres onduleurs solaires (facultatif)",
           "em_forecast_entity": "Prévision solaire restante aujourd'hui (optionnel)",
-          "em_forecast_power_entity": "Prévision solaire puissance actuelle (optionnel)",
           "em_inverter_sn": "Onduleur à contrôler",
           "em_battery_capacity_override": "Remplacer la capacité de la batterie",
           "em_battery_capacity_wh": "Capacité de la batterie (Wh)",
