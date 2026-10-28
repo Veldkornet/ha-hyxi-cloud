@@ -134,6 +134,7 @@
         "description": "Configurez le Gestionnaire d'énergie pour optimiser l'utilisation de la batterie en fonction de la production solaire, du compteur réseau et des données de prévision. Si votre batterie ne communique pas sa capacité (comme un HALO couplé en CA), activez ci-dessous le remplacement de la capacité de la batterie.",
         "data": {
           "em_p1_entity": "Compteur intelligent P1 (capteur de puissance)",
+          "em_extra_pv_entities": "Puissance des autres onduleurs solaires (facultatif)",
           "em_forecast_entity": "Prévision solaire restante aujourd'hui (optionnel)",
           "em_forecast_power_entity": "Prévision solaire puissance actuelle (optionnel)",
           "em_inverter_sn": "Onduleur à contrôler",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Capacité de la batterie (Wh)",
           "em_loop_interval": "Intervalle de la boucle de décision (secondes)",
           "em_dry_run": "Mode simulation (aucun appel API)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Capteurs de puissance d'autres onduleurs solaires du site, comme un SolarEdge. Leur production s'ajoute au PV propre de cet onduleur lorsque le Gestionnaire d'énergie décide de charger la batterie avec le solaire. Utilisez des capteurs mis à jour toutes les quelques secondes."
         }
       }
     },

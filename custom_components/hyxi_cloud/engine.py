@@ -26,6 +26,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.components import persistent_notification
+from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, UnitOfPower
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers import entity_registry as er
@@ -35,6 +36,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import PowerConverter
 from hyxi_cloud_api import HyxiApiClient
 
 from . import control_verify
@@ -89,6 +91,7 @@ class EMEntityConfig:
 
     sn: str
     p1_entity: str
+    extra_pv_entities: tuple[str, ...] = ()
     forecast_entity: str | None = None
     forecast_power_entity: str | None = None
 
@@ -135,6 +138,7 @@ class EnergyManagerEngine:
         self._coordinator = coordinator
         self._sn = config.sn
         self._p1_entity = config.p1_entity
+        self._extra_pv_entities = config.extra_pv_entities
         self._forecast_entity = config.forecast_entity
         self._forecast_power_entity = config.forecast_power_entity
 
@@ -470,8 +474,25 @@ class EnergyManagerEngine:
         return self._get_coordinator_metric("batSoc", 50)
 
     def _get_solar(self) -> float:
-        """Get current solar power."""
-        return self._get_coordinator_metric("ppv", 0)
+        """Get current solar power: the inverter's own PV plus any other PV
+        inverters' power sensors."""
+        return self._get_coordinator_metric("ppv", 0) + sum(
+            self._get_pv_sensor_power(entity_id)
+            for entity_id in self._extra_pv_entities
+        )
+
+    def _get_pv_sensor_power(self, entity_id: str) -> float:
+        """Get a PV power sensor's output in W, or 0 without a reading.
+
+        The reading's size is used, since meters on a PV feed may count
+        production as negative.
+        """
+        power = abs(self._get_ha_state_float(entity_id, 0))
+        state = self._hass.states.get(entity_id)
+        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) if state else None
+        if unit in PowerConverter.VALID_UNITS:
+            power = PowerConverter.convert(power, unit, UnitOfPower.WATT)
+        return power
 
     def _get_home_load(self) -> float:
         """Get current home load."""

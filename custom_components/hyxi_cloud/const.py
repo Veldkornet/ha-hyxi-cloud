@@ -761,6 +761,7 @@ PLATFORMS: list[Platform] = [
 CONF_EM_ENABLED = "em_enabled"
 CONF_EM_INVERTER_SN = "em_inverter_sn"
 CONF_EM_P1_ENTITY = "em_p1_entity"
+CONF_EM_EXTRA_PV_ENTITIES = "em_extra_pv_entities"
 CONF_EM_FORECAST_ENTITY = "em_forecast_entity"
 CONF_EM_FORECAST_POWER_ENTITY = "em_forecast_power_entity"
 CONF_EM_BATTERY_OVERRIDE = "em_battery_capacity_override"
@@ -772,6 +773,7 @@ EM_OPTION_KEYS = (
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     CONF_EM_P1_ENTITY,
+    CONF_EM_EXTRA_PV_ENTITIES,
     CONF_EM_FORECAST_ENTITY,
     CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_BATTERY_OVERRIDE,

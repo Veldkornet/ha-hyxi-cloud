@@ -134,6 +134,7 @@
         "description": "Configure o Gestor de Energia para otimizar o uso da bateria com base na produção solar, contador de rede e dados de previsão. Se a sua bateria não indica a capacidade (como uma HALO acoplada em CA), ative abaixo a substituição da capacidade da bateria.",
         "data": {
           "em_p1_entity": "Medidor Inteligente P1 (sensor de potência)",
+          "em_extra_pv_entities": "Potência de outros inversores solares (opcional)",
           "em_forecast_entity": "Previsão Solar Restante Hoje (opcional)",
           "em_forecast_power_entity": "Previsão Solar Potência Atual (opcional)",
           "em_inverter_sn": "Inversor a Controlar",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Capacidade da Bateria (Wh)",
           "em_loop_interval": "Intervalo do Ciclo de Decisão (segundos)",
           "em_dry_run": "Modo de Simulação (sem chamadas API)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Sensores de potência de outros inversores solares do local, como um SolarEdge. A produção deles é somada ao FV próprio deste inversor quando o Gestor de Energia decide se carrega a bateria com energia solar. Utilize sensores que atualizem a cada poucos segundos."
         }
       }
     },

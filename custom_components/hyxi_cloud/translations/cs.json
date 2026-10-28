@@ -134,6 +134,7 @@
         "description": "Nakonfigurujte Energetický manažer pro optimalizaci využití baterie na základě solární výroby, síťového měřiče a dat předpovědi. Pokud vaše baterie nehlásí svou kapacitu (například AC propojený HALO), zapněte níže přepsání kapacity baterie.",
         "data": {
           "em_p1_entity": "Chytrý měřič P1 (senzor výkonu)",
+          "em_extra_pv_entities": "Výkon dalších solárních střídačů (volitelné)",
           "em_forecast_entity": "Zbývající solární předpověď dnes (volitelné)",
           "em_forecast_power_entity": "Aktuální solární výkon předpověď (volitelné)",
           "em_inverter_sn": "Měnič k ovládání",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Kapacita baterie (Wh)",
           "em_loop_interval": "Interval rozhodovací smyčky (sekundy)",
           "em_dry_run": "Zkušební režim (bez volání API)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Senzory výkonu dalších solárních střídačů v této lokalitě, například SolarEdge. Jejich výkon se přičte k vlastní FV výrobě tohoto střídače, když Energetický manažer rozhoduje, zda nabíjet baterii ze slunce. Použijte senzory, které se aktualizují každých několik sekund."
         }
       }
     },

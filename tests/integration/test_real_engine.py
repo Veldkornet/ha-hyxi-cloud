@@ -2380,3 +2380,41 @@ async def test_repeated_decision_errors_are_quiet(hass: HomeAssistant, caplog):
     assert [r.levelname for r in errors] == ["ERROR", "DEBUG"]
     coordinator.client.set_mode_self_consume.assert_awaited_once_with("SN123")
     engine.stop()
+
+
+@pytest.mark.asyncio
+async def test_the_solar_reading_adds_other_pv_inverters(hass: HomeAssistant):
+    """The solar reading is the inverter's own PV plus the other PV
+    inverters' power sensors, in W whatever their unit or sign; a sensor
+    without a usable reading adds nothing."""
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
+    entry.add_to_hass(hass)
+    coordinator = MagicMock()
+    coordinator.entry = entry
+    coordinator.data = {"SN123": {"metrics": {"ppv": "1000"}}}
+    engine = EnergyManagerEngine(
+        hass,
+        coordinator,
+        EMEntityConfig(
+            sn="SN123",
+            p1_entity="sensor.p1_meter",
+            extra_pv_entities=(
+                "sensor.solaredge_power",
+                "sensor.other_pv_kw",
+                "sensor.no_unit",
+                "sensor.never_created",
+            ),
+        ),
+    )
+    hass.states.async_set(
+        "sensor.solaredge_power", "608.3", {"unit_of_measurement": "W"}
+    )
+    hass.states.async_set("sensor.other_pv_kw", "1.5", {"unit_of_measurement": "kW"})
+    hass.states.async_set("sensor.no_unit", "100")
+
+    assert engine._get_solar() == pytest.approx(1000 + 608.3 + 1500 + 100)
+
+    hass.states.async_set("sensor.solaredge_power", "unavailable")
+    hass.states.async_set("sensor.other_pv_kw", "-1.2", {"unit_of_measurement": "kW"})
+
+    assert engine._get_solar() == pytest.approx(1000 + 1200 + 100)

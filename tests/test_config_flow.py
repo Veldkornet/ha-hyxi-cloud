@@ -929,6 +929,7 @@ def test_save_energy_manager_input_with_battery_override(mock_ha_environment):
 
     user_input = {
         config_flow_mod.CONF_EM_P1_ENTITY: "sensor.p1",
+        config_flow_mod.CONF_EM_EXTRA_PV_ENTITIES: ["sensor.solaredge_power"],
         config_flow_mod.CONF_EM_INVERTER_SN: "SN1",
         config_flow_mod.CONF_EM_BATTERY_OVERRIDE: True,
         config_flow_mod.CONF_EM_BATTERY_CAPACITY: 6000,
@@ -941,6 +942,9 @@ def test_save_energy_manager_input_with_battery_override(mock_ha_environment):
     options_flow._save_energy_manager_input(user_input)
 
     assert options_flow._options[config_flow_mod.CONF_EM_P1_ENTITY] == "sensor.p1"
+    assert options_flow._options[config_flow_mod.CONF_EM_EXTRA_PV_ENTITIES] == [
+        "sensor.solaredge_power"
+    ]
     assert options_flow._options[config_flow_mod.CONF_EM_INVERTER_SN] == "SN1"
     assert options_flow._options[config_flow_mod.CONF_EM_BATTERY_OVERRIDE] is True
     assert options_flow._options[config_flow_mod.CONF_EM_BATTERY_CAPACITY] == 6000
@@ -959,14 +963,18 @@ def test_save_energy_manager_input_with_battery_override(mock_ha_environment):
 def test_save_energy_manager_input_without_battery_override_pops_capacity(
     mock_ha_environment,
 ):
-    """Test turning battery override off removes any stored capacity value and
-    that omitted optional fields (forecast entities) are left untouched rather
-    than being popped."""
+    """Test turning battery override off removes any stored capacity value,
+    and that cleared optional entity fields are removed."""
     config_flow_mod = mock_ha_environment
 
     config_entry = MagicMock()
     options_flow = config_flow_mod.HyxiOptionsFlowHandler(config_entry)
-    options_flow._options = {config_flow_mod.CONF_EM_BATTERY_CAPACITY: 9999}
+    options_flow._options = {
+        config_flow_mod.CONF_EM_BATTERY_CAPACITY: 9999,
+        config_flow_mod.CONF_EM_EXTRA_PV_ENTITIES: ["sensor.solaredge_power"],
+        config_flow_mod.CONF_EM_FORECAST_ENTITY: "sensor.forecast",
+        config_flow_mod.CONF_EM_FORECAST_POWER_ENTITY: "sensor.forecast_power",
+    }
 
     user_input = {
         config_flow_mod.CONF_EM_P1_ENTITY: "sensor.p1",
@@ -976,8 +984,10 @@ def test_save_energy_manager_input_without_battery_override_pops_capacity(
     options_flow._save_energy_manager_input(user_input)
 
     assert config_flow_mod.CONF_EM_BATTERY_CAPACITY not in options_flow._options
+    assert config_flow_mod.CONF_EM_EXTRA_PV_ENTITIES not in options_flow._options
     assert options_flow._options[config_flow_mod.CONF_EM_BATTERY_OVERRIDE] is False
     assert config_flow_mod.CONF_EM_FORECAST_ENTITY not in options_flow._options
+    assert config_flow_mod.CONF_EM_FORECAST_POWER_ENTITY not in options_flow._options
     assert options_flow._options[config_flow_mod.CONF_EM_LOOP_INTERVAL] == 15
     assert options_flow._options[config_flow_mod.CONF_EM_DRY_RUN] is False
 
@@ -1029,6 +1039,7 @@ async def test_async_step_energy_manager_autoselects_single_sn(
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "energy_manager"}
     )
+    options_flow.add_suggested_values_to_schema = MagicMock()
 
     result = await options_flow.async_step_energy_manager(user_input=None)
 
@@ -1063,6 +1074,7 @@ async def test_async_step_energy_manager_keeps_existing_sn_selection(
     options_flow.async_show_form = MagicMock(
         return_value={"type": "form", "step_id": "energy_manager"}
     )
+    options_flow.add_suggested_values_to_schema = MagicMock()
 
     await options_flow.async_step_energy_manager(user_input=None)
 

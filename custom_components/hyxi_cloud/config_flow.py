@@ -21,6 +21,7 @@ from .const import (
     CONF_EM_BATTERY_OVERRIDE,
     CONF_EM_DRY_RUN,
     CONF_EM_ENABLED,
+    CONF_EM_EXTRA_PV_ENTITIES,
     CONF_EM_FORECAST_ENTITY,
     CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_INVERTER_SN,
@@ -257,14 +258,20 @@ def _build_em_schema(
                 CONF_EM_P1_ENTITY,
                 default=options.get(CONF_EM_P1_ENTITY, ""),
             ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
-            vol.Optional(
-                CONF_EM_FORECAST_ENTITY,
-                default=options.get(CONF_EM_FORECAST_ENTITY, ""),
-            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
-            vol.Optional(
-                CONF_EM_FORECAST_POWER_ENTITY,
-                default=options.get(CONF_EM_FORECAST_POWER_ENTITY, ""),
-            ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+            # No defaults for the optional entities: a default is validated
+            # when the field is left empty, and "" isn't an entity. The
+            # options flow suggests their saved values instead.
+            vol.Optional(CONF_EM_EXTRA_PV_ENTITIES): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain="sensor", device_class="power", multiple=True
+                )
+            ),
+            vol.Optional(CONF_EM_FORECAST_ENTITY): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor")
+            ),
+            vol.Optional(CONF_EM_FORECAST_POWER_ENTITY): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="sensor")
+            ),
             vol.Required(
                 CONF_EM_INVERTER_SN, default=current_sn
             ): selector.SelectSelector(
@@ -1296,6 +1303,16 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         """Save the energy manager user input."""
         self._options[CONF_EM_P1_ENTITY] = user_input[CONF_EM_P1_ENTITY]
         self._options[CONF_EM_INVERTER_SN] = user_input[CONF_EM_INVERTER_SN]
+        # A cleared optional entity field is left out of user_input.
+        for key in (
+            CONF_EM_EXTRA_PV_ENTITIES,
+            CONF_EM_FORECAST_ENTITY,
+            CONF_EM_FORECAST_POWER_ENTITY,
+        ):
+            if user_input.get(key):
+                self._options[key] = user_input[key]
+            else:
+                self._options.pop(key, None)
         self._options[CONF_EM_BATTERY_OVERRIDE] = user_input.get(
             CONF_EM_BATTERY_OVERRIDE, False
         )
@@ -1305,12 +1322,6 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
             )
         else:
             self._options.pop(CONF_EM_BATTERY_CAPACITY, None)
-        if user_input.get(CONF_EM_FORECAST_ENTITY):
-            self._options[CONF_EM_FORECAST_ENTITY] = user_input[CONF_EM_FORECAST_ENTITY]
-        if user_input.get(CONF_EM_FORECAST_POWER_ENTITY):
-            self._options[CONF_EM_FORECAST_POWER_ENTITY] = user_input[
-                CONF_EM_FORECAST_POWER_ENTITY
-            ]
         self._options[CONF_EM_LOOP_INTERVAL] = user_input.get(CONF_EM_LOOP_INTERVAL, 15)
         self._options[CONF_EM_DRY_RUN] = user_input.get(CONF_EM_DRY_RUN, False)
 
@@ -1333,7 +1344,10 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         if not current_sn and len(sn_options) == 1:
             current_sn = sn_options[0]
 
-        schema = _build_em_schema(self._config_entry.options, sn_options, current_sn)
+        schema = self.add_suggested_values_to_schema(
+            _build_em_schema(self._config_entry.options, sn_options, current_sn),
+            self._config_entry.options,
+        )
 
         return self.async_show_form(step_id="energy_manager", data_schema=schema)
 

@@ -134,6 +134,7 @@
         "description": "Configureer Energiebeheer om het batterijgebruik te optimaliseren op basis van zonne-energieproductie, netmeter en voorspellingsgegevens. Als je batterij zijn capaciteit niet doorgeeft (zoals een AC-gekoppelde HALO), schakel dan hieronder het overschrijven van de batterijcapaciteit in.",
         "data": {
           "em_p1_entity": "P1 Slimme Meter (vermogenssensor)",
+          "em_extra_pv_entities": "Vermogen Andere Zonne-omvormers (optioneel)",
           "em_forecast_entity": "Zonneprognose Resterend Vandaag (optioneel)",
           "em_forecast_power_entity": "Zonneprognose Huidig Vermogen (optioneel)",
           "em_inverter_sn": "Te Besturen Omvormer",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Batterijcapaciteit (Wh)",
           "em_loop_interval": "Beslislusinterval (seconden)",
           "em_dry_run": "Testmodus (geen API-aanroepen)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Vermogenssensoren van andere zonne-omvormers op deze locatie, zoals een SolarEdge. Hun opbrengst wordt opgeteld bij de eigen PV van deze omvormer wanneer Energiebeheer beslist of de batterij met zonne-energie wordt geladen. Gebruik sensoren die om de paar seconden bijwerken."
         }
       }
     },

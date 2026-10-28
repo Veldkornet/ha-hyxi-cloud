@@ -134,6 +134,7 @@
         "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione. Se la batteria non comunica la sua capacità (come un HALO ad accoppiamento CA), attiva di seguito la sovrascrittura della capacità della batteria.",
         "data": {
           "em_p1_entity": "Smart Meter P1 (sensore di potenza)",
+          "em_extra_pv_entities": "Potenza di altri inverter solari (opzionale)",
           "em_forecast_entity": "Previsione Solare Rimanente Oggi (opzionale)",
           "em_forecast_power_entity": "Previsione Solare Potenza Attuale (opzionale)",
           "em_inverter_sn": "Inverter da Controllare",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Capacità Batteria (Wh)",
           "em_loop_interval": "Intervallo Ciclo Decisionale (secondi)",
           "em_dry_run": "Modalità Simulazione (nessuna chiamata API)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Sensori di potenza di altri inverter solari del sito, come un SolarEdge. La loro produzione viene sommata al FV proprio di questo inverter quando il Gestore Energia decide se caricare la batteria dal solare. Usa sensori che si aggiornano ogni pochi secondi."
         }
       }
     },

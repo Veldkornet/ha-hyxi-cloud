@@ -134,6 +134,7 @@
         "description": "Skonfiguruj Menedżera Energii, aby optymalizować wykorzystanie baterii na podstawie produkcji słonecznej, licznika sieciowego i danych prognozy. Jeśli bateria nie zgłasza swojej pojemności (na przykład HALO sprzężone AC), włącz poniżej zastępowanie pojemności baterii.",
         "data": {
           "em_p1_entity": "Inteligentny licznik P1 (czujnik mocy)",
+          "em_extra_pv_entities": "Moc innych falowników PV (opcjonalnie)",
           "em_forecast_entity": "Pozostała dzisiejsza prognoza słoneczna (opcjonalnie)",
           "em_forecast_power_entity": "Aktualna moc z prognozy słonecznej (opcjonalnie)",
           "em_inverter_sn": "Falownik do sterowania",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Pojemność baterii (Wh)",
           "em_loop_interval": "Interwał pętli decyzyjnej (sekundy)",
           "em_dry_run": "Tryb próbny (bez wywołań API)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Czujniki mocy innych falowników fotowoltaicznych w tej lokalizacji, np. SolarEdge. Ich produkcja jest dodawana do własnej produkcji PV tego falownika, gdy Menedżer Energii decyduje, czy ładować baterię energią słoneczną. Używaj czujników aktualizowanych co kilka sekund."
         }
       }
     },

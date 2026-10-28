@@ -85,6 +85,7 @@ if os.environ.get("HYXI_INTEGRATION_TEST") != "1" and not any(
         "homeassistant.helpers.update_coordinator", {"UpdateFailed": MockUpdateFailed}
     )
     ensure_mock("homeassistant.util")
+    ensure_mock("homeassistant.util.unit_conversion")
     ensure_mock("homeassistant.const")
     ensure_mock(
         "homeassistant.exceptions",
