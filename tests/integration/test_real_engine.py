@@ -2418,3 +2418,27 @@ async def test_the_solar_reading_adds_other_pv_inverters(hass: HomeAssistant):
     hass.states.async_set("sensor.other_pv_kw", "-1.2", {"unit_of_measurement": "kW"})
 
     assert engine._get_solar() == pytest.approx(1000 + 1200 + 100)
+
+
+@pytest.mark.asyncio
+async def test_a_kw_p1_meter_is_read_in_w(hass: HomeAssistant):
+    """A P1 meter reporting in kW is read in W, for decisions and for the
+    rolling average its state changes feed; a non-finite reading, or no
+    entity, is no reading."""
+    engine, _coordinator, _entry = _make_engine(hass)
+    engine.start()
+    try:
+        hass.states.async_set("sensor.p1_meter", "-1.2", {"unit_of_measurement": "kW"})
+        await hass.async_block_till_done()
+
+        assert engine._get_p1() == pytest.approx(-1200)
+        assert engine.p1_avg == pytest.approx(-1200)
+
+        hass.states.async_set("sensor.p1_meter", "nan", {"unit_of_measurement": "kW"})
+        await hass.async_block_till_done()
+
+        assert engine._get_p1() == 0.0
+        assert engine.p1_avg == pytest.approx(-1200)
+        assert engine._get_ha_power_w("") == 0.0
+    finally:
+        engine.stop()
