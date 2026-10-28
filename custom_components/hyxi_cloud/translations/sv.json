@@ -134,6 +134,7 @@
         "description": "Konfigurera Energihantering för att optimera batterianvändning baserat på solproduktion, nätmätare och prognosdata. Om ditt batteri inte rapporterar sin kapacitet (till exempel en AC-kopplad HALO), aktivera åsidosättning av batterikapacitet nedan.",
         "data": {
           "em_p1_entity": "P1 Smart Mätare (effektsensor)",
+          "em_extra_pv_entities": "Effekt från andra solcellsväxelriktare (valfritt)",
           "em_forecast_entity": "Återstående Solprognos Idag (valfritt)",
           "em_forecast_power_entity": "Aktuell Solprognos Effekt (valfritt)",
           "em_inverter_sn": "Växelriktare att Styra",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Batterikapacitet (Wh)",
           "em_loop_interval": "Beslutsloop-intervall (sekunder)",
           "em_dry_run": "Testläge (inga API-anrop)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Effektsensorer från andra solcellsväxelriktare på platsen, till exempel en SolarEdge. Deras produktion läggs till den här växelriktarens egen solel när Energihanteringen avgör om batteriet ska laddas med sol. Använd sensorer som uppdateras med några sekunders mellanrum."
         }
       }
     },

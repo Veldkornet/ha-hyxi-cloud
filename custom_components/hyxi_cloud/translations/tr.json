@@ -134,6 +134,7 @@
         "description": "Enerji Yöneticisini, güneş üretimi, şebeke sayacı ve tahmin verilerine dayalı olarak batarya kullanımını optimize edecek şekilde yapılandırın. Bataryanız kapasitesini bildirmiyorsa (örneğin AC bağlantılı bir HALO), aşağıdan batarya kapasitesini geçersiz kılmayı etkinleştirin.",
         "data": {
           "em_p1_entity": "P1 Akıllı Sayaç (güç sensörü)",
+          "em_extra_pv_entities": "Diğer güneş invertörlerinin gücü (isteğe bağlı)",
           "em_forecast_entity": "Bugün Kalan Güneş Tahmini (isteğe bağlı)",
           "em_forecast_power_entity": "Güncel Güneş Tahmini Gücü (isteğe bağlı)",
           "em_inverter_sn": "Kontrol Edilecek İnverter",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Batarya Kapasitesi (Wh)",
           "em_loop_interval": "Karar Döngüsü Aralığı (saniye)",
           "em_dry_run": "Deneme Modu (API çağrısı yok)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Bu sahadaki diğer güneş invertörlerinin (ör. SolarEdge) güç sensörleri. Enerji Yöneticisi bataryanın güneşten şarj edilip edilmeyeceğine karar verirken bunların üretimi bu invertörün kendi PV'sine eklenir. Birkaç saniyede bir güncellenen sensörler kullanın."
         }
       }
     },

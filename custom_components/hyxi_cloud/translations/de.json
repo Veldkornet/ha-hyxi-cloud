@@ -134,6 +134,7 @@
         "description": "Konfigurieren Sie den Energie-Manager, um die Batterienutzung basierend auf Solarproduktion, Netzzähler und Prognosedaten zu optimieren. Wenn Ihre Batterie ihre Kapazität nicht meldet (z. B. eine AC-gekoppelte HALO), aktivieren Sie unten das Überschreiben der Batteriekapazität.",
         "data": {
           "em_p1_entity": "P1 Smart Meter (Leistungssensor)",
+          "em_extra_pv_entities": "Leistung weiterer Solarwechselrichter (optional)",
           "em_forecast_entity": "Solarprognose für den restlichen Tag (optional)",
           "em_forecast_power_entity": "Solarprognose aktuelle Leistung (optional)",
           "em_inverter_sn": "Zu steuernder Wechselrichter",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Batteriekapazität (Wh)",
           "em_loop_interval": "Entscheidungsintervall (Sekunden)",
           "em_dry_run": "Testmodus (keine API-Aufrufe)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Leistungssensoren weiterer Solarwechselrichter am Standort, z. B. eines SolarEdge. Ihre Leistung wird zur eigenen PV dieses Wechselrichters addiert, wenn der Energie-Manager entscheidet, ob die Batterie mit Solarstrom geladen wird. Verwende Sensoren, die sich alle paar Sekunden aktualisieren."
         }
       }
     },

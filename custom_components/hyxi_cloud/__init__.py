@@ -27,6 +27,7 @@ from .const import (
     BASE_URL_DEFAULT,
     CONF_ACCESS_KEY,
     CONF_EM_ENABLED,
+    CONF_EM_EXTRA_PV_ENTITIES,
     CONF_EM_FORECAST_ENTITY,
     CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_INVERTER_SN,
@@ -541,6 +542,7 @@ def _async_setup_energy_manager(
     em_config = EMEntityConfig(
         sn=em_sn,
         p1_entity=entry.options.get(CONF_EM_P1_ENTITY, ""),
+        extra_pv_entities=tuple(entry.options.get(CONF_EM_EXTRA_PV_ENTITIES, ())),
         forecast_entity=entry.options.get(CONF_EM_FORECAST_ENTITY),
         forecast_power_entity=entry.options.get(CONF_EM_FORECAST_POWER_ENTITY),
     )

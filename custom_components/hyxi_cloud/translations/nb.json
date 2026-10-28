@@ -134,6 +134,7 @@
         "description": "Konfigurer Energistyring for å optimalisere batteribruk basert på solproduksjon, nettmåler og prognosedata. Hvis batteriet ikke rapporterer kapasiteten sin (for eksempel en AC-koblet HALO), slå på overstyring av batterikapasitet nedenfor.",
         "data": {
           "em_p1_entity": "P1 Smartmåler (effektsensor)",
+          "em_extra_pv_entities": "Effekt fra andre solcelleinvertere (valgfritt)",
           "em_forecast_entity": "Gjenværende Solprognose i Dag (valgfritt)",
           "em_forecast_power_entity": "Nåværende Solprognose Effekt (valgfritt)",
           "em_inverter_sn": "Inverter som skal Styres",
@@ -141,6 +142,9 @@
           "em_battery_capacity_wh": "Batterikapasitet (Wh)",
           "em_loop_interval": "Beslutningsløkke-intervall (sekunder)",
           "em_dry_run": "Testmodus (ingen API-kall)"
+        },
+        "data_description": {
+          "em_extra_pv_entities": "Effektsensorer fra andre solcelleinvertere på stedet, for eksempel en SolarEdge. Produksjonen deres legges til denne inverterens egen PV når Energistyringen avgjør om batteriet skal lades fra sol. Bruk sensorer som oppdateres med noen sekunders mellomrom."
         }
       }
     },
