@@ -116,7 +116,6 @@ class EMEntityConfig:
     p1_entity: str
     extra_pv_entities: tuple[str, ...] = ()
     forecast_entity: str | None = None
-    forecast_power_entity: str | None = None
 
 
 @dataclass
@@ -163,7 +162,6 @@ class EnergyManagerEngine:
         self._p1_entity = config.p1_entity
         self._extra_pv_entities = config.extra_pv_entities
         self._forecast_entity = config.forecast_entity
-        self._forecast_power_entity = config.forecast_power_entity
 
         # State tracking
         self._last_mode_switch: float = -999999.0

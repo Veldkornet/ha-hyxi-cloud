@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 Slimme Meter (vermogenssensor)",
           "em_extra_pv_entities": "Vermogen Andere Zonne-omvormers (optioneel)",
           "em_forecast_entity": "Zonneprognose Resterend Vandaag (optioneel)",
-          "em_forecast_power_entity": "Zonneprognose Huidig Vermogen (optioneel)",
           "em_inverter_sn": "Te Besturen Omvormer",
           "em_battery_capacity_override": "Batterijcapaciteit Overschrijven",
           "em_battery_capacity_wh": "Batterijcapaciteit (Wh)",

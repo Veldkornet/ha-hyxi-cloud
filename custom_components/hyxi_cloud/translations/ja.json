@@ -136,7 +136,6 @@
           "em_p1_entity": "P1スマートメーター (電力センサー)",
           "em_extra_pv_entities": "他のソーラーインバーターの電力（任意）",
           "em_forecast_entity": "本日の残り太陽光予測 (オプション)",
-          "em_forecast_power_entity": "現在の太陽光予測電力 (オプション)",
           "em_inverter_sn": "制御対象のインバーター",
           "em_battery_capacity_override": "バッテリー容量を上書き",
           "em_battery_capacity_wh": "バッテリー容量 (Wh)",

@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 Akıllı Sayaç (güç sensörü)",
           "em_extra_pv_entities": "Diğer güneş invertörlerinin gücü (isteğe bağlı)",
           "em_forecast_entity": "Bugün Kalan Güneş Tahmini (isteğe bağlı)",
-          "em_forecast_power_entity": "Güncel Güneş Tahmini Gücü (isteğe bağlı)",
           "em_inverter_sn": "Kontrol Edilecek İnverter",
           "em_battery_capacity_override": "Batarya Kapasitesini Geçersiz Kıl",
           "em_battery_capacity_wh": "Batarya Kapasitesi (Wh)",

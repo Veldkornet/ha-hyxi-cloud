@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 Smart Mätare (effektsensor)",
           "em_extra_pv_entities": "Effekt från andra solcellsväxelriktare (valfritt)",
           "em_forecast_entity": "Återstående Solprognos Idag (valfritt)",
-          "em_forecast_power_entity": "Aktuell Solprognos Effekt (valfritt)",
           "em_inverter_sn": "Växelriktare att Styra",
           "em_battery_capacity_override": "Åsidosätt Batterikapacitet",
           "em_battery_capacity_wh": "Batterikapacitet (Wh)",

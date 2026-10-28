@@ -23,7 +23,6 @@ from .const import (
     CONF_EM_ENABLED,
     CONF_EM_EXTRA_PV_ENTITIES,
     CONF_EM_FORECAST_ENTITY,
-    CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_INVERTER_SN,
     CONF_EM_LOOP_INTERVAL,
     CONF_EM_P1_ENTITY,
@@ -41,6 +40,7 @@ from .const import (
     CONF_REGION,
     CONF_SECRET_KEY,
     CONF_TRANSPORT,
+    CONFIG_MINOR_VERSION,
     CONFIG_VERSION,
     DEFAULT_MODBUS_BAUDRATE,
     DEFAULT_MODBUS_FAMILY,
@@ -269,9 +269,6 @@ def _build_em_schema(
             vol.Optional(CONF_EM_FORECAST_ENTITY): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="sensor")
             ),
-            vol.Optional(CONF_EM_FORECAST_POWER_ENTITY): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain="sensor")
-            ),
             vol.Required(
                 CONF_EM_INVERTER_SN, default=current_sn
             ): selector.SelectSelector(
@@ -320,6 +317,7 @@ class HyxiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[
     """Handle a config flow for HYXI Cloud."""
 
     VERSION = CONFIG_VERSION
+    MINOR_VERSION = CONFIG_MINOR_VERSION
 
     @staticmethod
     @callback
@@ -1304,11 +1302,7 @@ class HyxiOptionsFlowHandler(config_entries.OptionsFlow):
         self._options[CONF_EM_P1_ENTITY] = user_input[CONF_EM_P1_ENTITY]
         self._options[CONF_EM_INVERTER_SN] = user_input[CONF_EM_INVERTER_SN]
         # A cleared optional entity field is left out of user_input.
-        for key in (
-            CONF_EM_EXTRA_PV_ENTITIES,
-            CONF_EM_FORECAST_ENTITY,
-            CONF_EM_FORECAST_POWER_ENTITY,
-        ):
+        for key in (CONF_EM_EXTRA_PV_ENTITIES, CONF_EM_FORECAST_ENTITY):
             if user_input.get(key):
                 self._options[key] = user_input[key]
             else:

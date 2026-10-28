@@ -136,7 +136,6 @@
           "em_p1_entity": "Medidor Inteligente P1 (sensor de potencia)",
           "em_extra_pv_entities": "Potencia de otros inversores solares (opcional)",
           "em_forecast_entity": "Previsión Solar Restante Hoy (opcional)",
-          "em_forecast_power_entity": "Previsión Solar Potencia Actual (opcional)",
           "em_inverter_sn": "Inversor a Controlar",
           "em_battery_capacity_override": "Anular Capacidad de la Batería",
           "em_battery_capacity_wh": "Capacidad de la Batería (Wh)",

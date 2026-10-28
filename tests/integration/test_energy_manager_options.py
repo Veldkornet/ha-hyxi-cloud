@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from custom_components.hyxi_cloud.const import (
     CONF_EM_DRY_RUN,
     CONF_EM_EXTRA_PV_ENTITIES,
+    CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_INVERTER_SN,
     CONF_EM_P1_ENTITY,
 )
@@ -95,3 +96,30 @@ async def test_other_pv_inverters_are_saved_and_reach_the_engine(
 
     assert CONF_EM_EXTRA_PV_ENTITIES not in entry.options
     assert entry.runtime_data.engine._extra_pv_entities == ()
+
+
+@pytest.mark.asyncio
+async def test_migration_removes_the_former_forecast_power_option(
+    hass: HomeAssistant, client
+):
+    """Migrating an entry from 2.1 removes the former "Solar Forecast Current
+    Power" option, keeping its other options, before the coordinator reads
+    them."""
+    entry = cloud_entry(hass)
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            CONF_EM_FORECAST_POWER_ENTITY: "sensor.power_production_now",
+            "update_interval": 5,
+        },
+        version=2,
+        minor_version=1,
+    )
+    serve_devices(client, {"SN_HYB": HYBRID})
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert (entry.version, entry.minor_version) == (2, 2)
+    assert entry.options == {"update_interval": 5}
+    assert entry.runtime_data.options == entry.options

@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 Slim Meter (kragsensor)",
           "em_extra_pv_entities": "Ander Sonomsetters se Drywing (opsioneel)",
           "em_forecast_entity": "Sonkragvoorspelling Oorblywend Vandag (opsioneel)",
-          "em_forecast_power_entity": "Sonkragvoorspelling Huidige Krag (opsioneel)",
           "em_inverter_sn": "Omsetter om te Beheer",
           "em_battery_capacity_override": "Oorskryf Batterykapasiteit",
           "em_battery_capacity_wh": "Batterykapasiteit (Wh)",

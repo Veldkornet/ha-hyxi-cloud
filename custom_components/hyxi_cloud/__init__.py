@@ -29,13 +29,13 @@ from .const import (
     CONF_EM_ENABLED,
     CONF_EM_EXTRA_PV_ENTITIES,
     CONF_EM_FORECAST_ENTITY,
-    CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_INVERTER_SN,
     CONF_EM_P1_ENTITY,
     CONF_ENABLE_PUSH,
     CONF_MODBUS_FAMILY,
     CONF_MODBUS_UNIT,
     CONF_SECRET_KEY,
+    CONFIG_MINOR_VERSION,
     CONFIG_VERSION,
     DEFAULT_MODBUS_FAMILY,
     DEFAULT_MODBUS_UNIT,
@@ -75,6 +75,7 @@ from .migrations import (
     _migrate_vpp_dispatch_to_work_mode,
     _remove_alarm_entities_for_modbus,
     _remove_bms_alarm_sensors,
+    _remove_forecast_power_option,
     _remove_legacy_select_entities,
     _remove_purge_subscriptions_button,
     _remove_work_mode_sensor_for_modbus,
@@ -201,11 +202,16 @@ async def async_migrate_entry(  # NOSONAR
     Home Assistant awaits this, though it awaits nothing itself.
 
     Version 2 gives a Modbus entry's device entities their own unique_id
-    prefix (see unique_id_prefix).
+    prefix (see unique_id_prefix); 2.2 removes the Energy Manager's former
+    "Solar Forecast Current Power" option.
     """
     if entry.version < 2 and is_modbus_entry(entry):
         _mark_modbus_unique_ids(hass, entry)
-    hass.config_entries.async_update_entry(entry, version=CONFIG_VERSION)
+    if (entry.version, entry.minor_version) < (2, 2):
+        _remove_forecast_power_option(hass, entry)
+    hass.config_entries.async_update_entry(
+        entry, version=CONFIG_VERSION, minor_version=CONFIG_MINOR_VERSION
+    )
     return True
 
 
@@ -544,7 +550,6 @@ def _async_setup_energy_manager(
         p1_entity=entry.options.get(CONF_EM_P1_ENTITY, ""),
         extra_pv_entities=tuple(entry.options.get(CONF_EM_EXTRA_PV_ENTITIES, ())),
         forecast_entity=entry.options.get(CONF_EM_FORECAST_ENTITY),
-        forecast_power_entity=entry.options.get(CONF_EM_FORECAST_POWER_ENTITY),
     )
     engine = EnergyManagerEngine(hass, coordinator, em_config)
     coordinator.engine = engine

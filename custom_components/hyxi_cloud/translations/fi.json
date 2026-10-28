@@ -136,7 +136,6 @@
           "em_p1_entity": "P1-älymittari (tehoanturi)",
           "em_extra_pv_entities": "Muiden aurinkoinvertterien teho (valinnainen)",
           "em_forecast_entity": "Tämän päivän jäljellä oleva aurinkoennuste (valinnainen)",
-          "em_forecast_power_entity": "Nykyinen aurinkoennusteen teho (valinnainen)",
           "em_inverter_sn": "Ohjattava invertteri",
           "em_battery_capacity_override": "Ohita akun kapasiteetti",
           "em_battery_capacity_wh": "Akun kapasiteetti (Wh)",

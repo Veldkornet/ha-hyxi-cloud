@@ -12,6 +12,7 @@ from homeassistant.helpers.storage import Store
 from .const import (
     BATTERY_SENSORS,
     CONF_EM_ENABLED,
+    CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_INVERTER_SN,
     DOMAIN,
     EM_OPTION_KEYS,
@@ -791,6 +792,15 @@ def _remove_bms_alarm_sensors(hass: HomeAssistant, entry: ConfigEntry) -> None:
 # Entry data key marking that the entry was told about battery control it
 # can't use, so the repair issue is raised once.
 _BATTERY_CONTROL_NOTICE = "cloud_battery_control_notified"
+
+
+def _remove_forecast_power_option(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the em_forecast_power_entity key from the entry's options.
+    Runs once, from async_migrate_entry."""
+    if CONF_EM_FORECAST_POWER_ENTITY in entry.options:
+        options = dict(entry.options)
+        options.pop(CONF_EM_FORECAST_POWER_ENTITY)
+        hass.config_entries.async_update_entry(entry, options=options)
 
 
 def _cloud_battery_control_issue_id(entry: ConfigEntry) -> str:

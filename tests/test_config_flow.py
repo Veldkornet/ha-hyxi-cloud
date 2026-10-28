@@ -934,7 +934,6 @@ def test_save_energy_manager_input_with_battery_override(mock_ha_environment):
         config_flow_mod.CONF_EM_BATTERY_OVERRIDE: True,
         config_flow_mod.CONF_EM_BATTERY_CAPACITY: 6000,
         config_flow_mod.CONF_EM_FORECAST_ENTITY: "sensor.forecast",
-        config_flow_mod.CONF_EM_FORECAST_POWER_ENTITY: "sensor.forecast_power",
         config_flow_mod.CONF_EM_LOOP_INTERVAL: 20,
         config_flow_mod.CONF_EM_DRY_RUN: True,
     }
@@ -951,10 +950,6 @@ def test_save_energy_manager_input_with_battery_override(mock_ha_environment):
     assert (
         options_flow._options[config_flow_mod.CONF_EM_FORECAST_ENTITY]
         == "sensor.forecast"
-    )
-    assert (
-        options_flow._options[config_flow_mod.CONF_EM_FORECAST_POWER_ENTITY]
-        == "sensor.forecast_power"
     )
     assert options_flow._options[config_flow_mod.CONF_EM_LOOP_INTERVAL] == 20
     assert options_flow._options[config_flow_mod.CONF_EM_DRY_RUN] is True
@@ -973,7 +968,6 @@ def test_save_energy_manager_input_without_battery_override_pops_capacity(
         config_flow_mod.CONF_EM_BATTERY_CAPACITY: 9999,
         config_flow_mod.CONF_EM_EXTRA_PV_ENTITIES: ["sensor.solaredge_power"],
         config_flow_mod.CONF_EM_FORECAST_ENTITY: "sensor.forecast",
-        config_flow_mod.CONF_EM_FORECAST_POWER_ENTITY: "sensor.forecast_power",
     }
 
     user_input = {
@@ -987,7 +981,6 @@ def test_save_energy_manager_input_without_battery_override_pops_capacity(
     assert config_flow_mod.CONF_EM_EXTRA_PV_ENTITIES not in options_flow._options
     assert options_flow._options[config_flow_mod.CONF_EM_BATTERY_OVERRIDE] is False
     assert config_flow_mod.CONF_EM_FORECAST_ENTITY not in options_flow._options
-    assert config_flow_mod.CONF_EM_FORECAST_POWER_ENTITY not in options_flow._options
     assert options_flow._options[config_flow_mod.CONF_EM_LOOP_INTERVAL] == 15
     assert options_flow._options[config_flow_mod.CONF_EM_DRY_RUN] is False
 

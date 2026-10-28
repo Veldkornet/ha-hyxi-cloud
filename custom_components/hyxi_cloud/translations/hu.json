@@ -136,7 +136,6 @@
           "em_p1_entity": "P1 okos mérő (teljesítményszenzor)",
           "em_extra_pv_entities": "Más napelemes inverterek teljesítménye (opcionális)",
           "em_forecast_entity": "Mai hátralévő napenergia-előrejelzés (opcionális)",
-          "em_forecast_power_entity": "Jelenlegi napenergia-előrejelzés teljesítmény (opcionális)",
           "em_inverter_sn": "Vezérlendő inverter",
           "em_battery_capacity_override": "Akkumulátor kapacitás felülbírálása",
           "em_battery_capacity_wh": "Akkumulátor kapacitás (Wh)",
