@@ -76,7 +76,6 @@ class FakeSensorEntityDescription:
 
 
 sensor_mock.SensorEntityDescription = FakeSensorEntityDescription
-sensor_mock.EntityCategory = MagicMock()
 
 if "homeassistant.config_entries" not in sys.modules:
     sys.modules["homeassistant.config_entries"] = mock_ha
