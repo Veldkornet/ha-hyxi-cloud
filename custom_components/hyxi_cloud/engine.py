@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import time
 from collections import deque
 from collections.abc import Callable
@@ -27,7 +28,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components import persistent_notification
 from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, UnitOfPower
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, State, callback
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
@@ -83,6 +84,28 @@ _SUN_ENTITY_ID = "sun.sun"
 
 # Default rolling average window for P1 readings (overridable via p1_smoothing_period param)
 _P1_SMOOTHING_DEFAULT = 60
+
+
+def _state_float(state: State | None) -> float | None:
+    """A state's numeric reading, or None without a usable (finite) one."""
+    if state is None:
+        return None
+    try:
+        value = float(state.state)
+    except ValueError:
+        return None
+    return value if math.isfinite(value) else None
+
+
+def _power_w(state: State | None) -> float | None:
+    """A power sensor's reading in W, whatever its unit, or None without a
+    usable reading."""
+    if state is None or (power := _state_float(state)) is None:
+        return None
+    unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+    if unit in PowerConverter.VALID_UNITS:
+        power = PowerConverter.convert(power, unit, UnitOfPower.WATT)
+    return power
 
 
 @dataclass
@@ -363,13 +386,14 @@ class EnergyManagerEngine:
         """Get a float value from an HA entity state."""
         if not entity_id:
             return default
-        state = self._hass.states.get(entity_id)
-        if state is None or state.state in ("unknown", "unavailable", ""):
-            return default
-        try:
-            return float(state.state)
-        except ValueError, TypeError:
-            return default
+        value = _state_float(self._hass.states.get(entity_id))
+        return default if value is None else value
+
+    def _get_ha_power_w(self, entity_id: str | None) -> float:
+        """Get a power sensor's reading in W, or 0 without a reading."""
+        if not entity_id:
+            return 0.0
+        return _power_w(self._hass.states.get(entity_id)) or 0.0
 
     def _get_ha_state_bool(self, entity_id: str | None, default: bool = False) -> bool:
         """Get a boolean from an HA switch entity state."""
@@ -487,20 +511,15 @@ class EnergyManagerEngine:
         The reading's size is used, since meters on a PV feed may count
         production as negative.
         """
-        power = abs(self._get_ha_state_float(entity_id, 0))
-        state = self._hass.states.get(entity_id)
-        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) if state else None
-        if unit in PowerConverter.VALID_UNITS:
-            power = PowerConverter.convert(power, unit, UnitOfPower.WATT)
-        return power
+        return abs(self._get_ha_power_w(entity_id))
 
     def _get_home_load(self) -> float:
         """Get current home load."""
         return self._get_coordinator_metric("home_load", 0)
 
     def _get_p1(self) -> float:
-        """Get current P1 meter reading (positive=import, negative=export)."""
-        return self._get_ha_state_float(self._p1_entity, 0)
+        """Get current P1 meter reading in W (positive=import, negative=export)."""
+        return self._get_ha_power_w(self._p1_entity)
 
     def _is_night(self) -> bool:
         """Check if it's nighttime (no solar and sun below horizon)."""
@@ -1604,13 +1623,8 @@ class EnergyManagerEngine:
     @callback
     def _on_p1_change(self, event) -> None:
         """Handle P1 state changes — update rolling average and high-load fast-path."""
-        new_state = event.data.get("new_state")
-        if new_state is None or new_state.state in ("unknown", "unavailable"):
-            return
-
-        try:
-            value = float(new_state.state)
-        except ValueError, TypeError:
+        value = _power_w(event.data.get("new_state"))
+        if value is None:
             return
 
         now = time.monotonic()
@@ -1640,13 +1654,8 @@ class EnergyManagerEngine:
         if not self._enabled:
             return
 
-        new_state = event.data.get("new_state")
-        if new_state is None or new_state.state in ("unknown", "unavailable"):
-            return
-
-        try:
-            soc = float(new_state.state)
-        except ValueError, TypeError:
+        soc = _state_float(event.data.get("new_state"))
+        if soc is None:
             return
 
         soc_min = self._get_protection_param("soc_min", 20)
