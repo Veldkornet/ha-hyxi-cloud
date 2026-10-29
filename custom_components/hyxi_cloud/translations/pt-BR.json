@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Gerenciador de Energia",
-        "description": "Configure o Gerenciador de Energia para otimizar o uso da bateria com base na produção solar, medidor de rede e dados de previsão. Se a sua bateria não informa a capacidade (como uma HALO acoplada em CA), ative abaixo a substituição da capacidade da bateria.",
+        "description": "Configure o Gerenciador de Energia para otimizar o uso da bateria com base na produção solar, medidor de rede e dados de previsão. Uma bateria acoplada em CA, como uma HALO, não tem entrada solar própria: adicione abaixo os sensores de potência dos seus inversores solares, ou o Gerenciador de Energia não poderá carregá-la com energia solar. Se a sua bateria não informa a capacidade (como uma HALO acoplada em CA), ative abaixo a substituição da capacidade da bateria.",
         "data": {
           "em_p1_entity": "Medidor Inteligente P1 (sensor de potência)",
-          "em_extra_pv_entities": "Potência de outros inversores solares (opcional)",
+          "em_extra_pv_entities": "Potência dos inversores solares (não este dispositivo)",
           "em_forecast_entity": "Previsão Solar Restante Hoje (opcional)",
           "em_inverter_sn": "Inversor para Controlar",
           "em_battery_capacity_override": "Substituir Capacidade da Bateria",
@@ -143,7 +143,7 @@
           "em_dry_run": "Modo de Simulação (sem chamadas de API)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Sensores de potência de outros inversores solares do local, como um SolarEdge. A produção deles é somada ao FV próprio deste inversor quando o Gerenciador de Energia decide se carrega a bateria com energia solar. Use sensores que atualizam a cada poucos segundos."
+          "em_extra_pv_entities": "Sensores de potência de inversores solares que este dispositivo não mede, como um SolarEdge. A produção deles é somada ao FV próprio deste dispositivo quando o Gerenciador de Energia decide se carrega a bateria com energia solar. Use sensores que atualizam a cada poucos segundos."
         }
       }
     },

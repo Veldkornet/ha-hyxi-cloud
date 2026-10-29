@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Enerji Yöneticisi",
-        "description": "Enerji Yöneticisini, güneş üretimi, şebeke sayacı ve tahmin verilerine dayalı olarak batarya kullanımını optimize edecek şekilde yapılandırın. Bataryanız kapasitesini bildirmiyorsa (örneğin AC bağlantılı bir HALO), aşağıdan batarya kapasitesini geçersiz kılmayı etkinleştirin.",
+        "description": "Enerji Yöneticisini, güneş üretimi, şebeke sayacı ve tahmin verilerine dayalı olarak batarya kullanımını optimize edecek şekilde yapılandırın. HALO gibi AC bağlantılı bir bataryanın kendi güneş girişi yoktur: aşağıya güneş invertörlerinizin güç sensörlerini ekleyin, aksi halde Enerji Yöneticisi onu güneşten şarj edemez. Bataryanız kapasitesini bildirmiyorsa (örneğin AC bağlantılı bir HALO), aşağıdan batarya kapasitesini geçersiz kılmayı etkinleştirin.",
         "data": {
           "em_p1_entity": "P1 Akıllı Sayaç (güç sensörü)",
-          "em_extra_pv_entities": "Diğer güneş invertörlerinin gücü (isteğe bağlı)",
+          "em_extra_pv_entities": "Güneş invertörlerinin gücü (bu cihaz dışında)",
           "em_forecast_entity": "Bugün Kalan Güneş Tahmini (isteğe bağlı)",
           "em_inverter_sn": "Kontrol Edilecek İnverter",
           "em_battery_capacity_override": "Batarya Kapasitesini Geçersiz Kıl",
@@ -143,7 +143,7 @@
           "em_dry_run": "Deneme Modu (API çağrısı yok)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Bu sahadaki diğer güneş invertörlerinin (ör. SolarEdge) güç sensörleri. Enerji Yöneticisi bataryanın güneşten şarj edilip edilmeyeceğine karar verirken bunların üretimi bu invertörün kendi PV'sine eklenir. Birkaç saniyede bir güncellenen sensörler kullanın."
+          "em_extra_pv_entities": "Bu cihazın ölçmediği güneş invertörlerinin (ör. SolarEdge) güç sensörleri. Enerji Yöneticisi bataryanın güneşten şarj edilip edilmeyeceğine karar verirken bunların üretimi bu cihazın kendi PV'sine eklenir. Birkaç saniyede bir güncellenen sensörler kullanın."
         }
       }
     },
