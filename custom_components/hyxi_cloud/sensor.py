@@ -132,6 +132,7 @@ _ICON_COUNTER = "mdi:counter"
 _ICON_SOLAR_POWER_VARIANT = "mdi:solar-power-variant"
 _ICON_TRANSMISSION_TOWER = "mdi:transmission-tower"
 _ICON_POWER_PLUG_OFF = "mdi:power-plug-off"
+_ICON_STATE_MACHINE = "mdi:state-machine"
 
 SENSOR_TYPES = [
     # Phase Powers
@@ -867,7 +868,7 @@ SENSOR_TYPES = [
             "31",
             "32",
         ],
-        icon="mdi:state-machine",
+        icon=_ICON_STATE_MACHINE,
     ),
     SensorEntityDescription(
         key="vppMode",
@@ -876,7 +877,7 @@ SENSOR_TYPES = [
         # HALO registers 4146-4147: "off" while VPP dispatch is disabled,
         # else the dispatch mode from the HALO protocol document.
         options=["off", "0", "1", "2", "3"],
-        icon="mdi:state-machine",
+        icon=_ICON_STATE_MACHINE,
     ),
     SensorEntityDescription(
         key="selfTestStatus",
@@ -1545,7 +1546,7 @@ def _em_sensors(entry, coordinator) -> list[SensorEntity]:
         EMSensor(
             coordinator,
             em_sn,
-            EMSensorDef("status", em_device_info, icon="mdi:state-machine"),
+            EMSensorDef("status", em_device_info, icon=_ICON_STATE_MACHINE),
         ),
         EMSensor(
             coordinator,
