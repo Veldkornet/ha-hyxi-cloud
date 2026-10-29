@@ -231,12 +231,12 @@ class HyxiModbusClient:
         self._identity_read = False
         self._settings_read_at: float | None = None
         self._settings_confirmed_at: float | None = None
-        # What this client last saw or wrote at 4146 (VPP dispatch enable),
-        # None until known, and the VPP Mode sensor's state from the same
-        # read. A read of 4146-4147 replaces them only if it started after
-        # the last 4146 write -- see _note_dispatch_read.
+        # What this client last saw or wrote at 4146 (VPP dispatch enable)
+        # and 4147 (VPP mode), None until known. A read of 4146-4147
+        # replaces them only if it started after the last write to either
+        # -- see _note_dispatch_read.
         self._vpp_on: bool | None = None
-        self._vpp_mode: int | str | None = None
+        self._vpp_dispatch_mode: int | None = None
         self._vpp_written_at = -math.inf
         # When that read started; published as "_dispatch_read_at" for the
         # dispatch switch.
@@ -424,14 +424,22 @@ class HyxiModbusClient:
             return
         self._dispatch_read_at = started
         self._vpp_on = _enabled_when(self.dispatch.vpp_enable, enabled_value=1)
-        # "off" while dispatch is disabled: 4147 keeps its last value then,
-        # which no longer describes what the battery does.
-        self._vpp_mode = self.dispatch.vpp_mode if self._vpp_on else "off"
+        self._vpp_dispatch_mode = self.dispatch.vpp_mode
 
-    def _note_vpp_written(self, enabled: bool) -> None:
-        """Record a write of 4146."""
+    def _note_vpp_written(self, enabled: bool, mode: int | None = None) -> None:
+        """Record a write of 4146, and of 4147 when `mode` is given."""
         self._vpp_on = enabled
+        if mode is not None:
+            self._vpp_dispatch_mode = mode
         self._vpp_written_at = time.monotonic()
+
+    def _vpp_mode_state(self) -> int | str | None:
+        """The VPP Mode sensor's state: "off" while dispatch is disabled --
+        4147 keeps its last value then, which no longer describes what the
+        battery does -- else the dispatch mode; None until 4146 is known."""
+        if self._vpp_on is None:
+            return None
+        return self._vpp_dispatch_mode if self._vpp_on else "off"
 
     def _build_device(self) -> dict:
         """Assemble one device entry in the shape the coordinator publishes."""
@@ -469,7 +477,7 @@ class HyxiModbusClient:
             # so no translation is applied in either direction here.
             # See docs/modbus-provenance.md, rule 1.
             "workMode": self.status.work_mode,
-            "vppMode": self._vpp_mode,
+            "vppMode": self._vpp_mode_state(),
             "gridSts": self.status.grid_state,
             "deviceSwitchStatus": self.status.switch_status,
             "vbus": self.status.bus_voltage,
@@ -602,6 +610,9 @@ class HyxiModbusClient:
                 )
                 await self.settings.write(field, int(watts))
             await self.dispatch.write("vpp_mode", mode)
+            # Again once the mode is in, so a poll that read 4147 between
+            # the two writes isn't taken as current.
+            self._note_vpp_written(True, mode)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.debug(
                 "Modbus VPP write failed on unit %s (mode=%s, power=%s): %s",

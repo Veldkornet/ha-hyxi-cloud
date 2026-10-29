@@ -442,13 +442,41 @@ async def test_a_vpp_command_shows_dispatch_on_at_the_next_poll(client):
     metrics = (await client.async_read_all())["10201234567810"]["metrics"]
     assert metrics["dispatch_enabled"] is False  # seed: 4146 = 0
     settings_read_at = client._settings_read_at
+    first_read_at = metrics["_dispatch_read_at"]
 
     await client.set_mode_charge("SN", 1000)
+    client._unit.load_raw({"holding": {4147: 2}})  # changed by the app, say
     metrics = (await client.async_read_all())["10201234567810"]["metrics"]
 
     assert metrics["dispatch_enabled"] is True
-    assert metrics["_dispatch_read_at"] > metrics["_settings_read_at"]
+    assert metrics["vppMode"] == 2
+    assert metrics["_dispatch_read_at"] > first_read_at
     assert client._settings_read_at == settings_read_at
+
+
+@pytest.mark.asyncio
+async def test_a_write_sets_the_vpp_mode_until_a_newer_read(client):
+    """A mode command or a release decides the VPP Mode itself; a poll that
+    started before it, here one that read 4147 between the command's two
+    writes, doesn't put the old mode back."""
+    await client.async_read_all()  # seed: 4146 = 0, 4147 = 0
+    real_write = client.dispatch.write
+    read_started: list[float] = []
+
+    async def poll_starts_before_the_mode_write(field, value):
+        if field == "vpp_mode":
+            read_started.append(time.monotonic())
+        await real_write(field, value)
+
+    with patch.object(
+        client.dispatch, "write", side_effect=poll_starts_before_the_mode_write
+    ):
+        await client.set_mode_discharge("SN", 900)
+    client._note_dispatch_read(read_started[0])  # it read 4146 = 1, 4147 = 0
+    assert client._build_metrics()["vppMode"] == 2
+
+    await client.set_dispatch_enabled(False)
+    assert client._build_metrics()["vppMode"] == "off"
 
 
 @pytest.mark.asyncio
