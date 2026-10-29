@@ -227,7 +227,7 @@ class EnergyManagerEngine:
         cooldown = self._get_param("mode_switch_cooldown")
         if (time.monotonic() - self._last_mode_switch) < cooldown:
             return "cooldown"
-        if self._dry_run:
+        if self.dry_run:
             return "dry_run"
         return "running"
 
@@ -249,7 +249,8 @@ class EnergyManagerEngine:
 
     @property
     def current_mode(self) -> str | None:
-        """Last mode set by the engine."""
+        """The battery's mode as last sent by the engine or by battery
+        protection."""
         return self._current_mode
 
     @property
@@ -685,7 +686,7 @@ class EnergyManagerEngine:
     # ── Control methods: direct API calls matching stateless button controls ──
 
     @property
-    def _dry_run(self) -> bool:
+    def dry_run(self) -> bool:
         """Check if dry-run mode is enabled in options."""
         return bool(self._coordinator.entry.options.get("em_dry_run", False))
 
@@ -718,7 +719,7 @@ class EnergyManagerEngine:
         if mode in ("charge", "discharge"):
             power_w = int(max(1, min(power_w or 100, 10000)))
 
-        if self._dry_run:
+        if self.dry_run:
             action = f"{mode} @ {power_w}W" if power_w else mode
             _LOGGER.info(
                 "EM DRY-RUN: Would set mode -> %s for %s", action, mask_sn(self._sn)
@@ -757,6 +758,10 @@ class EnergyManagerEngine:
 
             self._last_mode_switch = time.monotonic()
             self._not_forwarded.forwarded("mode")
+            if protection is not None and protection.superseded(seq):
+                # A newer protection send landed first and has already
+                # told the engine its mode.
+                return False
             prev_mode = self._current_mode
             self._current_mode = mode
             self._current_mode_trace_id = control_verify.extract_trace_id(
@@ -841,7 +846,7 @@ class EnergyManagerEngine:
         if abs(target_w - current_power) <= threshold and target_w > 100:
             return False
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info(
                 "EM DRY-RUN: Would adjust %s power -> %dW for %s",
                 direction,
@@ -869,6 +874,8 @@ class EnergyManagerEngine:
 
             self._last_power_adjust = time.monotonic()
             self._not_forwarded.forwarded("mode")
+            if protection is not None and protection.superseded(seq):
+                return False
             self._current_mode = direction
             self._current_mode_trace_id = control_verify.extract_trace_id(
                 response, self._sn, "EM"
@@ -905,7 +912,7 @@ class EnergyManagerEngine:
         if self._not_forwarded_paused("peak_shaving"):
             return False
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info(
                 "EM DRY-RUN: Would set peak shaving -> %s for %s",
                 option,
@@ -1416,7 +1423,7 @@ class EnergyManagerEngine:
         """Handle charge entry decision when not currently charging."""
         if s.solar < sc.min_solar_for_charge:
             self._set_decision("solar_self_consume")
-            if self._current_mode not in ("self_consume", "idle"):
+            if self._current_mode != "self_consume":
                 await self._set_mode("self_consume")
             self._charge_entry_export_count = 0
 
@@ -1425,7 +1432,7 @@ class EnergyManagerEngine:
         else:
             self._charge_entry_export_count = 0
             self._set_decision("solar_self_consume")
-            if self._current_mode not in ("self_consume", "idle"):
+            if self._current_mode != "self_consume":
                 await self._set_mode("self_consume")
 
     async def _handle_solar_export_threshold(
@@ -1448,7 +1455,7 @@ class EnergyManagerEngine:
                 self._charge_entry_export_count = 0
         else:
             self._set_decision("solar_export_waiting")
-            if self._current_mode not in ("self_consume", "idle"):
+            if self._current_mode != "self_consume":
                 await self._set_mode("self_consume")
 
     async def _solar_tune_logic(

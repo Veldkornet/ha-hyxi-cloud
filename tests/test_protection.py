@@ -88,7 +88,7 @@ async def test_low_soc_triggers_idle_hold():
     await controller.async_evaluate()
 
     assert controller._low_soc_hold is True
-    controller._ensure_mode.assert_awaited_once_with("idle")
+    controller._ensure_mode.assert_awaited_once_with("idle", hold=True)
 
 
 @pytest.mark.asyncio
@@ -112,7 +112,7 @@ async def test_low_soc_hysteresis_keeps_idle_until_resume():
     await controller.async_evaluate()
 
     assert controller._low_soc_hold is True
-    controller._ensure_mode.assert_awaited_once_with("idle")
+    controller._ensure_mode.assert_awaited_once_with("idle", hold=True)
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_soc_max_stops_tracked_charge_mode():
     await controller.async_evaluate()
 
     assert controller._high_soc_hold is True
-    controller._ensure_mode.assert_awaited_once_with("idle")
+    controller._ensure_mode.assert_awaited_once_with("idle", hold=True)
 
 
 @pytest.mark.asyncio
@@ -183,25 +183,15 @@ async def test_high_soc_hysteresis_clears_below_resume():
 
 
 def _sending_controller(soc: float) -> HyxiBatteryProtectionController:
-    """A controller whose _ensure_mode records a changed mode as sent."""
+    """A controller that sends through the real _ensure_mode."""
     controller = _build_controller(soc)
-    controller._ensure_mode = AsyncMock()  # type: ignore[method-assign]
-    _resume_sending(controller)
+    del controller._ensure_mode  # back to the real method
     return controller
 
 
-def _resume_sending(controller: HyxiBatteryProtectionController) -> None:
-    controller._ensure_mode.side_effect = lambda mode: _record_mode(controller, mode)
-
-
-def _record_mode(controller: HyxiBatteryProtectionController, mode: str) -> bool:
-    if controller._last_sent_mode == mode:
-        return False
-    controller._last_sent_mode = mode
-    return True
-
-
-def _set_soc(controller: HyxiBatteryProtectionController, soc: float) -> None:
+def _after_cooldown(controller: HyxiBatteryProtectionController, soc: float) -> None:
+    """Move SOC to `soc` once the mode-switch cooldown has passed."""
+    controller._last_mode_switch = -999999.0
     controller._coordinator.data["SN123"]["metrics"]["batSoc"] = soc
 
 
@@ -211,20 +201,22 @@ async def test_low_soc_hold_returns_to_self_consume_once_recovered():
     back above the resume threshold, instead of holding the battery idle."""
     controller = _sending_controller(20)
     controller.note_manual_mode("self_consume")
+    client = controller._coordinator.client
 
+    _after_cooldown(controller, 20)
     await controller.async_evaluate()
-    _set_soc(controller, 21)
+    _after_cooldown(controller, 21)
     await controller.async_evaluate()
-    assert controller.last_sent_mode == "idle"
+    client.set_mode_idle.assert_awaited_once_with("SN123")
+    client.set_mode_self_consume.assert_not_awaited()
 
-    _set_soc(controller, 23)
+    _after_cooldown(controller, 23)
+    await controller.async_evaluate()
+    _after_cooldown(controller, 23)
     await controller.async_evaluate()
 
+    client.set_mode_self_consume.assert_awaited_once_with("SN123")
     assert controller.last_sent_mode == "self_consume"
-    assert controller._ensure_mode.await_args_list[-1].args == ("self_consume",)
-    controller._ensure_mode.reset_mock()
-    await controller.async_evaluate()
-    controller._ensure_mode.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -234,10 +226,11 @@ async def test_high_soc_hold_returns_to_self_consume_once_released():
     controller = _sending_controller(90)
     controller.note_manual_mode("charge")
 
+    _after_cooldown(controller, 90)
     await controller.async_evaluate()
     assert controller.last_sent_mode == "idle"
 
-    _set_soc(controller, 88)
+    _after_cooldown(controller, 88)
     await controller.async_evaluate()
 
     assert controller.last_sent_mode == "self_consume"
@@ -250,31 +243,51 @@ async def test_an_idle_set_before_the_hold_stays():
     controller = _sending_controller(20)
     controller.note_manual_mode("idle")
 
+    _after_cooldown(controller, 20)
     await controller.async_evaluate()
-    _set_soc(controller, 23)
+    _after_cooldown(controller, 23)
     await controller.async_evaluate()
 
     assert controller.last_sent_mode == "idle"
-    assert controller._hold_sent_idle is False
+    controller._coordinator.client.set_mode_self_consume.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_an_idle_recorded_by_another_send_meanwhile_stays():
-    """An idle another writer recorded while the hold's own send was
-    pending (or held back) wasn't the hold's choice either."""
+    """An idle another writer sent while the hold's own send was in flight,
+    and recorded first, wasn't the hold's choice either."""
     controller = _sending_controller(20)
+    client = controller._coordinator.client
 
-    def another_send_lands_first(mode):
-        controller.note_manual_mode(mode, seq=controller.begin_send())
-        return False
+    async def another_send_lands_first(_sn):
+        controller.note_manual_mode("idle", seq=controller.begin_send())
 
-    controller._ensure_mode.side_effect = another_send_lands_first
+    client.set_mode_idle.side_effect = another_send_lands_first
+    _after_cooldown(controller, 20)
     await controller.async_evaluate()
-    _resume_sending(controller)
-    _set_soc(controller, 23)
+    _after_cooldown(controller, 23)
     await controller.async_evaluate()
 
     assert controller.last_sent_mode == "idle"
+    client.set_mode_self_consume.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_an_idle_sent_while_the_hold_refreshes_stays():
+    """An idle another writer records while the hold's send is waiting on
+    the coordinator refresh that follows it is theirs, not the hold's."""
+    controller = _sending_controller(20)
+
+    async def manual_idle_lands():
+        controller.note_manual_mode("idle", seq=controller.begin_send())
+
+    controller._coordinator.async_request_refresh.side_effect = manual_idle_lands
+    _after_cooldown(controller, 20)
+    await controller.async_evaluate()
+    _after_cooldown(controller, 23)
+    await controller.async_evaluate()
+
+    controller._coordinator.client.set_mode_self_consume.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -283,28 +296,37 @@ async def test_a_mode_sent_during_the_hold_stays():
     the same as the hold's) is theirs, so the hold's end leaves it."""
     controller = _sending_controller(20)
 
+    _after_cooldown(controller, 20)
     await controller.async_evaluate()
     controller.note_manual_mode("idle", trace_id="manual")
-    _set_soc(controller, 23)
+    _after_cooldown(controller, 23)
     await controller.async_evaluate()
 
-    controller._ensure_mode.assert_awaited_once_with("idle")
+    controller._coordinator.client.set_mode_self_consume.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_the_energy_manager_picks_the_mode_after_a_hold():
+@pytest.mark.parametrize(
+    ("dry_run", "restored"), [(False, False), (True, True)], ids=["live", "dry-run"]
+)
+async def test_the_energy_manager_picks_the_mode_after_a_hold(dry_run, restored):
     """While the Energy Manager manages the battery, the hold's end leaves
-    the mode to it, and doesn't send self-use later either."""
+    the mode to it, and doesn't send self-use later either. A dry run sends
+    nothing, so protection restores self-use itself."""
     controller = _sending_controller(20)
-    controller._coordinator.engine = MagicMock(sn="SN123", is_managing=True)
+    engine = MagicMock(sn="SN123", is_managing=True, dry_run=dry_run)
+    controller._coordinator.engine = engine
 
+    _after_cooldown(controller, 20)
     await controller.async_evaluate()
-    _set_soc(controller, 23)
+    engine.note_protection_mode.assert_called_once_with("idle")
+    _after_cooldown(controller, 23)
     await controller.async_evaluate()
-    controller._coordinator.engine.is_managing = False
+    engine.is_managing = False
+    _after_cooldown(controller, 23)
     await controller.async_evaluate()
 
-    controller._ensure_mode.assert_awaited_once_with("idle")
+    assert controller._coordinator.client.set_mode_self_consume.called is restored
 
 
 @pytest.mark.asyncio
@@ -312,17 +334,18 @@ async def test_a_return_held_back_by_the_cooldown_is_retried():
     """A self-use send the cooldown holds back is tried again on the next
     evaluation."""
     controller = _sending_controller(20)
+    client = controller._coordinator.client
 
+    _after_cooldown(controller, 20)
     await controller.async_evaluate()
-    controller._ensure_mode.side_effect = lambda mode: False  # held back
-    _set_soc(controller, 23)
-    await controller.async_evaluate()
-    assert controller.last_sent_mode == "idle"
+    controller._coordinator.data["SN123"]["metrics"]["batSoc"] = 23
+    await controller.async_evaluate()  # cooldown still running
+    client.set_mode_self_consume.assert_not_awaited()
 
-    _resume_sending(controller)
+    _after_cooldown(controller, 23)
     await controller.async_evaluate()
 
-    assert controller.last_sent_mode == "self_consume"
+    client.set_mode_self_consume.assert_awaited_once_with("SN123")
 
 
 # --- Mode Restore ---
@@ -399,7 +422,7 @@ async def test_single_phase_low_soc_forces_hold():
     await controller.async_evaluate()
 
     assert controller._low_soc_hold is True
-    controller._ensure_mode.assert_awaited_once_with("hold")
+    controller._ensure_mode.assert_awaited_once_with("hold", hold=True)
 
 
 @pytest.mark.asyncio
@@ -532,7 +555,7 @@ def _build_blocking_controller() -> tuple[
     writes: list[str] = []
     release = asyncio.Event()
 
-    async def ensure_mode(mode: str) -> None:
+    async def ensure_mode(mode: str, *, hold: bool = False) -> None:
         writes.append(mode)
         await release.wait()
         writes.append(f"{mode} sent")
@@ -606,7 +629,7 @@ async def test_single_phase_high_soc_evaluation():
     controller.note_manual_mode("charge")
     await controller.async_evaluate()
     assert controller._high_soc_hold is True
-    controller._ensure_mode.assert_awaited_once_with("hold")
+    controller._ensure_mode.assert_awaited_once_with("hold", hold=True)
 
 
 @pytest.mark.asyncio
@@ -620,7 +643,7 @@ async def test_single_phase_high_soc_hold_maintains_hold():
     controller.note_manual_mode("charge")
     await controller.async_evaluate()
     assert controller._high_soc_hold is True
-    controller._ensure_mode.assert_awaited_once_with("hold")
+    controller._ensure_mode.assert_awaited_once_with("hold", hold=True)
 
 
 @pytest.mark.asyncio
@@ -634,7 +657,7 @@ async def test_three_phase_high_soc_hold_maintains_idle():
     controller.note_manual_mode("charge")
     await controller.async_evaluate()
     assert controller._high_soc_hold is True
-    controller._ensure_mode.assert_awaited_once_with("idle")
+    controller._ensure_mode.assert_awaited_once_with("idle", hold=True)
 
 
 @pytest.mark.asyncio

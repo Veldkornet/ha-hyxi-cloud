@@ -718,7 +718,7 @@ async def test_engine_status_property(hass: HomeAssistant):
     engine._last_mode_switch = time.monotonic() - 400
     with patch.object(engine, "_get_param", return_value=300):
         with patch.object(
-            EnergyManagerEngine, "_dry_run", new_callable=PropertyMock
+            EnergyManagerEngine, "dry_run", new_callable=PropertyMock
         ) as mock_dry_run:
             mock_dry_run.return_value = True
             assert engine.status == "dry_run"
@@ -726,7 +726,7 @@ async def test_engine_status_property(hass: HomeAssistant):
     # 6. Running
     with patch.object(engine, "_get_param", return_value=300):
         with patch.object(
-            EnergyManagerEngine, "_dry_run", new_callable=PropertyMock
+            EnergyManagerEngine, "dry_run", new_callable=PropertyMock
         ) as mock_dry_run:
             mock_dry_run.return_value = False
             assert engine.status == "running"
@@ -1543,6 +1543,57 @@ async def test_the_energy_manager_follows_a_protection_low_soc_hold(
 
     assert engine.decision == "idle_default"
     client.set_mode_self_consume.assert_awaited_once_with("SN123")
+
+
+@pytest.mark.asyncio
+async def test_the_solar_self_consume_decisions_leave_idle(hass: HomeAssistant):
+    """Solar too low to charge from is a self-consume decision, so an idle
+    from an earlier decision gives way to self_consume there as well."""
+    engine, coordinator, _entry = _make_engine(hass, metrics={"ppv": "500"})
+    client = AsyncMock()
+    coordinator.client = client
+    _set_soc_limits(hass, er.async_get(hass))
+    hass.states.async_set("sensor.p1_meter", "0")
+    hass.states.async_set("sun.sun", "above_horizon", {"elevation": 10.0})
+    engine._current_mode = "idle"
+
+    await engine._make_decision()
+
+    assert engine.decision == "solar_self_consume"
+    client.set_mode_self_consume.assert_awaited_once_with("SN123")
+
+
+@pytest.mark.asyncio
+async def test_an_energy_manager_write_overtaken_by_protection_is_not_tracked(
+    hass: HomeAssistant,
+):
+    """A protection send issued while an Energy Manager write is in flight,
+    and recorded first, is the mode the engine keeps: the older write's
+    late completion doesn't overwrite it."""
+    engine, coordinator, _entry = _make_engine(hass)
+    client = AsyncMock()
+    coordinator.client = client
+    coordinator.engine = engine
+    coordinator.async_request_refresh = AsyncMock()
+    protection = HyxiBatteryProtectionController(hass, coordinator, "SN123")
+    coordinator.protection_controllers = {"SN123": protection}
+    _set_soc_limits(hass, er.async_get(hass))
+
+    async def protection_sends_idle(*_args):
+        protection._last_mode_switch = -999999.0
+        await protection._ensure_mode("idle")
+        return {}
+
+    client.set_mode_charge.side_effect = protection_sends_idle
+    _expire_cooldowns(engine)
+    assert await engine._set_mode("charge", 1000) is False
+    assert engine.current_mode == "idle"
+
+    engine._current_mode = "charge"
+    protection._last_sent_mode = "charge"
+    _expire_cooldowns(engine)
+    assert await engine._adjust_power("charge", 3000) is False
+    assert engine.current_mode == "idle"
 
 
 @pytest.mark.asyncio
