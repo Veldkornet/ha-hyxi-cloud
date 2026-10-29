@@ -155,6 +155,24 @@ def _get_power_value(hass: HomeAssistant, coordinator, sn: str, direction: str) 
     return 100
 
 
+def engine_for(coordinator, serial: str):
+    """The Energy Manager engine for `serial`, or None when there is no
+    engine or it manages a different inverter."""
+    engine = getattr(coordinator, "engine", None)
+    return engine if engine is not None and engine.sn == serial else None
+
+
+def energy_manager_manages(coordinator, serial: str) -> bool:
+    """True when the Energy Manager engine is actively driving `serial`.
+
+    False when there is no engine, its loop is stopped, its ``em_enabled``
+    switch is off, it is paused on stale data, or it manages a different
+    inverter.
+    """
+    engine = engine_for(coordinator, serial)
+    return engine is not None and engine.is_managing
+
+
 def _get_protection_controller(coordinator, sn: str):
     """Return the battery protection controller for a device."""
     return getattr(coordinator, "protection_controllers", {}).get(sn)

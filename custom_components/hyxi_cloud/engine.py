@@ -227,7 +227,7 @@ class EnergyManagerEngine:
         cooldown = self._get_param("mode_switch_cooldown")
         if (time.monotonic() - self._last_mode_switch) < cooldown:
             return "cooldown"
-        if self._dry_run:
+        if self.dry_run:
             return "dry_run"
         return "running"
 
@@ -249,7 +249,8 @@ class EnergyManagerEngine:
 
     @property
     def current_mode(self) -> str | None:
-        """Last mode set by the engine."""
+        """The battery's mode as last sent by the engine or by battery
+        protection."""
         return self._current_mode
 
     @property
@@ -582,6 +583,30 @@ class EnergyManagerEngine:
         if controller := self._get_protection_controller():
             controller.note_manual_mode(mode, seq=seq)
 
+    def note_protection_mode(self, mode: str) -> None:
+        """Battery protection sent `mode` itself: track it as the current
+        mode, so decisions start from what the battery is actually doing."""
+        if mode == self._current_mode:
+            return
+        self._current_mode = mode
+        self._current_mode_trace_id = None
+        self._notify_sensors()
+
+    def _should_return_to_self_consume(self) -> bool:
+        """Whether the current mode goes back to self_consume, the
+        battery's normal mode, when no decision applies or the EM is
+        switched off. Idle does only once battery protection's low-SOC hold
+        no longer needs it."""
+        if self._current_mode == "idle":
+            return not self._protection_holds_low_soc()
+        return self._current_mode in ("charge", "discharge")
+
+    def _protection_holds_low_soc(self) -> bool:
+        """Whether battery protection's low-SOC hold is active: SOC reached
+        the minimum and hasn't recovered past its resume threshold yet."""
+        protection = self._get_protection_controller()
+        return protection is not None and protection.holds_low_soc
+
     # ── Control-result verification ──────────────────────────────────────
     #
     # set_mode_*/set_peak_shaving over Cloud are fire-and-forget: a
@@ -661,7 +686,7 @@ class EnergyManagerEngine:
     # ── Control methods: direct API calls matching stateless button controls ──
 
     @property
-    def _dry_run(self) -> bool:
+    def dry_run(self) -> bool:
         """Check if dry-run mode is enabled in options."""
         return bool(self._coordinator.entry.options.get("em_dry_run", False))
 
@@ -682,6 +707,33 @@ class EnergyManagerEngine:
             return await client.set_mode_self_consume(self._sn)
         return None
 
+    def _record_dry_run_mode(self, mode: str, power_w: int | None) -> None:
+        """Log and track the mode a dry run would have sent, and fire the
+        mode-changed event for it."""
+        action = f"{mode} @ {power_w}W" if power_w else mode
+        _LOGGER.info(
+            "EM DRY-RUN: Would set mode -> %s for %s", action, mask_sn(self._sn)
+        )
+        self._last_mode_switch = time.monotonic()
+        prev_mode = self._current_mode
+        self._current_mode = mode
+        # A dry run sends nothing, so any trace_id from an earlier
+        # real send no longer describes what _current_mode reflects.
+        self._current_mode_trace_id = None
+        self._last_action = f"[dry-run] {action}"
+        self._hass.bus.async_fire(
+            "hyxi_em_mode_changed",
+            {
+                "sn": self._sn,
+                "mode": mode,
+                "power": power_w,
+                "previous_mode": prev_mode,
+                "decision": self._last_decision,
+                "dry_run": True,
+            },
+        )
+        self._notify_sensors()
+
     async def _set_mode(self, mode: str, power_w: int | None = None) -> bool:
         """Set operating mode via direct API call with cooldown enforcement."""
         cooldown = self._get_param("mode_switch_cooldown")
@@ -694,30 +746,8 @@ class EnergyManagerEngine:
         if mode in ("charge", "discharge"):
             power_w = int(max(1, min(power_w or 100, 10000)))
 
-        if self._dry_run:
-            action = f"{mode} @ {power_w}W" if power_w else mode
-            _LOGGER.info(
-                "EM DRY-RUN: Would set mode -> %s for %s", action, mask_sn(self._sn)
-            )
-            self._last_mode_switch = time.monotonic()
-            prev_mode = self._current_mode
-            self._current_mode = mode
-            # A dry run sends nothing, so any trace_id from an earlier
-            # real send no longer describes what _current_mode reflects.
-            self._current_mode_trace_id = None
-            self._last_action = f"[dry-run] {action}"
-            self._hass.bus.async_fire(
-                "hyxi_em_mode_changed",
-                {
-                    "sn": self._sn,
-                    "mode": mode,
-                    "power": power_w,
-                    "previous_mode": prev_mode,
-                    "decision": self._last_decision,
-                    "dry_run": True,
-                },
-            )
-            self._notify_sensors()
+        if self.dry_run:
+            self._record_dry_run_mode(mode, power_w)
             return True
 
         protection = self._get_protection_controller()
@@ -733,6 +763,10 @@ class EnergyManagerEngine:
 
             self._last_mode_switch = time.monotonic()
             self._not_forwarded.forwarded("mode")
+            if protection is not None and protection.superseded(seq):
+                # A newer protection send landed first and has already
+                # told the engine its mode.
+                return False
             prev_mode = self._current_mode
             self._current_mode = mode
             self._current_mode_trace_id = control_verify.extract_trace_id(
@@ -817,7 +851,7 @@ class EnergyManagerEngine:
         if abs(target_w - current_power) <= threshold and target_w > 100:
             return False
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info(
                 "EM DRY-RUN: Would adjust %s power -> %dW for %s",
                 direction,
@@ -845,6 +879,8 @@ class EnergyManagerEngine:
 
             self._last_power_adjust = time.monotonic()
             self._not_forwarded.forwarded("mode")
+            if protection is not None and protection.superseded(seq):
+                return False
             self._current_mode = direction
             self._current_mode_trace_id = control_verify.extract_trace_id(
                 response, self._sn, "EM"
@@ -881,7 +917,7 @@ class EnergyManagerEngine:
         if self._not_forwarded_paused("peak_shaving"):
             return False
 
-        if self._dry_run:
+        if self.dry_run:
             _LOGGER.info(
                 "EM DRY-RUN: Would set peak shaving -> %s for %s",
                 option,
@@ -1140,7 +1176,7 @@ class EnergyManagerEngine:
 
         # ── DEFAULT: self_consume as safe fallback ─────────────────────
         self._set_decision("idle_default")
-        if self._current_mode in ("charge", "discharge"):
+        if self._should_return_to_self_consume():
             await self._set_mode("self_consume")
 
     async def _handle_low_soc(self, s: DecisionState) -> None:
@@ -1176,8 +1212,12 @@ class EnergyManagerEngine:
             await self._set_mode("idle")
 
     async def _check_soc_limits(self, s: DecisionState) -> bool:
-        """PRIORITY 1 & 2: SOC safety limits. Returns True if handled."""
-        if s.soc <= s.soc_min:
+        """PRIORITY 1 & 2: SOC safety limits. Returns True if handled.
+
+        SOC counts as low until battery protection's low-SOC hold ends, so
+        both recover at the same threshold.
+        """
+        if s.soc <= s.soc_min or self._protection_holds_low_soc():
             await self._handle_low_soc(s)
             return True
 
@@ -1388,7 +1428,7 @@ class EnergyManagerEngine:
         """Handle charge entry decision when not currently charging."""
         if s.solar < sc.min_solar_for_charge:
             self._set_decision("solar_self_consume")
-            if self._current_mode not in ("self_consume", "idle"):
+            if self._current_mode != "self_consume":
                 await self._set_mode("self_consume")
             self._charge_entry_export_count = 0
 
@@ -1397,7 +1437,7 @@ class EnergyManagerEngine:
         else:
             self._charge_entry_export_count = 0
             self._set_decision("solar_self_consume")
-            if self._current_mode not in ("self_consume", "idle"):
+            if self._current_mode != "self_consume":
                 await self._set_mode("self_consume")
 
     async def _handle_solar_export_threshold(
@@ -1420,7 +1460,7 @@ class EnergyManagerEngine:
                 self._charge_entry_export_count = 0
         else:
             self._set_decision("solar_export_waiting")
-            if self._current_mode not in ("self_consume", "idle"):
+            if self._current_mode != "self_consume":
                 await self._set_mode("self_consume")
 
     async def _solar_tune_logic(
@@ -1580,7 +1620,7 @@ class EnergyManagerEngine:
             if self._stale:
                 self._clear_stale()
             self._set_decision("disabled")
-            if self._current_mode in ("charge", "discharge"):
+            if self._should_return_to_self_consume():
                 _LOGGER.info(
                     "EM: Disabled — forcing self_consume from %s for %s",
                     self._current_mode,

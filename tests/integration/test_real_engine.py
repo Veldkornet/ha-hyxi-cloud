@@ -25,6 +25,7 @@ from custom_components.hyxi_cloud.engine import (
     EMEntityConfig,
     EnergyManagerEngine,
 )
+from custom_components.hyxi_cloud.protection import HyxiBatteryProtectionController
 
 
 @pytest.mark.asyncio
@@ -717,7 +718,7 @@ async def test_engine_status_property(hass: HomeAssistant):
     engine._last_mode_switch = time.monotonic() - 400
     with patch.object(engine, "_get_param", return_value=300):
         with patch.object(
-            EnergyManagerEngine, "_dry_run", new_callable=PropertyMock
+            EnergyManagerEngine, "dry_run", new_callable=PropertyMock
         ) as mock_dry_run:
             mock_dry_run.return_value = True
             assert engine.status == "dry_run"
@@ -725,7 +726,7 @@ async def test_engine_status_property(hass: HomeAssistant):
     # 6. Running
     with patch.object(engine, "_get_param", return_value=300):
         with patch.object(
-            EnergyManagerEngine, "_dry_run", new_callable=PropertyMock
+            EnergyManagerEngine, "dry_run", new_callable=PropertyMock
         ) as mock_dry_run:
             mock_dry_run.return_value = False
             assert engine.status == "running"
@@ -1348,6 +1349,16 @@ def _expire_cooldowns(engine) -> None:
     engine._last_pv_curtail_toggle = -999999.0
 
 
+def _em_enabled_switch(registry) -> str:
+    """Register the Energy Manager's em_enabled switch; return its entity ID."""
+    return registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        "hyxi_SN123_em_enabled",
+        suggested_object_id="hyxi_sn123_em_enabled",
+    ).entity_id
+
+
 def _refusal_levels(caplog) -> list[int]:
     return [
         r.levelno for r in caplog.records if "was not sent to the device" in r.message
@@ -1442,6 +1453,147 @@ async def test_engine_make_decision_default_fallback(hass: HomeAssistant):
     await engine._make_decision()
 
     assert engine.decision == "idle_default"
+
+
+@pytest.mark.asyncio
+async def test_the_energy_manager_does_not_leave_the_battery_idle(
+    hass: HomeAssistant,
+):
+    """An idle the Energy Manager sent (a night or low-SOC hold, say) goes
+    back to self_consume once no decision applies, and when the Energy
+    Manager is switched off."""
+    engine, coordinator, _entry = _make_engine(hass)
+    client = AsyncMock()
+    coordinator.client = client
+    registry = er.async_get(hass)
+    _set_soc_limits(hass, registry)
+    hass.states.async_set("sensor.p1_meter", "0")
+    hass.states.async_set("sun.sun", "above_horizon", {"elevation": 10.0})
+
+    engine._current_mode = "idle"
+    await engine._make_decision()
+
+    assert engine.decision == "idle_default"
+    client.set_mode_self_consume.assert_awaited_once_with("SN123")
+    assert engine.current_mode == "self_consume"
+
+    em_switch = _em_enabled_switch(registry)
+    hass.states.async_set(em_switch, "off")
+    engine._current_mode = "idle"
+    _expire_cooldowns(engine)
+    await engine._async_step()
+
+    assert engine.decision == "disabled"
+    assert client.set_mode_self_consume.await_count == 2
+    assert engine.current_mode == "self_consume"
+
+
+@pytest.mark.asyncio
+async def test_the_energy_manager_follows_a_protection_low_soc_hold(
+    hass: HomeAssistant,
+):
+    """Battery protection's low-SOC hold idles the battery: the Energy
+    Manager learns that, keeps treating SOC as low until the hold ends
+    (switched off, it leaves the idle too), then goes back to self_consume."""
+    engine, coordinator, _entry = _make_engine(hass)
+    client = AsyncMock()
+    coordinator.client = client
+    coordinator.engine = engine
+    coordinator.async_request_refresh = AsyncMock()
+    protection = HyxiBatteryProtectionController(hass, coordinator, "SN123")
+    coordinator.protection_controllers = {"SN123": protection}
+    registry = er.async_get(hass)
+    _set_soc_limits(hass, registry)
+    hass.states.async_set("sensor.p1_meter", "0")
+    hass.states.async_set("sun.sun", "above_horizon", {"elevation": 10.0})
+    metrics = coordinator.data["SN123"]["metrics"]
+    engine._current_mode = "self_consume"
+
+    metrics["batSoc"] = "20.0"
+    await protection.async_evaluate()
+    client.set_mode_idle.assert_awaited_once_with("SN123")
+    assert engine.current_mode == "idle"
+    # The mode the engine already tracks keeps its pending verification.
+    engine._current_mode_trace_id = "em-trace"
+    engine.note_protection_mode("idle")
+    assert engine._current_mode_trace_id == "em-trace"
+
+    # Above soc_min but below protection's resume threshold (20 + 2).
+    metrics["batSoc"] = "21.0"
+    await protection.async_evaluate()
+    _expire_cooldowns(engine)
+    await engine._make_decision()
+    assert engine.decision == "low_soc_idle"
+
+    em_switch = _em_enabled_switch(registry)
+    hass.states.async_set(em_switch, "off")
+    await engine._async_step()
+    assert engine.decision == "disabled"
+    hass.states.async_set(em_switch, "on")
+    client.set_mode_self_consume.assert_not_awaited()
+
+    metrics["batSoc"] = "23.0"
+    engine.start()
+    try:
+        await protection.async_evaluate()
+        client.set_mode_self_consume.assert_not_awaited()  # left to the EM
+        await engine._make_decision()
+    finally:
+        engine.stop()
+
+    assert engine.decision == "idle_default"
+    client.set_mode_self_consume.assert_awaited_once_with("SN123")
+
+
+@pytest.mark.asyncio
+async def test_the_solar_self_consume_decisions_leave_idle(hass: HomeAssistant):
+    """Solar too low to charge from is a self-consume decision, so an idle
+    from an earlier decision gives way to self_consume there as well."""
+    engine, coordinator, _entry = _make_engine(hass, metrics={"ppv": "500"})
+    client = AsyncMock()
+    coordinator.client = client
+    _set_soc_limits(hass, er.async_get(hass))
+    hass.states.async_set("sensor.p1_meter", "0")
+    hass.states.async_set("sun.sun", "above_horizon", {"elevation": 10.0})
+    engine._current_mode = "idle"
+
+    await engine._make_decision()
+
+    assert engine.decision == "solar_self_consume"
+    client.set_mode_self_consume.assert_awaited_once_with("SN123")
+
+
+@pytest.mark.asyncio
+async def test_an_energy_manager_write_overtaken_by_protection_is_not_tracked(
+    hass: HomeAssistant,
+):
+    """A protection send issued while an Energy Manager write is in flight,
+    and recorded first, is the mode the engine keeps: the older write's
+    late completion doesn't overwrite it."""
+    engine, coordinator, _entry = _make_engine(hass)
+    client = AsyncMock()
+    coordinator.client = client
+    coordinator.engine = engine
+    coordinator.async_request_refresh = AsyncMock()
+    protection = HyxiBatteryProtectionController(hass, coordinator, "SN123")
+    coordinator.protection_controllers = {"SN123": protection}
+    _set_soc_limits(hass, er.async_get(hass))
+
+    async def protection_sends_idle(*_args):
+        protection._last_mode_switch = -999999.0
+        await protection._ensure_mode("idle")
+        return {}
+
+    client.set_mode_charge.side_effect = protection_sends_idle
+    _expire_cooldowns(engine)
+    assert await engine._set_mode("charge", 1000) is False
+    assert engine.current_mode == "idle"
+
+    engine._current_mode = "charge"
+    protection._last_sent_mode = "charge"
+    _expire_cooldowns(engine)
+    assert await engine._adjust_power("charge", 3000) is False
+    assert engine.current_mode == "idle"
 
 
 @pytest.mark.asyncio

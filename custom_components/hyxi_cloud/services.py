@@ -25,6 +25,7 @@ from .const import (
     mask_sn,
     mask_subscription_code,
 )
+from .control import energy_manager_manages
 from .coordinator import HyxiDataUpdateCoordinator
 from .subscriptions import (
     SubscriptionError,
@@ -181,7 +182,7 @@ async def _async_handle_set_battery_mode(call) -> None:
                 f"Device Control is not enabled for {entry.title}. Turn on "
                 "'Device Control & Protection' in the integration options first."
             )
-        if not force and _energy_manager_manages(coordinator, sn):
+        if not force and energy_manager_manages(coordinator, sn):
             raise ServiceValidationError(
                 f"The Energy Manager is managing {mask_sn(sn)}. Turn it off, or "
                 "pass force: true to override it for this one command."
@@ -247,19 +248,6 @@ def _battery_mode_row(
         ),
         rows[0] if rows else None,
     )
-
-
-def _energy_manager_manages(
-    coordinator: HyxiDataUpdateCoordinator, serial: str
-) -> bool:
-    """True when the Energy Manager engine is actively driving `serial`.
-
-    False when there is no engine, its loop is stopped, its ``em_enabled``
-    switch is off, it is paused on stale data, or it manages a different
-    inverter.
-    """
-    engine = getattr(coordinator, "engine", None)
-    return engine is not None and engine.sn == serial and engine.is_managing
 
 
 def _loaded_coordinators(

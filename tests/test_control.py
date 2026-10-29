@@ -591,3 +591,19 @@ async def test_a_request_from_the_routine_itself_does_not_start_a_second_run():
 
     assert most_running == 1
     assert runs == 2
+
+
+@pytest.mark.parametrize(
+    ("engine", "expected"),
+    [
+        (None, False),
+        (MagicMock(sn="SN1", is_managing=False), False),
+        (MagicMock(sn="OTHER", is_managing=True), False),
+        (MagicMock(sn="SN1", is_managing=True), True),
+    ],
+    ids=["no-engine", "not-managing", "other-inverter", "managing"],
+)
+def test_energy_manager_manages(engine, expected):
+    coordinator = MagicMock()
+    coordinator.engine = engine
+    assert control_mod.energy_manager_manages(coordinator, "SN1") is expected

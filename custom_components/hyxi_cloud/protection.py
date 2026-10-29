@@ -19,7 +19,12 @@ from .const import (
     is_modbus_entry,
     mask_sn,
 )
-from .control import NOT_FORWARDED_REASON, CoalescingRunner, NotForwardedPause
+from .control import (
+    NOT_FORWARDED_REASON,
+    CoalescingRunner,
+    NotForwardedPause,
+    engine_for,
+)
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -75,6 +80,9 @@ class HyxiBatteryProtectionController:
         self._applied_send_seq = 0
         self._low_soc_hold = False
         self._high_soc_hold = False
+        # Whether the idle in effect was sent by one of the holds, so it can
+        # go back to self-use once both holds end.
+        self._hold_sent_idle = False
         self._last_mode_switch = -999999.0
         self._last_control_error_kind: str | None = None
         self._not_forwarded = NotForwardedPause()
@@ -89,6 +97,11 @@ class HyxiBatteryProtectionController:
     def last_sent_mode(self) -> str | None:
         """Return the last tracked mode command."""
         return self._last_sent_mode
+
+    @property
+    def holds_low_soc(self) -> bool:
+        """Whether the low-SOC hold is active."""
+        return self._low_soc_hold
 
     def begin_send(self) -> int:
         """Reserve the next monotonic send sequence number.
@@ -106,6 +119,11 @@ class HyxiBatteryProtectionController:
         """
         self._send_seq += 1
         return self._send_seq
+
+    def superseded(self, seq: int | None) -> bool:
+        """Whether the send that reserved `seq` was overtaken by a newer
+        one that has already been recorded -- see begin_send()."""
+        return self._stale_send(seq)
 
     def _stale_send(self, seq: int | None) -> bool:
         """Whether `seq` (from begin_send(), or None for a caller with no
@@ -194,6 +212,7 @@ class HyxiBatteryProtectionController:
         """
         if self._stale_send(seq):
             return
+        self._hold_sent_idle = False
         if mode != self._last_sent_mode:
             self._record_send(seq, mode, trace_id)
             return
@@ -334,6 +353,9 @@ class HyxiBatteryProtectionController:
         if self._high_soc_hold:
             await self._maybe_stay_in_high_soc_hold(soc, soc_max_resume, mode_control)
 
+        if self._hold_sent_idle and not self._high_soc_hold:
+            await self._leave_hold_idle()
+
     async def _enter_low_soc_hold(
         self, soc: float, soc_min: float, mode_control: bool
     ) -> None:
@@ -347,7 +369,7 @@ class HyxiBatteryProtectionController:
             )
         self._low_soc_hold = True
         if self._last_sent_mode != "charge":
-            await self._ensure_mode("idle" if mode_control else "hold")
+            await self._ensure_mode("idle" if mode_control else "hold", hold=True)
 
     async def _maybe_stay_in_low_soc_hold(
         self, soc: float, soc_min_resume: float, mode_control: bool
@@ -358,7 +380,7 @@ class HyxiBatteryProtectionController:
         """
         if soc < soc_min_resume:
             if self._last_sent_mode != "charge":
-                await self._ensure_mode("idle" if mode_control else "hold")
+                await self._ensure_mode("idle" if mode_control else "hold", hold=True)
             return True
         _LOGGER.debug(
             "Protection %s: exiting low-SOC hold (soc=%.1f >= resume=%.1f)",
@@ -406,14 +428,36 @@ class HyxiBatteryProtectionController:
         """
         if mode_control:
             if self._last_sent_mode not in ("discharge", "idle", "self_consume"):
-                await self._ensure_mode("idle")
+                await self._ensure_mode("idle", hold=True)
         elif self._last_sent_mode not in ("discharge", "hold"):
-            await self._ensure_mode("hold")
+            await self._ensure_mode("hold", hold=True)
 
-    async def _ensure_mode(self, mode: str) -> None:
-        """Send a mode command if cooldown allows it and mode changed."""
-        if self._last_sent_mode == mode:
+    async def _leave_hold_idle(self) -> None:
+        """Both holds have ended: put the battery back in self-use in place
+        of the idle a hold sent, unless something else has set the mode
+        since or the Energy Manager is managing the battery (not as a dry
+        run), which then picks the mode itself (it is told about the hold's
+        idle). A send held back by the cooldown is retried
+        on the next evaluation.
+        """
+        engine = engine_for(self._coordinator, self._sn)
+        if self._last_sent_mode != "idle" or (
+            engine is not None and engine.is_managing and not engine.dry_run
+        ):
+            self._hold_sent_idle = False
             return
+        if await self._ensure_mode("self_consume"):
+            self._hold_sent_idle = False
+
+    async def _ensure_mode(self, mode: str, *, hold: bool = False) -> bool:
+        """Send a mode command if cooldown allows it and mode changed.
+        Returns whether it was sent and is now the tracked mode.
+
+        `hold` marks a SOC hold's send: an idle it records belongs to the
+        hold, so the battery goes back to self-use once the holds end.
+        """
+        if self._last_sent_mode == mode:
+            return False
         remaining = MODE_SWITCH_COOLDOWN - (time.monotonic() - self._last_mode_switch)
         if remaining > 0:
             _LOGGER.debug(
@@ -422,7 +466,7 @@ class HyxiBatteryProtectionController:
                 mode,
                 remaining,
             )
-            return
+            return False
 
         if self._not_forwarded.paused("mode"):
             _LOGGER.debug(
@@ -430,80 +474,85 @@ class HyxiBatteryProtectionController:
                 mask_sn(self._sn),
                 mode,
             )
-            return
+            return False
 
         seq = self.begin_send()
         try:
             response = await self._send_control(mode)
         except HyxiApiClient.ControlError as err:
-            # The write was rejected. Throttle retries to the cooldown and
-            # don't let it escape as an unhandled task exception; log at
-            # WARNING the first time a given kind of rejection is seen,
-            # then quietly at DEBUG while that same kind keeps failing --
-            # but a *different* kind of rejection (e.g. switching from
-            # "under external control" to "permission denied", or back)
-            # is WARNING again, since it's new, actionable information.
-            self._last_mode_switch = time.monotonic()
-            if isinstance(err, HyxiApiClient.ControlNotForwardedError):
-                self._not_forwarded.refused("mode")
-                kind = "not_forwarded"
-                guidance = (
-                    f"{NOT_FORWARDED_REASON}. Turn off Device Control & "
-                    "Protection for it."
-                )
-            # Cloud-only: HYXI's API code. Modbus write failures never
-            # carry this HYXI response code.
-            elif not is_modbus_entry(
-                self._coordinator.entry
-            ) and _PERMISSION_DENIED_MARKER in str(err):
-                # HYXI's own API is refusing the write as unauthorized.
-                # Whether that's a per-plant permission level, a
-                # platform-side restriction on this control altogether (as
-                # with Micro ESS, see MICRO_ESS_CONTROL_SUPPORTED in
-                # const.py), or a credentials/authorization issue isn't
-                # something we can tell apart from the response alone --
-                # so the guidance doesn't guess and just points at HYXI
-                # support.
-                kind = "permission_denied"
-                guidance = (
-                    "HYXI's API rejected the write as unauthorized. "
-                    "Contact HYXI support for assistance."
-                )
-            else:
-                kind = "external_control"
-                guidance = (
-                    "The inverter may be under external control; turn off "
-                    "Device Control & Protection for it if it is managed "
-                    "elsewhere."
-                )
-            _LOGGER.log(
-                logging.WARNING
-                if kind != self._last_control_error_kind
-                else logging.DEBUG,
-                "Protection %s: could not set mode '%s' to keep SOC within "
-                "limits: %s. %s",
-                mask_sn(self._sn),
-                mode,
-                err,
-                guidance,
-            )
-            self._last_control_error_kind = kind
-            return
+            self._log_control_error(mode, err)
+            return False
 
         if self._stale_send(seq):
             # A manual or EM send issued after this one already completed
             # and was recorded first -- this write still happened (the
             # device got the command), but it's no longer the send
             # anything should be tracked against.
-            return
+            return False
 
         self._last_control_error_kind = None
         self._not_forwarded.forwarded("mode")
         trace_id = control_verify.extract_trace_id(response, self._sn, "Protection")
         self._record_send(seq, mode, trace_id)
+        if hold and mode == "idle":
+            self._hold_sent_idle = True
         self._last_mode_switch = time.monotonic()
         self._maybe_verify_control_result(mode, trace_id)
+        engine = engine_for(self._coordinator, self._sn)
+        if engine is not None and self._uses_mode_control():
+            engine.note_protection_mode(mode)
         await self._coordinator.async_request_refresh()
+        return True
+
+    def _log_control_error(self, mode: str, err: Exception) -> None:
+        """Handle a rejected mode write: throttle retries to the cooldown,
+        pause the mode on a not-forwarded rejection, and log it."""
+        # Logged at WARNING the first time a given kind of rejection is
+        # seen, then quietly at DEBUG while that same kind keeps failing --
+        # but a *different* kind of rejection (e.g. switching from "under
+        # external control" to "permission denied", or back) is WARNING
+        # again, since it's new, actionable information.
+        self._last_mode_switch = time.monotonic()
+        if isinstance(err, HyxiApiClient.ControlNotForwardedError):
+            self._not_forwarded.refused("mode")
+            kind = "not_forwarded"
+            guidance = (
+                f"{NOT_FORWARDED_REASON}. Turn off Device Control & Protection for it."
+            )
+        # Cloud-only: HYXI's API code. Modbus write failures never
+        # carry this HYXI response code.
+        elif not is_modbus_entry(
+            self._coordinator.entry
+        ) and _PERMISSION_DENIED_MARKER in str(err):
+            # HYXI's own API is refusing the write as unauthorized.
+            # Whether that's a per-plant permission level, a
+            # platform-side restriction on this control altogether (as
+            # with Micro ESS, see MICRO_ESS_CONTROL_SUPPORTED in
+            # const.py), or a credentials/authorization issue isn't
+            # something we can tell apart from the response alone --
+            # so the guidance doesn't guess and just points at HYXI
+            # support.
+            kind = "permission_denied"
+            guidance = (
+                "HYXI's API rejected the write as unauthorized. "
+                "Contact HYXI support for assistance."
+            )
+        else:
+            kind = "external_control"
+            guidance = (
+                "The inverter may be under external control; turn off "
+                "Device Control & Protection for it if it is managed "
+                "elsewhere."
+            )
+        _LOGGER.log(
+            logging.WARNING if kind != self._last_control_error_kind else logging.DEBUG,
+            "Protection %s: could not set mode '%s' to keep SOC within limits: %s. %s",
+            mask_sn(self._sn),
+            mode,
+            err,
+            guidance,
+        )
+        self._last_control_error_kind = kind
 
     def _maybe_verify_control_result(self, mode: str, trace_id: str | None) -> None:
         """Schedule a background check that the device actually applied
