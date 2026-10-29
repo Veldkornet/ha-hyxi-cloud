@@ -501,6 +501,16 @@
           "32": "Respaldo con control de picos de demanda"
         }
       },
+      "vppmode": {
+        "name": "Modo VPP",
+        "state": {
+          "off": "Desactivado",
+          "0": "VPP (inactivo)",
+          "1": "VPP (carga)",
+          "2": "VPP (descarga)",
+          "3": "VPP (autoconsumo, exportación primero)"
+        }
+      },
       "insulationresistance": {
         "name": "Resistencia de aislamiento"
       },

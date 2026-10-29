@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 import time
 from typing import Any, Protocol, runtime_checkable
 
@@ -39,6 +40,7 @@ from .registers import (
     TELEMETRY_COMPONENTS,
     HaloBackup,
     HaloBattery,
+    HaloDispatchState,
     HaloEnergy,
     HaloFaults,
     HaloGrid,
@@ -213,6 +215,7 @@ class HyxiModbusClient:
         self.energy = HaloEnergy(unit)
         self.faults = HaloFaults(unit)
         self.battery = HaloBattery(unit)
+        self.dispatch = HaloDispatchState(unit)
         self.settings = HaloSettings(unit)
         self.work_mode_setting = HaloWorkModeSetting(unit)
 
@@ -228,10 +231,16 @@ class HyxiModbusClient:
         self._identity_read = False
         self._settings_read_at: float | None = None
         self._settings_confirmed_at: float | None = None
-        # What this client last saw or wrote at 4146 (VPP dispatch enable);
-        # None until known. Decides whether a VPP command has to reopen the
-        # settings read for the dispatch switch -- see _write_vpp.
+        # What this client last saw or wrote at 4146 (VPP dispatch enable),
+        # None until known, and the VPP Mode sensor's state from the same
+        # read. A read of 4146-4147 replaces them only if it started after
+        # the last 4146 write -- see _note_dispatch_read.
         self._vpp_on: bool | None = None
+        self._vpp_mode: int | str | None = None
+        self._vpp_written_at = -math.inf
+        # When that read started; published as "_dispatch_read_at" for the
+        # dispatch switch.
+        self._dispatch_read_at: float | None = None
 
     @property
     def dispatch_on(self) -> bool | None:
@@ -315,7 +324,6 @@ class HyxiModbusClient:
         which relies on that to avoid adopting data from a poll that never
         actually got published.
         """
-        previously_confirmed = self._settings_confirmed_at
         (
             self._settings_read_at,
             self._settings_confirmed_at,
@@ -326,16 +334,13 @@ class HyxiModbusClient:
             self._unit_id,
             _LOGGER,
         )
-        if self._settings_confirmed_at != previously_confirmed:
-            self._vpp_on = _enabled_when(self.settings.vpp_enable, enabled_value=1)
 
     def force_settings_refresh(self) -> None:
         """Make the next async_read_settings re-read the block regardless
         of the refresh window -- backs the manual "Refresh Settings"
         button, for a user who just changed something from the app or
         another Modbus master and doesn't want to wait for the hourly
-        window to notice. set_work_mode and _write_vpp call it too: they
-        change 4146 through something other than the switch that shows it."""
+        window to notice."""
         self._settings_read_at = None
 
     async def async_read_all(self) -> dict[str, dict]:
@@ -389,7 +394,44 @@ class HyxiModbusClient:
                 ", ".join(failed),
             )
 
+        await self._read_dispatch_state()
         return {self.serial_number: self._build_device()}
+
+    async def _read_dispatch_state(self) -> None:
+        """Read 4146-4147 for the dispatch switch and the VPP Mode sensor.
+
+        Not a telemetry block: a device that refuses it loses only those
+        two, logged at DEBUG like the settings read, and it can't on its
+        own make a poll whose telemetry all failed look successful.
+        """
+        started = time.monotonic()
+        try:
+            await self.dispatch.async_update()
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            _LOGGER.debug(
+                "Modbus dispatch registers unreadable on unit %s: %s",
+                self._unit_id,
+                err,
+            )
+            return
+        self._note_dispatch_read(started)
+
+    def _note_dispatch_read(self, started: float) -> None:
+        """Adopt a successful read of 4146-4147 that started at `started`,
+        unless a 4146 write landed after it started: the read then says
+        nothing about what the write did."""
+        if started <= self._vpp_written_at:
+            return
+        self._dispatch_read_at = started
+        self._vpp_on = _enabled_when(self.dispatch.vpp_enable, enabled_value=1)
+        # "off" while dispatch is disabled: 4147 keeps its last value then,
+        # which no longer describes what the battery does.
+        self._vpp_mode = self.dispatch.vpp_mode if self._vpp_on else "off"
+
+    def _note_vpp_written(self, enabled: bool) -> None:
+        """Record a write of 4146."""
+        self._vpp_on = enabled
+        self._vpp_written_at = time.monotonic()
 
     def _build_device(self) -> dict:
         """Assemble one device entry in the shape the coordinator publishes."""
@@ -427,6 +469,7 @@ class HyxiModbusClient:
             # so no translation is applied in either direction here.
             # See docs/modbus-provenance.md, rule 1.
             "workMode": self.status.work_mode,
+            "vppMode": self._vpp_mode,
             "gridSts": self.status.grid_state,
             "deviceSwitchStatus": self.status.switch_status,
             "vbus": self.status.bus_voltage,
@@ -520,12 +563,15 @@ class HyxiModbusClient:
                 self.settings.anti_starvation, enabled_value=1
             ),
             # Whether the VPP dispatch block (4146) is currently driving the
-            # inverter. Every set_mode_* write turns this on; the dispatch
-            # switch is the explicit way to turn it off and hand control
-            # back to the inverter's own work mode.
-            "dispatch_enabled": _enabled_when(
-                self.settings.vpp_enable, enabled_value=1
-            ),
+            # inverter: the per-poll read, or a 4146 write since. Every
+            # set_mode_* write turns this on; the dispatch switch is the
+            # explicit way to turn it off and hand control back to the
+            # inverter's own work mode.
+            "dispatch_enabled": self._vpp_on,
+            # When that read started, so the dispatch switch adopts it only
+            # if it started after the switch's own last write -- see
+            # entity.py's SettingsSyncMixin.
+            "_dispatch_read_at": self._dispatch_read_at,
             # See async_read_settings: this is _settings_confirmed_at, not
             # the throttle -- it travels with the values above so
             # entity.py's SettingsSyncMixin can tell a metrics dict that
@@ -546,22 +592,16 @@ class HyxiModbusClient:
         also recovers automatically if something else cleared it.
         """
         try:
-            await self.settings.write("vpp_enable", 1)
-            # A write doesn't update the cached settings, so the dispatch
-            # switch only learns 4146 turned on from a re-read. Recorded
-            # here rather than after the last write, since dispatch is on
-            # even if a later write fails; skipped when already known to be
-            # on, so repeated commands (the Energy Manager's, say) don't each
-            # cost a settings read.
-            if self._vpp_on is not True:
-                self.force_settings_refresh()
-            self._vpp_on = True
+            await self.dispatch.write("vpp_enable", 1)
+            # Recorded here rather than after the last write, since dispatch
+            # is on even if a later write fails.
+            self._note_vpp_written(True)
             if watts is not None:
                 field = (
                     "vpp_charge_power" if mode == VPP_CHARGE else "vpp_discharge_power"
                 )
                 await self.settings.write(field, int(watts))
-            await self.settings.write("vpp_mode", mode)
+            await self.dispatch.write("vpp_mode", mode)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.debug(
                 "Modbus VPP write failed on unit %s (mode=%s, power=%s): %s",
@@ -607,27 +647,22 @@ class HyxiModbusClient:
         mode (4147) was last set -- the mode buttons already do this
         implicitly, so this is mostly a way back from "off".
         """
-        await self._write_setting("vpp_enable", 1 if enabled else 0, 4146)
-        self._vpp_on = enabled
+        await self._write_setting(
+            "vpp_enable", 1 if enabled else 0, 4146, self.dispatch
+        )
+        self._note_vpp_written(enabled)
 
     async def set_work_mode(self, mode: str) -> None:
         """Select the work mode the device runs on its own (register 4024).
 
         VPP dispatch is released first: while it is on the device reports a
         VPP mode rather than the configured one, so a bare 4024 write could
-        not be told apart from no write at all. The settings re-read is
-        forced even when the second write fails, since dispatch has already
-        been released by then and the dispatch switch has to show it.
+        not be told apart from no write at all.
         """
         register_value = WORK_MODES[mode]
-        try:
-            await self._write_setting("vpp_enable", 0, 4146)
-            self._vpp_on = False
-            await self._write_setting(
-                "mode", register_value, 4024, self.work_mode_setting
-            )
-        finally:
-            self.force_settings_refresh()
+        await self._write_setting("vpp_enable", 0, 4146, self.dispatch)
+        self._note_vpp_written(False)
+        await self._write_setting("mode", register_value, 4024, self.work_mode_setting)
 
     async def set_peak_shaving(self, device_sn: str, action: str) -> dict:
         """Limit or release export.

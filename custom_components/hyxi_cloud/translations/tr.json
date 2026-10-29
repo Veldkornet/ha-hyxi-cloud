@@ -501,6 +501,16 @@
           "32": "Pik Tıraşlamalı Yedek"
         }
       },
+      "vppmode": {
+        "name": "VPP Modu",
+        "state": {
+          "off": "Kapalı",
+          "0": "VPP (Bekleme)",
+          "1": "VPP (Şarj)",
+          "2": "VPP (Deşarj)",
+          "3": "VPP (Öz Tüketim, Önce Şebekeye Verme)"
+        }
+      },
       "insulationresistance": {
         "name": "Yalıtım Direnci"
       },

@@ -501,6 +501,16 @@
           "32": "Tartalék csúcskisímítással"
         }
       },
+      "vppmode": {
+        "name": "VPP üzemmód",
+        "state": {
+          "off": "Kikapcsolva",
+          "0": "VPP (készenlét)",
+          "1": "VPP (töltés)",
+          "2": "VPP (kisütés)",
+          "3": "VPP (saját fogyasztás, előbb betáplálás)"
+        }
+      },
       "insulationresistance": {
         "name": "Szigetelési ellenállás"
       },

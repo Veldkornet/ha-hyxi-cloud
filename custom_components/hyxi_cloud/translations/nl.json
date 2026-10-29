@@ -501,6 +501,16 @@
           "32": "Back-up met piekbesparing"
         }
       },
+      "vppmode": {
+        "name": "VPP-modus",
+        "state": {
+          "off": "Uit",
+          "0": "VPP (inactief)",
+          "1": "VPP (laden)",
+          "2": "VPP (ontladen)",
+          "3": "VPP (zelfverbruik, eerst teruglevering)"
+        }
+      },
       "insulationresistance": {
         "name": "Isolatieweerstand"
       },

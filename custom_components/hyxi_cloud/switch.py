@@ -379,10 +379,11 @@ class HyxiDispatchSwitch(SettingsSyncMixin, HyxiEntity, SwitchEntity):
     disabling scheduling -- there it lands in the same "off" state as this
     switch, for a different reason.
 
-    is_on is seeded and kept in sync from the settings block via
-    SettingsSyncMixin, the same as HyxiAntiStarvationSwitch.
+    is_on is seeded and kept in sync via SettingsSyncMixin, from the HALO's
+    per-poll read of 4146 or the hybrid's settings read of 3000.
     """
 
+    _read_at_key = "_dispatch_read_at"
     _attr_translation_key = "dispatch"
     _attr_icon = "mdi:remote"
     _attr_is_on: bool | None = None

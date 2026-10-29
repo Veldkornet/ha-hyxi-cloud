@@ -8,6 +8,7 @@ the device correctly.
 """
 
 import asyncio
+import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -323,6 +324,19 @@ async def test_every_block_failing_raises_control_error(client):
 
 
 @pytest.mark.asyncio
+async def test_an_unreadable_dispatch_state_leaves_out_only_the_vpp_mode(client):
+    """A HALO that refuses 4146-4147 still publishes everything else."""
+    client._unit.fail_read(
+        4146, IllegalDataAddressError(2, "nope"), register_type="holding"
+    )
+
+    metrics = (await client.async_read_all())["10201234567810"]["metrics"]
+
+    assert "vppMode" not in metrics
+    assert metrics["batSoc"] == pytest.approx(78.0)
+
+
+@pytest.mark.asyncio
 async def test_unreadable_identity_falls_back_to_a_stable_key(client, caplog):
     """A device that serves telemetry but not identity still gets sensors."""
     client._unit.fail_read(
@@ -411,70 +425,52 @@ async def test_control_writes_land_in_the_vpp_block(
 ):
     await getattr(client, call)("SN", *args)
     await client.settings.async_update()
+    await client.dispatch.async_update()
 
     # The enable is written every time: 4147 is only consulted while 4146
     # enables dispatch mode 2.
-    assert client.settings.vpp_enable == 1
-    assert client.settings.vpp_mode == expected_mode
+    assert client.dispatch.vpp_enable == 1
+    assert client.dispatch.vpp_mode == expected_mode
     if power_field:
         assert getattr(client.settings, power_field) == expected_power
 
 
 @pytest.mark.asyncio
-async def test_a_vpp_command_that_turns_dispatch_on_forces_a_settings_read(client):
-    """Writes don't update the cached settings, so without this the dispatch
-    switch would keep showing off until the hourly re-read."""
-    await client.async_read_settings()  # seed: 4146 = 0
-    assert client.settings.vpp_enable == 0
+async def test_a_vpp_command_shows_dispatch_on_at_the_next_poll(client):
+    """4146 is read on every poll, so the dispatch switch learns a mode
+    command turned dispatch on without re-reading the settings block."""
+    metrics = (await client.async_read_all())["10201234567810"]["metrics"]
+    assert metrics["dispatch_enabled"] is False  # seed: 4146 = 0
+    settings_read_at = client._settings_read_at
 
     await client.set_mode_charge("SN", 1000)
+    metrics = (await client.async_read_all())["10201234567810"]["metrics"]
 
-    assert client._settings_read_at is None
+    assert metrics["dispatch_enabled"] is True
+    assert metrics["_dispatch_read_at"] > metrics["_settings_read_at"]
+    assert client._settings_read_at == settings_read_at
 
 
 @pytest.mark.asyncio
-async def test_a_vpp_command_with_dispatch_already_on_does_not_reread(client):
-    """The Energy Manager repeats commands; each must not cost a settings
-    read once the cache already shows dispatch on."""
+async def test_a_read_older_than_a_dispatch_write_does_not_replace_it(client):
+    """A poll's read of 4146 that started before a 4146 write landed says
+    nothing about that write, so what the write recorded stands."""
+    await client.async_read_all()  # seed: 4146 = 0
+    started = time.monotonic()
     await client.set_mode_charge("SN", 1000)
-    await client.async_read_settings()  # picks up 4146 = 1
-    assert client.settings.vpp_enable == 1
 
-    await client.set_mode_discharge("SN", 900)
+    client._note_dispatch_read(started)  # still holds the earlier 4146 = 0
 
-    assert client._settings_read_at is not None
-
-
-@pytest.mark.asyncio
-async def test_a_vpp_command_after_dispatch_was_switched_off_refreshes(client):
-    """The cached 4146 still says on after the switch turns it off, so the
-    decision can't rest on the cache alone."""
-    await client.set_mode_charge("SN", 1000)
-    await client.async_read_settings()  # picks up 4146 = 1
-    await client.set_dispatch_enabled(False)  # the cache still says 1
-
-    await client.set_mode_discharge("SN", 900)
-
-    assert client._settings_read_at is None
-
-
-@pytest.mark.asyncio
-async def test_vpp_commands_do_not_defeat_the_failed_read_throttle(client):
-    """With the settings block unreadable there is nothing to learn from a
-    re-read, so only the first command may reopen the window."""
-    with patch.object(client.settings, "async_update", side_effect=OSError("down")):
-        await client.async_read_settings()  # fails; the attempt is stamped
-        await client.set_mode_charge("SN", 1000)  # first command: reopens it
-        await client.async_read_settings()  # fails again, restamps
-        await client.set_mode_discharge("SN", 900)  # dispatch now known on
-
-    assert client._settings_read_at is not None
+    assert client.dispatch_on is True
+    metrics = client._build_metrics()
+    assert metrics["dispatch_enabled"] is True
+    assert metrics["_dispatch_read_at"] < started
 
 
 @pytest.mark.asyncio
 async def test_a_vpp_command_that_fails_after_the_enable_still_records_it(client):
-    """4146=1 landed, so dispatch is on and the dispatch switch has to catch
-    up, even though the power write after it failed."""
+    """4146=1 landed, so dispatch is on, even though the power write after
+    it failed."""
     await client.async_read_settings()  # seed: 4146 = 0
     real_write = client.settings.write
 
@@ -488,7 +484,6 @@ async def test_a_vpp_command_that_fails_after_the_enable_still_records_it(client
             await client.set_mode_charge("SN", 1000)
 
     assert client.dispatch_on is True
-    assert client._settings_read_at is None
 
 
 @pytest.mark.asyncio
@@ -554,12 +549,12 @@ async def test_anti_starvation_write_is_straightforward_polarity(client):
 @pytest.mark.asyncio
 async def test_set_dispatch_enabled_toggles_the_vpp_enable_register(client):
     await client.set_dispatch_enabled(False)
-    await client.settings.async_update()
-    assert client.settings.vpp_enable == 0
+    await client.dispatch.async_update()
+    assert client.dispatch.vpp_enable == 0
 
     await client.set_dispatch_enabled(True)
-    await client.settings.async_update()
-    assert client.settings.vpp_enable == 1
+    await client.dispatch.async_update()
+    assert client.dispatch.vpp_enable == 1
 
 
 @pytest.mark.asyncio
@@ -582,9 +577,9 @@ async def test_set_work_mode_releases_dispatch_before_writing_4024(
         (4146, [0]),
         (4024, [register_value]),
     ]
-    await client.settings.async_update()
+    await client.dispatch.async_update()
     await client.work_mode_setting.async_update()
-    assert client.settings.vpp_enable == 0
+    assert client.dispatch.vpp_enable == 0
     assert client.work_mode_setting.mode == register_value
 
 
@@ -601,9 +596,8 @@ async def test_set_work_mode_validates_before_writing_anything(client):
 
 
 @pytest.mark.asyncio
-async def test_a_failed_4024_write_still_forces_the_settings_read(client):
-    """4146 is already cleared by the time the 4024 write fails, so the
-    dispatch switch must still be refreshed to show it."""
+async def test_a_failed_4024_write_still_records_dispatch_released(client):
+    """4146 is already cleared by the time the 4024 write fails."""
     await client.async_read_settings()
 
     with patch.object(
@@ -612,7 +606,6 @@ async def test_a_failed_4024_write_still_forces_the_settings_read(client):
         with pytest.raises(HyxiModbusClient.ControlError):
             await client.set_work_mode("tou")
 
-    assert client._settings_read_at is None
     # The 4146=0 write landed, so the client must say so -- the work mode
     # button relies on it to tell protection the device is released.
     assert client.dispatch_on is False
@@ -625,7 +618,7 @@ async def test_a_failed_release_write_leaves_the_dispatch_state_alone(client):
     await client.set_mode_charge("SN", 1000)
     assert client.dispatch_on is True
 
-    with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
+    with patch.object(client.dispatch, "write", side_effect=OSError("bus fell over")):
         with pytest.raises(HyxiModbusClient.ControlError):
             await client.set_work_mode("tou")
 
@@ -653,18 +646,6 @@ def test_every_work_mode_button_has_a_client_mode():
     from custom_components.hyxi_cloud.modbus.client import WORK_MODES
 
     assert set(WORK_MODE_ICONS) == set(WORK_MODES)
-
-
-@pytest.mark.asyncio
-async def test_set_work_mode_forces_the_next_settings_read(client):
-    """The dispatch switch only learns 4146 was cleared from a settings
-    re-read, so the write must reopen the refresh window."""
-    await client.async_read_settings()
-    assert client._settings_read_at is not None
-
-    await client.set_work_mode("tou")
-
-    assert client._settings_read_at is None
 
 
 @pytest.mark.asyncio
@@ -701,7 +682,11 @@ async def test_single_register_settings_writes_use_function_code_16(client):
 @pytest.mark.asyncio
 async def test_a_failed_write_raises_the_class_the_platforms_catch(client):
     """button.py and friends catch HyxiApiClient.ControlError by name."""
-    with patch.object(client.settings, "write", side_effect=OSError("bus fell over")):
+    failing = OSError("bus fell over")
+    with (
+        patch.object(client.settings, "write", side_effect=failing),
+        patch.object(client.dispatch, "write", side_effect=failing),
+    ):
         with pytest.raises(HyxiModbusClient.ControlError):
             await client.set_mode_charge("SN", 1000)
 
@@ -1730,9 +1715,9 @@ async def test_halo_work_mode_buttons_appear_and_write_through(hass):
     )
     await hass.async_block_till_done()
 
-    await coordinator.client.settings.async_update()
+    await coordinator.client.dispatch.async_update()
     await coordinator.client.work_mode_setting.async_update()
-    assert coordinator.client.settings.vpp_enable == 0
+    assert coordinator.client.dispatch.vpp_enable == 0
     assert coordinator.client.work_mode_setting.mode == 22
 
 
@@ -1845,6 +1830,60 @@ async def test_halo_vpp_mode_button_updates_the_dispatch_switch(hass):
     await hass.async_block_till_done()
 
     assert hass.states.get(switch_id).state == "on"
+
+
+@pytest.mark.asyncio
+async def test_halo_vpp_mode_sensor_follows_dispatch_on_every_poll(hass):
+    """The VPP Mode sensor and the dispatch switch read 4146-4147 on every
+    poll: off while dispatch is disabled, the dispatch mode once a mode
+    button turns it on, and a change made outside HA on the next poll, not
+    the hourly settings read."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+    connection = _seeded_connection()
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=connection,
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+    coordinator = entry.runtime_data
+
+    async def poll(holding: dict[int, int]) -> str:
+        connection.for_unit(1).load_raw({"holding": holding})
+        await coordinator.async_refresh()
+        await hass.async_block_till_done()
+        return hass.states.get(sensor_id).state
+
+    sn = "10201234567810"
+    sensor_id = lookup_entity_id(hass, entry, "sensor", sn, "vppMode")
+    switch_id = lookup_entity_id(hass, entry, "switch", sn, "dispatch")
+    assert sensor_id is not None
+    assert hass.states.get(sensor_id).state == "off"  # seed 4146 = 0
+    assert hass.states.get(switch_id).state == "off"
+
+    await hass.services.async_call(
+        "button",
+        "press",
+        {"entity_id": lookup_entity_id(hass, entry, "button", sn, "mode_self_consume")},
+        blocking=True,
+    )
+    assert await poll({}) == "3"
+    assert hass.states.get(switch_id).state == "on"
+    assert await poll({4147: 0}) == "0"  # changed by the app, say
+    assert await poll({4146: 0}) == "off"  # 4147 keeps its value
+    assert hass.states.get(switch_id).state == "off"
+
+    # After the switch's own write, it still follows the next poll.
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": switch_id}, blocking=True
+    )
+    assert hass.states.get(switch_id).state == "on"
+    assert await poll({4146: 0}) == "off"
+    assert hass.states.get(switch_id).state == "off"
 
 
 @pytest.mark.asyncio
@@ -1973,8 +2012,8 @@ async def test_halo_dispatch_switch_reflects_and_writes_the_vpp_enable(hass):
             "switch", "turn_on", {"entity_id": entity_id}, blocking=True
         )
     spy.assert_awaited_once_with(True)
-    await coordinator.client.settings.async_update()
-    assert coordinator.client.settings.vpp_enable == 1
+    await coordinator.client.dispatch.async_update()
+    assert coordinator.client.dispatch.vpp_enable == 1
 
     # A change made outside HA is adopted once the refresh window reopens.
     connection.for_unit(1).load_raw({"holding": {4146: 0}})

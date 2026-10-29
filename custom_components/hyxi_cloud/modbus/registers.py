@@ -256,12 +256,13 @@ class HaloBattery(Component):
 
 
 class HaloSettings(Component):
-    """Writable settings, including the VPP dispatch block.
+    """Writable settings, including the VPP block's power and SOC fields.
 
     Holding registers, read with 0x03 and written with 0x10. The VPP block at
-    4146-4150 is what makes local control possible at all: HYXI's cloud API
+    4146-4152 is what makes local control possible at all: HYXI's cloud API
     refuses Micro ESS control for third-party applications, and there is no
-    permission check on this path.
+    permission check on this path. Its enable and mode (4146-4147) are in
+    HaloDispatchState, read on every poll.
 
     Every writable single-register field below passes force_fc16=True: this
     document's function-code table lists only 0x03/0x04/0x10, unlike the
@@ -310,10 +311,6 @@ class HaloSettings(Component):
         4141, signed=False, writable=True, unit="%", force_fc16=True
     )
     """Discharge floor SOC."""
-    vpp_enable = integer(4146, signed=False, writable=True, force_fc16=True)
-    """VPP dispatch mode 2. 0 disabled, 1 enabled."""
-    vpp_mode = integer(4147, signed=False, writable=True, force_fc16=True)
-    """0 idle, 1 charge, 2 discharge, 3 self-consumption."""
     vpp_charge_power = uint32(4148, word_order=LOW_WORD_FIRST, writable=True, unit="W")
     """VPP charge power."""
     vpp_discharge_power = uint32(
@@ -349,6 +346,26 @@ class HaloWorkModeSetting(Component):
     mode = integer(4024, signed=False, writable=True, force_fc16=True)
     """1 self-use, 3 grid backup, 21 custom discharge, 22 TOU. Read back as
     4102 (HaloStatus.work_mode) unless VPP dispatch is on."""
+
+
+class HaloDispatchState(Component):
+    """VPP dispatch enable and mode, holding registers 4146-4147: the start
+    of the VPP block, whose power and SOC fields are in HaloSettings.
+
+    A component of its own, read after the telemetry blocks on every poll
+    rather than with the hourly settings block, so the dispatch switch and
+    the VPP Mode sensor follow a change made in the app or by another
+    Modbus master. Written with FC 0x10 like HaloSettings' fields.
+    """
+
+    register_space = "holding"
+    max_span = MAX_SPAN
+
+    vpp_enable = integer(4146, signed=False, writable=True, force_fc16=True)
+    """VPP dispatch mode 2. 0 disabled, 1 enabled."""
+    vpp_mode = integer(4147, signed=False, writable=True, force_fc16=True)
+    """0 idle, 1 charge, 2 discharge, 3 self-consumption. Keeps its value
+    after dispatch is disabled."""
 
 
 #: Components read on every poll, in the order they are read.

@@ -412,6 +412,9 @@ class HyxiHybridModbusClient:
             "dispatch_enabled": _enabled_when(
                 self.settings.scheduling_enabled, enabled_value=1
             ),
+            # The dispatch switch's freshness marker: 3000 comes with the
+            # settings read here, unlike the HALO's per-poll 4146.
+            "_dispatch_read_at": self._settings_confirmed_at,
             # See HyxiModbusClient.async_read_settings: this is
             # _settings_confirmed_at, not the throttle -- it travels with
             # the values above so entity.py's SettingsSyncMixin can tell a

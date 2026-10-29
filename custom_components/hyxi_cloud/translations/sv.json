@@ -501,6 +501,16 @@
           "32": "Backup med topplastreducering"
         }
       },
+      "vppmode": {
+        "name": "VPP-läge",
+        "state": {
+          "off": "Av",
+          "0": "VPP (inaktivt)",
+          "1": "VPP (laddning)",
+          "2": "VPP (urladdning)",
+          "3": "VPP (egenanvändning, export först)"
+        }
+      },
       "insulationresistance": {
         "name": "Isolationsresistans"
       },

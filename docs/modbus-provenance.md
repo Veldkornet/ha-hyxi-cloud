@@ -123,6 +123,13 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 5021 | `max_discharge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxDischargePower` |
 | 5023 | `max_charge_power` | Number (unsigned) | RO | ×0.001 | kW | sensor: `maxChargePower` |
 
+### HaloDispatchState  (space=holding)
+
+| Addr | Field | Type | R/W | Scale | Unit | Exposed as |
+| ---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 4146 | `vpp_enable` | Number (unsigned) | RW |  |  | sensor: `vppMode`; switch: `dispatch`; used by a control method |
+| 4147 | `vpp_mode` | Number (unsigned) | RW |  |  | sensor: `vppMode`; used by a control method |
+
 ### HaloSettings  (space=holding)
 
 | Addr | Field | Type | R/W | Scale | Unit | Exposed as |
@@ -135,8 +142,6 @@ Generated directly from the Component classes -- this table cannot drift from th
 | 4134 | `self_use_soc` | Number (unsigned) | RW |  | % | used by a control method |
 | 4140 | `force_charge_stop_soc` | Number (unsigned) | RW |  | % | used by a control method |
 | 4141 | `discharge_min_soc` | Number (unsigned) | RW |  | % | used by a control method |
-| 4146 | `vpp_enable` | Number (unsigned) | RW |  |  | used by a control method |
-| 4147 | `vpp_mode` | Number (unsigned) | RW |  |  | used by a control method |
 | 4148 | `vpp_charge_power` | Number (unsigned) | RW |  | W | used by a control method |
 | 4150 | `vpp_discharge_power` | Number (unsigned) | RW |  | W | used by a control method |
 | 4152 | `vpp_min_soc` | Number (unsigned) | RW |  | % | used by a control method |
@@ -456,9 +461,12 @@ snapshotting the bus around each with `tools/modbus_probe.py`. Whichever
 register tracks the change is the work mode, and its values are then fact.
 Record the result here and *then* change the code.
 
-Note that this is not hypothetical housekeeping: `binary_sensor.py` reads
-`metrics["vppMode"]`, a key the cloud client never populates, so the VPP
-dispatch sensor has never worked. The same experiment settles that too.
+Note that this is not hypothetical housekeeping: the cloud Work Mode
+binary sensor (`binary_sensor.py`) is on when the cloud's `workMode` is in
+`hyxi_cloud_api.VPP_ACTIVE_MODES`, whose values are the APK inference above.
+The same experiment settles whether it is right. (The HALO's VPP Mode sensor
+does not depend on this: it reads the dispatch registers 4146-4147, which this
+integration writes itself.)
 
 ### 2. Do not encode an unconfirmed enumeration as an enum
 

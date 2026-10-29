@@ -139,6 +139,9 @@ class SettingsSyncMixin:
     coordinator: Any
     _sn: str
     _last_write_at: float | None = None
+    #: The metrics key carrying when the read behind this entity's value
+    #: started: the settings read for most, a per-poll read for some.
+    _read_at_key = "_settings_read_at"
 
     def _note_write(self) -> None:
         """Call once a write has landed on the device, before applying it
@@ -171,7 +174,7 @@ class SettingsSyncMixin:
         if dev_data is None:
             dev_data = self.coordinator.data.get(self._sn) or {}
         metrics = dev_data.get("metrics") or {}
-        read_at = metrics.get("_settings_read_at")
+        read_at = metrics.get(self._read_at_key)
         if read_at is None:
             return None
         if self._last_write_at is not None and read_at <= self._last_write_at:

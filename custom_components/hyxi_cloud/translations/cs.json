@@ -501,6 +501,16 @@
           "32": "Záloha s omezováním špiček"
         }
       },
+      "vppmode": {
+        "name": "Režim VPP",
+        "state": {
+          "off": "Vypnuto",
+          "0": "VPP (nečinnost)",
+          "1": "VPP (nabíjení)",
+          "2": "VPP (vybíjení)",
+          "3": "VPP (vlastní spotřeba, nejprve export)"
+        }
+      },
       "insulationresistance": {
         "name": "Izolační odpor"
       },

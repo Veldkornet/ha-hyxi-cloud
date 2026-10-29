@@ -126,20 +126,22 @@ def _is_cache_expired(raw: dict | None) -> bool:
 
 
 def _drop_stale_settings_markers(devices: dict) -> dict:
-    """Strip a Modbus settings-freshness marker that predates this process.
+    """Strip Modbus freshness markers that predate this process.
 
-    "_settings_read_at" (modbus/client.py) is a time.monotonic() value,
-    meaningful only against other timestamps from the same process. A cache
-    loaded from disk at startup comes from a previous process's clock, so
-    pre-seeding coordinator.data with it verbatim would let
-    entity.py's SettingsSyncMixin treat a days-old cached settings snapshot
-    as though this process had just confirmed it, on the very first poll
-    after a restart -- including reverting a device change made while HA
-    was down. Cloud devices never carry this key, so this is a no-op there.
+    "_settings_read_at" and "_dispatch_read_at" (modbus/client.py) are
+    time.monotonic() values, meaningful only against other timestamps from
+    the same process. A cache loaded from disk at startup comes from a
+    previous process's clock, so pre-seeding coordinator.data with them
+    verbatim would let entity.py's SettingsSyncMixin treat a days-old cached
+    snapshot as though this process had just confirmed it, on the very first
+    poll after a restart -- including reverting a device change made while
+    HA was down. Cloud devices never carry these keys, so this is a no-op
+    there.
     """
     for dev_data in devices.values():
         if metrics := dev_data.get("metrics"):
             metrics.pop("_settings_read_at", None)
+            metrics.pop("_dispatch_read_at", None)
     return devices
 
 

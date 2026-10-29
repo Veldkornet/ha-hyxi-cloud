@@ -870,6 +870,15 @@ SENSOR_TYPES = [
         icon="mdi:state-machine",
     ),
     SensorEntityDescription(
+        key="vppMode",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # HALO registers 4146-4147: "off" while VPP dispatch is disabled,
+        # else the dispatch mode from the HALO protocol document.
+        options=["off", "0", "1", "2", "3"],
+        icon="mdi:state-machine",
+    ),
+    SensorEntityDescription(
         key="selfTestStatus",
         device_class=SensorDeviceClass.ENUM,
         entity_category=EntityCategory.DIAGNOSTIC,

@@ -542,6 +542,16 @@
           "32": "Backup with peak shaving"
         }
       },
+      "vppmode": {
+        "name": "VPP Mode",
+        "state": {
+          "off": "Off",
+          "0": "VPP (idle)",
+          "1": "VPP (charging)",
+          "2": "VPP (discharging)",
+          "3": "VPP (self-use, export first)"
+        }
+      },
       "insulationresistance": {
         "name": "Insulation Resistance"
       },
