@@ -179,6 +179,152 @@ async def test_high_soc_hysteresis_clears_below_resume():
     controller._ensure_mode.assert_not_awaited()
 
 
+# --- Leaving a Hold's Idle ---
+
+
+def _sending_controller(soc: float) -> HyxiBatteryProtectionController:
+    """A controller whose _ensure_mode records a changed mode as sent."""
+    controller = _build_controller(soc)
+    controller._ensure_mode = AsyncMock()  # type: ignore[method-assign]
+    _resume_sending(controller)
+    return controller
+
+
+def _resume_sending(controller: HyxiBatteryProtectionController) -> None:
+    controller._ensure_mode.side_effect = lambda mode: _record_mode(controller, mode)
+
+
+def _record_mode(controller: HyxiBatteryProtectionController, mode: str) -> bool:
+    if controller._last_sent_mode == mode:
+        return False
+    controller._last_sent_mode = mode
+    return True
+
+
+def _set_soc(controller: HyxiBatteryProtectionController, soc: float) -> None:
+    controller._coordinator.data["SN123"]["metrics"]["batSoc"] = soc
+
+
+@pytest.mark.asyncio
+async def test_low_soc_hold_returns_to_self_consume_once_recovered():
+    """The idle the low-SOC hold sent gives way to self-use once SOC is
+    back above the resume threshold, instead of holding the battery idle."""
+    controller = _sending_controller(20)
+    controller.note_manual_mode("self_consume")
+
+    await controller.async_evaluate()
+    _set_soc(controller, 21)
+    await controller.async_evaluate()
+    assert controller.last_sent_mode == "idle"
+
+    _set_soc(controller, 23)
+    await controller.async_evaluate()
+
+    assert controller.last_sent_mode == "self_consume"
+    assert controller._ensure_mode.await_args_list[-1].args == ("self_consume",)
+    controller._ensure_mode.reset_mock()
+    await controller.async_evaluate()
+    controller._ensure_mode.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_high_soc_hold_returns_to_self_consume_once_released():
+    """The idle the high-SOC hold sent to stop charging gives way to
+    self-use once SOC drops back to the release threshold."""
+    controller = _sending_controller(90)
+    controller.note_manual_mode("charge")
+
+    await controller.async_evaluate()
+    assert controller.last_sent_mode == "idle"
+
+    _set_soc(controller, 88)
+    await controller.async_evaluate()
+
+    assert controller.last_sent_mode == "self_consume"
+
+
+@pytest.mark.asyncio
+async def test_an_idle_set_before_the_hold_stays():
+    """An idle already in place when the hold starts wasn't the hold's
+    choice, so it stays after the hold ends."""
+    controller = _sending_controller(20)
+    controller.note_manual_mode("idle")
+
+    await controller.async_evaluate()
+    _set_soc(controller, 23)
+    await controller.async_evaluate()
+
+    assert controller.last_sent_mode == "idle"
+    assert controller._hold_sent_idle is False
+
+
+@pytest.mark.asyncio
+async def test_an_idle_recorded_by_another_send_meanwhile_stays():
+    """An idle another writer recorded while the hold's own send was
+    pending (or held back) wasn't the hold's choice either."""
+    controller = _sending_controller(20)
+
+    def another_send_lands_first(mode):
+        controller.note_manual_mode(mode, seq=controller.begin_send())
+        return False
+
+    controller._ensure_mode.side_effect = another_send_lands_first
+    await controller.async_evaluate()
+    _resume_sending(controller)
+    _set_soc(controller, 23)
+    await controller.async_evaluate()
+
+    assert controller.last_sent_mode == "idle"
+
+
+@pytest.mark.asyncio
+async def test_a_mode_sent_during_the_hold_stays():
+    """A mode sent by someone else while the hold is active (here an idle,
+    the same as the hold's) is theirs, so the hold's end leaves it."""
+    controller = _sending_controller(20)
+
+    await controller.async_evaluate()
+    controller.note_manual_mode("idle", trace_id="manual")
+    _set_soc(controller, 23)
+    await controller.async_evaluate()
+
+    controller._ensure_mode.assert_awaited_once_with("idle")
+
+
+@pytest.mark.asyncio
+async def test_the_energy_manager_picks_the_mode_after_a_hold():
+    """While the Energy Manager manages the battery, the hold's end leaves
+    the mode to it, and doesn't send self-use later either."""
+    controller = _sending_controller(20)
+    controller._coordinator.engine = MagicMock(sn="SN123", is_managing=True)
+
+    await controller.async_evaluate()
+    _set_soc(controller, 23)
+    await controller.async_evaluate()
+    controller._coordinator.engine.is_managing = False
+    await controller.async_evaluate()
+
+    controller._ensure_mode.assert_awaited_once_with("idle")
+
+
+@pytest.mark.asyncio
+async def test_a_return_held_back_by_the_cooldown_is_retried():
+    """A self-use send the cooldown holds back is tried again on the next
+    evaluation."""
+    controller = _sending_controller(20)
+
+    await controller.async_evaluate()
+    controller._ensure_mode.side_effect = lambda mode: False  # held back
+    _set_soc(controller, 23)
+    await controller.async_evaluate()
+    assert controller.last_sent_mode == "idle"
+
+    _resume_sending(controller)
+    await controller.async_evaluate()
+
+    assert controller.last_sent_mode == "self_consume"
+
+
 # --- Mode Restore ---
 
 
@@ -541,6 +687,31 @@ async def test_ensure_mode_three_phase_actions():
     controller._coordinator.client.set_mode_self_consume.assert_awaited_once_with(
         "SN123"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("model", "mode", "engine_sn", "told"),
+    [
+        ("H5K-HT", "idle", "SN123", True),
+        ("H5K-HT", "idle", "OTHER", False),
+        ("H5K-HS", "hold", "SN123", False),
+    ],
+    ids=["mode-control", "other-inverter", "peak-shaving"],
+)
+async def test_ensure_mode_tells_the_energy_manager(model, mode, engine_sn, told):
+    """A mode protection sends is what the Energy Manager's next decision
+    starts from; a peak-shaving mode isn't in its vocabulary."""
+    controller = _build_controller(50, model)
+    controller._ensure_mode = HyxiBatteryProtectionController._ensure_mode.__get__(
+        controller, HyxiBatteryProtectionController
+    )
+    engine = MagicMock(sn=engine_sn)
+    controller._coordinator.engine = engine
+
+    assert await controller._ensure_mode(mode) is True
+
+    assert engine.note_protection_mode.called is told
 
 
 @pytest.mark.asyncio

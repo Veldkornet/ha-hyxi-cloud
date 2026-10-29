@@ -9,7 +9,6 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from custom_components.hyxi_cloud.const import DOMAIN
 from custom_components.hyxi_cloud.services import (
     _battery_mode_row,
-    _energy_manager_manages,
     _resolve_battery_mode_targets,
     setup_services,
 )
@@ -391,22 +390,6 @@ def test_resolve_battery_mode_targets_skips_unknown_and_foreign_devices(
     ):
         rows = _resolve_battery_mode_targets(hass, {"a", "b", "c"}, set())
     assert rows == []
-
-
-@pytest.mark.parametrize(
-    ("engine", "expected"),
-    [
-        (None, False),
-        (MagicMock(sn="SN1", is_managing=False), False),
-        (MagicMock(sn="OTHER", is_managing=True), False),
-        (MagicMock(sn="SN1", is_managing=True), True),
-    ],
-    ids=["no-engine", "not-managing", "other-inverter", "managing"],
-)
-def test_energy_manager_manages(engine, expected):
-    coordinator = MagicMock()
-    coordinator.engine = engine
-    assert _energy_manager_manages(coordinator, "SN1") is expected
 
 
 def _coordinator_for(entry_id: str, transport: str | None, device_code: str):

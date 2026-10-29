@@ -19,7 +19,13 @@ from .const import (
     is_modbus_entry,
     mask_sn,
 )
-from .control import NOT_FORWARDED_REASON, CoalescingRunner, NotForwardedPause
+from .control import (
+    NOT_FORWARDED_REASON,
+    CoalescingRunner,
+    NotForwardedPause,
+    energy_manager_manages,
+    engine_for,
+)
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -75,6 +81,9 @@ class HyxiBatteryProtectionController:
         self._applied_send_seq = 0
         self._low_soc_hold = False
         self._high_soc_hold = False
+        # Whether the idle in effect was sent by one of the holds, so it can
+        # go back to self-use once both holds end.
+        self._hold_sent_idle = False
         self._last_mode_switch = -999999.0
         self._last_control_error_kind: str | None = None
         self._not_forwarded = NotForwardedPause()
@@ -89,6 +98,11 @@ class HyxiBatteryProtectionController:
     def last_sent_mode(self) -> str | None:
         """Return the last tracked mode command."""
         return self._last_sent_mode
+
+    @property
+    def holds_low_soc(self) -> bool:
+        """Whether the low-SOC hold is active."""
+        return self._low_soc_hold
 
     def begin_send(self) -> int:
         """Reserve the next monotonic send sequence number.
@@ -194,6 +208,7 @@ class HyxiBatteryProtectionController:
         """
         if self._stale_send(seq):
             return
+        self._hold_sent_idle = False
         if mode != self._last_sent_mode:
             self._record_send(seq, mode, trace_id)
             return
@@ -334,6 +349,9 @@ class HyxiBatteryProtectionController:
         if self._high_soc_hold:
             await self._maybe_stay_in_high_soc_hold(soc, soc_max_resume, mode_control)
 
+        if self._hold_sent_idle and not self._high_soc_hold:
+            await self._leave_hold_idle()
+
     async def _enter_low_soc_hold(
         self, soc: float, soc_min: float, mode_control: bool
     ) -> None:
@@ -347,7 +365,7 @@ class HyxiBatteryProtectionController:
             )
         self._low_soc_hold = True
         if self._last_sent_mode != "charge":
-            await self._ensure_mode("idle" if mode_control else "hold")
+            await self._send_hold_mode("idle" if mode_control else "hold")
 
     async def _maybe_stay_in_low_soc_hold(
         self, soc: float, soc_min_resume: float, mode_control: bool
@@ -358,7 +376,7 @@ class HyxiBatteryProtectionController:
         """
         if soc < soc_min_resume:
             if self._last_sent_mode != "charge":
-                await self._ensure_mode("idle" if mode_control else "hold")
+                await self._send_hold_mode("idle" if mode_control else "hold")
             return True
         _LOGGER.debug(
             "Protection %s: exiting low-SOC hold (soc=%.1f >= resume=%.1f)",
@@ -406,14 +424,37 @@ class HyxiBatteryProtectionController:
         """
         if mode_control:
             if self._last_sent_mode not in ("discharge", "idle", "self_consume"):
-                await self._ensure_mode("idle")
+                await self._send_hold_mode("idle")
         elif self._last_sent_mode not in ("discharge", "hold"):
-            await self._ensure_mode("hold")
+            await self._send_hold_mode("hold")
 
-    async def _ensure_mode(self, mode: str) -> None:
-        """Send a mode command if cooldown allows it and mode changed."""
-        if self._last_sent_mode == mode:
+    async def _send_hold_mode(self, mode: str) -> None:
+        """Send a hold's mode, noting when it idles the battery. An idle
+        already in place, or recorded by another send meanwhile, stays
+        unmarked: the hold didn't choose it."""
+        if await self._ensure_mode(mode) and mode == "idle":
+            self._hold_sent_idle = True
+
+    async def _leave_hold_idle(self) -> None:
+        """Both holds have ended: put the battery back in self-use in place
+        of the idle a hold sent, unless something else has set the mode
+        since or the Energy Manager is managing the battery, which then
+        picks the mode itself (it is told about the hold's idle). A send held back by the cooldown is retried
+        on the next evaluation.
+        """
+        if self._last_sent_mode != "idle" or energy_manager_manages(
+            self._coordinator, self._sn
+        ):
+            self._hold_sent_idle = False
             return
+        if await self._ensure_mode("self_consume"):
+            self._hold_sent_idle = False
+
+    async def _ensure_mode(self, mode: str) -> bool:
+        """Send a mode command if cooldown allows it and mode changed.
+        Returns whether it was sent and is now the tracked mode."""
+        if self._last_sent_mode == mode:
+            return False
         remaining = MODE_SWITCH_COOLDOWN - (time.monotonic() - self._last_mode_switch)
         if remaining > 0:
             _LOGGER.debug(
@@ -422,7 +463,7 @@ class HyxiBatteryProtectionController:
                 mode,
                 remaining,
             )
-            return
+            return False
 
         if self._not_forwarded.paused("mode"):
             _LOGGER.debug(
@@ -430,7 +471,7 @@ class HyxiBatteryProtectionController:
                 mask_sn(self._sn),
                 mode,
             )
-            return
+            return False
 
         seq = self.begin_send()
         try:
@@ -488,14 +529,14 @@ class HyxiBatteryProtectionController:
                 guidance,
             )
             self._last_control_error_kind = kind
-            return
+            return False
 
         if self._stale_send(seq):
             # A manual or EM send issued after this one already completed
             # and was recorded first -- this write still happened (the
             # device got the command), but it's no longer the send
             # anything should be tracked against.
-            return
+            return False
 
         self._last_control_error_kind = None
         self._not_forwarded.forwarded("mode")
@@ -503,7 +544,11 @@ class HyxiBatteryProtectionController:
         self._record_send(seq, mode, trace_id)
         self._last_mode_switch = time.monotonic()
         self._maybe_verify_control_result(mode, trace_id)
+        engine = engine_for(self._coordinator, self._sn)
+        if engine is not None and self._uses_mode_control():
+            engine.note_protection_mode(mode)
         await self._coordinator.async_request_refresh()
+        return True
 
     def _maybe_verify_control_result(self, mode: str, trace_id: str | None) -> None:
         """Schedule a background check that the device actually applied

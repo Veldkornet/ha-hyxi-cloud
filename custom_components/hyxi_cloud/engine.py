@@ -582,6 +582,30 @@ class EnergyManagerEngine:
         if controller := self._get_protection_controller():
             controller.note_manual_mode(mode, seq=seq)
 
+    def note_protection_mode(self, mode: str) -> None:
+        """Battery protection sent `mode` itself: track it as the current
+        mode, so decisions start from what the battery is actually doing."""
+        if mode == self._current_mode:
+            return
+        self._current_mode = mode
+        self._current_mode_trace_id = None
+        self._notify_sensors()
+
+    def _should_return_to_self_consume(self) -> bool:
+        """Whether the current mode goes back to self_consume, the
+        battery's normal mode, when no decision applies or the EM is
+        switched off. Idle does only once battery protection's low-SOC hold
+        no longer needs it."""
+        if self._current_mode == "idle":
+            return not self._protection_holds_low_soc()
+        return self._current_mode in ("charge", "discharge")
+
+    def _protection_holds_low_soc(self) -> bool:
+        """Whether battery protection's low-SOC hold is active: SOC reached
+        the minimum and hasn't recovered past its resume threshold yet."""
+        protection = self._get_protection_controller()
+        return protection is not None and protection.holds_low_soc
+
     # ── Control-result verification ──────────────────────────────────────
     #
     # set_mode_*/set_peak_shaving over Cloud are fire-and-forget: a
@@ -1140,7 +1164,7 @@ class EnergyManagerEngine:
 
         # ── DEFAULT: self_consume as safe fallback ─────────────────────
         self._set_decision("idle_default")
-        if self._current_mode in ("charge", "discharge"):
+        if self._should_return_to_self_consume():
             await self._set_mode("self_consume")
 
     async def _handle_low_soc(self, s: DecisionState) -> None:
@@ -1176,8 +1200,12 @@ class EnergyManagerEngine:
             await self._set_mode("idle")
 
     async def _check_soc_limits(self, s: DecisionState) -> bool:
-        """PRIORITY 1 & 2: SOC safety limits. Returns True if handled."""
-        if s.soc <= s.soc_min:
+        """PRIORITY 1 & 2: SOC safety limits. Returns True if handled.
+
+        SOC counts as low until battery protection's low-SOC hold ends, so
+        both recover at the same threshold.
+        """
+        if s.soc <= s.soc_min or self._protection_holds_low_soc():
             await self._handle_low_soc(s)
             return True
 
@@ -1580,7 +1608,7 @@ class EnergyManagerEngine:
             if self._stale:
                 self._clear_stale()
             self._set_decision("disabled")
-            if self._current_mode in ("charge", "discharge"):
+            if self._should_return_to_self_consume():
                 _LOGGER.info(
                     "EM: Disabled — forcing self_consume from %s for %s",
                     self._current_mode,
