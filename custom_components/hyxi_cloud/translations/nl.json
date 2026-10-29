@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Energiebeheer",
-        "description": "Configureer Energiebeheer om het batterijgebruik te optimaliseren op basis van zonne-energieproductie, netmeter en voorspellingsgegevens. Als je batterij zijn capaciteit niet doorgeeft (zoals een AC-gekoppelde HALO), schakel dan hieronder het overschrijven van de batterijcapaciteit in.",
+        "description": "Configureer Energiebeheer om het batterijgebruik te optimaliseren op basis van zonne-energieproductie, netmeter en voorspellingsgegevens. Een AC-gekoppelde batterij zoals een HALO heeft geen eigen zonne-invoer: voeg hieronder de vermogenssensoren van je zonne-omvormers toe, anders kan Energiebeheer hem niet met zonne-energie laden. Als je batterij zijn capaciteit niet doorgeeft, schakel dan hieronder het overschrijven van de batterijcapaciteit in.",
         "data": {
           "em_p1_entity": "P1 Slimme Meter (vermogenssensor)",
-          "em_extra_pv_entities": "Vermogen Andere Zonne-omvormers (optioneel)",
+          "em_extra_pv_entities": "Vermogen Zonne-omvormers (niet dit apparaat)",
           "em_forecast_entity": "Zonneprognose Resterend Vandaag (optioneel)",
           "em_inverter_sn": "Te Besturen Omvormer",
           "em_battery_capacity_override": "Batterijcapaciteit Overschrijven",
@@ -143,7 +143,7 @@
           "em_dry_run": "Testmodus (geen API-aanroepen)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Vermogenssensoren van andere zonne-omvormers op deze locatie, zoals een SolarEdge. Hun opbrengst wordt opgeteld bij de eigen PV van deze omvormer wanneer Energiebeheer beslist of de batterij met zonne-energie wordt geladen. Gebruik sensoren die om de paar seconden bijwerken."
+          "em_extra_pv_entities": "Vermogenssensoren van zonne-omvormers die dit apparaat niet meet, zoals een SolarEdge. Hun opbrengst wordt opgeteld bij de eigen PV van dit apparaat wanneer Energiebeheer beslist of de batterij met zonne-energie wordt geladen. Gebruik sensoren die om de paar seconden bijwerken."
         }
       }
     },

@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Energy Manager",
-        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data. If your battery doesn't report its capacity (such as an AC-coupled HALO), turn on the capacity override below.",
+        "description": "Configure the Energy Manager to optimize battery usage based on solar production, grid meter, and forecast data. An AC-coupled battery such as a HALO has no solar input of its own: add your solar inverters' power sensors below, or the Energy Manager can't charge it from solar. If your battery doesn't report its capacity, turn on the capacity override below.",
         "data": {
           "em_p1_entity": "P1 Smart Meter (power sensor)",
-          "em_extra_pv_entities": "Other Solar Inverters' Power (optional)",
+          "em_extra_pv_entities": "Solar Inverters' Power (not this device)",
           "em_forecast_entity": "Solar Forecast Remaining Today (optional)",
           "em_inverter_sn": "Inverter to Control",
           "em_battery_capacity_override": "Override Battery Capacity",
@@ -143,7 +143,7 @@
           "em_dry_run": "Dry-Run Mode (no API calls)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Power sensors of other solar inverters at this site, such as a SolarEdge. Their output is added to this inverter's own PV when the Energy Manager decides whether to charge the battery from solar. Use sensors that update every few seconds."
+          "em_extra_pv_entities": "Power sensors of solar inverters this device doesn't measure, such as a SolarEdge. Their output is added to this device's own PV when the Energy Manager decides whether to charge the battery from solar. Use sensors that update every few seconds."
         }
       }
     },

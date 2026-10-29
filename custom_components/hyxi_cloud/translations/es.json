@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Gestor de Energía",
-        "description": "Configure el Gestor de Energía para optimizar el uso de la batería según la producción solar, el medidor de red y los datos de previsión. Si su batería no informa su capacidad (como una HALO acoplada en CA), active a continuación la anulación de la capacidad de la batería.",
+        "description": "Configure el Gestor de Energía para optimizar el uso de la batería según la producción solar, el medidor de red y los datos de previsión. Una batería acoplada en CA, como una HALO, no tiene entrada solar propia: añada abajo los sensores de potencia de sus inversores solares, o el Gestor de Energía no podrá cargarla con energía solar. Si su batería no informa su capacidad, active a continuación la anulación de la capacidad de la batería.",
         "data": {
           "em_p1_entity": "Medidor Inteligente P1 (sensor de potencia)",
-          "em_extra_pv_entities": "Potencia de otros inversores solares (opcional)",
+          "em_extra_pv_entities": "Potencia de los inversores solares (no este dispositivo)",
           "em_forecast_entity": "Previsión Solar Restante Hoy (opcional)",
           "em_inverter_sn": "Inversor a Controlar",
           "em_battery_capacity_override": "Anular Capacidad de la Batería",
@@ -143,7 +143,7 @@
           "em_dry_run": "Modo de Prueba (sin llamadas API)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Sensores de potencia de otros inversores solares de la instalación, como un SolarEdge. Su producción se suma a la FV propia de este inversor cuando el Gestor de Energía decide si cargar la batería con energía solar. Usa sensores que se actualicen cada pocos segundos."
+          "em_extra_pv_entities": "Sensores de potencia de inversores solares que este dispositivo no mide, como un SolarEdge. Su producción se suma a la FV propia de este dispositivo cuando el Gestor de Energía decide si cargar la batería con energía solar. Use sensores que se actualicen cada pocos segundos."
         }
       }
     },

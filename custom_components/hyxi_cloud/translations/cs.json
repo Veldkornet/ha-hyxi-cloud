@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Energetický manažer",
-        "description": "Nakonfigurujte Energetický manažer pro optimalizaci využití baterie na základě solární výroby, síťového měřiče a dat předpovědi. Pokud vaše baterie nehlásí svou kapacitu (například AC propojený HALO), zapněte níže přepsání kapacity baterie.",
+        "description": "Nakonfigurujte Energetický manažer pro optimalizaci využití baterie na základě solární výroby, síťového měřiče a dat předpovědi. AC propojená baterie, například HALO, nemá vlastní solární vstup: přidejte níže senzory výkonu svých solárních střídačů, jinak ji Energetický manažer nemůže nabíjet ze slunce. Pokud vaše baterie nehlásí svou kapacitu, zapněte níže přepsání kapacity baterie.",
         "data": {
           "em_p1_entity": "Chytrý měřič P1 (senzor výkonu)",
-          "em_extra_pv_entities": "Výkon dalších solárních střídačů (volitelné)",
+          "em_extra_pv_entities": "Výkon solárních střídačů (mimo toto zařízení)",
           "em_forecast_entity": "Zbývající solární předpověď dnes (volitelné)",
           "em_inverter_sn": "Měnič k ovládání",
           "em_battery_capacity_override": "Přepsat kapacitu baterie",
@@ -143,7 +143,7 @@
           "em_dry_run": "Zkušební režim (bez volání API)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Senzory výkonu dalších solárních střídačů v této lokalitě, například SolarEdge. Jejich výkon se přičte k vlastní FV výrobě tohoto střídače, když Energetický manažer rozhoduje, zda nabíjet baterii ze slunce. Použijte senzory, které se aktualizují každých několik sekund."
+          "em_extra_pv_entities": "Senzory výkonu solárních střídačů, které toto zařízení neměří, například SolarEdge. Jejich výkon se přičte k vlastní FV výrobě tohoto zařízení, když Energetický manažer rozhoduje, zda nabíjet baterii ze slunce. Použijte senzory, které se aktualizují každých několik sekund."
         }
       }
     },

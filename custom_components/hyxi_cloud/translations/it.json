@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Gestore Energia",
-        "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione. Se la batteria non comunica la sua capacità (come un HALO ad accoppiamento CA), attiva di seguito la sovrascrittura della capacità della batteria.",
+        "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione. Una batteria ad accoppiamento CA, come un HALO, non ha un ingresso solare proprio: aggiungi di seguito i sensori di potenza dei tuoi inverter solari, altrimenti il Gestore Energia non può caricarla dal solare. Se la batteria non comunica la sua capacità, attiva di seguito la sovrascrittura della capacità della batteria.",
         "data": {
           "em_p1_entity": "Smart Meter P1 (sensore di potenza)",
-          "em_extra_pv_entities": "Potenza di altri inverter solari (opzionale)",
+          "em_extra_pv_entities": "Potenza degli inverter solari (non questo dispositivo)",
           "em_forecast_entity": "Previsione Solare Rimanente Oggi (opzionale)",
           "em_inverter_sn": "Inverter da Controllare",
           "em_battery_capacity_override": "Sovrascrivi Capacità Batteria",
@@ -143,7 +143,7 @@
           "em_dry_run": "Modalità Simulazione (nessuna chiamata API)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Sensori di potenza di altri inverter solari del sito, come un SolarEdge. La loro produzione viene sommata al FV proprio di questo inverter quando il Gestore Energia decide se caricare la batteria dal solare. Usa sensori che si aggiornano ogni pochi secondi."
+          "em_extra_pv_entities": "Sensori di potenza di inverter solari che questo dispositivo non misura, come un SolarEdge. La loro produzione viene sommata al FV proprio di questo dispositivo quando il Gestore Energia decide se caricare la batteria dal solare. Usa sensori che si aggiornano ogni pochi secondi."
         }
       }
     },

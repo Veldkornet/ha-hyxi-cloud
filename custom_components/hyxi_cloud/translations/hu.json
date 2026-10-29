@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Energiakezelő",
-        "description": "Az Energiakezelő konfigurálása az akkumulátor-használat optimalizálásához a napelemtermelés, a hálózati mérő és az előrejelzési adatok alapján. Ha az akkumulátor nem jelenti a kapacitását (például egy AC-csatolt HALO), kapcsolja be alább az akkumulátor kapacitásának felülbírálását.",
+        "description": "Az Energiakezelő konfigurálása az akkumulátor-használat optimalizálásához a napelemtermelés, a hálózati mérő és az előrejelzési adatok alapján. Egy AC-csatolt akkumulátornak, például egy HALO-nak, nincs saját napelemes bemenete: adja hozzá alább a napelemes invertereinek teljesítményérzékelőit, különben az Energiakezelő nem tudja napenergiából tölteni. Ha az akkumulátor nem jelenti a kapacitását, kapcsolja be alább az akkumulátor kapacitásának felülbírálását.",
         "data": {
           "em_p1_entity": "P1 okos mérő (teljesítményszenzor)",
-          "em_extra_pv_entities": "Más napelemes inverterek teljesítménye (opcionális)",
+          "em_extra_pv_entities": "Napelemes inverterek teljesítménye (nem ez az eszköz)",
           "em_forecast_entity": "Mai hátralévő napenergia-előrejelzés (opcionális)",
           "em_inverter_sn": "Vezérlendő inverter",
           "em_battery_capacity_override": "Akkumulátor kapacitás felülbírálása",
@@ -143,7 +143,7 @@
           "em_dry_run": "Próbafuttatás mód (API-hívások nélkül)"
         },
         "data_description": {
-          "em_extra_pv_entities": "A telephely más napelemes invertereinek teljesítményérzékelői, például egy SolarEdge. Kimenetük hozzáadódik ennek az inverternek a saját PV-termeléséhez, amikor az Energiakezelő eldönti, hogy napenergiából töltse-e az akkumulátort. Néhány másodpercenként frissülő érzékelőket használj."
+          "em_extra_pv_entities": "Olyan napelemes inverterek teljesítményérzékelői, amelyeket ez az eszköz nem mér, például egy SolarEdge. Kimenetük hozzáadódik ennek az eszköznek a saját PV-termeléséhez, amikor az Energiakezelő eldönti, hogy napenergiából töltse-e az akkumulátort. Néhány másodpercenként frissülő érzékelőket használjon."
         }
       }
     },

@@ -437,3 +437,14 @@ def test_device_control_warning_sits_on_its_toggle(lang_file):
     init = load_translation(lang_file)["options"]["step"]["init"]
     assert "⚠️" not in init["description"]
     assert "VPP" in init["data_description"]["enable_battery_control"]
+
+
+@pytest.mark.parametrize("lang_file", ["../strings.json", *get_all_languages()])
+def test_energy_manager_tells_halo_users_to_add_their_pv(lang_file):
+    """The Energy Manager form tells HALO users, outside the capacity note's
+    brackets, to add their PV sensors, and doesn't mark that field optional."""
+    step = load_translation(lang_file)["options"]["step"]["energy_manager"]
+    outside_brackets = re.sub(r"[(\uff08][^)\uff09]*[)\uff09]", "", step["description"])
+    assert "HALO" in outside_brackets
+    optional = re.split(r"[(\uff08]", step["data"]["em_forecast_entity"])[-1]
+    assert optional not in step["data"]["em_extra_pv_entities"]

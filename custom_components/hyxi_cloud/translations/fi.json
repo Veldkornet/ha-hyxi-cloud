@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Energianhallinta",
-        "description": "Määritä Energianhallinta optimoimaan akun käyttöä aurinkotuotannon, verkkomittarin ja ennustetietojen perusteella. Jos akkusi ei ilmoita kapasiteettiaan (esimerkiksi AC-kytketty HALO), ota alta käyttöön akun kapasiteetin ohitus.",
+        "description": "Määritä Energianhallinta optimoimaan akun käyttöä aurinkotuotannon, verkkomittarin ja ennustetietojen perusteella. AC-kytketyllä akulla, kuten HALO:lla, ei ole omaa aurinkotuloa: lisää alle aurinkoinvertteriesi tehoanturit, muuten Energianhallinta ei voi ladata sitä aurinkosähköllä. Jos akkusi ei ilmoita kapasiteettiaan, ota alta käyttöön akun kapasiteetin ohitus.",
         "data": {
           "em_p1_entity": "P1-älymittari (tehoanturi)",
-          "em_extra_pv_entities": "Muiden aurinkoinvertterien teho (valinnainen)",
+          "em_extra_pv_entities": "Aurinkoinvertterien teho (ei tämä laite)",
           "em_forecast_entity": "Tämän päivän jäljellä oleva aurinkoennuste (valinnainen)",
           "em_inverter_sn": "Ohjattava invertteri",
           "em_battery_capacity_override": "Ohita akun kapasiteetti",
@@ -143,7 +143,7 @@
           "em_dry_run": "Testitila (ei API-kutsuja)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Muiden tämän kohteen aurinkoinvertterien tehoanturit, kuten SolarEdge. Niiden tuotto lisätään tämän invertterin omaan aurinkotuotantoon, kun Energianhallinta päättää, ladataanko akkua aurinkosähköllä. Käytä antureita, jotka päivittyvät muutaman sekunnin välein."
+          "em_extra_pv_entities": "Niiden aurinkoinvertterien tehoanturit, joita tämä laite ei mittaa, kuten SolarEdge. Niiden tuotto lisätään tämän laitteen omaan aurinkotuotantoon, kun Energianhallinta päättää, ladataanko akkua aurinkosähköllä. Käytä antureita, jotka päivittyvät muutaman sekunnin välein."
         }
       }
     },

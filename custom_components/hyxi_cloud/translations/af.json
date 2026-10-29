@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Energiebestuurder",
-        "description": "Stel die Energiebestuurder op om battery-gebruik te optimaliseer gebaseer op sonkrag-opwekking, kragnetmeter, en voorspellingsdata. As jou battery nie sy kapasiteit rapporteer nie (soos 'n WS-gekoppelde HALO), skakel die oorskryf van batterykapasiteit hieronder aan.",
+        "description": "Stel die Energiebestuurder op om battery-gebruik te optimaliseer gebaseer op sonkrag-opwekking, kragnetmeter, en voorspellingsdata. 'n WS-gekoppelde battery soos 'n HALO het geen eie sonkrag-invoer nie: voeg jou sonomsetters se drywingsensors hieronder by, anders kan die Energiebestuurder dit nie uit son laai nie. As jou battery nie sy kapasiteit rapporteer nie, skakel die oorskryf van batterykapasiteit hieronder aan.",
         "data": {
           "em_p1_entity": "P1 Slim Meter (kragsensor)",
-          "em_extra_pv_entities": "Ander Sonomsetters se Drywing (opsioneel)",
+          "em_extra_pv_entities": "Sonomsetters se Drywing (nie hierdie toestel nie)",
           "em_forecast_entity": "Sonkragvoorspelling Oorblywend Vandag (opsioneel)",
           "em_inverter_sn": "Omsetter om te Beheer",
           "em_battery_capacity_override": "Oorskryf Batterykapasiteit",
@@ -143,7 +143,7 @@
           "em_dry_run": "Toetsmodus (geen API-oproepe)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Drywingsensors van ander sonomsetters by hierdie terrein, soos 'n SolarEdge. Hul uitset word by hierdie omsetter se eie PV getel wanneer die Energiebestuurder besluit of die battery uit son gelaai moet word. Gebruik sensors wat elke paar sekondes opdateer."
+          "em_extra_pv_entities": "Drywingsensors van sonomsetters wat hierdie toestel nie meet nie, soos 'n SolarEdge. Hul uitset word by hierdie toestel se eie PV getel wanneer die Energiebestuurder besluit of die battery uit son gelaai moet word. Gebruik sensors wat elke paar sekondes opdateer."
         }
       }
     },
