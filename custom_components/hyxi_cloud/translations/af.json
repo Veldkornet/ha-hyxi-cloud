@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Energiebestuurder",
-        "description": "Stel die Energiebestuurder op om battery-gebruik te optimaliseer gebaseer op sonkrag-opwekking, kragnetmeter, en voorspellingsdata. 'n WS-gekoppelde battery soos 'n HALO het geen eie sonkrag-invoer nie: voeg jou sonomsetters se drywingsensors hieronder by, anders kan die Energiebestuurder dit nie uit son laai nie. As jou battery nie sy kapasiteit rapporteer nie, skakel die oorskryf van batterykapasiteit hieronder aan.",
+        "description": "Stel die Energiebestuurder op om battery-gebruik te optimaliseer gebaseer op sonkrag-opwekking, kragnetmeter, en voorspellingsdata. 'n WS-gekoppelde battery soos 'n HALO het geen eie sonkrag-invoer nie: voeg jou sonomsetters se drywingsensors hieronder by, anders kan die Energiebestuurder dit nie uit son laai nie. As jou battery nie sy kapasiteit rapporteer nie (soos 'n WS-gekoppelde HALO), skakel die oorskryf van batterykapasiteit hieronder aan.",
         "data": {
           "em_p1_entity": "P1 Slim Meter (kragsensor)",
           "em_extra_pv_entities": "Sonomsetters se Drywing (nie hierdie toestel nie)",

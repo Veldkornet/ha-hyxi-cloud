@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Energistyring",
-        "description": "Konfigurer Energistyring for å optimalisere batteribruk basert på solproduksjon, nettmåler og prognosedata. Et AC-koblet batteri som en HALO har ingen egen solinngang: legg til effektsensorene til solcelleinverterne dine nedenfor, ellers kan ikke Energistyringen lade det fra sol. Hvis batteriet ikke rapporterer kapasiteten sin, slå på overstyring av batterikapasitet nedenfor.",
+        "description": "Konfigurer Energistyring for å optimalisere batteribruk basert på solproduksjon, nettmåler og prognosedata. Et AC-koblet batteri som en HALO har ingen egen solinngang: legg til effektsensorene til solcelleinverterne dine nedenfor, ellers kan ikke Energistyringen lade det fra sol. Hvis batteriet ikke rapporterer kapasiteten sin (for eksempel en AC-koblet HALO), slå på overstyring av batterikapasitet nedenfor.",
         "data": {
           "em_p1_entity": "P1 Smartmåler (effektsensor)",
           "em_extra_pv_entities": "Effekt fra solcelleinvertere (ikke denne enheten)",

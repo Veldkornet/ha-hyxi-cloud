@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Gestionnaire d'énergie",
-        "description": "Configurez le Gestionnaire d'énergie pour optimiser l'utilisation de la batterie en fonction de la production solaire, du compteur réseau et des données de prévision. Une batterie couplée en CA, comme un HALO, n'a pas d'entrée solaire propre : ajoutez ci-dessous les capteurs de puissance de vos onduleurs solaires, sinon le Gestionnaire d'énergie ne peut pas la charger avec le solaire. Si votre batterie ne communique pas sa capacité, activez ci-dessous le remplacement de la capacité de la batterie.",
+        "description": "Configurez le Gestionnaire d'énergie pour optimiser l'utilisation de la batterie en fonction de la production solaire, du compteur réseau et des données de prévision. Une batterie couplée en CA, comme un HALO, n'a pas d'entrée solaire propre : ajoutez ci-dessous les capteurs de puissance de vos onduleurs solaires, sinon le Gestionnaire d'énergie ne peut pas la charger avec le solaire. Si votre batterie ne communique pas sa capacité (comme un HALO couplé en CA), activez ci-dessous le remplacement de la capacité de la batterie.",
         "data": {
           "em_p1_entity": "Compteur intelligent P1 (capteur de puissance)",
           "em_extra_pv_entities": "Puissance des onduleurs solaires (hors cet appareil)",

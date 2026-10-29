@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Energie-Manager",
-        "description": "Konfigurieren Sie den Energie-Manager, um die Batterienutzung basierend auf Solarproduktion, Netzzähler und Prognosedaten zu optimieren. Eine AC-gekoppelte Batterie wie eine HALO hat keinen eigenen Solareingang: Fügen Sie unten die Leistungssensoren Ihrer Solarwechselrichter hinzu, sonst kann der Energie-Manager sie nicht mit Solarstrom laden. Wenn Ihre Batterie ihre Kapazität nicht meldet, aktivieren Sie unten das Überschreiben der Batteriekapazität.",
+        "description": "Konfigurieren Sie den Energie-Manager, um die Batterienutzung basierend auf Solarproduktion, Netzzähler und Prognosedaten zu optimieren. Eine AC-gekoppelte Batterie wie eine HALO hat keinen eigenen Solareingang: Fügen Sie unten die Leistungssensoren Ihrer Solarwechselrichter hinzu, sonst kann der Energie-Manager sie nicht mit Solarstrom laden. Wenn Ihre Batterie ihre Kapazität nicht meldet (z. B. eine AC-gekoppelte HALO), aktivieren Sie unten das Überschreiben der Batteriekapazität.",
         "data": {
           "em_p1_entity": "P1 Smart Meter (Leistungssensor)",
           "em_extra_pv_entities": "Leistung der Solarwechselrichter (nicht dieses Gerät)",

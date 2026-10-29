@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Energihantering",
-        "description": "Konfigurera Energihantering för att optimera batterianvändning baserat på solproduktion, nätmätare och prognosdata. Ett AC-kopplat batteri som en HALO har ingen egen solingång: lägg till effektsensorerna för dina solcellsväxelriktare nedan, annars kan Energihanteringen inte ladda det med sol. Om ditt batteri inte rapporterar sin kapacitet, aktivera åsidosättning av batterikapacitet nedan.",
+        "description": "Konfigurera Energihantering för att optimera batterianvändning baserat på solproduktion, nätmätare och prognosdata. Ett AC-kopplat batteri som en HALO har ingen egen solingång: lägg till effektsensorerna för dina solcellsväxelriktare nedan, annars kan Energihanteringen inte ladda det med sol. Om ditt batteri inte rapporterar sin kapacitet (till exempel en AC-kopplad HALO), aktivera åsidosättning av batterikapacitet nedan.",
         "data": {
           "em_p1_entity": "P1 Smart Mätare (effektsensor)",
           "em_extra_pv_entities": "Effekt från solcellsväxelriktare (inte den här enheten)",

@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Gestore Energia",
-        "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione. Una batteria ad accoppiamento CA, come un HALO, non ha un ingresso solare proprio: aggiungi di seguito i sensori di potenza dei tuoi inverter solari, altrimenti il Gestore Energia non può caricarla dal solare. Se la batteria non comunica la sua capacità, attiva di seguito la sovrascrittura della capacità della batteria.",
+        "description": "Configura il Gestore Energia per ottimizzare l'uso della batteria in base alla produzione solare, al contatore di rete e ai dati di previsione. Una batteria ad accoppiamento CA, come un HALO, non ha un ingresso solare proprio: aggiungi di seguito i sensori di potenza dei tuoi inverter solari, altrimenti il Gestore Energia non può caricarla dal solare. Se la batteria non comunica la sua capacità (come un HALO ad accoppiamento CA), attiva di seguito la sovrascrittura della capacità della batteria.",
         "data": {
           "em_p1_entity": "Smart Meter P1 (sensore di potenza)",
           "em_extra_pv_entities": "Potenza degli inverter solari (non questo dispositivo)",

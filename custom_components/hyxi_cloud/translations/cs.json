@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Energetický manažer",
-        "description": "Nakonfigurujte Energetický manažer pro optimalizaci využití baterie na základě solární výroby, síťového měřiče a dat předpovědi. AC propojená baterie, například HALO, nemá vlastní solární vstup: přidejte níže senzory výkonu svých solárních střídačů, jinak ji Energetický manažer nemůže nabíjet ze slunce. Pokud vaše baterie nehlásí svou kapacitu, zapněte níže přepsání kapacity baterie.",
+        "description": "Nakonfigurujte Energetický manažer pro optimalizaci využití baterie na základě solární výroby, síťového měřiče a dat předpovědi. AC propojená baterie, například HALO, nemá vlastní solární vstup: přidejte níže senzory výkonu svých solárních střídačů, jinak ji Energetický manažer nemůže nabíjet ze slunce. Pokud vaše baterie nehlásí svou kapacitu (například AC propojený HALO), zapněte níže přepsání kapacity baterie.",
         "data": {
           "em_p1_entity": "Chytrý měřič P1 (senzor výkonu)",
           "em_extra_pv_entities": "Výkon solárních střídačů (mimo toto zařízení)",

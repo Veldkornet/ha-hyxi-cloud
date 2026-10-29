@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Menedżer Energii",
-        "description": "Skonfiguruj Menedżera Energii, aby optymalizować wykorzystanie baterii na podstawie produkcji słonecznej, licznika sieciowego i danych prognozy. Bateria sprzężona AC, taka jak HALO, nie ma własnego wejścia PV: dodaj poniżej czujniki mocy swoich falowników PV, w przeciwnym razie Menedżer Energii nie może ładować jej energią słoneczną. Jeśli bateria nie zgłasza swojej pojemności, włącz poniżej zastępowanie pojemności baterii.",
+        "description": "Skonfiguruj Menedżera Energii, aby optymalizować wykorzystanie baterii na podstawie produkcji słonecznej, licznika sieciowego i danych prognozy. Bateria sprzężona AC, taka jak HALO, nie ma własnego wejścia PV: dodaj poniżej czujniki mocy swoich falowników PV, w przeciwnym razie Menedżer Energii nie może ładować jej energią słoneczną. Jeśli bateria nie zgłasza swojej pojemności (na przykład HALO sprzężone AC), włącz poniżej zastępowanie pojemności baterii.",
         "data": {
           "em_p1_entity": "Inteligentny licznik P1 (czujnik mocy)",
           "em_extra_pv_entities": "Moc falowników PV (nie tego urządzenia)",

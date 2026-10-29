@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Gestor de Energia",
-        "description": "Configure o Gestor de Energia para otimizar o uso da bateria com base na produção solar, contador de rede e dados de previsão. Uma bateria acoplada em CA, como uma HALO, não tem entrada solar própria: adicione abaixo os sensores de potência dos seus inversores solares, ou o Gestor de Energia não poderá carregá-la com energia solar. Se a sua bateria não indica a capacidade, ative abaixo a substituição da capacidade da bateria.",
+        "description": "Configure o Gestor de Energia para otimizar o uso da bateria com base na produção solar, contador de rede e dados de previsão. Uma bateria acoplada em CA, como uma HALO, não tem entrada solar própria: adicione abaixo os sensores de potência dos seus inversores solares, ou o Gestor de Energia não poderá carregá-la com energia solar. Se a sua bateria não indica a capacidade (como uma HALO acoplada em CA), ative abaixo a substituição da capacidade da bateria.",
         "data": {
           "em_p1_entity": "Medidor Inteligente P1 (sensor de potência)",
           "em_extra_pv_entities": "Potência dos inversores solares (não este dispositivo)",

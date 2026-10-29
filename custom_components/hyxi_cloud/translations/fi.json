@@ -131,7 +131,7 @@
       },
       "energy_manager": {
         "title": "Energianhallinta",
-        "description": "Määritä Energianhallinta optimoimaan akun käyttöä aurinkotuotannon, verkkomittarin ja ennustetietojen perusteella. AC-kytketyllä akulla, kuten HALO:lla, ei ole omaa aurinkotuloa: lisää alle aurinkoinvertteriesi tehoanturit, muuten Energianhallinta ei voi ladata sitä aurinkosähköllä. Jos akkusi ei ilmoita kapasiteettiaan, ota alta käyttöön akun kapasiteetin ohitus.",
+        "description": "Määritä Energianhallinta optimoimaan akun käyttöä aurinkotuotannon, verkkomittarin ja ennustetietojen perusteella. AC-kytketyllä akulla, kuten HALO:lla, ei ole omaa aurinkotuloa: lisää alle aurinkoinvertteriesi tehoanturit, muuten Energianhallinta ei voi ladata sitä aurinkosähköllä. Jos akkusi ei ilmoita kapasiteettiaan (esimerkiksi AC-kytketty HALO), ota alta käyttöön akun kapasiteetin ohitus.",
         "data": {
           "em_p1_entity": "P1-älymittari (tehoanturi)",
           "em_extra_pv_entities": "Aurinkoinvertterien teho (ei tämä laite)",
