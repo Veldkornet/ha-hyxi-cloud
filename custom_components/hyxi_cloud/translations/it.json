@@ -501,6 +501,16 @@
           "32": "Backup con rasatura dei picchi"
         }
       },
+      "vppmode": {
+        "name": "Modalità VPP",
+        "state": {
+          "off": "Disattivato",
+          "0": "VPP (inattivo)",
+          "1": "VPP (carica)",
+          "2": "VPP (scarica)",
+          "3": "VPP (autoconsumo, prima immissione)"
+        }
+      },
       "insulationresistance": {
         "name": "Resistenza di isolamento"
       },

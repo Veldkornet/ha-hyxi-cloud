@@ -501,6 +501,16 @@
           "32": "Backup mit Spitzenlastkappung"
         }
       },
+      "vppmode": {
+        "name": "VPP-Modus",
+        "state": {
+          "off": "Aus",
+          "0": "VPP (Leerlauf)",
+          "1": "VPP (Laden)",
+          "2": "VPP (Entladen)",
+          "3": "VPP (Eigenverbrauch, Einspeisung zuerst)"
+        }
+      },
       "insulationresistance": {
         "name": "Isolationswiderstand"
       },

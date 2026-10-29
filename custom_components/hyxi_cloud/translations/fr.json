@@ -501,6 +501,16 @@
           "32": "Secours avec écrêtement des pics"
         }
       },
+      "vppmode": {
+        "name": "Mode VPP",
+        "state": {
+          "off": "Désactivé",
+          "0": "VPP (inactif)",
+          "1": "VPP (charge)",
+          "2": "VPP (décharge)",
+          "3": "VPP (autoconsommation, injection d'abord)"
+        }
+      },
       "insulationresistance": {
         "name": "Résistance d'isolement"
       },

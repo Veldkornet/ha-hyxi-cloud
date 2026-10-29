@@ -501,6 +501,16 @@
           "32": "Backup med topplastreduksjon"
         }
       },
+      "vppmode": {
+        "name": "VPP-modus",
+        "state": {
+          "off": "Av",
+          "0": "VPP (inaktiv)",
+          "1": "VPP (lading)",
+          "2": "VPP (utlading)",
+          "3": "VPP (eget forbruk, eksport først)"
+        }
+      },
       "insulationresistance": {
         "name": "Isolasjonsmotstand"
       },

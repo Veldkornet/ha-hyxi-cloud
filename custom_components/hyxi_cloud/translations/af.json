@@ -501,6 +501,16 @@
           "32": "Rugsteun met piekbesnoeiing"
         }
       },
+      "vppmode": {
+        "name": "VPP-modus",
+        "state": {
+          "off": "Af",
+          "0": "VPP (rustend)",
+          "1": "VPP (laai)",
+          "2": "VPP (ontlaai)",
+          "3": "VPP (selfgebruik, uitvoer eerste)"
+        }
+      },
       "insulationresistance": {
         "name": "Isolasieweerstand"
       },

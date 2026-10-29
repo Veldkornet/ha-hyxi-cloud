@@ -501,6 +501,16 @@
           "32": "Backup com limitação de picos"
         }
       },
+      "vppmode": {
+        "name": "Modo VPP",
+        "state": {
+          "off": "Desligado",
+          "0": "VPP (inativo)",
+          "1": "VPP (carga)",
+          "2": "VPP (descarga)",
+          "3": "VPP (autoconsumo, exportação primeiro)"
+        }
+      },
       "insulationresistance": {
         "name": "Resistência de isolamento"
       },

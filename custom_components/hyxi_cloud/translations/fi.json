@@ -501,6 +501,16 @@
           "32": "Varavirta huipputehon leikkauksella"
         }
       },
+      "vppmode": {
+        "name": "VPP-tila",
+        "state": {
+          "off": "Pois",
+          "0": "VPP (valmiustila)",
+          "1": "VPP (lataus)",
+          "2": "VPP (purku)",
+          "3": "VPP (omakäyttö, syöttö verkkoon ensin)"
+        }
+      },
       "insulationresistance": {
         "name": "Eristysvastus"
       },

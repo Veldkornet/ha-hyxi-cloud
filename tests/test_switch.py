@@ -522,9 +522,11 @@ async def test_dispatch_switch_error_is_raised_and_state_untouched(
 
 
 @pytest.mark.asyncio
-async def test_dispatch_switch_seeds_from_settings_metrics(mock_coordinator_fixture):
+async def test_dispatch_switch_seeds_from_its_own_read_marker(
+    mock_coordinator_fixture,
+):
     mock_coordinator_fixture.data = {
-        "SN123": {"metrics": {"dispatch_enabled": True, "_settings_read_at": 1.0}}
+        "SN123": {"metrics": {"dispatch_enabled": True, "_dispatch_read_at": 1.0}}
     }
     switch = switch_mod.HyxiDispatchSwitch(
         mock_coordinator_fixture,

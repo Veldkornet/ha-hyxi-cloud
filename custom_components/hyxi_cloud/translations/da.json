@@ -501,6 +501,16 @@
           "32": "Backup med spidsbelastningsudjævning"
         }
       },
+      "vppmode": {
+        "name": "VPP-tilstand",
+        "state": {
+          "off": "Fra",
+          "0": "VPP (inaktiv)",
+          "1": "VPP (opladning)",
+          "2": "VPP (afladning)",
+          "3": "VPP (eget forbrug, eksport først)"
+        }
+      },
       "insulationresistance": {
         "name": "Isolationsmodstand"
       },

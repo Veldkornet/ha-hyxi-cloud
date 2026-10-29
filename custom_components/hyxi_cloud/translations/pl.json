@@ -501,6 +501,16 @@
           "32": "Zasilanie awaryjne z redukcją szczytów"
         }
       },
+      "vppmode": {
+        "name": "Tryb VPP",
+        "state": {
+          "off": "Wyłączony",
+          "0": "VPP (bezczynność)",
+          "1": "VPP (ładowanie)",
+          "2": "VPP (rozładowanie)",
+          "3": "VPP (autokonsumpcja, najpierw eksport)"
+        }
+      },
       "insulationresistance": {
         "name": "Rezystancja izolacji"
       },
