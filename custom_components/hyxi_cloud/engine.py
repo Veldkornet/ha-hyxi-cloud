@@ -707,6 +707,33 @@ class EnergyManagerEngine:
             return await client.set_mode_self_consume(self._sn)
         return None
 
+    def _record_dry_run_mode(self, mode: str, power_w: int | None) -> None:
+        """Log and track the mode a dry run would have sent, and fire the
+        mode-changed event for it."""
+        action = f"{mode} @ {power_w}W" if power_w else mode
+        _LOGGER.info(
+            "EM DRY-RUN: Would set mode -> %s for %s", action, mask_sn(self._sn)
+        )
+        self._last_mode_switch = time.monotonic()
+        prev_mode = self._current_mode
+        self._current_mode = mode
+        # A dry run sends nothing, so any trace_id from an earlier
+        # real send no longer describes what _current_mode reflects.
+        self._current_mode_trace_id = None
+        self._last_action = f"[dry-run] {action}"
+        self._hass.bus.async_fire(
+            "hyxi_em_mode_changed",
+            {
+                "sn": self._sn,
+                "mode": mode,
+                "power": power_w,
+                "previous_mode": prev_mode,
+                "decision": self._last_decision,
+                "dry_run": True,
+            },
+        )
+        self._notify_sensors()
+
     async def _set_mode(self, mode: str, power_w: int | None = None) -> bool:
         """Set operating mode via direct API call with cooldown enforcement."""
         cooldown = self._get_param("mode_switch_cooldown")
@@ -720,29 +747,7 @@ class EnergyManagerEngine:
             power_w = int(max(1, min(power_w or 100, 10000)))
 
         if self.dry_run:
-            action = f"{mode} @ {power_w}W" if power_w else mode
-            _LOGGER.info(
-                "EM DRY-RUN: Would set mode -> %s for %s", action, mask_sn(self._sn)
-            )
-            self._last_mode_switch = time.monotonic()
-            prev_mode = self._current_mode
-            self._current_mode = mode
-            # A dry run sends nothing, so any trace_id from an earlier
-            # real send no longer describes what _current_mode reflects.
-            self._current_mode_trace_id = None
-            self._last_action = f"[dry-run] {action}"
-            self._hass.bus.async_fire(
-                "hyxi_em_mode_changed",
-                {
-                    "sn": self._sn,
-                    "mode": mode,
-                    "power": power_w,
-                    "previous_mode": prev_mode,
-                    "decision": self._last_decision,
-                    "dry_run": True,
-                },
-            )
-            self._notify_sensors()
+            self._record_dry_run_mode(mode, power_w)
             return True
 
         protection = self._get_protection_controller()

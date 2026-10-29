@@ -480,58 +480,7 @@ class HyxiBatteryProtectionController:
         try:
             response = await self._send_control(mode)
         except HyxiApiClient.ControlError as err:
-            # The write was rejected. Throttle retries to the cooldown and
-            # don't let it escape as an unhandled task exception; log at
-            # WARNING the first time a given kind of rejection is seen,
-            # then quietly at DEBUG while that same kind keeps failing --
-            # but a *different* kind of rejection (e.g. switching from
-            # "under external control" to "permission denied", or back)
-            # is WARNING again, since it's new, actionable information.
-            self._last_mode_switch = time.monotonic()
-            if isinstance(err, HyxiApiClient.ControlNotForwardedError):
-                self._not_forwarded.refused("mode")
-                kind = "not_forwarded"
-                guidance = (
-                    f"{NOT_FORWARDED_REASON}. Turn off Device Control & "
-                    "Protection for it."
-                )
-            # Cloud-only: HYXI's API code. Modbus write failures never
-            # carry this HYXI response code.
-            elif not is_modbus_entry(
-                self._coordinator.entry
-            ) and _PERMISSION_DENIED_MARKER in str(err):
-                # HYXI's own API is refusing the write as unauthorized.
-                # Whether that's a per-plant permission level, a
-                # platform-side restriction on this control altogether (as
-                # with Micro ESS, see MICRO_ESS_CONTROL_SUPPORTED in
-                # const.py), or a credentials/authorization issue isn't
-                # something we can tell apart from the response alone --
-                # so the guidance doesn't guess and just points at HYXI
-                # support.
-                kind = "permission_denied"
-                guidance = (
-                    "HYXI's API rejected the write as unauthorized. "
-                    "Contact HYXI support for assistance."
-                )
-            else:
-                kind = "external_control"
-                guidance = (
-                    "The inverter may be under external control; turn off "
-                    "Device Control & Protection for it if it is managed "
-                    "elsewhere."
-                )
-            _LOGGER.log(
-                logging.WARNING
-                if kind != self._last_control_error_kind
-                else logging.DEBUG,
-                "Protection %s: could not set mode '%s' to keep SOC within "
-                "limits: %s. %s",
-                mask_sn(self._sn),
-                mode,
-                err,
-                guidance,
-            )
-            self._last_control_error_kind = kind
+            self._log_control_error(mode, err)
             return False
 
         if self._stale_send(seq):
@@ -554,6 +503,56 @@ class HyxiBatteryProtectionController:
             engine.note_protection_mode(mode)
         await self._coordinator.async_request_refresh()
         return True
+
+    def _log_control_error(self, mode: str, err: Exception) -> None:
+        """Handle a rejected mode write: throttle retries to the cooldown,
+        pause the mode on a not-forwarded rejection, and log it."""
+        # Logged at WARNING the first time a given kind of rejection is
+        # seen, then quietly at DEBUG while that same kind keeps failing --
+        # but a *different* kind of rejection (e.g. switching from "under
+        # external control" to "permission denied", or back) is WARNING
+        # again, since it's new, actionable information.
+        self._last_mode_switch = time.monotonic()
+        if isinstance(err, HyxiApiClient.ControlNotForwardedError):
+            self._not_forwarded.refused("mode")
+            kind = "not_forwarded"
+            guidance = (
+                f"{NOT_FORWARDED_REASON}. Turn off Device Control & Protection for it."
+            )
+        # Cloud-only: HYXI's API code. Modbus write failures never
+        # carry this HYXI response code.
+        elif not is_modbus_entry(
+            self._coordinator.entry
+        ) and _PERMISSION_DENIED_MARKER in str(err):
+            # HYXI's own API is refusing the write as unauthorized.
+            # Whether that's a per-plant permission level, a
+            # platform-side restriction on this control altogether (as
+            # with Micro ESS, see MICRO_ESS_CONTROL_SUPPORTED in
+            # const.py), or a credentials/authorization issue isn't
+            # something we can tell apart from the response alone --
+            # so the guidance doesn't guess and just points at HYXI
+            # support.
+            kind = "permission_denied"
+            guidance = (
+                "HYXI's API rejected the write as unauthorized. "
+                "Contact HYXI support for assistance."
+            )
+        else:
+            kind = "external_control"
+            guidance = (
+                "The inverter may be under external control; turn off "
+                "Device Control & Protection for it if it is managed "
+                "elsewhere."
+            )
+        _LOGGER.log(
+            logging.WARNING if kind != self._last_control_error_kind else logging.DEBUG,
+            "Protection %s: could not set mode '%s' to keep SOC within limits: %s. %s",
+            mask_sn(self._sn),
+            mode,
+            err,
+            guidance,
+        )
+        self._last_control_error_kind = kind
 
     def _maybe_verify_control_result(self, mode: str, trace_id: str | None) -> None:
         """Schedule a background check that the device actually applied
