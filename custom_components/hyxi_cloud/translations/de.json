@@ -131,10 +131,10 @@
       },
       "energy_manager": {
         "title": "Energie-Manager",
-        "description": "Konfigurieren Sie den Energie-Manager, um die Batterienutzung basierend auf Solarproduktion, Netzzähler und Prognosedaten zu optimieren. Wenn Ihre Batterie ihre Kapazität nicht meldet (z. B. eine AC-gekoppelte HALO), aktivieren Sie unten das Überschreiben der Batteriekapazität.",
+        "description": "Konfigurieren Sie den Energie-Manager, um die Batterienutzung basierend auf Solarproduktion, Netzzähler und Prognosedaten zu optimieren. Eine AC-gekoppelte Batterie wie eine HALO hat keinen eigenen Solareingang: Fügen Sie unten die Leistungssensoren Ihrer Solarwechselrichter hinzu, sonst kann der Energie-Manager sie nicht mit Solarstrom laden. Wenn Ihre Batterie ihre Kapazität nicht meldet (z. B. eine AC-gekoppelte HALO), aktivieren Sie unten das Überschreiben der Batteriekapazität.",
         "data": {
           "em_p1_entity": "P1 Smart Meter (Leistungssensor)",
-          "em_extra_pv_entities": "Leistung weiterer Solarwechselrichter (optional)",
+          "em_extra_pv_entities": "Leistung der Solarwechselrichter (nicht dieses Gerät)",
           "em_forecast_entity": "Solarprognose für den restlichen Tag (optional)",
           "em_inverter_sn": "Zu steuernder Wechselrichter",
           "em_battery_capacity_override": "Batteriekapazität überschreiben",
@@ -143,7 +143,7 @@
           "em_dry_run": "Testmodus (keine API-Aufrufe)"
         },
         "data_description": {
-          "em_extra_pv_entities": "Leistungssensoren weiterer Solarwechselrichter am Standort, z. B. eines SolarEdge. Ihre Leistung wird zur eigenen PV dieses Wechselrichters addiert, wenn der Energie-Manager entscheidet, ob die Batterie mit Solarstrom geladen wird. Verwende Sensoren, die sich alle paar Sekunden aktualisieren."
+          "em_extra_pv_entities": "Leistungssensoren von Solarwechselrichtern, die dieses Gerät nicht misst, z. B. eines SolarEdge. Ihre Leistung wird zur eigenen PV dieses Geräts addiert, wenn der Energie-Manager entscheidet, ob die Batterie mit Solarstrom geladen wird. Verwenden Sie Sensoren, die sich alle paar Sekunden aktualisieren."
         }
       }
     },
