@@ -7,6 +7,12 @@ updates:
       interval: "weekly"
     # Minor and patch bumps share one PR so they can't conflict on workflow files; major bumps get their own.
     groups:
+      # The CodeQL actions must move to a new major version together.
+      codeql:
+        patterns:
+          - "github/codeql-action*"
+        update-types:
+          - "major"
       actions:
         patterns:
           - "*"
