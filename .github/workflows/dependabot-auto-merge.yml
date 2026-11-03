@@ -7,6 +7,11 @@ permissions:
   contents: none
   pull-requests: none
 
+# A newer push to the same PR cancels the run checking the previous head.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   dependabot:
     runs-on: ubuntu-latest
@@ -75,13 +80,27 @@ jobs:
           steps.metadata.outputs.update-type != 'version-update:semver-major' &&
           steps.verify.outputs.is_allowed == 'true'
         run: |
-          if ! OUTPUT=$(gh pr merge --auto --squash "$PR_URL" 2>&1); then
+          if ! OUTPUT=$(gh pr merge --auto --squash --match-head-commit "$HEAD_SHA" "$PR_URL" 2>&1); then
             if echo "$OUTPUT" | grep -iq "workflow.*permission"; then
               echo "::notice title=Manual Merge Required::GitHub Actions cannot auto-merge PRs that modify workflow files due to security restrictions. Please merge manually."
             else
               echo "::error::Failed to enable auto-merge: $OUTPUT"
               exit 1
             fi
+          fi
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          HEAD_SHA: ${{github.event.pull_request.head.sha}}
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      # Auto-merge enabled for an earlier head stays on after Dependabot pushes, so turn it off when the current head needs review.
+      - name: Disable auto-merge for PRs that need review
+        if: >
+          steps.metadata.outputs.update-type == 'version-update:semver-major' ||
+          steps.verify.outputs.is_allowed != 'true'
+        run: |
+          if ! OUTPUT=$(gh pr merge --disable-auto "$PR_URL" 2>&1); then
+            echo "::notice title=Auto-merge Not Disabled::$OUTPUT"
           fi
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
