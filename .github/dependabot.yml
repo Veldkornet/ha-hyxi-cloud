@@ -5,10 +5,17 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Minor and patch bumps share one PR so they can't conflict on workflow files; major bumps get their own.
     groups:
-      codeql:
+      actions:
         patterns:
-          - "github/codeql-action*"
+          - "*"
+        # Not on the auto-merge allowlist, so it gets its own PR.
+        exclude-patterns:
+          - "peter-evans/create-pull-request"
+        update-types:
+          - "minor"
+          - "patch"
 
   # 2. Keep Python dependencies (pyproject.toml + uv.lock) up to date
   - package-ecosystem: "uv"
