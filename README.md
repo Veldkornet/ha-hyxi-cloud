@@ -3,7 +3,7 @@
 # HYXI Integration for Home Assistant
 
 [![Release][release-shield]][releases]
-[![HACS][hacs-shield]][hacs]
+[![Marketplace / HACS][marketplace-shield]][hacs]
 [![Home Assistant][ha-version-shield]][hacs]
 [![Docs][wiki-shield]][wiki]
 
@@ -36,23 +36,23 @@ Bring your HYXIPower inverter, battery, and meter data into Home Assistant — o
 
 ## 📥 Installation
 
-[![Open your Home Assistant instance and open the repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)][hacs]
+[![Open your Home Assistant instance and open the repository in the Marketplace or HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)][hacs]
 
-1. Open **HACS** in Home Assistant and search for **HYXI**.
+1. Open **Settings → Marketplace** (Home Assistant 2026.11 and later) or **HACS** (earlier versions) and search for **HYXI**.
 2. Click **Download**, then restart Home Assistant.
 
 <details>
-<summary>Can't find it in HACS?</summary>
+<summary>Can't find it?</summary>
 
 If **HYXI** doesn't appear in search, add it as a custom repository first:
 
-1. In HACS, open the **⋮** menu → **Custom repositories**.
+1. Open the **⋮** menu → **Custom repositories**.
 2. Repository `https://github.com/Veldkornet/ha-hyxi-cloud`, category **Integration** → **Add**.
 3. Search for and download **HYXI** as above.
 
 </details>
 
-Manual installation and the **beta channel** (pre-release features) are in the [Installation Guide][wiki-install].
+Manual installation and **pre-releases** (beta features) are in the [Installation Guide][wiki-install].
 
 ## ⚙️ Setup
 
@@ -127,7 +127,7 @@ If this integration is useful to you and you'd like to support its development:
 <!-- Badges -->
 [release-shield]: https://img.shields.io/github/v/release/Veldkornet/ha-hyxi-cloud?include_prereleases&sort=semver&style=for-the-badge&logo=github&logoColor=white&label=Release&color=41BDF5
 [releases]: https://github.com/Veldkornet/ha-hyxi-cloud/releases
-[hacs-shield]: https://img.shields.io/badge/HACS-Default-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white
+[marketplace-shield]: https://img.shields.io/badge/Marketplace%20%2F%20HACS-Default-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white
 [hacs]: https://my.home-assistant.io/redirect/hacs_repository/?owner=Veldkornet&repository=ha-hyxi-cloud&category=Integration
 [ha-version-shield]: https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/Veldkornet/ha-hyxi-cloud/main/hacs.json&query=$.homeassistant&style=for-the-badge&logo=homeassistant&logoColor=white&label=Home%20Assistant&color=41BDF5&prefix=%E2%89%A5%20
 [wiki-shield]: https://img.shields.io/badge/Docs-Wiki-41BDF5?style=for-the-badge&logo=readthedocs&logoColor=white
