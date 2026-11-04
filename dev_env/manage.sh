@@ -8,10 +8,11 @@ ACTION="$1"
 
 # Optional Home Assistant image channel for start/restart, used as the image tag
 check_channel() {
-  case "${1:-stable}" in
+  local channel="${1:-stable}"
+  case "$channel" in
     stable | beta | dev) ;;
     *)
-      echo "❌ ERROR: Unknown channel '$1' (use stable, beta or dev)." >&2
+      echo "❌ ERROR: Unknown channel '$channel' (use stable, beta or dev)." >&2
       exit 1
       ;;
   esac
