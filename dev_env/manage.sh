@@ -6,6 +6,17 @@ cd -- "$SCRIPT_DIR" || exit 1
 
 ACTION="$1"
 
+# Optional Home Assistant image channel for start/restart, used as the image tag
+check_channel() {
+  case "${1:-stable}" in
+    stable | beta | dev) ;;
+    *)
+      echo "❌ ERROR: Unknown channel '$1' (use stable, beta or dev)." >&2
+      exit 1
+      ;;
+  esac
+}
+
 case "$ACTION" in
   sync-git)
     echo "☁️  Fetching latest from GitHub..."
@@ -62,15 +73,8 @@ case "$ACTION" in
     ;;
 
   start)
-    # Optional Home Assistant image channel, used as the image tag
+    check_channel "$2"
     export HA_IMAGE_TAG="${2:-stable}"
-    case "$HA_IMAGE_TAG" in
-      stable | beta | dev) ;;
-      *)
-        echo "❌ ERROR: Unknown channel '$HA_IMAGE_TAG' (use stable, beta or dev)." >&2
-        exit 1
-        ;;
-    esac
 
     echo "🧹 Wiping old Sandbox..."
     rm -rf -- ha_testing_config
@@ -84,7 +88,7 @@ case "$ACTION" in
     fi
 
     echo "🚀 Starting Home Assistant (image tag: $HA_IMAGE_TAG)..."
-    docker compose up -d
+    docker compose up -d || exit 1
 
     echo "🔗 Linking local HYXi API Development folder..."
     sleep 2
@@ -100,6 +104,7 @@ case "$ACTION" in
     ;;
 
   restart)
+    check_channel "$2"
     echo "🔄 Restarting Sandbox..."
     "$0" stop
     "$0" start "$2"
