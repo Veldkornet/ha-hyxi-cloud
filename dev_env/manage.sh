@@ -6,6 +6,18 @@ cd -- "$SCRIPT_DIR" || exit 1
 
 ACTION="$1"
 
+# Optional Home Assistant image channel for start/restart, used as the image tag
+check_channel() {
+  local channel="${1:-stable}"
+  case "$channel" in
+    stable | beta | dev) ;;
+    *)
+      echo "❌ ERROR: Unknown channel '$channel' (use stable, beta or dev)." >&2
+      exit 1
+      ;;
+  esac
+}
+
 case "$ACTION" in
   sync-git)
     echo "☁️  Fetching latest from GitHub..."
@@ -62,6 +74,9 @@ case "$ACTION" in
     ;;
 
   start)
+    check_channel "$2"
+    export HA_IMAGE_TAG="${2:-stable}"
+
     echo "🧹 Wiping old Sandbox..."
     rm -rf -- ha_testing_config
     mkdir -p -- ha_testing_config
@@ -73,8 +88,8 @@ case "$ACTION" in
         echo "⚠️ No ha_testing_seed found! Starting a fresh instance (Onboarding required)."
     fi
 
-    echo "🚀 Starting Home Assistant..."
-    docker compose up -d
+    echo "🚀 Starting Home Assistant (image tag: $HA_IMAGE_TAG)..."
+    docker compose up -d || exit 1
 
     echo "🔗 Linking local HYXi API Development folder..."
     sleep 2
@@ -90,9 +105,10 @@ case "$ACTION" in
     ;;
 
   restart)
+    check_channel "$2"
     echo "🔄 Restarting Sandbox..."
     "$0" stop
-    "$0" start
+    "$0" start "$2"
     ;;
   ruff-check)
     echo "🔍 Running Ruff Check..."
@@ -120,7 +136,7 @@ case "$ACTION" in
     HYXI_INTEGRATION_TEST="1" python3 -m pytest tests/integration -v -p no:warnings
     ;;
   *)
-    printf "Usage: %s {start|stop|restart|ruff-check|ruff-format|ruff-fix|lint|test-integration}\n" "$0"
+    printf "Usage: %s {start [stable|beta|dev]|stop|restart [stable|beta|dev]|ruff-check|ruff-format|ruff-fix|lint|test-integration}\n" "$0"
     exit 1
     ;;
 

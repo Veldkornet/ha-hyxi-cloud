@@ -1,7 +1,7 @@
 services:
   homeassistant:
     container_name: ha_dev_hyxi
-    image: ghcr.io/home-assistant/home-assistant:latest
+    image: ghcr.io/home-assistant/home-assistant:${HA_IMAGE_TAG:-stable}
     pull_policy: always
     ports:
       - "8123:8123"
