@@ -135,7 +135,7 @@ case "$ACTION" in
     HYXI_INTEGRATION_TEST="1" python3 -m pytest tests/integration -v -p no:warnings
     ;;
   *)
-    printf "Usage: %s {start|stop|restart [stable|beta|dev]|ruff-check|ruff-format|ruff-fix|lint|test-integration}\n" "$0"
+    printf "Usage: %s {start [stable|beta|dev]|stop|restart [stable|beta|dev]|ruff-check|ruff-format|ruff-fix|lint|test-integration}\n" "$0"
     exit 1
     ;;
 
