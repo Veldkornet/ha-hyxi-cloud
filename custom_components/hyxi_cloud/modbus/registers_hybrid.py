@@ -172,10 +172,11 @@ class HybridBackup(Component):
     voltage_b = gauge(501, 0.01, signed=False, unit="V")
     voltage_c = gauge(502, 0.01, signed=False, unit="V")
     frequency = gauge(503, 0.01, unit="Hz")
-    active_power = integer(507, signed=False, unit="W")
-    phase_a_power = integer(520, signed=False, unit="W")
-    phase_b_power = integer(521, signed=False, unit="W")
-    phase_c_power = integer(522, signed=False, unit="W")
+    # Signed: see docs/modbus-provenance.md.
+    active_power = integer(507, unit="W")
+    phase_a_power = integer(520, unit="W")
+    phase_b_power = integer(521, unit="W")
+    phase_c_power = integer(522, unit="W")
 
 
 class HybridPv(Component):
