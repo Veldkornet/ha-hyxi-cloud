@@ -69,33 +69,33 @@ async def _with_auth_recheck[T](
     client: HyxiApiClient, fetch: Callable[[], Awaitable[T]]
 ) -> T:
     """Run fetch with a token for the API keys, raising ConfigEntryAuthFailed
-    if HYXI reports them as another kind than User Authorization keys, or
-    rejects them on two attempts in a row."""
+    if HYXI reports them as a kind it can't read devices with, or rejects
+    them on two attempts in a row."""
     try:
-        return await _fetch_with_user_keys(client, fetch)
+        return await _fetch_with_readable_keys(client, fetch)
     except HyxiAuthError:
         _LOGGER.warning(
             "HYXI Cloud rejected the API keys; retrying in %ss", AUTH_RECHECK_DELAY
         )
     await asyncio.sleep(AUTH_RECHECK_DELAY)
     try:
-        return await _fetch_with_user_keys(client, fetch)
+        return await _fetch_with_readable_keys(client, fetch)
     except HyxiAuthError as err:
         raise ConfigEntryAuthFailed(
             "HYXI Cloud rejected the access/secret key"
         ) from err
 
 
-async def _fetch_with_user_keys[T](
+async def _fetch_with_readable_keys[T](
     client: HyxiApiClient, fetch: Callable[[], Awaitable[T]]
 ) -> T:
-    """Get a token, refuse API keys of another kind than User Authorization
-    keys before using them, and run fetch."""
+    """Get a token, refuse API keys of a kind the integration can't read
+    devices with before using them, and run fetch."""
     await client.ensure_token()
     if wrong := WRONG_KEY_KINDS.get(client.authorization_type):
         raise ConfigEntryAuthFailed(
             f"HYXI reports these as {wrong[0]} Authorization API keys; "
-            "the integration needs User Authorization keys"
+            "the integration needs User or Plant Authorization keys"
         )
     return await fetch()
 

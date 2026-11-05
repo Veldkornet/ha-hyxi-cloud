@@ -149,33 +149,30 @@ async def test_one_off_key_rejection_does_not_start_reauth(
     assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)
 
 
-@pytest.mark.parametrize(
-    ("authorization_type", "error"),
-    [(1, "vpp_keys"), (2, "plant_keys")],
-    ids=["vpp", "plant"],
-)
 async def test_config_flow_refuses_keys_of_another_kind(
-    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, authorization_type, error
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ):
-    """VPP or Plant Authorization keys are refused, saying which kind they
-    are, before any device is read."""
-    aioclient_mock.post(TOKEN_URL, json=_token(authorization_type))
+    """VPP Authorization keys are refused, saying which kind they are,
+    before any device is read."""
+    aioclient_mock.post(TOKEN_URL, json=_token(1))
 
     result = await _enter_cloud_keys(hass)
 
     assert result["type"] == data_entry_flow.FlowResultType.FORM
-    assert result["errors"] == {"base": error}
+    assert result["errors"] == {"base": "vpp_keys"}
     assert [str(call[1]) for call in aioclient_mock.mock_calls] == [TOKEN_URL]
 
 
 @pytest.mark.parametrize(
-    "authorization_type", [0, "0", None], ids=["user", "user-as-text", "not-reported"]
+    "authorization_type",
+    [0, "0", 2, None],
+    ids=["user", "user-as-text", "plant", "not-reported"],
 )
-async def test_config_flow_accepts_user_keys(
+async def test_config_flow_accepts_readable_keys(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, authorization_type
 ):
-    """User Authorization keys are accepted, and so are keys whose type
-    HYXI doesn't report."""
+    """User and Plant Authorization keys are accepted, and so are keys
+    whose type HYXI doesn't report."""
     aioclient_mock.post(TOKEN_URL, json=_token(authorization_type))
     _mock_one_device_account(aioclient_mock)
 
@@ -202,8 +199,8 @@ async def test_reauth_refuses_keys_of_another_kind(
 
 @pytest.mark.parametrize(
     ("authorization_type", "devices_readable"),
-    [(1, False), (1, True), (2, False)],
-    ids=["vpp-unreadable", "vpp-readable", "plant"],
+    [(1, False), (1, True)],
+    ids=["vpp-unreadable", "vpp-readable"],
 )
 async def test_setup_with_keys_of_another_kind_starts_reauth(
     hass: HomeAssistant,
@@ -211,7 +208,7 @@ async def test_setup_with_keys_of_another_kind_starts_reauth(
     authorization_type,
     devices_readable,
 ):
-    """An entry whose keys turn out to be VPP or Plant Authorization keys
+    """An entry whose keys turn out to be VPP Authorization keys
     fails setup and asks for new keys, whether or not the devices could be
     read, rather than retrying setup; no device is read with them."""
     aioclient_mock.post(TOKEN_URL, json=_token(authorization_type))
@@ -228,12 +225,14 @@ async def test_setup_with_keys_of_another_kind_starts_reauth(
     assert [str(call[1]) for call in aioclient_mock.mock_calls] == [TOKEN_URL]
 
 
-@pytest.mark.parametrize("authorization_type", [0, None], ids=["user", "not-reported"])
-async def test_setup_with_user_keys_loads(
+@pytest.mark.parametrize(
+    "authorization_type", [0, 2, None], ids=["user", "plant", "not-reported"]
+)
+async def test_setup_with_readable_keys_loads(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, authorization_type
 ):
-    """An entry with User Authorization keys, or keys whose kind HYXI
-    doesn't report, loads as before."""
+    """An entry with User or Plant Authorization keys, or keys whose kind
+    HYXI doesn't report, loads as before."""
     aioclient_mock.post(TOKEN_URL, json=_token(authorization_type))
     _mock_one_device_account(aioclient_mock)
     entry = cloud_entry(hass)

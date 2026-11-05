@@ -182,7 +182,7 @@ def test_credential_errors_are_translated(lang_file):
     """Every error the credential check can show, such as API keys of the
     wrong kind, has a message in every language."""
     keys = get_credential_error_keys()
-    assert {"invalid_auth", "vpp_keys", "plant_keys"} <= keys
+    assert {"invalid_auth", "vpp_keys"} <= keys
     errors = load_translation(lang_file)["config"]["error"]
     for key in keys:
         assert errors.get(key), f"Error '{key}' is missing from {lang_file}"
