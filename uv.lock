@@ -945,7 +945,7 @@ wheels = [
 
 [[package]]
 name = "ha-hyxi-cloud"
-version = "1.7.2"
+version = "1.7.3b1"
 source = { editable = "." }
 dependencies = [
     { name = "hyxi-cloud-api" },
