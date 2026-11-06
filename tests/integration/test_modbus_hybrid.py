@@ -350,6 +350,32 @@ async def test_derived_metrics_come_from_the_shared_cloud_helper(client):
 
 
 @pytest.mark.asyncio
+async def test_backup_powers_decode_as_signed(client):
+    """Power flowing back in through the backup port (PV on the house side)
+    reads negative, not as about 65,500 W per phase."""
+    client._unit.load_raw(
+        {
+            "input": {
+                507: (-10) & 0xFFFF,
+                520: 300,
+                521: (-25) & 0xFFFF,
+                522: (-15) & 0xFFFF,
+            }
+        }
+    )
+    devices = await client.async_read_all()
+    metrics = devices["10201234567810"]["metrics"]
+
+    assert metrics["offGridP"] == -10
+    assert (metrics["ph1Loadp"], metrics["ph2Loadp"], metrics["ph3Loadp"]) == (
+        300,
+        -25,
+        -15,
+    )
+    assert metrics["home_load"] == 260.0
+
+
+@pytest.mark.asyncio
 async def test_inverter_serial_is_hex_formatted_not_a_decimal_reading(client):
     """Regression test: the inverter's own serial (register 1007, H64) was
     rendered with plain str(int) instead of _hex_identifier() -- correct
