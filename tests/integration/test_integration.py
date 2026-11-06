@@ -1,4 +1,4 @@
-"""Integration tests for the HYXI Cloud integration using pytest-homeassistant-custom-component."""
+"""Integration tests for the HYXI Cloud integration using pytest-homeassistant."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -6,7 +6,7 @@ import pytest
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.hyxi_cloud import sensor as sensor_mod
 from custom_components.hyxi_cloud.const import (

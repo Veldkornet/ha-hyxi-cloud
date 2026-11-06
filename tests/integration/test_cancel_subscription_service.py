@@ -13,7 +13,7 @@ from homeassistant.exceptions import (
 )
 from homeassistant.setup import async_setup_component
 from hyxi_cloud_api import HyxiApiClient, Subscription, SubscriptionType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.hyxi_cloud.const import DOMAIN
 from custom_components.hyxi_cloud.services import _loaded_coordinators

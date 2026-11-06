@@ -23,8 +23,7 @@ from hyxi_cloud_api import HyxiApiClient
 from .binary_sensor import ACTIVE_ALARM_STATES
 from .const import (
     CONF_ENABLE_PUSH,
-    DOMAIN,
-    MANUFACTURER,
+    cloud_service_device_info,
     detect_phase_type,
     device_unique_id,
     get_raw_device_code,
@@ -42,7 +41,7 @@ from .control import (
     async_send_battery_mode,
 )
 from .coordinator import HyxiConfigEntry
-from .entity import HyxiEntity, device_entities
+from .entity import HyxiEntity, device_entities, device_info
 from .subscriptions import (
     _async_sync_subscriptions,
     _async_teardown_alarm_subscription,
@@ -256,13 +255,7 @@ class HyxiClearAlarmsButton(
         super().__init__(coordinator)
         self._sn = sn
         self._attr_unique_id = device_unique_id(coordinator.entry, sn, "clear_alarms")
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Press the button to clear active alarms."""
@@ -303,13 +296,7 @@ class HyxiMicroRestartButton(
         super().__init__(coordinator)
         self._sn = sn
         self._attr_unique_id = device_unique_id(coordinator.entry, sn, "micro_restart")
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Restart the microinverter."""
@@ -343,13 +330,7 @@ class HyxiModeButton(CoordinatorEntity["HyxiDataUpdateCoordinator"], ButtonEntit
         self._attr_unique_id = device_unique_id(coordinator.entry, sn, f"mode_{mode}")
         self._attr_translation_key = f"mode_{mode}"
         self._attr_icon = MODE_ICONS.get(mode, "mdi:solar-power-variant-outline")
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Send the operating mode command to the inverter."""
@@ -385,13 +366,7 @@ class HyxiPeakShavingButton(
         self._attr_icon = PEAK_SHAVING_ICONS.get(
             option, "mdi:chart-bell-curve-cumulative"
         )
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Send the peak shaving command to the inverter."""
@@ -445,13 +420,7 @@ class HyxiPowerCommandButton(
         self._attr_unique_id = device_unique_id(coordinator.entry, sn, action)
         self._attr_translation_key = action
         self._attr_icon = POWER_COMMAND_ICONS.get(action, "mdi:power")
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_press(self) -> None:
         """Send the power command to the inverter."""
@@ -544,12 +513,7 @@ class HyxiRenewSubscriptionButton(ButtonEntity):
         self.coordinator = coordinator
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_renew_realtime_subscription"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
-            "manufacturer": MANUFACTURER,
-            "model": "Cloud API Bridge",
-        }
+        self._attr_device_info = cloud_service_device_info(entry.entry_id)
 
     async def async_press(self) -> None:
         """Force renew both push subscriptions (data + alarm); clears the

@@ -40,13 +40,12 @@ modbus = [
     "pymodbus==3.13.1",
 ]
 test = [
-    "pytest>=9.0.3",
-    "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     # tests/test_core_pins.py parses requirement specifiers.
     "packaging>=26.2",
     "hypothesis>=6.165.5",
-    "pytest-homeassistant-custom-component>=0.13.355",
+    # Pins homeassistant, pytest and pytest-asyncio exactly; upgrade it with HA.
+    "pytest-homeassistant==2026.11.0",
     "mypy>=2.3.0",
     # The local Modbus transport now reaches its device through Core's
     # `modbus` integration (async_get_unit). Importing that module pulls in
@@ -83,7 +82,9 @@ include = ["custom_components*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "--ignore=tests/integration"
+asyncio_default_fixture_loop_scope = "function"
+# -p no:respx lets Home Assistant install its httpx alias before respx loads.
+addopts = "--ignore=tests/integration -p no:respx"
 
 [tool.coverage.run]
 source = ["custom_components/hyxi_cloud"]
