@@ -43,7 +43,7 @@ pre-commit run --files <changed files>
 
 ## Tests
 
-- `tests/` holds hand-mocked unit tests; `tests/integration/` runs against a real Home Assistant (`pytest-homeassistant-custom-component`: `hass`, `MockConfigEntry`, `hass_storage`, `aioclient_mock`). Shared integration helpers live in `tests/integration/entries.py`.
+- `tests/` holds hand-mocked unit tests; `tests/integration/` runs against a real Home Assistant (`pytest-homeassistant`: `hass`, `MockConfigEntry`, `hass_storage`, `aioclient_mock`). Shared integration helpers live in `tests/integration/entries.py`.
 - Anything Home Assistant itself validates or drives (entity state and attributes, config and options flows, setup, reload and reauth) needs a test through the real `hass`, not only a mocked one. To exercise the real API client, answer its HTTP requests with `aioclient_mock`, as `tests/integration/test_auth.py` does.
 - A test guarding a shipped file (translations, the manifest) reads that file, not a copy.
 - Patch a name in the module that looks it up, which is the one importing it, not the one defining it. Patch through the package (`custom_components.hyxi_cloud.…`), never `custom_components.hyxi_cloud.__init__.…`: that path imports a second copy of the module.

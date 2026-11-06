@@ -11,6 +11,12 @@ import pytest
 # This adds the root directory to the path so 'custom_components' can be found
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
+import custom_components
+
+# Filter out non-existent directory paths (like setuptools editable installation finder hooks)
+# which cause Home Assistant's loader to throw FileNotFoundError when trying to iterdir() them.
+custom_components.__path__ = [p for p in custom_components.__path__ if Path(p).is_dir()]
+
 
 # Custom Exception classes to avoid TypeError when catching
 class MockUpdateFailed(Exception):

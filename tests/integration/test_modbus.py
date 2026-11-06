@@ -749,7 +749,7 @@ def test_register_model_declares_the_right_spaces():
 
 def _modbus_entry(hass, *, options=None, **overrides):
     """A config entry describing a local Modbus device."""
-    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    from pytest_homeassistant.common import MockConfigEntry
 
     from custom_components.hyxi_cloud.const import DOMAIN
 

@@ -306,6 +306,16 @@ def modbus_service_device_info(entry_id: str) -> DeviceInfo:
     )
 
 
+def cloud_service_device_info(entry_id: str) -> DeviceInfo:
+    """Device info for the one non-inverter device every cloud entry gets."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, entry_id)},
+        name="HYXI Cloud Service",
+        manufacturer=MANUFACTURER,
+        model="Cloud API Bridge",
+    )
+
+
 def entry_stable_key(entry: Any) -> str:
     """Return a per-entry identifier that survives a remove-and-re-add.
 

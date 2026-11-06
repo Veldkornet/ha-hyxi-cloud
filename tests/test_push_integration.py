@@ -503,35 +503,34 @@ async def test_button_press_renew(mock_coordinator, mock_entry):
     """Renew button force-tears-down and re-sets-up both the data and alarm
     push subscriptions."""
     hass = MagicMock()
-    with patch("custom_components.hyxi_cloud.button.DOMAIN", DOMAIN):
-        button = HyxiRenewSubscriptionButton(mock_coordinator, mock_entry)
-        button.hass = hass
+    button = HyxiRenewSubscriptionButton(mock_coordinator, mock_entry)
+    button.hass = hass
 
-        with (
-            patch(
-                "custom_components.hyxi_cloud.button._async_teardown_push_subscription"
-            ) as mock_teardown_push,
-            patch(
-                "custom_components.hyxi_cloud.button._async_teardown_alarm_subscription"
-            ) as mock_teardown_alarm,
-            patch(
-                "custom_components.hyxi_cloud.subscriptions._async_setup_push_subscription"
-            ) as mock_setup_push,
-            patch(
-                "custom_components.hyxi_cloud.subscriptions._async_setup_alarm_subscription"
-            ) as mock_setup_alarm,
-        ):
-            await button.async_press()
+    with (
+        patch(
+            "custom_components.hyxi_cloud.button._async_teardown_push_subscription"
+        ) as mock_teardown_push,
+        patch(
+            "custom_components.hyxi_cloud.button._async_teardown_alarm_subscription"
+        ) as mock_teardown_alarm,
+        patch(
+            "custom_components.hyxi_cloud.subscriptions._async_setup_push_subscription"
+        ) as mock_setup_push,
+        patch(
+            "custom_components.hyxi_cloud.subscriptions._async_setup_alarm_subscription"
+        ) as mock_setup_alarm,
+    ):
+        await button.async_press()
 
-            mock_teardown_push.assert_called_once_with(
-                hass, mock_coordinator, mock_entry, force=True
-            )
-            mock_teardown_alarm.assert_called_once_with(
-                hass, mock_coordinator, mock_entry, force=True
-            )
-            mock_setup_push.assert_called_once_with(hass, mock_entry, mock_coordinator)
-            mock_setup_alarm.assert_called_once_with(hass, mock_entry, mock_coordinator)
-            mock_coordinator.async_update_listeners.assert_called_once()
+        mock_teardown_push.assert_called_once_with(
+            hass, mock_coordinator, mock_entry, force=True
+        )
+        mock_teardown_alarm.assert_called_once_with(
+            hass, mock_coordinator, mock_entry, force=True
+        )
+        mock_setup_push.assert_called_once_with(hass, mock_entry, mock_coordinator)
+        mock_setup_alarm.assert_called_once_with(hass, mock_entry, mock_coordinator)
+        mock_coordinator.async_update_listeners.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -688,15 +687,14 @@ async def test_async_cancel_subscription_transient_error(hass):
 async def test_button_press_renew_error(mock_coordinator, mock_entry):
     """Test a failure during renewal is wrapped in a HomeAssistantError."""
     hass = MagicMock()
-    with patch("custom_components.hyxi_cloud.button.DOMAIN", DOMAIN):
-        button = HyxiRenewSubscriptionButton(mock_coordinator, mock_entry)
-        button.hass = hass
+    button = HyxiRenewSubscriptionButton(mock_coordinator, mock_entry)
+    button.hass = hass
 
-        with patch(
-            "custom_components.hyxi_cloud.button._async_teardown_push_subscription",
-            side_effect=RuntimeError("teardown blew up"),
+    with patch(
+        "custom_components.hyxi_cloud.button._async_teardown_push_subscription",
+        side_effect=RuntimeError("teardown blew up"),
+    ):
+        with pytest.raises(
+            button_mod.HomeAssistantError, match="Subscription renewal failed"
         ):
-            with pytest.raises(
-                button_mod.HomeAssistantError, match="Subscription renewal failed"
-            ):
-                await button.async_press()
+            await button.async_press()

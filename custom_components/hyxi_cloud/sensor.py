@@ -36,6 +36,7 @@ from .const import (
     MANUFACTURER,
     MODBUS_TYPE_SERIAL,
     NULL_VALUES,
+    cloud_service_device_info,
     detect_phase_type,
     device_unique_id,
     entry_stable_key,
@@ -1594,7 +1595,7 @@ def _em_sensors(entry, coordinator) -> list[SensorEntity]:
 
 def _battery_device_info(
     hass: HomeAssistant, config_entry_id: str, inverter_sn: str, bat_sn: str
-) -> dict | None:
+) -> DeviceInfo | None:
     """DeviceInfo for the battery pack hung off an inverter.
 
     Returns None when bat_sn matches the inverter's own sn -- some builds
@@ -1604,13 +1605,13 @@ def _battery_device_info(
     """
     if bat_sn == inverter_sn:
         return None
-    info: dict = {
-        "identifiers": {(DOMAIN, bat_sn)},
-        "name": f"Battery {bat_sn}",
-        "manufacturer": MANUFACTURER,
-        "model": "Energy Storage System",
-        "serial_number": bat_sn,
-    }
+    info = DeviceInfo(
+        identifiers={(DOMAIN, bat_sn)},
+        name=f"Battery {bat_sn}",
+        manufacturer=MANUFACTURER,
+        model="Energy Storage System",
+        serial_number=bat_sn,
+    )
     if parent_id := via_device_id(hass, config_entry_id, inverter_sn):
         info["via_device_id"] = parent_id
     return info
@@ -2146,12 +2147,7 @@ class HyxiLastUpdateSensor(
         self._attr_device_info = (
             modbus_service_device_info(entry.entry_id)
             if is_modbus_entry(entry)
-            else DeviceInfo(
-                identifiers={(DOMAIN, entry.entry_id)},
-                name="HYXI Cloud Service",
-                manufacturer=MANUFACTURER,
-                model="Cloud API Bridge",
-            )
+            else cloud_service_device_info(entry.entry_id)
         )
         self._update_native_value()
 
@@ -2216,12 +2212,7 @@ class HyxiSubscriptionStatusSensor(
         self._entry = entry
         self._attr_options = ["active", "inactive", "error", "partial"]
         self._attr_unique_id = f"{entry.entry_id}_realtime_subscription_status"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "HYXI Cloud Service",
-            "manufacturer": MANUFACTURER,
-            "model": "Cloud API Bridge",
-        }
+        self._attr_device_info = cloud_service_device_info(entry.entry_id)
         self._update_value()
 
     def _update_value(self):
@@ -2328,12 +2319,12 @@ class HyxiMicroinverterSumSensor(
         # remove-and-re-add, which would strand them.
         stable_key = entry_stable_key(entry)
         self._attr_unique_id = f"{stable_key}_{description.key}"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{stable_key}_microinverters_summary")},
-            "name": "Microinverters Summary",
-            "manufacturer": MANUFACTURER,
-            "model": "Aggregated Microinverter Metrics",
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{stable_key}_microinverters_summary")},
+            name="Microinverters Summary",
+            manufacturer=MANUFACTURER,
+            model="Aggregated Microinverter Metrics",
+        )
         self._logged_no_data = False
         self._update_native_value()
 

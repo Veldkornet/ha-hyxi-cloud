@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -87,6 +88,17 @@ def via_device_id(
     return device.id if device is not None else None
 
 
+def device_info(sn: str, dev_data: dict) -> DeviceInfo:
+    """Device info for the cloud device `sn`, from its cached `dev_data`."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, sn)},
+        name=dev_data.get("device_name") or f"Device {sn}",
+        manufacturer=MANUFACTURER,
+        model=dev_data.get("model"),
+        serial_number=sn,
+    )
+
+
 class HyxiEntity(CoordinatorEntity["HyxiDataUpdateCoordinator"]):
     """Base entity for HYXI Cloud."""
 
@@ -98,13 +110,7 @@ class HyxiEntity(CoordinatorEntity["HyxiDataUpdateCoordinator"]):
         """Initialize the entity."""
         super().__init__(coordinator)
         self._sn = sn
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
 
 class SettingsSyncMixin:
