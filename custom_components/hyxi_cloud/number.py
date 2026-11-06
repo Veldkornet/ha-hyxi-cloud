@@ -9,6 +9,7 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, UnitOfPower
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -22,7 +23,6 @@ from .const import (
     CONF_EM_INVERTER_SN,
     DOMAIN,
     EM_DEFAULTS,
-    MANUFACTURER,
     detect_phase_type,
     device_unique_id,
     get_raw_device_code,
@@ -33,7 +33,7 @@ from .const import (
     normalize_device_type,
 )
 from .coordinator import HyxiConfigEntry
-from .entity import SettingsSyncMixin, device_entities
+from .entity import SettingsSyncMixin, device_entities, device_info
 
 if TYPE_CHECKING:
     from .coordinator import HyxiDataUpdateCoordinator
@@ -454,13 +454,7 @@ class HyxiPowerNumber(
         metric_key = _MAX_POWER_KEYS.get(direction, "")
         self._attr_native_max_value = int(_safe_int(metrics.get(metric_key), 10000))
         self._attr_native_value = 100
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_added_to_hass(self) -> None:
         """Restore last known value on startup."""
@@ -529,13 +523,7 @@ class HyxiSettingNumber(
         self._attr_native_max_value = definition.max_val
         self._attr_native_step = definition.step
         self._attr_icon = definition.icon
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
         self._has_live_value = False
         self._attr_native_value = definition.min_val
@@ -615,13 +603,7 @@ class HyxiMicroPowerLimit(
         self._attr_unique_id = device_unique_id(
             coordinator.entry, sn, "micro_power_limit"
         )
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_added_to_hass(self) -> None:
         """Restore last known value on startup."""
@@ -695,13 +677,7 @@ class HyxiProtectionNumber(
         self._attr_native_max_value = int(definition["max"])
         self._attr_native_value = int(definition["default"])
         self._attr_icon = str(definition["icon"])
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-            "serial_number": sn,
-        }
+        self._attr_device_info = device_info(sn, dev_data)
 
     async def async_added_to_hass(self) -> None:
         """Restore the last configured value."""
@@ -775,9 +751,9 @@ class EMParameterNumber(NumberEntity, RestoreEntity):
         self._attr_icon = numdef.icon
 
         self._attr_native_value = float(EM_DEFAULTS.get(numdef.key, 0))
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{sn}_energy_manager")},
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{sn}_energy_manager")},
+        )
 
     async def async_added_to_hass(self) -> None:
         """Restore last known value on startup."""

@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from hyxi_cloud_api import HyxiApiClient
@@ -518,13 +519,13 @@ class EMToggleSwitch(SwitchEntity, RestoreEntity):
         self._attr_is_on = toggle_def.default_on
 
         if em_device:
-            self._attr_device_info = {
-                "identifiers": {(DOMAIN, f"{sn}_energy_manager")},
-            }
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, f"{sn}_energy_manager")},
+            )
         else:
-            self._attr_device_info = {
-                "identifiers": {(DOMAIN, sn)},
-            }
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, sn)},
+            )
 
     async def async_added_to_hass(self) -> None:
         """Restore last known value on startup."""

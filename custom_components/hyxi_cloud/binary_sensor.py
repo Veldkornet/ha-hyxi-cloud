@@ -152,22 +152,22 @@ class HyxiConnectivitySensor(
                     f"{entry.data.get(CONF_MODBUS_HOST)}:"
                     f"{entry.data.get(CONF_MODBUS_PORT)}"
                 )
-            self._attr_device_info = {
-                "identifiers": {(DOMAIN, entry.entry_id)},
-                "name": "HYXI Modbus Service",
-                "manufacturer": MANUFACTURER,
-            }
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, entry.entry_id)},
+                name="HYXI Modbus Service",
+                manufacturer=MANUFACTURER,
+            )
         else:
             self._connection_target = (
                 urlparse(entry.data.get("base_url") or BASE_URL_DEFAULT).netloc
                 or urlparse(BASE_URL_DEFAULT).netloc
             )
-            self._attr_device_info = {
-                "identifiers": {(DOMAIN, entry.entry_id)},
-                "name": "HYXI Cloud Service",
-                "manufacturer": MANUFACTURER,
-                "configuration_url": "https://www.hyxicloud.com",
-            }
+            self._attr_device_info = DeviceInfo(
+                identifiers={(DOMAIN, entry.entry_id)},
+                name="HYXI Cloud Service",
+                manufacturer=MANUFACTURER,
+                configuration_url="https://www.hyxicloud.com",
+            )
 
     @property
     def is_on(self) -> bool:
@@ -255,14 +255,14 @@ class HyxiDeviceAlarmSensor(
         metrics = device_data.get("metrics", {})
         parent_sn = metrics.get("parentSn")
 
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": device_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": device_data.get("model"),
-            "sw_version": device_data.get("sw_version"),
-            "hw_version": device_data.get("hw_version"),
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, sn)},
+            name=device_data.get("device_name") or f"Device {sn}",
+            manufacturer=MANUFACTURER,
+            model=device_data.get("model"),
+            sw_version=device_data.get("sw_version"),
+            hw_version=device_data.get("hw_version"),
+        )
 
         if parent_sn:
             parent_id = via_device_id(coordinator.hass, entry.entry_id, parent_sn, sn)
@@ -351,12 +351,12 @@ class HyxiWorkModeSensor(
         super().__init__(coordinator)
         self.sn = sn
         self._attr_unique_id = f"{entry.entry_id}_{sn}_work_mode"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, sn)},
-            "name": dev_data.get("device_name") or f"Device {sn}",
-            "manufacturer": MANUFACTURER,
-            "model": dev_data.get("model"),
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, sn)},
+            name=dev_data.get("device_name") or f"Device {sn}",
+            manufacturer=MANUFACTURER,
+            model=dev_data.get("model"),
+        )
         self._last_work_mode = self._normalized_work_mode
 
     @callback
