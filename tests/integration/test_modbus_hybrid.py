@@ -15,7 +15,7 @@ and the prose describing types, scale and word order.
 from unittest.mock import patch
 
 import pytest
-from modbus_connection import IllegalDataAddressError
+from modbus_connection import IllegalDataAddressError, ModbusTimeoutError
 from modbus_connection.pytest_plugin import MockModbusConnection
 
 from custom_components.hyxi_cloud.modbus.client import SETTINGS_REFRESH_SECONDS
@@ -453,6 +453,21 @@ async def test_unreadable_identity_falls_back_to_a_stable_key(client):
     devices = await client.async_read_all()
 
     assert list(devices) == ["modbus_1"]
+
+
+@pytest.mark.asyncio
+async def test_a_transient_identity_failure_is_retried_not_keyed_on_the_fallback(
+    client,
+):
+    """A timeout reading identity fails the poll, so no device is published
+    under the fallback key; the next poll reads the real serial."""
+    client._unit.fail_read(1, ModbusTimeoutError("slow"), register_type="input")
+
+    with pytest.raises(ModbusTimeoutError):
+        await client.async_read_all()
+
+    client._unit.fail_read(1, None, register_type="input")
+    assert list(await client.async_read_all()) == ["10201234567810"]
 
 
 @pytest.mark.asyncio
