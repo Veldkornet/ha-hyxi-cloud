@@ -60,12 +60,14 @@ from .registers import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Failures that say nothing about the device: the link dropped, the gateway
-# timed out or was busy, or the frames were garbled. Reading identity again on
+# Failures that say nothing about the device: the link dropped (including a
+# bare OSError from the socket), the gateway timed out or was busy, or the
+# frames were garbled. Reading identity again on
 # the next poll can succeed, so these propagate. Any other failure (the device
 # refusing the block, or its contents not decoding) is permanent, and the
 # device's serial falls back to a per-unit key.
 IDENTITY_TRANSIENT = (
+    OSError,
     ModbusConnectionError,
     ModbusTimeoutError,
     ModbusProtocolError,

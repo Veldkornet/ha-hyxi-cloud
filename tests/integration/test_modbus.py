@@ -367,6 +367,18 @@ async def test_a_transient_identity_failure_is_retried_not_keyed_on_the_fallback
 
 
 @pytest.mark.asyncio
+async def test_a_bare_socket_error_reading_identity_is_also_retried(client):
+    """A raw OSError from the socket is the same link failure as a timeout."""
+    client._unit.fail_read(4002, ConnectionResetError("reset"), register_type="input")
+
+    with pytest.raises(ConnectionResetError):
+        await client.async_read_all()
+
+    client._unit.fail_read(4002, None, register_type="input")
+    assert list(await client.async_read_all()) == ["10201234567810"]
+
+
+@pytest.mark.asyncio
 async def test_a_transient_identity_failure_leaves_no_fallback_device(hass):
     """The entry retries its setup instead of loading under the fallback
     key, so the registry never holds a second device for the same inverter."""
