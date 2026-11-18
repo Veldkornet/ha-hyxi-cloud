@@ -491,10 +491,15 @@ async def _release_modbus_dispatch_on_teardown(
         _LOGGER.debug("Could not release dispatch on unload: %s", err)
 
 
-async def async_remove_config_entry_device(
-    hass: HomeAssistant, entry: HyxiConfigEntry, device_entry: dr.DeviceEntry
+async def async_remove_config_entry_device(  # NOSONAR
+    hass: HomeAssistant,  # NOSONAR
+    entry: HyxiConfigEntry,
+    device_entry: dr.DeviceEntry,
 ) -> bool:
     """Allow deleting a device the entry no longer reports.
+
+    Home Assistant awaits this with its `hass`, though the check awaits and
+    reads nothing from it.
 
     A device left behind under a serial the entry stopped using stays in the
     registry, and Home Assistant only offers to delete it when this returns
