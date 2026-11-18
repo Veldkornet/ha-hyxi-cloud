@@ -12,9 +12,10 @@ import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from modbus_connection import IllegalDataAddressError
+from modbus_connection import IllegalDataAddressError, ModbusTimeoutError
 from modbus_connection.pytest_plugin import MockModbusConnection
 
 from custom_components.hyxi_cloud.const import DOMAIN, MODBUS_FAMILY_SIGNATURES
@@ -348,6 +349,66 @@ async def test_unreadable_identity_falls_back_to_a_stable_key(client, caplog):
     assert list(devices) == ["modbus_1"]
     assert devices["modbus_1"]["model"] == "HYX-MS3000AC"
     assert "falling back to unit id" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_a_transient_identity_failure_is_retried_not_keyed_on_the_fallback(
+    client,
+):
+    """A timeout reading identity fails the poll, so no device is published
+    under the fallback key; the next poll reads the real serial."""
+    client._unit.fail_read(4002, ModbusTimeoutError("slow"), register_type="input")
+
+    with pytest.raises(ModbusTimeoutError):
+        await client.async_read_all()
+
+    client._unit.fail_read(4002, None, register_type="input")
+    assert list(await client.async_read_all()) == ["10201234567810"]
+
+
+@pytest.mark.asyncio
+async def test_a_bare_socket_error_reading_identity_is_also_retried(client):
+    """A raw OSError from the socket is the same link failure as a timeout."""
+    client._unit.fail_read(4002, ConnectionResetError("reset"), register_type="input")
+
+    with pytest.raises(ConnectionResetError):
+        await client.async_read_all()
+
+    client._unit.fail_read(4002, None, register_type="input")
+    assert list(await client.async_read_all()) == ["10201234567810"]
+
+
+@pytest.mark.asyncio
+async def test_a_transient_identity_failure_leaves_no_fallback_device(hass):
+    """The entry retries its setup instead of loading under the fallback
+    key, so the registry never holds a second device for the same inverter."""
+    entry = _modbus_entry(hass, modbus_family="halo")
+    failing = _seeded_connection()
+    failing.for_unit(1).fail_read(
+        4002, ModbusTimeoutError("slow"), register_type="input"
+    )
+
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        side_effect=[failing, _seeded_connection()],
+    ):
+        assert not await hass.config_entries.async_setup(entry.entry_id)
+        assert entry.state is ConfigEntryState.SETUP_RETRY
+        assert not dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+    identifiers = {
+        identifier
+        for device in dr.async_entries_for_config_entry(
+            dr.async_get(hass), entry.entry_id
+        )
+        for identifier in device.identifiers
+    }
+    assert (DOMAIN, "10201234567810") in identifiers
+    assert (DOMAIN, "modbus_1") not in identifiers
 
 
 @pytest.mark.asyncio

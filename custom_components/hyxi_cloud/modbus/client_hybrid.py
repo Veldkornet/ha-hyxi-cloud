@@ -27,7 +27,13 @@ from hyxi_cloud_api import HyxiApiClient
 from modbus_connection import ModbusUnit
 from modbus_connection.model import Component
 
-from .client import _enabled_when, _hex_identifier, _mask, _read_settings_if_stale
+from .client import (
+    IDENTITY_TRANSIENT,
+    _enabled_when,
+    _hex_identifier,
+    _mask,
+    _read_settings_if_stale,
+)
 from .registers_hybrid import (
     TELEMETRY_COMPONENTS,
     HybridBackup,
@@ -133,7 +139,11 @@ class HyxiHybridModbusClient:
         return self._serial or f"modbus_{self._unit_id}"
 
     async def async_read_identity(self) -> None:
-        """Read the static identity block once, tolerating its absence."""
+        """Read the static identity block once.
+
+        See HyxiModbusClient.async_read_identity: a transient failure is
+        retried on the next poll, any other falls back to the per-unit key.
+        """
         if self._identity_read:
             return
         try:
@@ -151,6 +161,8 @@ class HyxiHybridModbusClient:
                     _fix_battery_serial_byte_order(self.identity.battery_serial_number)
                 ),
             )
+        except IDENTITY_TRANSIENT:
+            raise
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning(
                 "Modbus identity block unreadable, falling back to unit id "

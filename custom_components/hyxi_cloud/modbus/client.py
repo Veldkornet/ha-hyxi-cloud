@@ -33,7 +33,15 @@ import time
 from typing import Any, Protocol, runtime_checkable
 
 from hyxi_cloud_api import HyxiApiClient
-from modbus_connection import ModbusUnit
+from modbus_connection import (
+    GatewayPathUnavailableError,
+    GatewayTargetError,
+    ModbusConnectionError,
+    ModbusProtocolError,
+    ModbusTimeoutError,
+    ModbusUnit,
+    ServerDeviceBusyError,
+)
 from modbus_connection.model import Component
 
 from .registers import (
@@ -51,6 +59,22 @@ from .registers import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Failures that say nothing about the device: the link dropped (including a
+# bare OSError from the socket), the gateway timed out or was busy, or the
+# frames were garbled. Reading identity again on
+# the next poll can succeed, so these propagate. Any other failure (the device
+# refusing the block, or its contents not decoding) is permanent, and the
+# device's serial falls back to a per-unit key.
+IDENTITY_TRANSIENT = (
+    OSError,
+    ModbusConnectionError,
+    ModbusTimeoutError,
+    ModbusProtocolError,
+    ServerDeviceBusyError,
+    GatewayTargetError,
+    GatewayPathUnavailableError,
+)
 
 
 @runtime_checkable
@@ -258,12 +282,13 @@ class HyxiModbusClient:
         return self._serial or f"modbus_{self._unit_id}"
 
     async def async_read_identity(self) -> None:
-        """Read the static identity block once, tolerating its absence.
+        """Read the static identity block once.
 
-        Identity is a convenience, not a precondition: a device that serves
-        telemetry but rejects the identity block still has usable sensors,
-        and serial_number falls back to a stable per-unit key. Failing the
-        whole poll here would trade every metric for a model string.
+        A device that serves telemetry but rejects the identity block still
+        has usable sensors, and serial_number falls back to a stable per-unit
+        key. A transient link or gateway failure propagates instead and the
+        read is retried on the next poll, so it cannot leave the device keyed
+        on the fallback.
         """
         if self._identity_read:
             return
@@ -283,6 +308,8 @@ class HyxiModbusClient:
                 self.identity.rated_frequency,
                 self.identity.rated_voltage,
             )
+        except IDENTITY_TRANSIENT:
+            raise
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOGGER.warning(
                 "Modbus identity block unreadable, falling back to unit id "
