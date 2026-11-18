@@ -1,5 +1,7 @@
-# This will make @Veldkornet a required reviewer for all files
+# Default owner: required reviewer for all files
 * @Veldkornet
 
-# Optional: If you want to be specifically tagged for the core logic
-# custom_components/hyxi_cloud/sensor.py    @Veldkornet
+# Energy Manager (the last matching rule wins, so both owners are listed)
+/custom_components/hyxi_cloud/engine.py   @Veldkornet @cuipito
+/tests/**/test_*engine*.py                @Veldkornet @cuipito
+/tests/**/test_energy_manager*.py         @Veldkornet @cuipito
