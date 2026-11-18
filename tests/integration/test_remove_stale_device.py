@@ -10,6 +10,7 @@ from homeassistant.setup import async_setup_component
 
 from custom_components.hyxi_cloud import async_remove_config_entry_device
 from custom_components.hyxi_cloud.const import (
+    CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     DOMAIN,
     entry_stable_key,
@@ -63,15 +64,40 @@ async def test_the_reported_inverter_and_the_service_device_stay_protected(
 
 
 @pytest.mark.asyncio
-async def test_a_device_keyed_from_a_live_one_stays_protected(hass: HomeAssistant):
-    """The Energy Manager and microinverter summary devices are keyed from
-    the inverter's serial and the entry's stable key."""
-    entry = await _loaded_entry(hass)
+async def test_the_enabled_energy_manager_stays_protected(hass: HomeAssistant):
+    entry = await _loaded_entry(
+        hass, **{CONF_EM_ENABLED: True, CONF_EM_INVERTER_SN: SN}
+    )
 
     energy_manager = _device(hass, entry, f"{SN}_energy_manager")
-    summary = _device(hass, entry, f"{entry_stable_key(entry)}_microinverters_summary")
 
     assert not await async_remove_config_entry_device(hass, entry, energy_manager)
+
+
+@pytest.mark.asyncio
+async def test_a_disabled_energy_managers_device_can_be_deleted(hass: HomeAssistant):
+    """Only the configured, enabled Energy Manager keeps its device, not one
+    per reported serial."""
+    entry = await _loaded_entry(hass)
+
+    assert await async_remove_config_entry_device(
+        hass, entry, _device(hass, entry, f"{SN}_energy_manager")
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_microinverter_summary_is_protected_only_with_microinverters(
+    hass: HomeAssistant,
+):
+    entry = await _loaded_entry(hass)
+    summary = _device(hass, entry, f"{entry_stable_key(entry)}_microinverters_summary")
+
+    assert await async_remove_config_entry_device(hass, entry, summary)
+
+    entry.runtime_data.data["MICRO1"] = {
+        "device_type_code": "MICRO_INVERTER",
+        "metrics": {},
+    }
     assert not await async_remove_config_entry_device(hass, entry, summary)
 
 
@@ -79,7 +105,9 @@ async def test_a_device_keyed_from_a_live_one_stays_protected(hass: HomeAssistan
 async def test_the_energy_managers_inverter_stays_protected_when_not_reported(
     hass: HomeAssistant,
 ):
-    entry = await _loaded_entry(hass, **{CONF_EM_INVERTER_SN: "EM_INVERTER"})
+    entry = await _loaded_entry(
+        hass, **{CONF_EM_ENABLED: True, CONF_EM_INVERTER_SN: "EM_INVERTER"}
+    )
 
     em_inverter = _device(hass, entry, "EM_INVERTER")
 

@@ -499,21 +499,28 @@ async def async_remove_config_entry_device(
     A device left behind under a serial the entry stopped using stays in the
     registry, and Home Assistant only offers to delete it when this returns
     True. The entry's live devices stay protected: each reported inverter, its
-    battery and parent collector, the Energy Manager and its inverter, the
-    microinverter summary and the service device.
+    battery and parent collector, the enabled Energy Manager and its inverter,
+    the microinverter summary while there are microinverters, and the service
+    device.
     """
     coordinator = getattr(entry, "runtime_data", None)
     if coordinator is None or coordinator.data is None:
         return False
-    live = {entry.entry_id, f"{entry_stable_key(entry)}_microinverters_summary"}
+    live = {entry.entry_id}
+    if any(
+        device_type_of(dev) == "micro_inverter" for dev in coordinator.data.values()
+    ):
+        live.add(f"{entry_stable_key(entry)}_microinverters_summary")
     sns = set(coordinator.data)
-    if em_sn := entry.options.get(CONF_EM_INVERTER_SN):
+    if entry.options.get(CONF_EM_ENABLED) and (
+        em_sn := entry.options.get(CONF_EM_INVERTER_SN)
+    ):
         sns.add(em_sn)
+        live.add(f"{em_sn}_energy_manager")
     for dev_data in coordinator.data.values():
         metrics = dev_data.get("metrics") or {}
         sns.update(filter(None, (metrics.get("batSn"), metrics.get("parentSn"))))
     live.update(sns)
-    live.update(f"{sn}_energy_manager" for sn in sns)
     return not any(
         domain == DOMAIN and identifier in live
         for domain, identifier in device_entry.identifiers
