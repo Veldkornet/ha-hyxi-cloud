@@ -45,7 +45,7 @@ test = [
     "packaging>=26.2",
     "hypothesis>=6.165.5",
     # Pins homeassistant, pytest and pytest-asyncio exactly; upgrade it with HA.
-    "pytest-homeassistant==2026.11.1",
+    "pytest-homeassistant==2026.11.2",
     "mypy>=2.3.0",
     # The local Modbus transport now reaches its device through Core's
     # `modbus` integration (async_get_unit). Importing that module pulls in
