@@ -26,7 +26,6 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     BATTERY_SENSORS,
-    CLOUD_NEVER_PRODUCES_BY_TYPE,
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     CONF_MODBUS_FRAMER,
@@ -37,6 +36,7 @@ from .const import (
     MANUFACTURER,
     MODBUS_TYPE_SERIAL,
     NULL_VALUES,
+    ONLY_WHEN_REPORTED_BY_TYPE,
     cloud_service_device_info,
     detect_phase_type,
     device_unique_id,
@@ -1303,7 +1303,7 @@ def _keys_to_add_for_device(
     base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
     local_battery_sensors = BATTERY_SENSORS
 
-    never_produced = CLOUD_NEVER_PRODUCES_BY_TYPE.get(device_type, frozenset())
+    never_produced = ONLY_WHEN_REPORTED_BY_TYPE.get(device_type, frozenset())
 
     # Pre-calculate base keys to process + specific static keys
     keys_to_add = set(base_keys) - never_produced

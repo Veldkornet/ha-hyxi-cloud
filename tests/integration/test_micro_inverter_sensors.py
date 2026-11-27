@@ -198,3 +198,45 @@ async def test_a_renamed_leftover_sensor_stays(hass: HomeAssistant, client):
 
     assert _has_sensor(hass, entry, MICRO_SN, "totalEnt")
     assert not _has_sensor(hass, entry, MICRO_SN, "totalEpt")
+
+
+COLLECTOR_SN = "COLL1"
+
+
+async def _setup_collector(hass: HomeAssistant, client, metrics: dict, leftover: bool):
+    entry = cloud_entry(hass)
+    if leftover:
+        _register_leftovers(hass, entry, COLLECTOR_SN, ("wifiVer",))
+    serve_devices(
+        client,
+        {
+            COLLECTOR_SN: {
+                "device_name": "Collector",
+                "device_type_code": "COLLECTOR",
+                "metrics": {"hw_version": "V00.00.01.01", **metrics},
+            }
+        },
+    )
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
+@pytest.mark.asyncio
+async def test_a_collector_gets_wifi_version_only_when_it_reports_one(
+    hass: HomeAssistant, client
+):
+    """A collector with a Wi-Fi firmware version gets the sensor; one that
+    reports none doesn't."""
+    entry = await _setup_collector(hass, client, {"wifiVer": "3.3.0.0"}, False)
+    assert _has_sensor(hass, entry, COLLECTOR_SN, "wifiVer")
+    assert _has_sensor(hass, entry, COLLECTOR_SN, "last_seen")
+
+
+@pytest.mark.asyncio
+async def test_a_collector_without_a_wifi_version_gets_no_sensor(
+    hass: HomeAssistant, client
+):
+    """No sensor is created, and a leftover one is removed."""
+    entry = await _setup_collector(hass, client, {"wifiVer": None}, True)
+    assert not _has_sensor(hass, entry, COLLECTOR_SN, "wifiVer")

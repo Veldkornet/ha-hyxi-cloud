@@ -11,7 +11,6 @@ from homeassistant.helpers.storage import Store
 
 from .const import (
     BATTERY_SENSORS,
-    CLOUD_NEVER_PRODUCES_BY_TYPE,
     CONF_EM_ENABLED,
     CONF_EM_FORECAST_POWER_ENTITY,
     CONF_EM_INVERTER_SN,
@@ -19,6 +18,7 @@ from .const import (
     EM_OPTION_KEYS,
     ENERGY_STORAGE_DEVICE_TYPES,
     MODBUS_UNIQUE_ID_PREFIX,
+    ONLY_WHEN_REPORTED_BY_TYPE,
     UNIQUE_ID_PREFIX,
     device_type_of,
     device_unique_id,
@@ -791,16 +791,19 @@ def _remove_bms_alarm_sensors(hass: HomeAssistant, entry: ConfigEntry) -> None:
             registry.async_remove(reg_entry.entity_id)
 
 
-# Readings every micro-inverter reports while it is online; a poll with
-# none of them says nothing about which other keys the device reports.
-_MICRO_INVERTER_LIVE_KEYS = ("acP", "ph1p", "ppv")
+# Readings a device of the type always carries while it is online; a poll
+# with none of them says nothing about which other keys the device reports.
+_LIVE_KEYS_BY_TYPE = {
+    "micro_inverter": ("acP", "ph1p", "ppv"),
+    "collector": ("hw_version", "_sw_ver_sys"),
+}
 
 
-def _remove_unreported_micro_inverter_sensors(
+def _remove_unreported_sensors(
     hass: HomeAssistant, entry: ConfigEntry, devices: dict
 ) -> None:
-    """Remove the sensors a micro-inverter was given for keys it never reports
-    (CLOUD_NEVER_PRODUCES_BY_TYPE).
+    """Remove the sensors a device was given for keys it doesn't report
+    (ONLY_WHEN_REPORTED_BY_TYPE).
 
     Such registry rows would otherwise stay as dangling, permanently
     unavailable entities. A row is kept when the device reports a value for
@@ -812,13 +815,12 @@ def _remove_unreported_micro_inverter_sensors(
         return
     registry = er.async_get(hass)
     for sn, dev_data in devices.items():
-        never_reported = CLOUD_NEVER_PRODUCES_BY_TYPE.get(
-            normalize_device_type(get_raw_device_code(dev_data)), frozenset()
-        )
+        device_type = normalize_device_type(get_raw_device_code(dev_data))
         metrics = dev_data.get("metrics") or {}
-        if all(is_null_value(metrics.get(key)) for key in _MICRO_INVERTER_LIVE_KEYS):
+        live_keys = _LIVE_KEYS_BY_TYPE.get(device_type, ())
+        if all(is_null_value(metrics.get(key)) for key in live_keys):
             continue
-        for key in never_reported:
+        for key in ONLY_WHEN_REPORTED_BY_TYPE.get(device_type, frozenset()):
             if not is_null_value(metrics.get(key)):
                 continue
             entity_id = registry.async_get_entity_id(
