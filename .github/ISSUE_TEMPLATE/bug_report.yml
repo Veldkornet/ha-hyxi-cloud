@@ -8,24 +8,25 @@ body:
       value: |
         Thanks for taking the time to fill out this bug report!
         **Please ensure you have read the Troubleshooting section in the README and have your Debug Logs ready.**
+  - type: dropdown
+    id: connection_type
+    attributes:
+      label: Connection type
+      description: |
+        How is this integration entry connected to your HYXi device? Under Settings > Devices & Services > HYXI, a cloud entry is titled "HYXI Cloud" and a Modbus entry "HYXI Modbus (...)".
+        If you have both, pick the entry the problem is on.
+      options:
+        - Not sure
+        - Cloud (HYXI OpenAPI)
+        - Modbus (local RS485)
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
       label: Describe the bug
       description: A clear and concise description of what the bug is.
       placeholder: The integration loads, but my Solar Power sensor stays at 0W...
-    validations:
-      required: true
-  - type: dropdown
-    id: connection_type
-    attributes:
-      label: Connection type
-      description: How is this integration entry connected to your HYXi device? (Settings > Devices & Services > HYXi Cloud shows the entry's type.)
-      options:
-        - Cloud (HYXI OpenAPI)
-        - Modbus (local RS485)
-        - Both (separate entries)
-        - Not sure
     validations:
       required: true
   - type: input
