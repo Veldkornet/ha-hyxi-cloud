@@ -967,7 +967,8 @@ SENSOR_TYPES = [
     ),
     SensorEntityDescription(
         key="gridP",
-        native_unit_of_measurement="W",
+        native_unit_of_measurement="kW",
+        suggested_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         icon=_ICON_TRANSMISSION_TOWER,
@@ -1726,7 +1727,12 @@ class HyxiBaseSensor(
             return value
 
         try:
-            num_value = round(float(value), 2)
+            # kW readings keep the 0.1 W the API reports; 2 decimals would
+            # round them to the nearest 10 W.
+            digits = (
+                4 if self.entity_description.native_unit_of_measurement == "kW" else 2
+            )
+            num_value = round(float(value), digits)
 
             if (
                 self.entity_description.state_class
