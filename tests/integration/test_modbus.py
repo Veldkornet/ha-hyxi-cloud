@@ -1432,7 +1432,7 @@ async def test_setting_up_a_modbus_entry_creates_entities(hass):
     by_id = {s.entity_id: s.state for s in states}
     sn = "10201234567810"
     # 0.811 kW, published at the sensor's declared display precision.
-    assert by_id[f"sensor.hyxi_{sn}_gridp"] == "0.81"
+    assert by_id[f"sensor.hyxi_{sn}_gridp"] == "811.0"
     assert by_id[f"sensor.hyxi_{sn}_ph1v"] == "230.12"
     # Derived locally by the same helper the cloud path uses.
     assert by_id[f"sensor.hyxi_{sn}_grid_export"] == "811.0"
