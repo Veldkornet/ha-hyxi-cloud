@@ -19,6 +19,9 @@ class FakeCoordinatorEntity(FakeBase):
     def __init__(self, coordinator, context=None, **kwargs):
         self.coordinator = coordinator
 
+    def _handle_coordinator_update(self):
+        pass
+
 
 class FakeNumberEntity(FakeBase):
     @property
@@ -57,7 +60,7 @@ ensure_mock("homeassistant.components.number", {"NumberEntity": FakeNumberEntity
 ensure_mock("homeassistant.components.sensor")
 ensure_mock("homeassistant.components.binary_sensor")
 ensure_mock("homeassistant.config_entries")
-ensure_mock("homeassistant.core")
+ensure_mock("homeassistant.core", {"callback": lambda func: func})
 ensure_mock("homeassistant.helpers")
 ensure_mock("homeassistant.helpers.entity")
 ensure_mock("homeassistant.helpers.aiohttp_client")
@@ -359,6 +362,54 @@ def test_hyxi_power_number_init():
     assert entity._attr_native_value == 100
 
 
+def _power_number_after_poll(max_power, data_for_sn, value=100):
+    """A charge power number at 3000 W, set to value, after a poll."""
+    coordinator = MagicMock()
+    entity = number_mod.HyxiPowerNumber(
+        coordinator, "SN1", {"metrics": {"maxChargePower": 3000}}, "charge"
+    )
+    entity.async_write_ha_state = MagicMock()
+    entity._attr_native_value = value
+    coordinator.data = data_for_sn
+    return entity
+
+
+def test_hyxi_power_number_follows_the_devices_maximum():
+    """A poll with a new maximum sets it, and brings a value above a lowered
+    maximum down to it."""
+    entity = _power_number_after_poll(
+        None, {"SN1": {"metrics": {"maxChargePower": "2850"}}}, value=3000
+    )
+    entity._handle_coordinator_update()
+    assert entity._attr_native_max_value == 2850
+    assert entity._attr_native_value == 2850
+
+    entity.coordinator.data = {"SN1": {"metrics": {"maxChargePower": "3200"}}}
+    entity._handle_coordinator_update()
+    assert entity._attr_native_max_value == 3200
+    assert entity._attr_native_value == 2850
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        None,
+        {},
+        {"SN1": {}},
+        {"SN1": {"metrics": None}},
+        {"SN1": {"metrics": {}}},
+        {"SN1": {"metrics": {"maxChargePower": None}}},
+        {"SN1": {"metrics": {"maxChargePower": "0"}}},
+    ],
+)
+def test_hyxi_power_number_keeps_its_maximum_without_a_usable_reading(data):
+    """A poll with no usable maximum leaves the range as it was."""
+    entity = _power_number_after_poll(None, data, value=2500)
+    entity._handle_coordinator_update()
+    assert entity._attr_native_max_value == 3000
+    assert entity._attr_native_value == 2500
+
+
 @pytest.mark.asyncio
 async def test_hyxi_power_number_restore_state():
     """Test restoring state for HyxiPowerNumber."""
@@ -385,6 +436,11 @@ async def test_hyxi_power_number_restore_state():
     # Should not crash, value remains 150
     await entity.async_added_to_hass()
     assert entity._attr_native_value == 150
+
+    # A saved value above the device's current maximum is brought down to it
+    mock_state.state = "9000"
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 5000
 
 
 @pytest.mark.asyncio

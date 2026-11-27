@@ -2278,3 +2278,39 @@ async def test_hybrid_anti_starvation_switch_appears_and_writes_through(hass):
             "switch", "turn_off", {"entity_id": entity_id}, blocking=True
         )
     spy.assert_awaited_once_with(False)
+
+
+@pytest.mark.asyncio
+async def test_target_power_range_follows_the_devices_current_limit(hass):
+    """The target charge power's range is the device's maximum charge power
+    as last read, not as first read: the device changes it while running, and
+    a value up to the new maximum is accepted."""
+    entry = _modbus_entry(
+        hass, modbus_family="halo", options={"enable_battery_control": True}
+    )
+    with patch(
+        "homeassistant.components.modbus.connection.ModbusConnection",
+        return_value=_seeded_connection(),
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    await hass.async_block_till_done()
+
+    sn = "10201234567810"
+    entity_id = lookup_entity_id(hass, entry, "number", sn, "charge_power")
+    assert hass.states.get(entity_id).attributes["max"] == 3000
+
+    coordinator = entry.runtime_data
+    data = {k: dict(v) for k, v in coordinator.data.items()}
+    data[sn]["metrics"] = {**data[sn]["metrics"], "maxChargePower": 3200.0}
+    coordinator.async_set_updated_data(data)
+    await hass.async_block_till_done()
+
+    assert hass.states.get(entity_id).attributes["max"] == 3200
+    await hass.services.async_call(
+        "number",
+        "set_value",
+        {"entity_id": entity_id, "value": 3100},
+        blocking=True,
+    )
+    assert float(hass.states.get(entity_id).state) == 3100

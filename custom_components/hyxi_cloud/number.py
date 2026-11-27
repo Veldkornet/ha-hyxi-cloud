@@ -452,16 +452,36 @@ class HyxiPowerNumber(
         self._attr_translation_key = f"{direction}_power"
         metrics = dev_data.get("metrics") or {}
         metric_key = _MAX_POWER_KEYS.get(direction, "")
-        self._attr_native_max_value = int(_safe_int(metrics.get(metric_key), 10000))
+        self._attr_native_max_value = _safe_int(metrics.get(metric_key), 10000)
         self._attr_native_value = 100
         self._attr_device_info = device_info(sn, dev_data)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Follow the device's maximum, which it can change while running.
+
+        A poll without a usable maximum keeps the last one, and a value
+        above a lowered maximum is brought down to it.
+        """
+        metrics = ((self.coordinator.data or {}).get(self._sn) or {}).get(
+            "metrics"
+        ) or {}
+        if maximum := _safe_int(
+            metrics.get(_MAX_POWER_KEYS.get(self._direction, "")), 0
+        ):
+            self._attr_native_max_value = maximum
+            if (value := self._attr_native_value) is not None:
+                self._attr_native_value = min(value, maximum)
+        super()._handle_coordinator_update()
 
     async def async_added_to_hass(self) -> None:
         """Restore last known value on startup."""
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) is not None:
             try:
-                self._attr_native_value = int(float(last_state.state))
+                self._attr_native_value = min(
+                    int(float(last_state.state)), self._attr_native_max_value
+                )
             except ValueError, TypeError:
                 _LOGGER.debug(
                     _LOG_RESTORE_FAILED,
