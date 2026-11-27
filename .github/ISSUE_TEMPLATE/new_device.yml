@@ -8,6 +8,19 @@ body:
       value: |
         Awesome! You have a device that hasn't been mapped yet.
         **To add support for it, I absolutely need your Home Assistant debug logs.**
+  - type: dropdown
+    id: connection_type
+    attributes:
+      label: Connection type
+      description: |
+        How is this integration entry connected to your HYXi device? Under Settings > Devices & Services > HYXI, a cloud entry is titled "HYXI Cloud" and a Modbus entry "HYXI Modbus (...)".
+        If you have both, pick the entry the problem is on.
+      options:
+        - Not sure
+        - Cloud (HYXI OpenAPI)
+        - Modbus (local RS485)
+    validations:
+      required: true
   - type: input
     id: device_type
     attributes:

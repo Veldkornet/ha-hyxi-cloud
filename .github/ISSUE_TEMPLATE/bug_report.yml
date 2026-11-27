@@ -8,6 +8,19 @@ body:
       value: |
         Thanks for taking the time to fill out this bug report!
         **Please ensure you have read the Troubleshooting section in the README and have your Debug Logs ready.**
+  - type: dropdown
+    id: connection_type
+    attributes:
+      label: Connection type
+      description: |
+        How is this integration entry connected to your HYXi device? Under Settings > Devices & Services > HYXI, a cloud entry is titled "HYXI Cloud" and a Modbus entry "HYXI Modbus (...)".
+        If you have both, pick the entry the problem is on.
+      options:
+        - Not sure
+        - Cloud (HYXI OpenAPI)
+        - Modbus (local RS485)
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
