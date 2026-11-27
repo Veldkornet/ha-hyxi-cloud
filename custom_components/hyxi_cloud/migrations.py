@@ -18,6 +18,7 @@ from .const import (
     EM_OPTION_KEYS,
     ENERGY_STORAGE_DEVICE_TYPES,
     MODBUS_UNIQUE_ID_PREFIX,
+    ONLY_WHEN_REPORTED_BY_TYPE,
     UNIQUE_ID_PREFIX,
     device_type_of,
     device_unique_id,
@@ -26,6 +27,7 @@ from .const import (
     is_battery_control_enabled,
     is_control_capable_device_type,
     is_modbus_entry,
+    is_null_value,
     mask_sn,
     normalize_device_type,
     offers_device_control,
@@ -787,6 +789,56 @@ def _remove_bms_alarm_sensors(hass: HomeAssistant, entry: ConfigEntry) -> None:
         ):
             _LOGGER.debug("Removing BMS alarm sensor %s", reg_entry.entity_id)
             registry.async_remove(reg_entry.entity_id)
+
+
+# Readings a device of the type always carries while it is online; a poll
+# with none of them says nothing about which other keys the device reports.
+_LIVE_KEYS_BY_TYPE = {
+    "micro_inverter": ("acP", "ph1p", "ppv"),
+    "collector": ("hw_version", "_sw_ver_sys"),
+}
+
+
+def _unreported_keys(dev_data: dict) -> list[str]:
+    """The keys of ONLY_WHEN_REPORTED_BY_TYPE the device has no value for,
+    or none when it returned no live reading (it may be offline, so a null
+    key proves nothing)."""
+    device_type = normalize_device_type(get_raw_device_code(dev_data))
+    metrics = dev_data.get("metrics") or {}
+    live_keys = _LIVE_KEYS_BY_TYPE.get(device_type, ())
+    if all(is_null_value(metrics.get(key)) for key in live_keys):
+        return []
+    return [
+        key
+        for key in ONLY_WHEN_REPORTED_BY_TYPE.get(device_type, ())
+        if is_null_value(metrics.get(key))
+    ]
+
+
+def _remove_unreported_sensors(
+    hass: HomeAssistant, entry: ConfigEntry, devices: dict
+) -> None:
+    """Remove the sensors a device was given for keys it doesn't report
+    (ONLY_WHEN_REPORTED_BY_TYPE).
+
+    Such registry rows would otherwise stay as dangling, permanently
+    unavailable entities. A row is kept when the device reports a value for
+    its key, when the device returned no live reading in this poll, and when
+    the user renamed it. Cheap and safe to run on every setup: a no-op once
+    none exist.
+    """
+    if is_modbus_entry(entry):
+        return
+    registry = er.async_get(hass)
+    for sn, dev_data in devices.items():
+        for key in _unreported_keys(dev_data):
+            entity_id = registry.async_get_entity_id(
+                "sensor", DOMAIN, device_unique_id(entry, sn, key)
+            )
+            reg_entry = entity_id and registry.async_get(entity_id)
+            if reg_entry and reg_entry.name is None:
+                _LOGGER.debug("Removing unreported %s sensor %s", key, entity_id)
+                registry.async_remove(reg_entry.entity_id)
 
 
 # Entry data key marking that the entry was told about battery control it

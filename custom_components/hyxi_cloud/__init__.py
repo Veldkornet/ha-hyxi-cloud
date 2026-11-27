@@ -79,6 +79,7 @@ from .migrations import (
     _remove_forecast_power_option,
     _remove_legacy_select_entities,
     _remove_purge_subscriptions_button,
+    _remove_unreported_sensors,
     _remove_work_mode_sensor_for_modbus,
     _retire_cloud_battery_control,
 )
@@ -298,6 +299,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HyxiConfigEntry) -> bool
     _remove_work_mode_sensor_for_modbus(hass, entry, coordinator.data)
     _remove_alarm_entities_for_modbus(hass, entry, coordinator.data)
     _remove_bms_alarm_sensors(hass, entry)
+    _remove_unreported_sensors(hass, entry, coordinator.data)
     _retire_cloud_battery_control(hass, entry, coordinator)
     _cleanup_control_entities(hass, entry, coordinator)
     await _async_setup_battery_protection(hass, coordinator, coordinator.data)

@@ -36,6 +36,7 @@ from .const import (
     MANUFACTURER,
     MODBUS_TYPE_SERIAL,
     NULL_VALUES,
+    ONLY_WHEN_REPORTED_BY_TYPE,
     cloud_service_device_info,
     detect_phase_type,
     device_unique_id,
@@ -1303,8 +1304,10 @@ def _keys_to_add_for_device(
     base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
     local_battery_sensors = BATTERY_SENSORS
 
+    never_produced = ONLY_WHEN_REPORTED_BY_TYPE.get(device_type, frozenset())
+
     # Pre-calculate base keys to process + specific static keys
-    keys_to_add = set(base_keys)
+    keys_to_add = set(base_keys) - never_produced
     if is_modbus_entry(entry):
         # last_seen is a cloud heartbeat timestamp; neither Modbus
         # client ever populates it, so it would just sit frozen at
@@ -1330,6 +1333,7 @@ def _keys_to_add_for_device(
     if not is_collector_or_dmu and not is_modbus_entry(entry):
         keys_to_add.update(
             _static_cloud_inverter_keys(dev_data, device_type, local_battery_sensors)
+            - never_produced
         )
 
     # O(1) removals instead of repeated conditionals
