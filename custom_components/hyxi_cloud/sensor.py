@@ -109,6 +109,25 @@ CLOUD_NEVER_PRODUCES = {
     "llcBusVoltage",
 }
 
+# Keys not pre-registered for a device type because it doesn't report them
+# (hybrid inverters do, so they can't go in the global set above). A key the
+# device does report a value for still gets a sensor from the dynamic loop in
+# _keys_to_add_for_device.
+CLOUD_NEVER_PRODUCES_BY_TYPE: dict[str, frozenset[str]] = {
+    "micro_inverter": frozenset(
+        {
+            "gridSts",
+            "invSts",
+            "home_load",
+            "ph1Loadp",
+            "swVerMaster",
+            "swVerSlave",
+            "totalEnt",
+            "totalEpt",
+        }
+    ),
+}
+
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS
 BASE_KEYS_OTHER = HEARTBEAT_SENSORS | {"app_sw", "swVerMaster", "swVerSlave"}
 
@@ -1302,8 +1321,10 @@ def _keys_to_add_for_device(
     base_keys = BASE_KEYS_COLLECTOR if is_collector_or_dmu else BASE_KEYS_OTHER
     local_battery_sensors = BATTERY_SENSORS
 
+    never_produced = CLOUD_NEVER_PRODUCES_BY_TYPE.get(device_type, frozenset())
+
     # Pre-calculate base keys to process + specific static keys
-    keys_to_add = set(base_keys)
+    keys_to_add = set(base_keys) - never_produced
     if is_modbus_entry(entry):
         # last_seen is a cloud heartbeat timestamp; neither Modbus
         # client ever populates it, so it would just sit frozen at
@@ -1329,6 +1350,7 @@ def _keys_to_add_for_device(
     if not is_collector_or_dmu and not is_modbus_entry(entry):
         keys_to_add.update(
             _static_cloud_inverter_keys(dev_data, device_type, local_battery_sensors)
+            - never_produced
         )
 
     # O(1) removals instead of repeated conditionals
