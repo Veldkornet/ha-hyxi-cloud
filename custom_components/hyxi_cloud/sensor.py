@@ -26,6 +26,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     BATTERY_SENSORS,
+    CLOUD_NEVER_PRODUCES_BY_TYPE,
     CONF_EM_ENABLED,
     CONF_EM_INVERTER_SN,
     CONF_MODBUS_FRAMER,
@@ -107,25 +108,6 @@ CLOUD_NEVER_PRODUCES = {
     "batNominalCapacity",
     "batOperatingStatus",
     "llcBusVoltage",
-}
-
-# Keys not pre-registered for a device type because it doesn't report them
-# (hybrid inverters do, so they can't go in the global set above). A key the
-# device does report a value for still gets a sensor from the dynamic loop in
-# _keys_to_add_for_device.
-CLOUD_NEVER_PRODUCES_BY_TYPE: dict[str, frozenset[str]] = {
-    "micro_inverter": frozenset(
-        {
-            "gridSts",
-            "invSts",
-            "home_load",
-            "ph1Loadp",
-            "swVerMaster",
-            "swVerSlave",
-            "totalEnt",
-            "totalEpt",
-        }
-    ),
 }
 
 BASE_KEYS_COLLECTOR = HEARTBEAT_SENSORS | COLLECTOR_SENSORS

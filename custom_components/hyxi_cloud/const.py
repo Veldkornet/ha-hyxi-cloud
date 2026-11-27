@@ -286,6 +286,26 @@ def unique_id_prefix(entry: Any) -> str:
     return MODBUS_UNIQUE_ID_PREFIX if is_modbus_entry(entry) else UNIQUE_ID_PREFIX
 
 
+# Keys a device type doesn't report, so no sensor is pre-registered for them
+# on a device of that type. Hybrid inverters do report them, which is why
+# they are not in sensor.py's CLOUD_NEVER_PRODUCES. A key the device does
+# report a value for still gets a sensor.
+CLOUD_NEVER_PRODUCES_BY_TYPE: dict[str, frozenset[str]] = {
+    "micro_inverter": frozenset(
+        {
+            "gridSts",
+            "invSts",
+            "home_load",
+            "ph1Loadp",
+            "swVerMaster",
+            "swVerSlave",
+            "totalEnt",
+            "totalEpt",
+        }
+    ),
+}
+
+
 def device_unique_id(entry: Any, sn: str, key: str) -> str:
     """The unique_id of device `sn`'s `key` entity on this entry."""
     return f"{unique_id_prefix(entry)}{sn}_{key}"
