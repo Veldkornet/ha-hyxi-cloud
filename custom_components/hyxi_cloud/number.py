@@ -479,7 +479,9 @@ class HyxiPowerNumber(
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) is not None:
             try:
-                self._attr_native_value = int(float(last_state.state))
+                self._attr_native_value = min(
+                    int(float(last_state.state)), self._attr_native_max_value
+                )
             except ValueError, TypeError:
                 _LOGGER.debug(
                     _LOG_RESTORE_FAILED,

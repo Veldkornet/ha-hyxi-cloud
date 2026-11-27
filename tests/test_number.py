@@ -437,6 +437,11 @@ async def test_hyxi_power_number_restore_state():
     await entity.async_added_to_hass()
     assert entity._attr_native_value == 150
 
+    # A saved value above the device's current maximum is brought down to it
+    mock_state.state = "9000"
+    await entity.async_added_to_hass()
+    assert entity._attr_native_value == 5000
+
 
 @pytest.mark.asyncio
 async def test_hyxi_power_number_set_value():
